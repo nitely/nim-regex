@@ -3,11 +3,7 @@
 [![Build Status](https://img.shields.io/travis/nitely/nim-regex.svg?style=flat-square)](https://travis-ci.org/nitely/nim-regex)
 [![licence](https://img.shields.io/github/license/nitely/nim-regex.svg?style=flat-square)](https://raw.githubusercontent.com/nitely/nim-regex/master/LICENSE)
 
-A library for parsing, compiling, and executing
-regular expressions. All searches execute in linear
-time with respect to the size of the regular expression
-and search text. It can parse, compile and match
-regular expression at compile-time.
+A library for parsing, compiling, and executing regular expressions.
 
 Features:
 

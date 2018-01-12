@@ -27,6 +27,10 @@ regular expression at compile-time.
 - [ ] User friendly compiling errors
 - [ ] APIs (nre/re/re2/rust-regex API parity)
 
+## Docs
+
+[Read the docs](https://nitely.github.io/nim-regex/)
+
 ## Tests
 
 ```

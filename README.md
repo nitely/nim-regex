@@ -9,6 +9,13 @@ time with respect to the size of the regular expression
 and search text. It can parse, compile and match
 regular expression at compile-time.
 
+Features:
+
+* The match time is linear in the length of the input string
+* Regular expressions are compiled at compile-time
+* Captures all group repetitions (not just the last one)
+* Unicode level-1 support
+
 > This is a WIP. API is not stable
 
 ## Status

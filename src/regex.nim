@@ -4,7 +4,7 @@ regular expressions. The match time is linear
 with respect to the length of the input and
 the regular expression. So, it can handle
 untrusted users input. Its syntax is similar to PCRE
-but lacks a few features that can\'t be implemented
+but lacks a few features that can not be implemented
 while keeping the space/time complexity guarantees,
 i.e.: backreferences and look-around assertions.
 
@@ -384,7 +384,7 @@ proc isWhiteSpaceAscii(r: Rune): bool {.inline.} =
     '\f'.ord,
     '\v'.ord}
 
-# todo: can\'t use unicodeplus due to
+# todo: can not use unicodeplus due to
 # https://github.com/nim-lang/Nim/issues/7059
 proc swapCase(r: Rune): Rune =
   # Note a character can be

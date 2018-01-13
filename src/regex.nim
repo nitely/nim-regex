@@ -229,7 +229,7 @@ type
   Node = object
     kind: NodeKind
     cp: Rune
-    outA, outB: int  # todo: int16
+    outA, outB: int16
     isGreedy: bool
     # reGroupStart, reGroupEnd
     idx: int  # todo: rename?
@@ -1248,12 +1248,17 @@ proc rpn(expression: seq[Node]): seq[Node] =
   result.add(ops)
 
 # todo: keep track of org/target end instead of doing this recursion BS
-proc combine(nfa: var seq[Node], org: int, target: int, visited: var set[int16]) =
+proc combine(
+      nfa: var seq[Node],
+      org: int16,
+      target: int16,
+      visited: var set[int16]
+    ) =
   ## combine the end of a node
   ## (or last leafs end) with a target node
-  if org.int16 in visited:
+  if org. in visited:
     return
-  visited.incl(org.int16)
+  visited.incl(org)
   if nfa[org].outA != -1:
     if nfa[nfa[org].outA].kind == reEOE:
       nfa[org].outA = target
@@ -1265,7 +1270,7 @@ proc combine(nfa: var seq[Node], org: int, target: int, visited: var set[int16])
     else:
       nfa.combine(nfa[org].outB, target, visited)
 
-proc combine(nfa: var seq[Node], org: int, target: int) =
+proc combine(nfa: var seq[Node], org: int16, target: int16) =
   var visited: set[int16] = {}
   nfa.combine(org, target, visited)
 
@@ -1274,7 +1279,7 @@ proc nfa(expression: seq[Node]): seq[Node] =
   ## expression (in RPN) to an NFA, linearly
   result = newSeqOfCap[Node](expression.len)
   result.add(initEOENode())
-  var states: seq[int] = @[]
+  var states: seq[int16] = @[]
   for n in expression:
     var n = n
     case n.kind
@@ -1282,7 +1287,7 @@ proc nfa(expression: seq[Node]): seq[Node] =
       n.outA = 0
       n.outB = -1
       result.add(n)
-      states.add(result.high)
+      states.add(result.high.int16)
     of reJoiner:
       let
         stateB = states.pop()
@@ -1293,19 +1298,19 @@ proc nfa(expression: seq[Node]): seq[Node] =
       n.outB = states.pop()
       n.outA = states.pop()
       result.add(n)
-      states.add(result.high)
+      states.add(result.high.int16)
     of reZeroOrMore:
       n.outA = states.pop()
       n.outB = 0
-      result.combine(n.outA, result.high + 1)
+      result.combine(n.outA, result.high.int16 + 1)
       result.add(n)
-      states.add(result.high)
+      states.add(result.high.int16)
       if n.isGreedy:
         swap(result[^1].outA, result[^1].outB)
     of reOneOrMore:
       n.outA = states.pop()
       n.outB = 0
-      result.combine(n.outA, result.high + 1)
+      result.combine(n.outA, result.high.int16 + 1)
       result.add(n)
       states.add(n.outA)
       if n.isGreedy:
@@ -1314,34 +1319,34 @@ proc nfa(expression: seq[Node]): seq[Node] =
       n.outA = states.pop()
       n.outB = 0
       result.add(n)
-      states.add(result.high)
+      states.add(result.high.int16)
       if n.isGreedy:
         swap(result[^1].outA, result[^1].outB)
     of reGroupStart:
       n.outA = states.pop()
       n.outB = -1
       result.add(n)
-      states.add(result.high)
+      states.add(result.high.int16)
     of reGroupEnd:
       n.outA = 0
       n.outB = -1
       let stateA = states.pop()
-      result.combine(stateA, result.high + 1)
+      result.combine(stateA, result.high.int16 + 1)
       result.add(n)
       states.add(stateA)
     else:
       doAssert(false, "Unhandled node: $#" % $n.kind)
+    # This limitation may be removed
+    # in the future if someone asks for it
+    doAssert(
+      result.high < int16.high,
+      "regex is too long")
   doAssert(states.len == 1)
   result.add(Node(
     kind: reSkip,
     cp: "¿".toRune,
     outA: states[0],
     outB: -1))
-  # This limitation may be removed
-  # in the future if someone asks for it
-  doAssert(
-    result.high <= int16.high,
-    "regex is too long")
 
 # todo: remove
 proc stringify(nfa: seq[Node], n: Node, visited: var seq[Node]): string =
@@ -1383,7 +1388,7 @@ type
     idx*: int
     cpIdx*: int
   State = tuple
-    ni: int  # todo: int16
+    ni: int16
     c: int
 
 proc group(m: Match, i: int): seq[Slice[int]] =
@@ -1551,7 +1556,7 @@ iterator peek[T: seq[Rune] | string](s: T): (int, Rune, Rune) {.inline.} =
 proc step(
       result: var States,
       nfa: NFA,
-      nIdx: int,
+      nIdx: int16,
       captured: var LeakySeq[Capture],
       cIdx: int,
       visited: var set[int16],
@@ -1559,9 +1564,9 @@ proc step(
       cp: Rune,
       nxt: Rune
     ) =
-  if nIdx.int16 in visited:
+  if nIdx in visited:
     return
-  visited.incl(nIdx.int16)
+  visited.incl(nIdx)
   let n = nfa.state[nIdx]
   if n.kind == reEOE:
     result.add((ni: nIdx, c: cIdx))
@@ -1632,7 +1637,7 @@ proc fullMatch*(s: string | seq[Rune], nfa: NFA): Match =
       assert currStates.len == 0
       assert i == 0
       currStates.step(
-        nfa, nfa.state.high, captured, 0, visited, i, cp, nxt)
+        nfa, nfa.state.high.int16, captured, 0, visited, i, cp, nxt)
       continue
     if currStates.len == 0:
       break
@@ -1662,7 +1667,7 @@ proc contains*(s: string | seq[Rune], nfa: NFA): bool =
   for i, cp, nxt in s.peek:
     visited = {}
     currStates.step(
-      nfa, nfa.state.high, captured, 0, visited, i, cp, nxt)
+      nfa, nfa.state.high.int16, captured, 0, visited, i, cp, nxt)
     for ni, _ in currStates.items:
       let n = nfa.state[ni]
       if n.kind == reEOE:
@@ -1692,7 +1697,7 @@ proc search*(s: string | seq[Rune], nfa: NFA): Match =
   for i, cp, nxt in s.peek:
     visited = {}
     currStates.step(
-      nfa, nfa.state.high, captured, 0, visited, i, cp, nxt)
+      nfa, nfa.state.high.int16, captured, 0, visited, i, cp, nxt)
     if currStates.len > 0 and
         nfa.state[currStates[0].ni].kind == reEOE:
       break

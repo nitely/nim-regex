@@ -160,6 +160,8 @@ const
   # be invalid code, but while it
   # works it simplifies things a bit.
   # An alternative would be opt[Rune]
+  # or just using int32 and convert
+  # Rune to int when needed
   invalidRune = Rune(-1)
   # `\n` is platform specific in
   # Nim and not the actual `\n`
@@ -259,11 +261,11 @@ proc initEOENode(): Node =
   ## This is a dummy node that marks a match as successful
   Node(kind: reEOE, cp: "¿".toRune, outA: -1, outB: -1)
 
-proc initSetNodeCommon(kind: NodeKind): Node =
+template initSetNodeCommon(k: NodeKind): Node =
   ## base node
-  doAssert(kind in {reSet, reNotSet})
+  assert k in {reSet, reNotSet}
   Node(
-    kind: kind,
+    kind: k,
     cp: "¿".toRune,
     cps: @[],
     ranges: @[],
@@ -284,6 +286,7 @@ proc initGroupStart(
       flags: seq[Flag] = nil,
       isCapturing = true
     ): Node =
+  ## return a ``reGroupStart`` node
   Node(
     kind: reGroupStart,
     cp: "(".toRune,
@@ -300,28 +303,29 @@ proc isEmpty(n: Node): bool =
     n.shorthands.len == 0)
 
 proc isAlphaNumAscii(r: Rune): bool {.inline.} =
+  ## return ``true`` if the given
+  ## rune is in ``[A-Za-z0-9]`` range
   r.int in {
     'A'.ord .. 'Z'.ord,
     'a'.ord .. 'z'.ord,
     '0'.ord .. '9'.ord}
 
+template isWordBoundaryImpl(r, nxt, alnumProc): bool =
+  let
+    isWord = r != invalidRune and alnumProc(r)
+    isNxtWord = nxt != invalidRune and alnumProc(nxt)
+  ((isWord and not isNxtWord) or
+   (not isWord and isNxtWord))
+
 proc isWordBoundary(r: Rune, nxt: Rune): bool {.inline.} =
   ## check if current match
-  ## form a boundary (i.e the end of a word)
-  let
-    isWord = r != invalidRune and r.isalnum()
-    isNxtWord = nxt != invalidRune and nxt.isalnum()
-  result = (
-    (isWord and not isNxtWord) or
-    (not isWord and isNxtWord))
+  ## is a boundary (i.e the end of a word)
+  isWordBoundaryImpl(r, nxt, isalnum)
 
 proc isWordBoundaryAscii(r: Rune, nxt: Rune): bool {.inline.} =
-  let
-    isWord = r != invalidRune and r.isAlphaNumAscii()
-    isNxtWord = nxt != invalidRune and nxt.isAlphaNumAscii()
-  result = (
-    (isWord and not isNxtWord) or
-    (not isWord and isNxtWord))
+  ## check if current match
+  ## is a boundary. Match ascii only
+  isWordBoundaryImpl(r, nxt, isAlphaNumAscii)
 
 proc match(n: Node, r: Rune, nxt: Rune): bool =
   ## match for ``Node`` of assertion kind.
@@ -513,6 +517,8 @@ proc `$`(n: Node): string =
   ## of a `Node`. The string is always
   ## equivalent to the original
   ## expression but not necessarily equal
+  # Note this is not complete. Just
+  # what needed for debugging so far
   case n.kind
   of reZeroOrMore,
       reOneOrMore,
@@ -590,19 +596,20 @@ proc next[T](sc: Scanner[T]): T =
   result = sc.s[sc.pos]
   inc sc.pos
 
-proc peek[T](sc: Scanner[T], default: T): T =
+template peekImpl[T](sc: Scanner[T], default: T): T =
   ## same as ``curr`` except it
   ## returns a default/invalid value when
   ## the data is fully consumed
   if sc.pos >= sc.s.high:
-    return default
-  result = sc.s[sc.pos]
+    default
+  else:
+    sc.s[sc.pos]
 
 proc peek(sc: Scanner[Rune]): Rune =
-  sc.peek(invalidRune)
+  peekImpl(sc, invalidRune)
 
 proc peek(sc: Scanner[Node]): Node =
-  sc.peek(initEOENode())
+  peekImpl(sc, initEOENode())
 
 iterator peek[T](sc: Scanner[T]): (T, T) =
   for s in sc:
@@ -643,7 +650,7 @@ proc toAssertionNode(r: Rune): Node =
     r.toCharNode
 
 proc toEscapedSeqNode(r: Rune): Node =
-  ## the given character must be a
+  ## the given character must be an
   ## escaped sequence or else a regular char
   ## Node is returned
   case r
@@ -679,7 +686,9 @@ proc toSetEscapedNode(r: Rune): Node =
 
 proc parseSet(sc: Scanner[Rune]): seq[Node] =
   ## parse a set atom (i.e ``[a-z]``) into a
-  ## ``Node`` of ``reSet`` or ``reNotSet`` kind
+  ## ``Node`` of ``reSet`` or ``reNotSet`` kind.
+  ## This proc is PCRE compatible and
+  ## handles a ton of edge cases
   var n = case sc.curr
   of "^".toRune:
     discard sc.next()
@@ -739,6 +748,7 @@ proc parseSet(sc: Scanner[Rune]): seq[Node] =
   result = @[n]
 
 proc parseRepRange(sc: Scanner[Rune]): seq[Node] =
+  ## parse a repetition range ``{n,m}``
   var
     first, last: string
     curr = ""
@@ -796,6 +806,9 @@ proc toNegFlag(r: Rune): Flag =
     doAssert(false)
 
 proc parseGroupTag(sc: Scanner[Rune]): seq[Node] =
+  ## parse a special group (name, flags, non-captures).
+  ## Return a regular ``reGroupStart``
+  ## if it's not special enough
   # A regular group
   if sc.curr != "?".toRune:
     return @[initGroupStart()]
@@ -1120,7 +1133,9 @@ proc expandRepRange(expression: seq[Node]): seq[Node] =
         "either char or shorthand (i.e: \\w) expected before repetition range")
 
 proc joinAtoms(expression: seq[Node]): seq[Node] =
-  ## Put a `~` joiner between atoms
+  ## Put a ``~`` joiner between atoms. An atom is
+  ## a piece of expression that would loose
+  ## meaning when breaking it up (i.e.: ``a~(b|c)*~d``)
   result = newSeqOfCap[Node](expression.len * 2)
   var atomsCount = 0
   for n in expression:
@@ -1148,6 +1163,9 @@ proc joinAtoms(expression: seq[Node]): seq[Node] =
 
 type
   Associativity = enum
+    ## Operator associativity. Unary ops are
+    ## right[-to-left] and binary ops are
+    ## left[-to-right]
     asyRight,
     asyLeft
   OpsPA = tuple
@@ -1155,6 +1173,8 @@ type
     associativity: Associativity
 
 proc opsPA(nk: NodeKind): OpsPA =
+  ## return the precedence and
+  ## associativity of a given node kind
   doAssert(nk in opKind)
   case nk
   of reRepRange,
@@ -1170,6 +1190,13 @@ proc opsPA(nk: NodeKind): OpsPA =
     doAssert(false, "Unhandled nodeKind")
 
 proc hasPrecedence(a: NodeKind, b: NodeKind): bool =
+  ## Check ``b`` has precedence over ``a``.
+  ## Both ``a`` and ``b`` are expected to
+  ## be valid operators. Unary operators such
+  ## as: ``*``, ``?`` and ``+`` have right-to-left
+  ## associativity. Binary operators
+  ## such as: ``|`` (or) and ``~`` (joiner) have
+  ## left-to-right associativity
   result = (
     (opsPA(b).associativity == asyRight and
       opsPA(b).precedence <= opsPA(a).precedence) or
@@ -1193,6 +1220,14 @@ proc popUntilGroupStart(ops: var seq[Node]): seq[Node] =
       break
 
 proc rpn(expression: seq[Node]): seq[Node] =
+  ## An adaptation of the Shunting-yard algorithm
+  ## for producing `Reverse Polish Notation` out of
+  ## an expression specified in infix notation.
+  ## It supports regex primitives including groups.
+  ## The point of doing this is greatly simplifying
+  ## the parsing of the regular expression into an NFA.
+  ## Suffix notation removes nesting and so it can
+  ## be parsed in a linear way instead of recursively
   result = newSeqOfCap[Node](expression.len)
   var ops: seq[Node] = @[]
   for n in expression:
@@ -1213,10 +1248,12 @@ proc rpn(expression: seq[Node]): seq[Node] =
   result.add(ops)
 
 # todo: keep track of org/target end instead of doing this recursion BS
-proc combine(nfa: var seq[Node], org: int, target: int, visited: var seq[int]) =
-  if org in visited:
+proc combine(nfa: var seq[Node], org: int, target: int, visited: var set[int16]) =
+  ## combine the end of a node
+  ## (or last leafs end) with a target node
+  if org.int16 in visited:
     return
-  visited.add(org)
+  visited.incl(org.int16)
   if nfa[org].outA != -1:
     if nfa[nfa[org].outA].kind == reEOE:
       nfa[org].outA = target
@@ -1229,12 +1266,12 @@ proc combine(nfa: var seq[Node], org: int, target: int, visited: var seq[int]) =
       nfa.combine(nfa[org].outB, target, visited)
 
 proc combine(nfa: var seq[Node], org: int, target: int) =
-  var visited: seq[int] = @[]
+  var visited: set[int16] = {}
   nfa.combine(org, target, visited)
 
 proc nfa(expression: seq[Node]): seq[Node] =
   ## A stack machine to convert a
-  ## expression (in RPN) to an NFA
+  ## expression (in RPN) to an NFA, linearly
   result = newSeqOfCap[Node](expression.len)
   result.add(initEOENode())
   var states: seq[int] = @[]
@@ -1291,7 +1328,7 @@ proc nfa(expression: seq[Node]): seq[Node] =
       let stateA = states.pop()
       result.combine(stateA, result.high + 1)
       result.add(n)
-      states.add(stateA)  # ???
+      states.add(stateA)
     else:
       doAssert(false, "Unhandled node: $#" % $n.kind)
   doAssert(states.len == 1)
@@ -1308,7 +1345,8 @@ proc nfa(expression: seq[Node]): seq[Node] =
 
 # todo: remove
 proc stringify(nfa: seq[Node], n: Node, visited: var seq[Node]): string =
-  ## AST to string representation
+  ## NFA to string representation.
+  ## For debugging purposes
   if n in visited:
     return "[...]"
   visited.add(n)
@@ -1374,7 +1412,7 @@ proc groups2(m: Match): seq[seq[Slice[int]]] =
       inc j
 
 proc `$`(n: NFA): string =
-  ## AST to string representation
+  ## NFA to string representation
   n.state.stringify
 
 proc populateCaptures(
@@ -1420,6 +1458,8 @@ proc populateCaptures(
     curr = c.prev
 
 iterator runesIt(s: string): (int, Rune) {.inline.} =
+  ## yield current Rune and
+  ## the ending index/start of next rune
   var
     i = 0
     result: Rune
@@ -1468,7 +1508,7 @@ proc add[T](ls: var LeakySeq[T], x: T) =
   ls.s[ls.pos] = x
   inc ls.pos
 
-iterator items[T](ls: LeakySeq[T]): T =
+iterator items[T](ls: LeakySeq[T]): T {.inline.} =
   var i = 0
   while i < ls.pos:
     yield ls.s[i]
@@ -1500,7 +1540,7 @@ proc add(ss: var States, s: State) =
   ss.states.add(s)
   ss.ids.incl(s.ni.int16)
 
-iterator items(ss: States): State =
+iterator items(ss: States): State {.inline.} =
   for s in ss.states.items:
     yield s
 

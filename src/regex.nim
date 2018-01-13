@@ -1415,9 +1415,72 @@ proc `$`(n: NFA): string =
   ## NFA to string representation
   n.state.stringify
 
+type
+  LeakySeq[T] = object
+    ## a seq that can only grow
+    s: seq[T]
+    pos: int
+
+proc initLeakySeq[T](size = 16): LeakySeq[T] =
+  LeakySeq[T](s: newSeq[T](size), pos: 0)
+
+proc isInitialized[T](ls: LeakySeq[T]): bool =
+  not ls.s.isNil
+
+proc `[]`[T](ls: LeakySeq[T], i: int): T =
+  ls.s[i]
+
+proc len[T](ls: LeakySeq[T]): int =
+  ls.pos
+
+proc clear[T](ls: var LeakySeq[T]) =
+  ls.pos = 0
+
+proc add[T](ls: var LeakySeq[T], x: T) =
+  if ls.pos > ls.s.high:
+    ls.s.setLen(ls.s.len * 2)
+  ls.s[ls.pos] = x
+  inc ls.pos
+
+iterator items[T](ls: LeakySeq[T]): T {.inline.} =
+  var i = 0
+  while i < ls.pos:
+    yield ls.s[i]
+    inc i
+
+type
+  States = tuple
+    states: LeakySeq[State]
+    ids: set[int16]  # todo: use seq and make the algo O(regex) space?
+
+proc initStates(): States =
+  result = (
+    states: initLeakySeq[State](),
+    ids: {})
+
+proc `[]`(ss: States, i: int): State =
+  ss.states[i]
+
+proc len(ss: States): int =
+  ss.states.len
+
+proc clear(ss: var States) =
+  ss.states.clear()
+  ss.ids = {}
+
+proc add(ss: var States, s: State) =
+  if s.ni.int16 in ss.ids:
+    return
+  ss.states.add(s)
+  ss.ids.incl(s.ni.int16)
+
+iterator items(ss: States): State {.inline.} =
+  for s in ss.states.items:
+    yield s
+
 proc populateCaptures(
       result: var Match,
-      captured: seq[Capture],
+      captured: LeakySeq[Capture],
       cIdx: int,
       gc: int
     ) =
@@ -1484,72 +1547,12 @@ iterator peek[T: seq[Rune] | string](s: T): (int, Rune, Rune) {.inline.} =
     j = i
   yield (j, prev, invalidRune)
 
-type
-  LeakySeq[T] = object
-    ## a seq that can only grow
-    s: seq[T]
-    pos: int
-
-proc initLeakySeq[T](size = 16): LeakySeq[T] =
-  LeakySeq[T](s: newSeq[T](size), pos: 0)
-
-proc `[]`[T](ls: LeakySeq[T], i: int): T =
-  ls.s[i]
-
-proc len[T](ls: LeakySeq[T]): int =
-  ls.pos
-
-proc clear[T](ls: var LeakySeq[T]) =
-  ls.pos = 0
-
-proc add[T](ls: var LeakySeq[T], x: T) =
-  if ls.pos > ls.s.high:
-    ls.s.setLen(ls.s.len * 2)
-  ls.s[ls.pos] = x
-  inc ls.pos
-
-iterator items[T](ls: LeakySeq[T]): T {.inline.} =
-  var i = 0
-  while i < ls.pos:
-    yield ls.s[i]
-    inc i
-
-type
-  States = tuple
-    states: LeakySeq[State]
-    ids: set[int16]  # todo: use seq and make the algo O(regex) space?
-
-proc initStates(): States =
-  result = (
-    states: initLeakySeq[State](),
-    ids: {})
-
-proc `[]`(ss: States, i: int): State =
-  ss.states[i]
-
-proc len(ss: States): int =
-  ss.states.len
-
-proc clear(ss: var States) =
-  ss.states.clear()
-  ss.ids = {}
-
-proc add(ss: var States, s: State) =
-  if s.ni.int16 in ss.ids:
-    return
-  ss.states.add(s)
-  ss.ids.incl(s.ni.int16)
-
-iterator items(ss: States): State {.inline.} =
-  for s in ss.states.items:
-    yield s
-
 # todo: make it iterative
 proc step(
       result: var States,
       nfa: NFA,
       nIdx: int,
-      captured: var seq[Capture],
+      captured: var LeakySeq[Capture],
       cIdx: int,
       visited: var set[int16],
       cpIdx: int,
@@ -1572,7 +1575,7 @@ proc step(
   var cIdx = cIdx
   if n.kind in {reGroupStart, reGroupEnd} and
       n.isCapturing and
-      not captured.isNil:
+      captured.isInitialized:
     case n.kind
     of reGroupStart:
       captured.add(Capture(
@@ -1588,7 +1591,7 @@ proc step(
         idx: n.idx))
     else:
       doAssert(false)
-    cIdx = captured.high
+    cIdx = captured.len - 1
   if n.outA != -1:
     result.step(
       nfa, n.outA, captured, cIdx, visited, cpIdx, cp, nxt)
@@ -1600,7 +1603,7 @@ template stepFrom(
       result: var States,
       n: Node,
       nfa: NFA,
-      captured: var seq[Capture],
+      captured: var LeakySeq[Capture],
       cIdx: int,
       visited: var set[int16],
       cpIdx: int,
@@ -1618,11 +1621,12 @@ template stepFrom(
 proc fullMatch*(s: string | seq[Rune], nfa: NFA): Match =
   var
     visited: set[int16] = {}
-    captured: seq[Capture]  # todo: grow seq by X factor when needed
+    captured: LeakySeq[Capture]
     currStates = initStates()
     nextStates = initStates()
   if nfa.groupsCount > 0:
-    captured = @[Capture()]
+    captured = initLeakySeq[Capture]()
+    captured.add(Capture())
   for i, cp, nxt in s.peek:
     if cp == invalidRune:
       assert currStates.len == 0
@@ -1652,12 +1656,13 @@ proc fullMatch*(s: string | seq[Rune], nfa: NFA): Match =
 proc contains*(s: string | seq[Rune], nfa: NFA): bool =
   var
     visited: set[int16] = {}
+    captured: LeakySeq[Capture]
     currStates = initStates()
     nextStates = initStates()
   for i, cp, nxt in s.peek:
     visited = {}
     currStates.step(
-      nfa, nfa.state.high, nil, 0, visited, i, cp, nxt)
+      nfa, nfa.state.high, captured, 0, visited, i, cp, nxt)
     for ni, _ in currStates.items:
       let n = nfa.state[ni]
       if n.kind == reEOE:
@@ -1666,7 +1671,7 @@ proc contains*(s: string | seq[Rune], nfa: NFA): bool =
         continue
       visited = {}
       nextStates.stepFrom(
-        n, nfa, nil, 0, visited, i, cp, nxt)
+        n, nfa, captured, 0, visited, i, cp, nxt)
     swap(currStates, nextStates)
     nextStates.clear()
   for ni, _ in currStates.items:
@@ -1678,11 +1683,12 @@ proc search*(s: string | seq[Rune], nfa: NFA): Match =
   ## location where there is a match
   var
     visited: set[int16] = {}
-    captured: seq[Capture]
+    captured: LeakySeq[Capture]
     currStates = initStates()
     nextStates = initStates()
   if nfa.groupsCount > 0:
-    captured = @[Capture()]
+    captured = initLeakySeq[Capture]()
+    captured.add(Capture())
   for i, cp, nxt in s.peek:
     visited = {}
     currStates.step(

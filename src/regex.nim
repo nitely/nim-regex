@@ -240,7 +240,7 @@ type
     min: int
     max: int
     # reSet, reNotSet
-    cps: seq[Rune]  # todo: use set
+    cps: HashSet[Rune]
     ranges: seq[SetRange]  # todo: interval tree
     shorthands: seq[Node]
 
@@ -267,7 +267,7 @@ template initSetNodeCommon(k: NodeKind): Node =
   Node(
     kind: k,
     cp: "¿".toRune,
-    cps: @[],
+    cps: initSet[Rune](),
     ranges: @[],
     shorthands: @[])
 
@@ -512,6 +512,9 @@ const
     reOneOrMore,
     reRepRange}
 
+proc cmp(x, y: Rune): int =
+  x.int - y.int
+
 proc `$`(n: Node): string =
   ## return the string representation
   ## of a `Node`. The string is always
@@ -544,7 +547,13 @@ proc `$`(n: Node): string =
     str.add('[')
     if n.kind == reNotSet:
       str.add('^')
+    var
+      cps = newSeq[Rune](n.cps.len)
+      i = 0
     for cp in n.cps:
+      cps[i] = cp
+      inc i
+    for cp in cps.sorted(cmp):
       str.add(cp.toUTF8)
     for rs, re in n.ranges.items:
       str.add(rs.toUTF8 & '-' & re.toUTF8)
@@ -695,18 +704,20 @@ proc parseSet(sc: Scanner[Rune]): seq[Node] =
     initNotSetNode()
   else:
     initSetNode()
-  var isRange, isEscaped, hasEnd = false
+  var
+    isRange, isEscaped, hasEnd = false
+    cps = newSeq[Rune]()
   for cp, nxt in sc.peek:
     if cp == "]".toRune and
         not isEscaped and
-        not n.isEmpty:
+        (not n.isEmpty or cps.len > 0):
       hasEnd = true
       break
     if cp == "\\".toRune and not isEscaped:
       isEscaped = true
       continue
     if isRange:
-      doAssert(n.cps.len > 0)
+      doAssert(cps.len > 0)
       var cp = cp
       if isEscaped:
         let nn = cp.toSetEscapedNode()
@@ -715,33 +726,34 @@ proc parseSet(sc: Scanner[Rune]): seq[Node] =
         cp = nn.cp
       isRange = false
       isEscaped = false
-      let start = n.cps.pop()
+      let start = cps.pop()
       doAssert(start <= cp)
       n.ranges.add((
         rangeStart: start,
         rangeEnd: cp))
       if nxt == "-".toRune:
-        n.cps.add(nxt)
+        cps.add(nxt)
         discard sc.next()
       continue
     if isEscaped:
       isEscaped = false
       let nn = cp.toSetEscapedNode()
       if nn.kind == reChar:
-        n.cps.add(nn.cp)
+        cps.add(nn.cp)
         continue
       doAssert(nn.kind in shorthandKind)
       n.shorthands.add(nn)
       if nxt == "-".toRune:
-        n.cps.add(nxt)
+        cps.add(nxt)
         discard sc.next()
       continue
-    if cp == "-".toRune and n.cps.len > 0:
+    if cp == "-".toRune and cps.len > 0:
       isRange = true
       continue
-    n.cps.add(cp)
+    cps.add(cp)
   if isRange:
-    n.cps.add("-".toRune)
+    cps.add("-".toRune)
+  n.cps = cps.toSet
   doAssert(not isEscaped)
   doAssert(not n.isEmpty)
   doAssert(hasEnd)
@@ -1349,25 +1361,26 @@ proc nfa(expression: seq[Node]): seq[Node] =
     outB: -1))
 
 # todo: remove
-proc stringify(nfa: seq[Node], n: Node, visited: var seq[Node]): string =
+proc stringify(nfa: seq[Node], nIdx: int16, visited: var set[int16]): string =
   ## NFA to string representation.
   ## For debugging purposes
-  if n in visited:
+  if nIdx in visited:
     return "[...]"
-  visited.add(n)
+  visited.incl(nIdx)
+  let n = nfa[nIdx]
   result = "["
   result.add($n)
   if n.outA != -1:
     result.add(", ")
-    result.add(nfa.stringify(nfa[n.outA], visited))
+    result.add(nfa.stringify(n.outA, visited))
   if n.outB != -1:
     result.add(", ")
-    result.add(nfa.stringify(nfa[n.outB], visited))
+    result.add(nfa.stringify(n.outB, visited))
   result.add("]")
 
 proc stringify(nfa: seq[Node]): string =
-  var visited: seq[Node] = @[]
-  result = nfa.stringify(nfa[^1], visited)
+  var visited: set[int16] = {}
+  result = nfa.stringify(nfa.high.int16, visited)
 
 type
   NFA = tuple  # todo: rename to Regex
@@ -1775,7 +1788,7 @@ when isMainModule:
   doAssert(toAtoms(r"\d") == r"\d")
   doAssert(toAtoms(r"[a-z]") == r"[a-z]")
   doAssert(toAtoms(r"[aa-zz]") == r"[aza-z]")
-  doAssert(toAtoms(r"[aa\-zz]") == r"[aa-zz]")
+  doAssert(toAtoms(r"[aa\-zz]") == r"[-az]")
   doAssert(toAtoms(r"[^a]") == r"[^a]")
   doAssert(toAtoms(r"(a*)*") != toAtoms(r"a*"))
   doAssert(toAtoms(r"(a*|b*)*") != toAtoms(r"(a|b)*"))

@@ -150,6 +150,7 @@ import unicode
 import algorithm
 import strutils
 import sets
+import tables
 
 import unicodedb
 import unicodeplus except isUpper, isLower
@@ -930,19 +931,16 @@ proc greediness(expression: seq[Node]): seq[Node] =
     result.add(n)
 
 type
-  NamedGroup = tuple
-    name: string
-    idx: int
   GroupsCapture = tuple
     count: int
-    names: seq[NamedGroup]
+    names: Table[string, int]
 
 proc fillGroups(expression: var seq[Node]): GroupsCapture =
   ## populate group indices, names and capturing mark
   var
-    groups: seq[int] = @[]
+    groups = newSeq[int]()
     nonCapt = 0
-    names: seq[NamedGroup] = @[]
+    names = initTable[string, int]()
     count = 0
   for i, n in expression.mpairs:
     case n.kind
@@ -955,7 +953,7 @@ proc fillGroups(expression: var seq[Node]): GroupsCapture =
         inc nonCapt
       if not n.name.isNil:
         assert n.isCapturing
-        names.add((name: n.name, idx: n.idx))
+        names[n.name] = n.idx
     of reGroupEnd:
       let start = groups.pop()
       n.isCapturing = expression[start].isCapturing
@@ -1178,7 +1176,7 @@ type
     ## Operator associativity. Unary ops are
     ## right[-to-left] and binary ops are
     ## left[-to-right]
-    asyRight,
+    asyRight
     asyLeft
   OpsPA = tuple
     precedence: int
@@ -1360,49 +1358,32 @@ proc nfa(expression: seq[Node]): seq[Node] =
     outA: states[0],
     outB: -1))
 
-# todo: remove
-proc stringify(nfa: seq[Node], nIdx: int16, visited: var set[int16]): string =
-  ## NFA to string representation.
-  ## For debugging purposes
-  if nIdx in visited:
-    return "[...]"
-  visited.incl(nIdx)
-  let n = nfa[nIdx]
-  result = "["
-  result.add($n)
-  if n.outA != -1:
-    result.add(", ")
-    result.add(nfa.stringify(n.outA, visited))
-  if n.outB != -1:
-    result.add(", ")
-    result.add(nfa.stringify(n.outB, visited))
-  result.add("]")
-
-proc stringify(nfa: seq[Node]): string =
-  var visited: set[int16] = {}
-  result = nfa.stringify(nfa.high.int16, visited)
-
 type
   NFA = tuple  # todo: rename to Regex
     state: seq[Node]
     groupsCount: int
-    namedGroups: seq[NamedGroup]  # todo: use table
+    namedGroups: Table[string, int]
   Match = object  # todo: rename to RegexMatch
-    isMatch*: bool
-    captures*: seq[Slice[int]]
-    groups*: seq[Slice[int]] # todo: remove, merge with captures
-    namedGroups*: seq[NamedGroup]  # todo: use table
+    isMatch: bool
+    captures: seq[Slice[int]]
+    groups: seq[Slice[int]] # todo: remove, merge with captures
+    namedGroups: Table[string, int]
   CaptureKind = enum
     captStart
     captEnd
   Capture = object
-    kind*: CaptureKind
-    prev*: int
-    idx*: int
-    cpIdx*: int
+    kind: CaptureKind
+    prev: int
+    idx: int
+    cpIdx: int
   State = tuple
     ni: int16
     c: int
+
+iterator group(m: Match, i: int): Slice[int] =
+  ## return slices for a given group
+  for idx in m.groups[i]:
+    yield m.captures[idx]
 
 proc group(m: Match, i: int): seq[Slice[int]] =
   ## return slices for a given group.
@@ -1412,9 +1393,7 @@ proc group(m: Match, i: int): seq[Slice[int]] =
 proc group(m: Match, s: string): seq[Slice[int]] =
   ## return slices for a given group.
   ## Use the iterator version if you care about performance
-  for ng in m.namedGroups:
-    if s == ng.name:
-      return m.captures[m.groups[ng.idx]]
+  m.group(m.namedGroups[s])
 
 # todo: rename to groups
 proc groups2(m: Match): seq[seq[Slice[int]]] =
@@ -1429,9 +1408,28 @@ proc groups2(m: Match): seq[seq[Slice[int]]] =
       result[i][j] = m.captures[idx]
       inc j
 
-proc `$`(n: NFA): string =
-  ## NFA to string representation
-  n.state.stringify
+proc stringify(nfa: NFA, nIdx: int16, visited: var set[int16]): string =
+  ## NFA to string representation.
+  ## For debugging purposes
+  if nIdx in visited:
+    return "[...]"
+  visited.incl(nIdx)
+  let n = nfa.state[nIdx]
+  result = "["
+  result.add($n)
+  if n.outA != -1:
+    result.add(", ")
+    result.add(nfa.stringify(n.outA, visited))
+  if n.outB != -1:
+    result.add(", ")
+    result.add(nfa.stringify(n.outB, visited))
+  result.add("]")
+
+proc `$`(nfa: NFA): string =
+  ## NFA to string representation.
+  ## For debugging purposes
+  var visited: set[int16] = {}
+  result = nfa.stringify(nfa.state.high.int16, visited)
 
 type
   LeakySeq[T] = object
@@ -1487,10 +1485,10 @@ proc clear(ss: var States) =
   ss.ids = {}
 
 proc add(ss: var States, s: State) =
-  if s.ni.int16 in ss.ids:
+  if s.ni in ss.ids:
     return
   ss.states.add(s)
-  ss.ids.incl(s.ni.int16)
+  ss.ids.incl(s.ni)
 
 iterator items(ss: States): State {.inline.} =
   for s in ss.states.items:
@@ -1736,13 +1734,19 @@ proc search*(s: string | seq[Rune], nfa: NFA): Match =
         result.namedGroups = nfa.namedGroups
       break
 
-proc toPattern(s: string): NFA =
+proc toPattern*(s: string): NFA =
+  ## Parse and compile a regular expression.
+  ## Use the ``re`` template if you
+  ## care about performance.
   var ns = s.parse.greediness
   let gc = ns.fillGroups()
+  var names: Table[string, int]
+  if gc.names.len > 0:
+    names = gc.names
   result = (
     state: ns.applyFlags.expandRepRange.joinAtoms.rpn.nfa,
     groupsCount: gc.count,
-    namedGroups: gc.names)
+    namedGroups: names)
 
 template re*(s: string): NFA =
   ## Parse and compile a regular
@@ -1758,10 +1762,11 @@ when isMainModule:
     s.parse.greediness.applyFlags.expandRepRange.joinAtoms.`$`
 
   proc toNfaStr(s: string): string =
+    var ng: Table[string, int]
     let n: NFA = (
       state: s.parse.greediness.applyFlags.expandRepRange.joinAtoms.rpn.nfa,
       groupsCount: 0,
-      namedGroups: @[])
+      namedGroups: ng)
     result = $n
 
   proc fullMatchWithCapt(s: string, nfa: NFA): seq[seq[string]] =

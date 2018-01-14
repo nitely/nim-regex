@@ -589,11 +589,9 @@ proc scan[T](s: seq[T]): Scanner[T] =
 
 iterator items[T](sc: Scanner[T]): T =
   ## the yielded item gets consumed
-  while true:
+  while sc.pos <= sc.s.high:
     inc sc.pos
     yield sc.s[sc.pos - 1]
-    if sc.pos >= sc.s.len:
-      break
 
 proc prev[T](sc: Scanner[T]): T =
   sc.s[sc.pos - 1]
@@ -1083,8 +1081,6 @@ proc applyFlags(expression: seq[Node]): seq[Node] =
           flags.add(n.flags)
         continue  # skip (
       flags.add(n.flags)
-      result.add(n)
-      continue
     of reGroupEnd:
       discard flags.pop()
     else:
@@ -1296,6 +1292,8 @@ proc nfa(expression: seq[Node]): seq[Node] =
   result = newSeqOfCap[Node](expression.len)
   result.add(initEOENode())
   var states: seq[int16] = @[]
+  if expression.len == 0:
+    states.add(0)
   for n in expression:
     var n = n
     case n.kind
@@ -1822,7 +1820,7 @@ when isMainModule:
   doAssert(toAtoms(r"(a*|b*)") != toAtoms(r"(a|b)*"))
 
   # tfull_match
-  #doAssert("".isFullMatch(re""))
+  doAssert("".isFullMatch(re""))
   doAssert("a".isFullMatch(re"a"))
   doAssert("ab".isFullMatch(re"(a)b"))
   doAssert("aa".isFullMatch(re"(a)*"))
@@ -1834,7 +1832,7 @@ when isMainModule:
   doAssert("b".isFullMatch(re"a|b"))
   doAssert(not "ab".isFullMatch(re"a(b|c)*d"))
   doAssert(not "a".isFullMatch(re"b"))
-  #doAssert(not "a".isFullMatch(re""))
+  doAssert(not "a".isFullMatch(re""))
 
   # trepetition_cycle
   doAssert("aaa".isFullMatch(re"a**"))
@@ -2098,7 +2096,6 @@ when isMainModule:
   doAssert(not "".isFullMatch(re"a{,0}"))
   doAssert("".isFullMatch(re"a{,2}"))
   doAssert("a".isFullMatch(re"a{0}"))
-  #doAssert("".isFullMatch(re"")) #?
   doAssert("a".isFullMatch(re"a{0,0}"))
   doAssert("a".isFullMatch(re"a{,0}"))
   doAssert("a".isFullMatch(re"a{1}"))

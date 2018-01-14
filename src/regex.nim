@@ -865,7 +865,7 @@ proc parseGroupTag(sc: Scanner[Rune]): seq[Node] =
     result = @[initGroupStart(
       flags = flags,
       isCapturing = false)]
-    if sc.curr == ")".toRune:
+    if sc.peek == ")".toRune:
       result.add(Node(
         kind: reSkip,
         cp: "¿".toRune))  # todo: remove?
@@ -1030,33 +1030,33 @@ proc applyFlags(expression: seq[Node]): seq[Node] =
   let sc = expression.scan()
   var flags = newSeq[seq[Flag]]()  # todo: ofCap(groupsCount)
   for n in sc:
-    result.add(n)
+    var n = n
     for f in flags.squash():
       # todo: move to its own function
       case f
       of flagAnyMatchNewLine:
         if n.kind == reAny:
-          result[^1].kind = reAnyNL
+          n.kind = reAnyNL
       of flagMultiLine:
         case n.kind
         of reStartSym:
-          result[^1].kind = reStartSymML
+          n.kind = reStartSymML
         of reEndSym:
-          result[^1].kind = reEndSymML
+          n.kind = reEndSymML
         else:
           discard
       of flagCaseInsensitive:
         # todo: support sets?
         if n.kind == reChar and n.cp != n.cp.swapCase():
-          result[^1].kind = reCharCI
+          n.kind = reCharCI
       of flagUnGreedy:
         if n.kind in opKind:
-          result[^1].isGreedy = not n.isGreedy
+          n.isGreedy = not n.isGreedy
       of flagNotUnicode:
-        result[^1].kind = n.kind.toAsciiKind()
+        n.kind = n.kind.toAsciiKind()
         # todo: remove, add reSetAscii and reNotSetAscii
-        if result[^1].kind in {reSet, reNotSet}:
-          for nn in result[^1].shorthands.mitems:
+        if n.kind in {reSet, reNotSet}:
+          for nn in n.shorthands.mitems:
             nn.kind = nn.kind.toAsciiKind()
       else:
         doAssert(f in {
@@ -1071,6 +1071,7 @@ proc applyFlags(expression: seq[Node]): seq[Node] =
     of reGroupStart:
       if n.flags.isNil:
         flags.add(@[])
+        result.add(n)
         continue
       if sc.peek.kind == reSkip:
         discard sc.next()  # SKIP
@@ -1078,12 +1079,17 @@ proc applyFlags(expression: seq[Node]): seq[Node] =
         discard sc.next()  # )
         if flags.len > 0:
           flags[^1].add(n.flags)
-          continue
+        else:
+          flags.add(n.flags)
+        continue  # skip (
       flags.add(n.flags)
+      result.add(n)
+      continue
     of reGroupEnd:
       discard flags.pop()
     else:
       discard
+    result.add(n)
 
 proc expandOneRepRange(subExpr: seq[Node], n: Node): seq[Node] =
   ## expand a repetition-range expression
@@ -1364,7 +1370,7 @@ type
     groupsCount: int
     namedGroups: Table[string, int]
   Match = object  # todo: rename to RegexMatch
-    isMatch: bool
+    isMatch*: bool
     captures: seq[Slice[int]]
     groups: seq[Slice[int]] # todo: remove, merge with captures
     namedGroups: Table[string, int]
@@ -1381,7 +1387,10 @@ type
     c: int
 
 iterator group(m: Match, i: int): Slice[int] =
-  ## return slices for a given group
+  ## return slices for a given group.
+  ## Slices of end > start are empty
+  ## matches (i.e.: ``re"(\d?)"``)
+  ## and they are included same as in PCRE.
   for idx in m.groups[i]:
     yield m.captures[idx]
 
@@ -1390,15 +1399,29 @@ proc group(m: Match, i: int): seq[Slice[int]] =
   ## Use the iterator version if you care about performance
   m.captures[m.groups[i]]
 
+iterator group(m: Match, s: string): Slice[int] =
+  ## return slices for a given group
+  for idx in m.groups[m.namedGroups[s]]:
+    yield m.captures[idx]
+
 proc group(m: Match, s: string): seq[Slice[int]] =
   ## return slices for a given group.
   ## Use the iterator version if you care about performance
   m.group(m.namedGroups[s])
 
-# todo: rename to groups
+proc groupsCount(m: Match): int =
+  ## return the number of capturing groups
+  ##
+  ## .. code-block::
+  ##   for gi in 0 ..< m.groupsCount:
+  ##     for slice in m.group(gi):
+  ##       echo text[slice]
+  ##
+  m.groups.len
+
+# todo: remove?
 proc groups2(m: Match): seq[seq[Slice[int]]] =
   ## return slices for each group.
-  ## Use the iterator version if you care about performance
   result = newSeq[seq[Slice[int]]](m.groups.len)
   var j = 0
   for i, g in m.groups:
@@ -1772,12 +1795,10 @@ when isMainModule:
   proc fullMatchWithCapt(s: string, nfa: NFA): seq[seq[string]] =
     let m = s.fullMatch(nfa)
     result = @[]
-    for g in m.groups:
+    for g in 0 ..< m.groupsCount:
       result.add(@[])
-      for idx in g:
-        let capt = m.captures[idx]
-        if capt.b >= capt.a:
-          result[^1].add(s[capt])
+      for slice in m.group(g):
+        result[^1].add(s[slice])
 
   doAssert(toAtoms(r"a(b|c)*d") == r"a~(b|c)*~d")
   doAssert(toAtoms(r"abc") == r"a~b~c")
@@ -2323,22 +2344,26 @@ when isMainModule:
 
   doAssert(
     "aa".fullMatchWithCapt(re"((?U)a*)(a*)") ==
-    @[@[], @["aa"]])
+    @[@[""], @["aa"]])
   doAssert(
     "aa".fullMatchWithCapt(re"((?U)a*?)(a*)") ==
-    @[@["aa"], @[]])
+    @[@["aa"], @[""]])
   doAssert(
     "aa".fullMatchWithCapt(re"((?U-U)a*)(a*)") ==
-    @[@["aa"], @[]])
+    @[@["aa"], @[""]])
+  # no empty matches
+  doAssert(
+    "aa".fullMatchWithCapt(re"(?U:(a)*)(a)*") ==
+    @[@[], @["a", "a"]])
   doAssert(
     "aa".fullMatchWithCapt(re"((?U:a*))(a*)") ==
-    @[@[], @["aa"]])
+    @[@[""], @["aa"]])
   doAssert(
     "aa".fullMatchWithCapt(re"((?U:a*?))(a*)") ==
-    @[@["aa"], @[]])
+    @[@["aa"], @[""]])
   doAssert(
     "aa".fullMatchWithCapt(re"((?U-U:a*))(a*)") ==
-    @[@["aa"], @[]])
+    @[@["aa"], @[""]])
 
   doAssert(not "a\Lb\L".isFullMatch(re"(?sm)a.b(?-sm:.)"))
   doAssert("a\Lb\L".isFullMatch(re"(?ms)a.b(?s-m:.)"))

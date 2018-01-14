@@ -1677,8 +1677,8 @@ proc fullMatch*(s: string | seq[Rune], nfa: NFA): Match =
       if not n.match(cp):
         continue
       visited = {}
-      nextStates.stepFrom(
-        n, nfa, captured, c, visited, i, cp, nxt)
+      stepFrom(
+        nextStates, n, nfa, captured, c, visited, i, cp, nxt)
     swap(currStates, nextStates)
     nextStates.clear()
   for ni, c in currStates.items:
@@ -1706,8 +1706,8 @@ proc contains*(s: string | seq[Rune], nfa: NFA): bool =
       if not n.match(cp):
         continue
       visited = {}
-      nextStates.stepFrom(
-        n, nfa, captured, 0, visited, i, cp, nxt)
+      stepFrom(
+        nextStates, n, nfa, captured, 0, visited, i, cp, nxt)
     swap(currStates, nextStates)
     nextStates.clear()
   for ni, _ in currStates.items:
@@ -1742,8 +1742,8 @@ proc search*(s: string | seq[Rune], nfa: NFA): Match =
       if not n.match(cp):
         continue
       visited = {}
-      nextStates.stepFrom(
-        n, nfa, captured, c, visited, i, cp, nxt)
+      stepFrom(
+        nextStates, n, nfa, captured, c, visited, i, cp, nxt)
     swap(currStates, nextStates)
     nextStates.clear()
   for ni, c in currStates.items:
@@ -1754,7 +1754,7 @@ proc search*(s: string | seq[Rune], nfa: NFA): Match =
         result.namedGroups = nfa.namedGroups
       break
 
-proc toPattern*(s: string): NFA =
+proc toPattern(s: string): NFA =
   ## Parse and compile a regular expression.
   ## Use the ``re`` template if you
   ## care about performance.
@@ -1771,7 +1771,7 @@ proc toPattern*(s: string): NFA =
 template re*(s: string): NFA =
   ## Parse and compile a regular
   ## expression at compile-time
-  const pattern = s.toPattern
+  const pattern = toPattern(s)
   pattern
 
 when isMainModule:

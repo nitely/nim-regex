@@ -1142,7 +1142,8 @@ proc expandRepRange(expression: seq[Node]): seq[Node] =
     else:
       doAssert(
         false,
-        "either char or shorthand (i.e: \\w) expected before repetition range")
+        "either char or shorthand (i.e: \\w) " &
+        "expected before repetition range")
 
 proc joinAtoms(expression: seq[Node]): seq[Node] =
   ## Put a ``~`` joiner between atoms. An atom is
@@ -1649,11 +1650,9 @@ template stepFrom(
     ) =
   ## go to next states
   if n.outA != -1:
-    result.step(
-      nfa, n.outA, captured, cIdx, visited, cpIdx, cp, nxt)
+    step(result, nfa, n.outA, captured, cIdx, visited, cpIdx, cp, nxt)
   if n.outB != -1:
-    result.step(
-      nfa, n.outB, captured, cIdx, visited, cpIdx, cp, nxt)
+    step(result, nfa, n.outB, captured, cIdx, visited, cpIdx, cp, nxt)
 
 proc fullMatch*(s: string | seq[Rune], nfa: NFA): Match =
   var

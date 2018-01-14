@@ -37,7 +37,11 @@ Features:
 ## Tests
 
 ```
+// main module
 nimble test
+
+// unit tests
+nimble tests
 ```
 
 ## LICENSE

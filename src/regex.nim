@@ -1566,7 +1566,7 @@ iterator peek[T: seq[Rune] | string](s: T): (int, Rune, Rune) {.inline.} =
   yield (j, prev, invalidRune)
 
 # todo: make it iterative
-proc step(
+proc step*(
       result: var States,
       nfa: NFA,
       nIdx: int16,
@@ -1736,7 +1736,7 @@ proc search*(s: string | seq[Rune], nfa: NFA): Match =
         result.namedGroups = nfa.namedGroups
       break
 
-proc toPattern(s: string): NFA =
+proc toPattern*(s: string): NFA =
   var ns = s.parse.greediness
   let gc = ns.fillGroups()
   result = (

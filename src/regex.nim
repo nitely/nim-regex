@@ -1754,7 +1754,7 @@ proc search*(s: string | seq[Rune], nfa: NFA): Match =
         result.namedGroups = nfa.namedGroups
       break
 
-proc toPattern(s: string): NFA =
+proc toPattern*(s: string): NFA =
   ## Parse and compile a regular expression.
   ## Use the ``re`` template if you
   ## care about performance.

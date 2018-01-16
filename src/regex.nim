@@ -238,8 +238,7 @@ type
     name: string
     flags: seq[Flag]
     # reRepRange
-    min: int
-    max: int
+    min, max: int
     # reSet, reNotSet
     cps: HashSet[Rune]
     ranges: seq[SetRange]  # todo: interval tree
@@ -1480,6 +1479,10 @@ proc add[T](ls: var LeakySeq[T], x: T) =
   ls.s[ls.pos] = x
   inc ls.pos
 
+proc pop[T](ls: var LeakySeq[T]): T =
+  dec ls.pos
+  result = ls.s[ls.pos]
+
 iterator items[T](ls: LeakySeq[T]): T {.inline.} =
   var i = 0
   while i < ls.pos:
@@ -1585,7 +1588,12 @@ iterator peek[T: seq[Rune] | string](s: T): (int, Rune, Rune) {.inline.} =
     j = i
   yield (j, prev, invalidRune)
 
-# todo: make it iterative
+template toVisitStep(result: var LeakySeq[State], n: Node, cc: int) =
+  if n.outB != -1:
+    add(result, (ni: n.outB, c: cc))
+  if n.outA != -1:
+    add(result, (ni: n.outA, c: cc))
+
 proc step(
       result: var States,
       nfa: NFA,
@@ -1593,49 +1601,51 @@ proc step(
       captured: var LeakySeq[Capture],
       cIdx: int,
       visited: var set[int16],
+      toVisit: var LeakySeq[State],
       cpIdx: int,
       cp: Rune,
       nxt: Rune
     ) =
-  if nIdx in visited:
-    return
-  visited.incl(nIdx)
-  let n = nfa.state[nIdx]
-  if n.kind == reEOE:
-    result.add((ni: nIdx, c: cIdx))
-    return
-  if n.kind in matchableKind:
-    result.add((ni: nIdx, c: cIdx))
-    return
-  if n.kind in assertionKind and
-      not n.match(cp, nxt):
-    return
-  var cIdx = cIdx
-  if n.kind in {reGroupStart, reGroupEnd} and
-      n.isCapturing and
-      captured.isInitialized:
+  assert toVisit.len == 0
+  toVisit.add((ni: nIdx, c: cIdx))
+  while toVisit.len > 0:
+    let state = toVisit.pop()
+    if state.ni in visited:
+      continue
+    visited.incl(state.ni)
+    let n = nfa.state[state.ni]
     case n.kind
+    of reEOE:
+      result.add(state)
+    of matchableKind:
+      result.add(state)
+    of assertionKind:
+      if n.match(cp, nxt):
+        toVisitStep(toVisit, n, state.c)
     of reGroupStart:
+      if not (n.isCapturing and
+          captured.isInitialized):
+        toVisitStep(toVisit, n, state.c)
+        continue
       captured.add(Capture(
         kind: captStart,
         cpIdx: cpIdx,
-        prev: cIdx,
+        prev: state.c,
         idx: n.idx))
+      toVisitStep(toVisit, n, captured.len - 1)
     of reGroupEnd:
+      if not (n.isCapturing and
+          captured.isInitialized):
+        toVisitStep(toVisit, n, state.c)
+        continue
       captured.add(Capture(
         kind: captEnd,
         cpIdx: cpIdx - 1,
-        prev: cIdx,
+        prev: state.c,
         idx: n.idx))
+      toVisitStep(toVisit, n, captured.len - 1)
     else:
-      doAssert(false)
-    cIdx = captured.len - 1
-  if n.outA != -1:
-    result.step(
-      nfa, n.outA, captured, cIdx, visited, cpIdx, cp, nxt)
-  if n.outB != -1:
-    result.step(
-      nfa, n.outB, captured, cIdx, visited, cpIdx, cp, nxt)
+      toVisitStep(toVisit, n, state.c)
 
 template stepFrom(
       result: var States,
@@ -1644,19 +1654,21 @@ template stepFrom(
       captured: var LeakySeq[Capture],
       cIdx: int,
       visited: var set[int16],
+      toVisit: var LeakySeq[State],
       cpIdx: int,
       cp: Rune,
       nxt: Rune
     ) =
   ## go to next states
   if n.outA != -1:
-    step(result, nfa, n.outA, captured, cIdx, visited, cpIdx, cp, nxt)
+    step(result, nfa, n.outA, captured, cIdx, visited, toVisit, cpIdx, cp, nxt)
   if n.outB != -1:
-    step(result, nfa, n.outB, captured, cIdx, visited, cpIdx, cp, nxt)
+    step(result, nfa, n.outB, captured, cIdx, visited, toVisit, cpIdx, cp, nxt)
 
 proc fullMatch*(s: string | seq[Rune], nfa: NFA): Match =
   var
     visited: set[int16] = {}
+    toVisit = initLeakySeq[State]()
     captured: LeakySeq[Capture]
     currStates = initStates()
     nextStates = initStates()
@@ -1668,7 +1680,7 @@ proc fullMatch*(s: string | seq[Rune], nfa: NFA): Match =
       assert currStates.len == 0
       assert i == 0
       currStates.step(
-        nfa, nfa.state.high.int16, captured, 0, visited, i, cp, nxt)
+        nfa, nfa.state.high.int16, captured, 0, visited, toVisit, i, cp, nxt)
       continue
     if currStates.len == 0:
       break
@@ -1678,7 +1690,7 @@ proc fullMatch*(s: string | seq[Rune], nfa: NFA): Match =
         continue
       visited = {}
       stepFrom(
-        nextStates, n, nfa, captured, c, visited, i, cp, nxt)
+        nextStates, n, nfa, captured, c, visited, toVisit, i, cp, nxt)
     swap(currStates, nextStates)
     nextStates.clear()
   for ni, c in currStates.items:
@@ -1692,13 +1704,14 @@ proc fullMatch*(s: string | seq[Rune], nfa: NFA): Match =
 proc contains*(s: string | seq[Rune], nfa: NFA): bool =
   var
     visited: set[int16] = {}
+    toVisit = initLeakySeq[State]()
     captured: LeakySeq[Capture]
     currStates = initStates()
     nextStates = initStates()
   for i, cp, nxt in s.peek:
     visited = {}
     currStates.step(
-      nfa, nfa.state.high.int16, captured, 0, visited, i, cp, nxt)
+      nfa, nfa.state.high.int16, captured, 0, visited, toVisit, i, cp, nxt)
     for ni, _ in currStates.items:
       let n = nfa.state[ni]
       if n.kind == reEOE:
@@ -1707,7 +1720,7 @@ proc contains*(s: string | seq[Rune], nfa: NFA): bool =
         continue
       visited = {}
       stepFrom(
-        nextStates, n, nfa, captured, 0, visited, i, cp, nxt)
+        nextStates, n, nfa, captured, 0, visited, toVisit, i, cp, nxt)
     swap(currStates, nextStates)
     nextStates.clear()
   for ni, _ in currStates.items:
@@ -1719,6 +1732,7 @@ proc search*(s: string | seq[Rune], nfa: NFA): Match =
   ## location where there is a match
   var
     visited: set[int16] = {}
+    toVisit = initLeakySeq[State]()
     captured: LeakySeq[Capture]
     currStates = initStates()
     nextStates = initStates()
@@ -1728,7 +1742,7 @@ proc search*(s: string | seq[Rune], nfa: NFA): Match =
   for i, cp, nxt in s.peek:
     visited = {}
     currStates.step(
-      nfa, nfa.state.high.int16, captured, 0, visited, i, cp, nxt)
+      nfa, nfa.state.high.int16, captured, 0, visited, toVisit, i, cp, nxt)
     if currStates.len > 0 and
         nfa.state[currStates[0].ni].kind == reEOE:
       break
@@ -1743,7 +1757,7 @@ proc search*(s: string | seq[Rune], nfa: NFA): Match =
         continue
       visited = {}
       stepFrom(
-        nextStates, n, nfa, captured, c, visited, i, cp, nxt)
+        nextStates, n, nfa, captured, c, visited, toVisit, i, cp, nxt)
     swap(currStates, nextStates)
     nextStates.clear()
   for ni, c in currStates.items:

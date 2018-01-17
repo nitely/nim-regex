@@ -282,10 +282,9 @@ proc initNotSetNode(): Node =
   initSetNodeCommon(reNotSet)
 
 proc initGroupStart(
-      name: string = nil,
-      flags: seq[Flag] = nil,
-      isCapturing = true
-    ): Node =
+    name: string = nil,
+    flags: seq[Flag] = nil,
+    isCapturing = true): Node =
   ## return a ``reGroupStart`` node
   Node(
     kind: reGroupStart,
@@ -1303,7 +1302,9 @@ template update(
 
 proc nfa(expression: seq[Node]): seq[Node] =
   ## A stack machine to convert a
-  ## expression (in RPN) to an NFA, linearly
+  ## expression (in RPN) to an NFA, linearly.
+  # The e-transitions are kept,
+  # removing them showed minimal speed improvements
   result = newSeqOfCap[Node](expression.len + 1)
   result.add(initEOENode())
   var
@@ -1545,11 +1546,10 @@ iterator items(ss: States): State {.inline.} =
     yield s
 
 proc populateCaptures(
-      result: var Match,
-      captured: LeakySeq[Capture],
-      cIdx: int,
-      gc: int
-    ) =
+    result: var Match,
+    captured: LeakySeq[Capture],
+    cIdx: int,
+    gc: int) =
   # calculate slices for every group,
   # then calculate slices for each match
   # (a group can have multiple matches).
@@ -1620,17 +1620,16 @@ template toVisitStep(result: var LeakySeq[State], n: Node, cIdx: int) =
     add(result, (ni: n.outA, ci: cIdx))
 
 proc step(
-      result: var States,
-      nfa: NFA,
-      nIdx: int16,
-      captured: var LeakySeq[Capture],
-      cIdx: int,
-      visited: var set[int16],
-      toVisit: var LeakySeq[State],
-      cpIdx: int,
-      cp: Rune,
-      nxt: Rune
-    ) =
+    result: var States,
+    nfa: NFA,
+    nIdx: int16,
+    captured: var LeakySeq[Capture],
+    cIdx: int,
+    visited: var set[int16],
+    toVisit: var LeakySeq[State],
+    cpIdx: int,
+    cp: Rune,
+    nxt: Rune) =
   assert toVisit.len == 0
   toVisit.add((ni: nIdx, ci: cIdx))
   while toVisit.len > 0:
@@ -1671,17 +1670,16 @@ proc step(
       toVisitStep(toVisit, n, state.ci)
 
 template stepFrom(
-      result: var States,
-      n: Node,
-      nfa: NFA,
-      captured: var LeakySeq[Capture],
-      cIdx: int,
-      visited: var set[int16],
-      toVisit: var LeakySeq[State],
-      cpIdx: int,
-      cp: Rune,
-      nxt: Rune
-    ) =
+    result: var States,
+    n: Node,
+    nfa: NFA,
+    captured: var LeakySeq[Capture],
+    cIdx: int,
+    visited: var set[int16],
+    toVisit: var LeakySeq[State],
+    cpIdx: int,
+    cp: Rune,
+    nxt: Rune) =
   ## go to next states
   if n.outA != -1:
     step(result, nfa, n.outA, captured, cIdx, visited, toVisit, cpIdx, cp, nxt)

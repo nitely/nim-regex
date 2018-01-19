@@ -230,10 +230,10 @@ type
   Node = object
     kind: NodeKind
     cp: Rune
-    outA, outB: int16
+    outA, outB: int
     isGreedy: bool
     # reGroupStart, reGroupEnd
-    idx: int  # todo: rename?
+    idx: int16  # todo: rename?
     isCapturing: bool
     name: string
     flags: seq[Flag]
@@ -936,7 +936,7 @@ proc greediness(expression: seq[Node]): seq[Node] =
 
 type
   GroupsCapture = tuple
-    count: int
+    count: int16
     names: Table[string, int]
 
 proc fillGroups(expression: var seq[Node]): GroupsCapture =
@@ -945,7 +945,7 @@ proc fillGroups(expression: var seq[Node]): GroupsCapture =
     groups = newSeq[int]()
     nonCapt = 0
     names = initTable[string, int]()
-    count = 0
+    count = 0'i16
   for i, n in expression.mpairs:
     case n.kind
     of reGroupStart:
@@ -966,6 +966,7 @@ proc fillGroups(expression: var seq[Node]): GroupsCapture =
         dec nonCapt
     else:
       discard
+    doAssert(count < int16.high)
   doAssert(groups.len == 0)
   result = (
     count: count,
@@ -1267,7 +1268,7 @@ proc rpn(expression: seq[Node]): seq[Node] =
   result.add(ops)
 
 type
-  End = seq[int16]
+  End = seq[int]
     ## store all the last
     ## states of a given state.
     ## Avoids having to recurse
@@ -1277,8 +1278,8 @@ type
 template combine(
     nfa: var seq[Node],
     ends: var seq[End],
-    org: int16,
-    target: int16) =
+    org: int,
+    target: int) =
   ## combine ends of ``org``
   ## with ``target``
   for e in ends[org]:
@@ -1290,9 +1291,9 @@ template combine(
 
 template update(
     ends: var seq[End],
-    ni: int16,
-    outA: int16,
-    outB: int16) =
+    ni: int,
+    outA: int,
+    outB: int) =
   ## update the ends of Node ``ni``
   ## to point to ends of ``n.outA``
   ## and ``n.outB``. If either outA
@@ -1317,13 +1318,13 @@ proc nfa(expression: seq[Node]): seq[Node] =
   result.add(initEOENode())
   var
     ends = newSeq[End](expression.len + 1)
-    states = newSeq[int16]()
+    states = newSeq[int]()
   ends.fill(@[])
   if expression.len == 0:
     states.add(0)
   for n in expression:
     var n = n
-    let ni = result.high.int16 + 1
+    let ni = result.high + 1
     case n.kind
     of matchableKind, assertionKind:
       n.outA = 0
@@ -1385,11 +1386,6 @@ proc nfa(expression: seq[Node]): seq[Node] =
       states.add(stateA)
     else:
       doAssert(false, "Unhandled node: $#" % $n.kind)
-    # This limitation/optimization may be removed
-    # in the future if someone asks for it
-    doAssert(
-      result.high < int16.high,
-      "regex is too long")
   doAssert(states.len == 1)
   result.add(Node(
     kind: reSkip,
@@ -1400,7 +1396,7 @@ proc nfa(expression: seq[Node]): seq[Node] =
 type
   NFA = tuple  # todo: rename to Regex
     state: seq[Node]
-    groupsCount: int
+    groupsCount: int16
     namedGroups: Table[string, int]
   Match = object  # todo: rename to RegexMatch
     isMatch*: bool
@@ -1413,10 +1409,10 @@ type
   Capture = object
     kind: CaptureKind
     prev: int
-    idx: int
+    idx: int16
     cpIdx: int
   State = tuple
-    ni: int16
+    ni: int
     ci: int
 
 iterator group(m: Match, i: int): Slice[int] =
@@ -1464,12 +1460,12 @@ proc groups2(m: Match): seq[seq[Slice[int]]] =
       result[i][j] = m.captures[idx]
       inc j
 
-proc stringify(nfa: NFA, nIdx: int16, visited: var set[int16]): string =
+proc stringify(nfa: NFA, nIdx: int, visited: var set[int16]): string =
   ## NFA to string representation.
   ## For debugging purposes
-  if nIdx in visited:
+  if nIdx.int16 in visited:
     return "[...]"
-  visited.incl(nIdx)
+  visited.incl(nIdx.int16)
   let n = nfa.state[nIdx]
   result = "["
   result.add($n)
@@ -1485,14 +1481,18 @@ proc `$`(nfa: NFA): string =
   ## NFA to string representation.
   ## For debugging purposes
   var visited: set[int16] = {}
-  result = nfa.stringify(nfa.state.high.int16, visited)
+  result = nfa.stringify(nfa.state.high, visited)
 
 type
   BitSet = object
-    ## a seq with set powers.
+    ## a bitset is a seq
+    ## with set capabilities.
     ## It doesn't allow duplicates.
     ## It's O(1) time and O(n)
-    ## space complexity
+    ## space complexity. Unlike
+    ## regular bitsets, it offers
+    ## amortized O(1) time ``clear``
+    ## at the cost of memory space
     s: seq[int]
     key: int
 
@@ -1662,7 +1662,7 @@ template toVisitStep(result: var LeakySeq[State], n: Node, cIdx: int) =
 proc step(
     result: var States,
     nfa: NFA,
-    nIdx: int16,
+    nIdx: int,
     captured: var LeakySeq[Capture],
     cIdx: int,
     visited: var BitSet,
@@ -1741,7 +1741,7 @@ proc fullMatch*(s: string | seq[Rune], nfa: NFA): Match =
       assert currStates.len == 0
       assert i == 0
       currStates.step(
-        nfa, nfa.state.high.int16, captured, 0, visited, toVisit, i, cp, nxt)
+        nfa, nfa.state.high, captured, 0, visited, toVisit, i, cp, nxt)
       continue
     if currStates.len == 0:
       break
@@ -1772,7 +1772,7 @@ proc contains*(s: string | seq[Rune], nfa: NFA): bool =
   for i, cp, nxt in s.peek:
     visited.clear()
     currStates.step(
-      nfa, nfa.state.high.int16, captured, 0, visited, toVisit, i, cp, nxt)
+      nfa, nfa.state.high, captured, 0, visited, toVisit, i, cp, nxt)
     for ni, _ in currStates.items:
       let n = nfa.state[ni]
       if n.kind == reEOE:
@@ -1803,7 +1803,7 @@ proc search*(s: string | seq[Rune], nfa: NFA): Match =
   for i, cp, nxt in s.peek:
     visited.clear()
     currStates.step(
-      nfa, nfa.state.high.int16, captured, 0, visited, toVisit, i, cp, nxt)
+      nfa, nfa.state.high, captured, 0, visited, toVisit, i, cp, nxt)
     if currStates.len > 0 and
         nfa.state[currStates[0].ni].kind == reEOE:
       break
@@ -1860,7 +1860,7 @@ when isMainModule:
     var ng: Table[string, int]
     let n: NFA = (
       state: s.parse.greediness.applyFlags.expandRepRange.joinAtoms.rpn.nfa,
-      groupsCount: 0,
+      groupsCount: 0'i16,
       namedGroups: ng)
     result = $n
 

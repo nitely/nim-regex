@@ -779,10 +779,18 @@ proc parseRepRange(sc: Scanner[Rune]): seq[Node] =
     last = "-1"
   doAssert(first.len > 0)
   doAssert(last.len > 0)
+  let
+    firstNum = first.parseInt
+    lastNum = last.parseInt
+  # for perf reasons. This becomes a?a?a?...
+  # too many parallel states
+  doAssert(
+    not (lastNum != -1 and lastNum - firstNum > 100),
+    "{n,m} can't have a range greater than 100 repetitions")
   result = @[Node(
     kind: reRepRange,
-    min: first.parseInt,
-    max: last.parseInt)]
+    min: firstNum,
+    max: lastNum)]
 
 proc toFlag(r: Rune): Flag =
   case r

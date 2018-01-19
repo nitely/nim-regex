@@ -1488,7 +1488,7 @@ proc `$`(nfa: NFA): string =
   result = nfa.stringify(nfa.state.high.int16, visited)
 
 type
-  BitSetSeq = object
+  BitSet = object
     ## a seq with set powers.
     ## It doesn't allow duplicates.
     ## It's O(1) time and O(n)
@@ -1496,10 +1496,10 @@ type
     s: seq[int]
     key: int
 
-proc initBitSetSeq(size: int): BitSetSeq =
-  BitSetSeq(s: newSeq[int](size), key: 1)
+proc initBitSet(size: int): BitSet =
+  BitSet(s: newSeq[int](size), key: 1)
 
-proc hardClear(bss: var BitSetSeq) =
+proc hardClear(bss: var BitSet) =
   assert bss.key == bss.key.high
   for k in bss.s.mitems:
     if k == bss.key:
@@ -1508,15 +1508,15 @@ proc hardClear(bss: var BitSetSeq) =
       k = 0
   bss.key = 1
 
-proc clear(bss: var BitSetSeq) =
+proc clear(bss: var BitSet) =
   if bss.key == bss.key.high:
     bss.hardClear()
   inc bss.key
 
-proc incl(bss: var BitSetSeq, x: int) =
+proc incl(bss: var BitSet, x: int) =
   bss.s[x] = bss.key
 
-proc contains(bss: var BitSetSeq, x: int): bool =
+proc contains(bss: var BitSet, x: int): bool =
   bss.s[x] == bss.key
 
 type
@@ -1559,12 +1559,12 @@ iterator items[T](ls: LeakySeq[T]): T {.inline.} =
 type
   States = tuple
     states: LeakySeq[State]
-    ids: BitSetSeq
+    ids: BitSet
 
 proc initStates(size: int): States =
   result = (
     states: initLeakySeq[State](),
-    ids: initBitSetSeq(size))
+    ids: initBitSet(size))
 
 proc `[]`(ss: States, i: int): State =
   ss.states[i]
@@ -1665,7 +1665,7 @@ proc step(
     nIdx: int16,
     captured: var LeakySeq[Capture],
     cIdx: int,
-    visited: var BitSetSeq,
+    visited: var BitSet,
     toVisit: var LeakySeq[State],
     cpIdx: int,
     cp: Rune,
@@ -1715,7 +1715,7 @@ template stepFrom(
     nfa: NFA,
     captured: var LeakySeq[Capture],
     cIdx: int,
-    visited: var BitSetSeq,
+    visited: var BitSet,
     toVisit: var LeakySeq[State],
     cpIdx: int,
     cp: Rune,
@@ -1728,7 +1728,7 @@ template stepFrom(
 
 proc fullMatch*(s: string | seq[Rune], nfa: NFA): Match =
   var
-    visited = initBitSetSeq(nfa.state.len)
+    visited = initBitSet(nfa.state.len)
     toVisit = initLeakySeq[State]()
     captured: LeakySeq[Capture]
     currStates = initStates(nfa.state.len)
@@ -1764,7 +1764,7 @@ proc fullMatch*(s: string | seq[Rune], nfa: NFA): Match =
 
 proc contains*(s: string | seq[Rune], nfa: NFA): bool =
   var
-    visited = initBitSetSeq(nfa.state.len)
+    visited = initBitSet(nfa.state.len)
     toVisit = initLeakySeq[State]()
     captured: LeakySeq[Capture]
     currStates = initStates(nfa.state.len)
@@ -1792,7 +1792,7 @@ proc search*(s: string | seq[Rune], nfa: NFA): Match =
   ## search through the string looking for the first
   ## location where there is a match
   var
-    visited = initBitSetSeq(nfa.state.len)
+    visited = initBitSet(nfa.state.len)
     toVisit = initLeakySeq[State]()
     captured: LeakySeq[Capture]
     currStates = initStates(nfa.state.len)

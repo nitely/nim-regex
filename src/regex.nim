@@ -2436,6 +2436,7 @@ when isMainModule:
   doAssert("\x07".isFullMatch(re"[\a]"))
   doAssert("\x07".isFullMatch(re"[\a-\a]"))
   doAssert(not "0".isFullMatch(re"[\a-\a]"))
+  #doAssert("|".isFullMatch(re"[a|b]"))  # ????
 
   # tsearch
   doAssert("abcd".search(re"bc").isMatch)

@@ -1480,6 +1480,38 @@ proc `$`(nfa: NFA): string =
   result = nfa.stringify(nfa.state.high.int16, visited)
 
 type
+  BitSetSeq = object
+    ## a seq with set powers.
+    ## It doesn't allow duplicates.
+    ## It's O(1) time and O(n)
+    ## space complexity
+    s: seq[int]
+    key: int
+
+proc initBitSetSeq(size: int): BitSetSeq =
+  BitSetSeq(s: newSeq[int](size), key: 1)
+
+proc hardClear(bss: var BitSetSeq) =
+  assert bss.key == bss.key.high
+  for k in bss.s.mitems:
+    if k == bss.key:
+      k = 1
+    else:
+      k = 0
+  bss.key = 1
+
+proc clear(bss: var BitSetSeq) =
+  if bss.key == bss.key.high:
+    bss.hardClear()
+  inc bss.key
+
+proc incl(bss: var BitSetSeq, x: int) =
+  bss.s[x] = bss.key
+
+proc contains(bss: var BitSetSeq, x: int): bool =
+  bss.s[x] == bss.key
+
+type
   LeakySeq[T] = object
     ## a seq that can only grow
     s: seq[T]
@@ -1519,12 +1551,12 @@ iterator items[T](ls: LeakySeq[T]): T {.inline.} =
 type
   States = tuple
     states: LeakySeq[State]
-    ids: set[int16]
+    ids: BitSetSeq
 
-proc initStates(): States =
+proc initStates(size: int): States =
   result = (
     states: initLeakySeq[State](),
-    ids: {})
+    ids: initBitSetSeq(size))
 
 proc `[]`(ss: States, i: int): State =
   ss.states[i]
@@ -1534,7 +1566,7 @@ proc len(ss: States): int =
 
 proc clear(ss: var States) =
   ss.states.clear()
-  ss.ids = {}
+  ss.ids.clear()
 
 proc add(ss: var States, s: State) =
   if s.ni notin ss.ids:
@@ -1625,7 +1657,7 @@ proc step(
     nIdx: int16,
     captured: var LeakySeq[Capture],
     cIdx: int,
-    visited: var set[int16],
+    visited: var BitSetSeq,
     toVisit: var LeakySeq[State],
     cpIdx: int,
     cp: Rune,
@@ -1675,7 +1707,7 @@ template stepFrom(
     nfa: NFA,
     captured: var LeakySeq[Capture],
     cIdx: int,
-    visited: var set[int16],
+    visited: var BitSetSeq,
     toVisit: var LeakySeq[State],
     cpIdx: int,
     cp: Rune,
@@ -1688,11 +1720,11 @@ template stepFrom(
 
 proc fullMatch*(s: string | seq[Rune], nfa: NFA): Match =
   var
-    visited: set[int16] = {}
+    visited = initBitSetSeq(nfa.state.len)
     toVisit = initLeakySeq[State]()
     captured: LeakySeq[Capture]
-    currStates = initStates()
-    nextStates = initStates()
+    currStates = initStates(nfa.state.len)
+    nextStates = initStates(nfa.state.len)
   if nfa.groupsCount > 0:
     captured = initLeakySeq[Capture]()
     captured.add(Capture())
@@ -1709,7 +1741,7 @@ proc fullMatch*(s: string | seq[Rune], nfa: NFA): Match =
       let n = nfa.state[ni]
       if not n.match(cp):
         continue
-      visited.reset()
+      visited.clear()
       stepFrom(
         nextStates, n, nfa, captured, ci, visited, toVisit, i, cp, nxt)
     swap(currStates, nextStates)
@@ -1724,13 +1756,13 @@ proc fullMatch*(s: string | seq[Rune], nfa: NFA): Match =
 
 proc contains*(s: string | seq[Rune], nfa: NFA): bool =
   var
-    visited: set[int16] = {}
+    visited = initBitSetSeq(nfa.state.len)
     toVisit = initLeakySeq[State]()
     captured: LeakySeq[Capture]
-    currStates = initStates()
-    nextStates = initStates()
+    currStates = initStates(nfa.state.len)
+    nextStates = initStates(nfa.state.len)
   for i, cp, nxt in s.peek:
-    visited = {}
+    visited.clear()
     currStates.step(
       nfa, nfa.state.high.int16, captured, 0, visited, toVisit, i, cp, nxt)
     for ni, _ in currStates.items:
@@ -1739,7 +1771,7 @@ proc contains*(s: string | seq[Rune], nfa: NFA): bool =
         return true
       if not n.match(cp):
         continue
-      visited = {}
+      visited.clear()
       stepFrom(
         nextStates, n, nfa, captured, 0, visited, toVisit, i, cp, nxt)
     swap(currStates, nextStates)
@@ -1752,16 +1784,16 @@ proc search*(s: string | seq[Rune], nfa: NFA): Match =
   ## search through the string looking for the first
   ## location where there is a match
   var
-    visited: set[int16] = {}
+    visited = initBitSetSeq(nfa.state.len)
     toVisit = initLeakySeq[State]()
     captured: LeakySeq[Capture]
-    currStates = initStates()
-    nextStates = initStates()
+    currStates = initStates(nfa.state.len)
+    nextStates = initStates(nfa.state.len)
   if nfa.groupsCount > 0:
     captured = initLeakySeq[Capture]()
     captured.add(Capture())
   for i, cp, nxt in s.peek:
-    visited = {}
+    visited.clear()
     currStates.step(
       nfa, nfa.state.high.int16, captured, 0, visited, toVisit, i, cp, nxt)
     if currStates.len > 0 and
@@ -1776,7 +1808,7 @@ proc search*(s: string | seq[Rune], nfa: NFA): Match =
         continue
       if not n.match(cp):
         continue
-      visited = {}
+      visited.clear()
       stepFrom(
         nextStates, n, nfa, captured, ci, visited, toVisit, i, cp, nxt)
     swap(currStates, nextStates)

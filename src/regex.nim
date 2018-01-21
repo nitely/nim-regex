@@ -3,7 +3,7 @@ A library for parsing, compiling, and executing
 regular expressions. The match time is linear
 with respect to the length of the input and
 the regular expression. So, it can handle
-untrusted users input. Its syntax is similar to PCRE
+input from untrusted users. Its syntax is similar to PCRE
 but lacks a few features that can not be implemented
 while keeping the space/time complexity guarantees,
 i.e.: backreferences and look-around assertions.
@@ -902,6 +902,8 @@ proc subParse(sc: Scanner[Rune]): seq[Node] =
     @[Node(kind: reEndSym, cp: r)]
   of ".".toRune:
     @[Node(kind: reAny, cp: r)]
+  of "\\".toRune:
+    @[sc.next().toEscapedNode]
   else:
     @[r.toCharNode]
 
@@ -910,15 +912,7 @@ proc parse(expression: string): seq[Node] =
   ## into a ``Node`` expression
   result = newSeqOfCap[Node](expression.len)
   let sc = expression.toRunes.scan()
-  var isEscaped = false
-  for cp in sc:
-    if isEscaped:
-      isEscaped = false
-      result.add(cp.toEscapedNode)
-      continue
-    if cp == "\\".toRune:
-      isEscaped = true
-      continue
+  for _ in sc:
     result.add(sc.subParse())
 
 proc greediness(expression: seq[Node]): seq[Node] =
@@ -1520,37 +1514,38 @@ proc contains(bss: var BitSet, x: int): bool =
   bss.s[x] == bss.key
 
 type
-  LeakySeq[T] = object
-    ## a seq that can only grow
+  ElasticSeq[T] = object
+    ## a seq that can grow and shrink
+    ## avoiding excessive allocations
     s: seq[T]
     pos: int
 
-proc initLeakySeq[T](size = 16): LeakySeq[T] =
-  LeakySeq[T](s: newSeq[T](size), pos: 0)
+proc initElasticSeq[T](size = 16): ElasticSeq[T] =
+  ElasticSeq[T](s: newSeq[T](size), pos: 0)
 
-proc isInitialized[T](ls: LeakySeq[T]): bool =
+proc isInitialized[T](ls: ElasticSeq[T]): bool =
   not ls.s.isNil
 
-proc `[]`[T](ls: LeakySeq[T], i: int): T =
+proc `[]`[T](ls: ElasticSeq[T], i: int): T =
   ls.s[i]
 
-proc len[T](ls: LeakySeq[T]): int =
+proc len[T](ls: ElasticSeq[T]): int =
   ls.pos
 
-proc clear[T](ls: var LeakySeq[T]) =
+proc clear[T](ls: var ElasticSeq[T]) =
   ls.pos = 0
 
-proc add[T](ls: var LeakySeq[T], x: T) =
+proc add[T](ls: var ElasticSeq[T], x: T) =
   if ls.pos > ls.s.high:
     ls.s.setLen(ls.s.len * 2)
   ls.s[ls.pos] = x
   inc ls.pos
 
-proc pop[T](ls: var LeakySeq[T]): T =
+proc pop[T](ls: var ElasticSeq[T]): T =
   dec ls.pos
   ls.s[ls.pos]
 
-iterator items[T](ls: LeakySeq[T]): T {.inline.} =
+iterator items[T](ls: ElasticSeq[T]): T {.inline.} =
   var i = 0
   while i < ls.pos:
     yield ls.s[i]
@@ -1558,12 +1553,12 @@ iterator items[T](ls: LeakySeq[T]): T {.inline.} =
 
 type
   States = tuple
-    states: LeakySeq[State]
+    states: ElasticSeq[State]
     ids: BitSet
 
 proc initStates(size: int): States =
   result = (
-    states: initLeakySeq[State](),
+    states: initElasticSeq[State](),
     ids: initBitSet(size))
 
 proc `[]`(ss: States, i: int): State =
@@ -1587,7 +1582,7 @@ iterator items(ss: States): State {.inline.} =
 
 proc populateCaptures(
     result: var Match,
-    captured: LeakySeq[Capture],
+    captured: ElasticSeq[Capture],
     cIdx: int,
     gc: int) =
   # calculate slices for every group,
@@ -1653,7 +1648,7 @@ iterator peek[T: seq[Rune] | string](s: T): (int, Rune, Rune) {.inline.} =
     j = i
   yield (j, prev, invalidRune)
 
-template toVisitStep(result: var LeakySeq[State], n: Node, cIdx: int) =
+template toVisitStep(result: var ElasticSeq[State], n: Node, cIdx: int) =
   if n.outB != -1:
     add(result, (ni: n.outB, ci: cIdx))
   if n.outA != -1:
@@ -1663,10 +1658,10 @@ proc step(
     result: var States,
     nfa: NFA,
     nIdx: int,
-    captured: var LeakySeq[Capture],
+    captured: var ElasticSeq[Capture],
     cIdx: int,
     visited: var BitSet,
-    toVisit: var LeakySeq[State],
+    toVisit: var ElasticSeq[State],
     cpIdx: int,
     cp: Rune,
     nxt: Rune) =
@@ -1713,10 +1708,10 @@ template stepFrom(
     result: var States,
     n: Node,
     nfa: NFA,
-    captured: var LeakySeq[Capture],
+    captured: var ElasticSeq[Capture],
     cIdx: int,
     visited: var BitSet,
-    toVisit: var LeakySeq[State],
+    toVisit: var ElasticSeq[State],
     cpIdx: int,
     cp: Rune,
     nxt: Rune) =
@@ -1729,12 +1724,12 @@ template stepFrom(
 proc fullMatch*(s: string | seq[Rune], nfa: NFA): Match =
   var
     visited = initBitSet(nfa.state.len)
-    toVisit = initLeakySeq[State]()
-    captured: LeakySeq[Capture]
+    toVisit = initElasticSeq[State]()
+    captured: ElasticSeq[Capture]
     currStates = initStates(nfa.state.len)
     nextStates = initStates(nfa.state.len)
   if nfa.groupsCount > 0:
-    captured = initLeakySeq[Capture]()
+    captured = initElasticSeq[Capture]()
     captured.add(Capture())
   for i, cp, nxt in s.peek:
     if cp == invalidRune:
@@ -1765,8 +1760,8 @@ proc fullMatch*(s: string | seq[Rune], nfa: NFA): Match =
 proc contains*(s: string | seq[Rune], nfa: NFA): bool =
   var
     visited = initBitSet(nfa.state.len)
-    toVisit = initLeakySeq[State]()
-    captured: LeakySeq[Capture]
+    toVisit = initElasticSeq[State]()
+    captured: ElasticSeq[Capture]
     currStates = initStates(nfa.state.len)
     nextStates = initStates(nfa.state.len)
   for i, cp, nxt in s.peek:
@@ -1793,12 +1788,12 @@ proc search*(s: string | seq[Rune], nfa: NFA): Match =
   ## location where there is a match
   var
     visited = initBitSet(nfa.state.len)
-    toVisit = initLeakySeq[State]()
-    captured: LeakySeq[Capture]
+    toVisit = initElasticSeq[State]()
+    captured: ElasticSeq[Capture]
     currStates = initStates(nfa.state.len)
     nextStates = initStates(nfa.state.len)
   if nfa.groupsCount > 0:
-    captured = initLeakySeq[Capture]()
+    captured = initElasticSeq[Capture]()
     captured.add(Capture())
   for i, cp, nxt in s.peek:
     visited.clear()

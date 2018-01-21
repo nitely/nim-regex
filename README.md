@@ -8,7 +8,7 @@ A library for parsing, compiling, and executing regular expressions.
 Features:
 
 * The match time is linear in the length of the input string
-* Regular expressions are compiled at compile-time
+* Regular expressions are (optionally) compiled at compile-time
 * Captures all group repetitions (not just the last one)
 * Unicode level-1 support
 

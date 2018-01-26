@@ -151,6 +151,7 @@ import algorithm
 import strutils
 import sets
 import tables
+import options
 
 import unicodedb
 import unicodeplus except isUpper, isLower
@@ -1395,7 +1396,6 @@ type
     namedGroups: Table[string, int]
   RegexMatch* = object
     ## result from matching operations
-    isMatch*: bool
     captures: seq[Slice[int]]
     groups: seq[Slice[int]] # todo: remove, merge with captures
     namedGroups: Table[string, int]
@@ -1731,16 +1731,17 @@ proc stepFrom(
       pattern, n.outB, captured, cIdx, visited, toVisit, cpIdx, cp, nxt)
 
 proc setRegexMatch(
-    result: var RegexMatch,
+    result: var Option[RegexMatch],
     states: States,
     pattern: Regex,
     captured: ElasticSeq[Capture]) {.inline.} =
   for ni, ci in states.items:
-    result.isMatch = pattern.states[ni].kind == reEOE
-    if result.isMatch:
+    if pattern.states[ni].kind == reEOE:
+      var m = RegexMatch()
       if pattern.groupsCount > 0:
-        result.populateCaptures(captured, ci, pattern.groupsCount)
-        result.namedGroups = pattern.namedGroups
+        m.populateCaptures(captured, ci, pattern.groupsCount)
+        m.namedGroups = pattern.namedGroups
+      result = some(m)
       return
 
 template initDataSets(withCaptures) {.dirty.} =
@@ -1755,7 +1756,16 @@ template initDataSets(withCaptures) {.dirty.} =
       captured = initElasticSeq[Capture]()
       captured.add(Capture())
 
-proc fullMatch*(s: string | seq[Rune], pattern: Regex): RegexMatch =
+proc fullMatch*(s: string | seq[Rune], pattern: Regex): Option[RegexMatch] =
+  ## return a match if the whole string
+  ## matches the regular expression. This
+  ## is similar to ``find(text, re"^regex$")``
+  ## but has better performance
+  ##
+  ## .. code-block::
+  ##   assert "abcd".fullMatch(re"abcd").isSome == true
+  ##   assert "abcd".fullMatch(re"abc").isSome == false
+  ##
   initDataSets(true)
   for i, cp, nxt in s.peek:
     if cp == invalidRune:
@@ -1779,12 +1789,25 @@ proc fullMatch*(s: string | seq[Rune], pattern: Regex): RegexMatch =
   setRegexMatch(result, currStates, pattern, captured)
 
 proc contains*(s: string | seq[Rune], pattern: Regex): bool =
+  ##  similar to ``find()`` but with better
+  ##  performance, since it returns as soon
+  ##  as there is a match, even when the
+  ##  expression has repetitions
+  ##
+  ## .. code-block::
+  ##   assert re"bc" in "abcd"
+  ##   assert re"bd" notin "abcd"
+  ##   assert re"(22)*" in "22222"
+  ##   assert re"^(22)*$" notin "22222"
+  ##
   initDataSets(false)
   for i, cp, nxt in s.peek:
     visited.clear()
     currStates.step(
       pattern, pattern.states.high, captured, 0,
       visited, toVisit, i, cp, nxt)
+    if cp == invalidRune:
+      continue
     for ni, _ in currStates.items:
       let n = pattern.states[ni]
       if n.kind == reEOE:
@@ -1801,9 +1824,16 @@ proc contains*(s: string | seq[Rune], pattern: Regex): bool =
     if result:
       return
 
-proc find*(s: string | seq[Rune], pattern: Regex): RegexMatch =
+proc find*(s: string | seq[Rune], pattern: Regex): Option[RegexMatch] =
   ## search through the string looking for the first
   ## location where there is a match
+  ##
+  ## .. code-block::
+  ##   assert "abcd".find(re"bc").isSome == true
+  ##   assert "abcd".find(re"de").isSome == false
+  ##   assert("2222".find(re"(22)*").get().group(0) ==
+  ##     @[Slice[int](a: 0, b: 1), Slice[int](a: 2, b: 3)])
+  ##
   initDataSets(true)
   for i, cp, nxt in s.peek:
     visited.clear()
@@ -1851,7 +1881,7 @@ template re*(s: string): Regex =
 
 when isMainModule:
   proc isFullMatch(s: string, pattern: Regex): bool =
-    s.fullMatch(pattern).isMatch
+    s.fullMatch(pattern).isSome
 
   proc toAtoms(s: string): string =
     s.parse.greediness.applyFlags.expandRepRange.joinAtoms.`$`
@@ -1861,12 +1891,14 @@ when isMainModule:
       states: s.parse.greediness.applyFlags.expandRepRange.joinAtoms.rpn.nfa)
     result = $pattern
 
-  proc toStrCaptures(m: RegexMatch, s: string): seq[seq[string]] =
-    assert m.isMatch
+  proc toStrCaptures(
+      m: Option[RegexMatch],
+      s: string): seq[seq[string]] =
+    assert m.isSome
     result = @[]
-    for g in 0 ..< m.groupsCount:
+    for g in 0 ..< m.get().groupsCount:
       result.add(@[])
-      for slice in m.group(g):
+      for slice in m.get().group(g):
         result[^1].add(s[slice])
 
   proc fullMatchWithCapt(s: string, pattern: Regex): seq[seq[string]] =
@@ -2310,10 +2342,10 @@ when isMainModule:
     "aaa".fullMatchWithCapt(re"(a){1,}?(a){1,}?(a)?") ==
     @[@["a"], @["a"], @["a"]])
   doAssert(
-    "aaaa".fullMatch(re"(a*?)(a*?)(a*)").groups2() ==
+    "aaaa".fullMatch(re"(a*?)(a*?)(a*)").get().groups2() ==
     @[@[0 .. -1], @[0 .. -1], @[0 .. 3]])  # note the empty slices
   doAssert(
-    "aaaa".fullMatch(re"(a*)(a*?)(a*?)").groups2() ==
+    "aaaa".fullMatch(re"(a*)(a*?)(a*?)").get().groups2() ==
     @[@[0 .. 3], @[4 .. 3], @[4 .. 3]])  # note the empty slices
 
   # tassertions
@@ -2349,35 +2381,35 @@ when isMainModule:
   doAssert(not "\L".isFullMatch(re".*"))
 
   # tgroup
-  doAssert("foobar".fullMatch(re"(\w*)").group(0) == @[0..5])
+  doAssert("foobar".fullMatch(re"(\w*)").get().group(0) == @[0..5])
   doAssert(
-    "foobar".fullMatch(re"(?P<foo>\w*)").group(0) == @[0..5])
+    "foobar".fullMatch(re"(?P<foo>\w*)").get().group(0) == @[0..5])
   doAssert(
-    "ab".fullMatch(re"(a)(b)").group(0) == @[0..0])
+    "ab".fullMatch(re"(a)(b)").get().group(0) == @[0..0])
   doAssert(
-    "ab".fullMatch(re"(a)(b)").group(1) == @[1..1])
+    "ab".fullMatch(re"(a)(b)").get().group(1) == @[1..1])
   doAssert(
-    "ab".fullMatch(re"(a)(b)").groups2() ==
+    "ab".fullMatch(re"(a)(b)").get().groups2() ==
     @[@[0..0], @[1..1]])
 
   # tnamed_groups
   doAssert(
-    "foobar".fullMatch(re"(?P<foo>\w*)").group("foo") ==
+    "foobar".fullMatch(re"(?P<foo>\w*)").get().group("foo") ==
     @[0..5])
   doAssert(
-    "foobar".fullMatch(re"(?P<foo>(?P<bar>\w*))").group("foo") ==
+    "foobar".fullMatch(re"(?P<foo>(?P<bar>\w*))").get().group("foo") ==
     @[0..5])
   doAssert(
-    "foobar".fullMatch(re"(?P<foo>(?P<bar>\w*))").group("bar") ==
+    "foobar".fullMatch(re"(?P<foo>(?P<bar>\w*))").get().group("bar") ==
     @[0..5])
   doAssert(
-    "aab".fullMatch(re"(?P<foo>(?P<bar>a)*b)").group("foo") ==
+    "aab".fullMatch(re"(?P<foo>(?P<bar>a)*b)").get().group("foo") ==
     @[0..2])
   doAssert(
-    "aab".fullMatch(re"(?P<foo>(?P<bar>a)*b)").group("bar") ==
+    "aab".fullMatch(re"(?P<foo>(?P<bar>a)*b)").get().group("bar") ==
     @[0..0, 1..1])
   doAssert(
-    "aab".fullMatch(re"((?P<bar>a)*b)").group("bar") ==
+    "aab".fullMatch(re"((?P<bar>a)*b)").get().group("bar") ==
     @[0..0, 1..1])
 
   #tflags
@@ -2482,7 +2514,17 @@ when isMainModule:
   #doAssert("|".isFullMatch(re"[a|b]"))  # ????
 
   # tfind
-  doAssert("abcd".find(re"bc").isMatch)
-  doAssert("abcd".find(re"^abcd$").isMatch)
+  doAssert("abcd".find(re"bc").isSome)
+  doAssert(not "abcd".find(re"ac").isSome)
+  doAssert("abcd".find(re"^abcd$").isSome)
   doAssert("2222".findWithCapt(re"(22)*") ==
     @[@["22", "22"]])
+  doAssert("2222".find(re"(22)*").get().group(0) ==
+    @[Slice[int](a: 0, b: 1), Slice[int](a: 2, b: 3)])
+
+  # tcontains
+  doAssert(re"bc" in "abcd")
+  doAssert(re"bd" notin "abcd")
+  doAssert(re"(22)*" in "2222")
+  doAssert(re"(22)*" in "22222")
+  doAssert(re"^(22)*$" notin "22222")

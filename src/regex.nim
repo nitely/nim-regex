@@ -1732,10 +1732,10 @@ proc stepFrom(
 
 proc setRegexMatch(
     result: var RegexMatch,
-    currStates: States,
+    states: States,
     pattern: Regex,
     captured: ElasticSeq[Capture]) {.inline.} =
-  for ni, ci in currStates.items:
+  for ni, ci in states.items:
     result.isMatch = pattern.states[ni].kind == reEOE
     if result.isMatch:
       if pattern.groupsCount > 0:
@@ -1801,7 +1801,7 @@ proc contains*(s: string | seq[Rune], pattern: Regex): bool =
     if result:
       return
 
-proc search*(s: string | seq[Rune], pattern: Regex): RegexMatch =
+proc find*(s: string | seq[Rune], pattern: Regex): RegexMatch =
   ## search through the string looking for the first
   ## location where there is a match
   initDataSets(true)
@@ -1861,13 +1861,19 @@ when isMainModule:
       states: s.parse.greediness.applyFlags.expandRepRange.joinAtoms.rpn.nfa)
     result = $pattern
 
-  proc fullMatchWithCapt(s: string, pattern: Regex): seq[seq[string]] =
-    let m = s.fullMatch(pattern)
+  proc toStrCaptures(m: RegexMatch, s: string): seq[seq[string]] =
+    assert m.isMatch
     result = @[]
     for g in 0 ..< m.groupsCount:
       result.add(@[])
       for slice in m.group(g):
         result[^1].add(s[slice])
+
+  proc fullMatchWithCapt(s: string, pattern: Regex): seq[seq[string]] =
+    s.fullMatch(pattern).toStrCaptures(s)
+
+  proc findWithCapt(s: string, pattern: Regex): seq[seq[string]] =
+    s.find(pattern).toStrCaptures(s)
 
   doAssert(toAtoms(r"a(b|c)*d") == r"a~(b|c)*~d")
   doAssert(toAtoms(r"abc") == r"a~b~c")
@@ -2475,6 +2481,8 @@ when isMainModule:
   doAssert(not "0".isFullMatch(re"[\a-\a]"))
   #doAssert("|".isFullMatch(re"[a|b]"))  # ????
 
-  # tsearch
-  doAssert("abcd".search(re"bc").isMatch)
-  doAssert("abcd".search(re"^abcd$").isMatch)
+  # tfind
+  doAssert("abcd".find(re"bc").isMatch)
+  doAssert("abcd".find(re"^abcd$").isMatch)
+  doAssert("2222".findWithCapt(re"(22)*") ==
+    @[@["22", "22"]])

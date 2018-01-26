@@ -1388,11 +1388,13 @@ proc nfa(expression: seq[Node]): seq[Node] =
     outB: -1))
 
 type
-  NFA = tuple  # todo: rename to Regex
-    state: seq[Node]
+  Regex* = object
+    ## a compiled regular expression
+    states: seq[Node]
     groupsCount: int16
     namedGroups: Table[string, int]
-  Match = object  # todo: rename to RegexMatch
+  RegexMatch* = object
+    ## result from matching operations
     isMatch*: bool
     captures: seq[Slice[int]]
     groups: seq[Slice[int]] # todo: remove, merge with captures
@@ -1406,10 +1408,12 @@ type
     idx: int16
     cpIdx: int
   State = tuple
+    ## temporary state to store node's
+    ## index and capture's index while matching
     ni: int
     ci: int
 
-iterator group(m: Match, i: int): Slice[int] =
+iterator group(m: RegexMatch, i: int): Slice[int] =
   ## return slices for a given group.
   ## Slices of end > start are empty
   ## matches (i.e.: ``re"(\d?)"``)
@@ -1417,22 +1421,22 @@ iterator group(m: Match, i: int): Slice[int] =
   for idx in m.groups[i]:
     yield m.captures[idx]
 
-proc group(m: Match, i: int): seq[Slice[int]] =
+proc group(m: RegexMatch, i: int): seq[Slice[int]] =
   ## return slices for a given group.
   ## Use the iterator version if you care about performance
   m.captures[m.groups[i]]
 
-iterator group(m: Match, s: string): Slice[int] =
+iterator group(m: RegexMatch, s: string): Slice[int] =
   ## return slices for a given group
   for idx in m.groups[m.namedGroups[s]]:
     yield m.captures[idx]
 
-proc group(m: Match, s: string): seq[Slice[int]] =
+proc group(m: RegexMatch, s: string): seq[Slice[int]] =
   ## return slices for a given group.
   ## Use the iterator version if you care about performance
   m.group(m.namedGroups[s])
 
-proc groupsCount(m: Match): int =
+proc groupsCount(m: RegexMatch): int =
   ## return the number of capturing groups
   ##
   ## .. code-block::
@@ -1443,7 +1447,7 @@ proc groupsCount(m: Match): int =
   m.groups.len
 
 # todo: remove?
-proc groups2(m: Match): seq[seq[Slice[int]]] =
+proc groups2(m: RegexMatch): seq[seq[Slice[int]]] =
   ## return slices for each group.
   result = newSeq[seq[Slice[int]]](m.groups.len)
   var j = 0
@@ -1454,28 +1458,28 @@ proc groups2(m: Match): seq[seq[Slice[int]]] =
       result[i][j] = m.captures[idx]
       inc j
 
-proc stringify(nfa: NFA, nIdx: int, visited: var set[int16]): string =
+proc stringify(pattern: Regex, nIdx: int, visited: var set[int16]): string =
   ## NFA to string representation.
   ## For debugging purposes
   if nIdx.int16 in visited:
     return "[...]"
   visited.incl(nIdx.int16)
-  let n = nfa.state[nIdx]
+  let n = pattern.states[nIdx]
   result = "["
   result.add($n)
   if n.outA != -1:
     result.add(", ")
-    result.add(nfa.stringify(n.outA, visited))
+    result.add(pattern.stringify(n.outA, visited))
   if n.outB != -1:
     result.add(", ")
-    result.add(nfa.stringify(n.outB, visited))
+    result.add(pattern.stringify(n.outB, visited))
   result.add("]")
 
-proc `$`(nfa: NFA): string =
+proc `$`(pattern: Regex): string =
   ## NFA to string representation.
   ## For debugging purposes
   var visited: set[int16] = {}
-  result = nfa.stringify(nfa.state.high, visited)
+  result = pattern.stringify(pattern.states.high, visited)
 
 type
   BitSet = object
@@ -1581,7 +1585,7 @@ iterator items(ss: States): State {.inline.} =
     yield s
 
 proc populateCaptures(
-    result: var Match,
+    result: var RegexMatch,
     captured: ElasticSeq[Capture],
     cIdx: int,
     gc: int) =
@@ -1656,7 +1660,7 @@ template toVisitStep(result: var ElasticSeq[State], n: Node, cIdx: int) =
 
 proc step(
     result: var States,
-    nfa: NFA,
+    pattern: Regex,
     nIdx: int,
     captured: var ElasticSeq[Capture],
     cIdx: int,
@@ -1672,7 +1676,7 @@ proc step(
     if state.ni in visited:
       continue
     visited.incl(state.ni)
-    let n = nfa.state[state.ni]
+    let n = pattern.states[state.ni]
     case n.kind
     of matchableKind, reEOE:
       result.add(state)
@@ -1707,7 +1711,7 @@ proc step(
 template stepFrom(
     result: var States,
     n: Node,
-    nfa: NFA,
+    pattern: Regex,
     captured: var ElasticSeq[Capture],
     cIdx: int,
     visited: var BitSet,
@@ -1717,18 +1721,18 @@ template stepFrom(
     nxt: Rune) =
   ## go to next states
   if n.outA != -1:
-    step(result, nfa, n.outA, captured, cIdx, visited, toVisit, cpIdx, cp, nxt)
+    step(result, pattern, n.outA, captured, cIdx, visited, toVisit, cpIdx, cp, nxt)
   if n.outB != -1:
-    step(result, nfa, n.outB, captured, cIdx, visited, toVisit, cpIdx, cp, nxt)
+    step(result, pattern, n.outB, captured, cIdx, visited, toVisit, cpIdx, cp, nxt)
 
-proc fullMatch*(s: string | seq[Rune], nfa: NFA): Match =
+proc fullMatch*(s: string | seq[Rune], pattern: Regex): RegexMatch =
   var
-    visited = initBitSet(nfa.state.len)
+    visited = initBitSet(pattern.states.len)
     toVisit = initElasticSeq[State]()
     captured: ElasticSeq[Capture]
-    currStates = initStates(nfa.state.len)
-    nextStates = initStates(nfa.state.len)
-  if nfa.groupsCount > 0:
+    currStates = initStates(pattern.states.len)
+    nextStates = initStates(pattern.states.len)
+  if pattern.groupsCount > 0:
     captured = initElasticSeq[Capture]()
     captured.add(Capture())
   for i, cp, nxt in s.peek:
@@ -1736,76 +1740,76 @@ proc fullMatch*(s: string | seq[Rune], nfa: NFA): Match =
       assert currStates.len == 0
       assert i == 0
       currStates.step(
-        nfa, nfa.state.high, captured, 0, visited, toVisit, i, cp, nxt)
+        pattern, pattern.states.high, captured, 0, visited, toVisit, i, cp, nxt)
       continue
     if currStates.len == 0:
       break
     for ni, ci in currStates.items:
-      let n = nfa.state[ni]
+      let n = pattern.states[ni]
       if not n.match(cp):
         continue
       visited.clear()
       stepFrom(
-        nextStates, n, nfa, captured, ci, visited, toVisit, i, cp, nxt)
+        nextStates, n, pattern, captured, ci, visited, toVisit, i, cp, nxt)
     swap(currStates, nextStates)
     nextStates.clear()
   for ni, ci in currStates.items:
-    if nfa.state[ni].kind == reEOE:
+    if pattern.states[ni].kind == reEOE:
       result.isMatch = true
-      if nfa.groupsCount > 0:
-        result.populateCaptures(captured, ci, nfa.groupsCount)
-        result.namedGroups = nfa.namedGroups
+      if pattern.groupsCount > 0:
+        result.populateCaptures(captured, ci, pattern.groupsCount)
+        result.namedGroups = pattern.namedGroups
       break
 
-proc contains*(s: string | seq[Rune], nfa: NFA): bool =
+proc contains*(s: string | seq[Rune], pattern: Regex): bool =
   var
-    visited = initBitSet(nfa.state.len)
+    visited = initBitSet(pattern.states.len)
     toVisit = initElasticSeq[State]()
     captured: ElasticSeq[Capture]
-    currStates = initStates(nfa.state.len)
-    nextStates = initStates(nfa.state.len)
+    currStates = initStates(pattern.states.len)
+    nextStates = initStates(pattern.states.len)
   for i, cp, nxt in s.peek:
     visited.clear()
     currStates.step(
-      nfa, nfa.state.high, captured, 0, visited, toVisit, i, cp, nxt)
+      pattern, pattern.states.high, captured, 0, visited, toVisit, i, cp, nxt)
     for ni, _ in currStates.items:
-      let n = nfa.state[ni]
+      let n = pattern.states[ni]
       if n.kind == reEOE:
         return true
       if not n.match(cp):
         continue
       visited.clear()
       stepFrom(
-        nextStates, n, nfa, captured, 0, visited, toVisit, i, cp, nxt)
+        nextStates, n, pattern, captured, 0, visited, toVisit, i, cp, nxt)
     swap(currStates, nextStates)
     nextStates.clear()
   for ni, _ in currStates.items:
-    if nfa.state[ni].kind == reEOE:
+    if pattern.states[ni].kind == reEOE:
       return true
 
-proc search*(s: string | seq[Rune], nfa: NFA): Match =
+proc search*(s: string | seq[Rune], pattern: Regex): RegexMatch =
   ## search through the string looking for the first
   ## location where there is a match
   var
-    visited = initBitSet(nfa.state.len)
+    visited = initBitSet(pattern.states.len)
     toVisit = initElasticSeq[State]()
     captured: ElasticSeq[Capture]
-    currStates = initStates(nfa.state.len)
-    nextStates = initStates(nfa.state.len)
-  if nfa.groupsCount > 0:
+    currStates = initStates(pattern.states.len)
+    nextStates = initStates(pattern.states.len)
+  if pattern.groupsCount > 0:
     captured = initElasticSeq[Capture]()
     captured.add(Capture())
   for i, cp, nxt in s.peek:
     visited.clear()
     currStates.step(
-      nfa, nfa.state.high, captured, 0, visited, toVisit, i, cp, nxt)
+      pattern, pattern.states.high, captured, 0, visited, toVisit, i, cp, nxt)
     if currStates.len > 0 and
-        nfa.state[currStates[0].ni].kind == reEOE:
+        pattern.states[currStates[0].ni].kind == reEOE:
       break
     if cp == invalidRune:
       continue
     for ni, ci in currStates.items:
-      let n = nfa.state[ni]
+      let n = pattern.states[ni]
       if n.kind == reEOE:
         nextStates.add((ni: ni, ci: ci))
         continue
@@ -1813,18 +1817,18 @@ proc search*(s: string | seq[Rune], nfa: NFA): Match =
         continue
       visited.clear()
       stepFrom(
-        nextStates, n, nfa, captured, ci, visited, toVisit, i, cp, nxt)
+        nextStates, n, pattern, captured, ci, visited, toVisit, i, cp, nxt)
     swap(currStates, nextStates)
     nextStates.clear()
   for ni, ci in currStates.items:
-    if nfa.state[ni].kind == reEOE:
+    if pattern.states[ni].kind == reEOE:
       result.isMatch = true
-      if nfa.groupsCount > 0:
-        result.populateCaptures(captured, ci, nfa.groupsCount)
-        result.namedGroups = nfa.namedGroups
+      if pattern.groupsCount > 0:
+        result.populateCaptures(captured, ci, pattern.groupsCount)
+        result.namedGroups = pattern.namedGroups
       break
 
-proc toPattern*(s: string): NFA =
+proc toPattern*(s: string): Regex =
   ## Parse and compile a regular expression.
   ## Use the ``re`` template if you
   ## care about performance.
@@ -1833,34 +1837,31 @@ proc toPattern*(s: string): NFA =
   var names: Table[string, int]
   if gc.names.len > 0:
     names = gc.names
-  result = (
-    state: ns.applyFlags.expandRepRange.joinAtoms.rpn.nfa,
+  result = Regex(
+    states: ns.applyFlags.expandRepRange.joinAtoms.rpn.nfa,
     groupsCount: gc.count,
     namedGroups: names)
 
-template re*(s: string): NFA =
+template re*(s: string): Regex =
   ## Parse and compile a regular
   ## expression at compile-time
   const pattern = toPattern(s)
   pattern
 
 when isMainModule:
-  proc isFullMatch(s: string, nfa: NFA): bool =
-    s.fullMatch(nfa).isMatch
+  proc isFullMatch(s: string, pattern: Regex): bool =
+    s.fullMatch(pattern).isMatch
 
   proc toAtoms(s: string): string =
     s.parse.greediness.applyFlags.expandRepRange.joinAtoms.`$`
 
   proc toNfaStr(s: string): string =
-    var ng: Table[string, int]
-    let n: NFA = (
-      state: s.parse.greediness.applyFlags.expandRepRange.joinAtoms.rpn.nfa,
-      groupsCount: 0'i16,
-      namedGroups: ng)
-    result = $n
+    let pattern = Regex(
+      states: s.parse.greediness.applyFlags.expandRepRange.joinAtoms.rpn.nfa)
+    result = $pattern
 
-  proc fullMatchWithCapt(s: string, nfa: NFA): seq[seq[string]] =
-    let m = s.fullMatch(nfa)
+  proc fullMatchWithCapt(s: string, pattern: Regex): seq[seq[string]] =
+    let m = s.fullMatch(pattern)
     result = @[]
     for g in 0 ..< m.groupsCount:
       result.add(@[])

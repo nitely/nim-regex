@@ -919,8 +919,8 @@ proc greediness(expression: seq[Node]): seq[Node] =
   ## apply greediness to an expression
   result = newSeqOfCap[Node](expression.len)
   let sc = expression.scan()
-  for n in sc:
-    var n = n
+  for nn in sc:
+    var n = nn
     if (n.kind in repetitionKind or
         n.kind == reZeroOrOne) and
         sc.peek.kind == reZeroOrOne:
@@ -1028,8 +1028,8 @@ proc applyFlags(expression: seq[Node]): seq[Node] =
   result = newSeqOfCap[Node](expression.len)
   let sc = expression.scan()
   var flags = newSeq[seq[Flag]]()  # todo: ofCap(groupsCount)
-  for n in sc:
-    var n = n
+  for nn in sc:
+    var n = nn
     for f in flags.squash():
       # todo: move to its own function
       case f
@@ -1316,8 +1316,8 @@ proc nfa(expression: seq[Node]): seq[Node] =
   ends.fill(@[])
   if expression.len == 0:
     states.add(0)
-  for n in expression:
-    var n = n
+  for nn in expression:
+    var n = nn
     let ni = result.high + 1
     case n.kind
     of matchableKind, assertionKind:

@@ -156,7 +156,16 @@ import options
 import unicodedb
 import unicodeplus except isUpper, isLower
 
-export isSome, get
+export Option, isSome, get
+
+type
+  RegexError* = object of ValueError
+  ## raised when the pattern
+  ## is not a valid regex
+
+proc check(cond: bool, msg: string) =
+  if not cond:
+    raise newException(RegexError, msg)
 
 const
   # This is used as start
@@ -605,7 +614,7 @@ proc next[T](sc: Scanner[T]): T =
   result = sc.s[sc.pos]
   inc sc.pos
 
-template peekImpl[T](sc: Scanner[T], default: T): T =
+proc peekImpl[T](sc: Scanner[T], default: T): T {.inline.} =
   ## same as ``curr`` except it
   ## returns a default/invalid value when
   ## the data is fully consumed
@@ -772,7 +781,10 @@ proc parseRepRange(sc: Scanner[Rune]): seq[Node] =
       first = curr
       curr = ""
       continue
-    doAssert(cp.int in '0'.ord .. '9'.ord)
+    check(
+      cp.int in '0'.ord .. '9'.ord,
+      "Invalid repetition range near position " &
+      $sc.pos & ", can only contain [0-9]")
     curr.add(char(cp.int))
   if first.isNil:  # {n}
     first = curr
@@ -780,22 +792,29 @@ proc parseRepRange(sc: Scanner[Rune]): seq[Node] =
     first.add('0')
   if last.len == 0:  # {n,} or {,}
     last = "-1"
-  doAssert(first.len > 0)
-  doAssert(last.len > 0)
-  let
-    firstNum = first.parseInt
-    lastNum = last.parseInt
+  var
+    firstNum: int16
+    lastNum: int16
+  try:
+    firstNum = first.parseInt().int16
+    lastNum = last.parseInt().int16
+  except ValueError, RangeError:
+    raise newException(RegexError,
+      "Invalid repetition " &
+      "range near position " & $sc.pos &
+      ", max value is " & $int16.high &
+      ", but found: " & first & ", " & last)
   # for perf reasons. This becomes a?a?a?...
   # too many parallel states
-  doAssert(
-    not (lastNum != -1 and lastNum - firstNum > 100),
-    "{n,m} can't have a range greater than 100 repetitions")
-  doAssert(firstNum <= int16.high)
-  doAssert(lastNum <= int16.high)
+  check(
+    not (lastNum - firstNum > 100),
+    "Invalid repetition range near position " & $sc.pos &
+    ", can't have a range greater than 100 " &
+    "repetitions, but found: " & $(lastNum - firstNum))
   result = @[Node(
     kind: reRepRange,
-    min: firstNum.int16,
-    max: lastNum.int16)]
+    min: firstNum,
+    max: lastNum)]
 
 proc toFlag(r: Rune): Flag =
   case r
@@ -1909,6 +1928,13 @@ when isMainModule:
   proc findWithCapt(s: string, pattern: Regex): seq[seq[string]] =
     s.find(pattern).toStrCaptures(s)
 
+  proc raises(pattern: string): bool =
+    result = false
+    try:
+      discard pattern.toPattern()
+    except RegexError:
+      result = true
+
   doAssert(toAtoms(r"a(b|c)*d") == r"a~(b|c)*~d")
   doAssert(toAtoms(r"abc") == r"a~b~c")
   doAssert(toAtoms(r"(abc|def)") == r"(a~b~c|d~e~f)")
@@ -2270,6 +2296,13 @@ when isMainModule:
   doAssert(not "".isMatch(re"(a{1,})"))
   doAssert("a".matchWithCapt(re"(a{1,})") == @[@["a"]])
   doAssert("aaa".matchWithCapt(re"(a{1,})") == @[@["aaa"]])
+  doAssert(raises(r"a{bad}"))
+  doAssert(raises(r"a{1111111111}"))
+  doAssert(raises(r"a{0,101}"))
+  doAssert(not raises(r"a{0,100}"))
+  doAssert(raises(r"a{0,a}"))
+  doAssert(raises(r"a{a,1}"))
+  doAssert(raises(r"a{-1}"))
 
   #tnon_capturing_groups
   doAssert("a".matchWithCapt(re"(?:a)") == @[])

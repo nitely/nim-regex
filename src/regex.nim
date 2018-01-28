@@ -231,7 +231,7 @@ type
   Node = object
     kind: NodeKind
     cp: Rune
-    outA, outB: int
+    outA, outB: int32
     isGreedy: bool
     # reGroupStart, reGroupEnd
     idx: int16  # todo: rename?
@@ -239,7 +239,7 @@ type
     name: string
     flags: seq[Flag]
     # reRepRange
-    min, max: int
+    min, max: int16
     # reSet, reNotSet
     cps: HashSet[Rune]
     ranges: seq[SetRange]  # todo: interval tree
@@ -788,10 +788,12 @@ proc parseRepRange(sc: Scanner[Rune]): seq[Node] =
   doAssert(
     not (lastNum != -1 and lastNum - firstNum > 100),
     "{n,m} can't have a range greater than 100 repetitions")
+  doAssert(firstNum <= int16.high)
+  doAssert(lastNum <= int16.high)
   result = @[Node(
     kind: reRepRange,
-    min: firstNum,
-    max: lastNum)]
+    min: firstNum.int16,
+    max: lastNum.int16)]
 
 proc toFlag(r: Rune): Flag =
   case r
@@ -1263,7 +1265,7 @@ proc rpn(expression: seq[Node]): seq[Node] =
   result.add(ops)
 
 type
-  End = seq[int]
+  End = seq[int32]
     ## store all the last
     ## states of a given state.
     ## Avoids having to recurse
@@ -1273,8 +1275,8 @@ type
 template combine(
     nfa: var seq[Node],
     ends: var seq[End],
-    org: int,
-    target: int) =
+    org: int32,
+    target: int32) =
   ## combine ends of ``org``
   ## with ``target``
   for e in ends[org]:
@@ -1286,9 +1288,9 @@ template combine(
 
 template update(
     ends: var seq[End],
-    ni: int,
-    outA: int,
-    outB: int) =
+    ni: int32,
+    outA: int32,
+    outB: int32) =
   ## update the ends of Node ``ni``
   ## to point to ends of ``n.outA``
   ## and ``n.outB``. If either outA
@@ -1313,13 +1315,14 @@ proc nfa(expression: seq[Node]): seq[Node] =
   result.add(initEOENode())
   var
     ends = newSeq[End](expression.len + 1)
-    states = newSeq[int]()
+    states = newSeq[int32]()
   ends.fill(@[])
   if expression.len == 0:
     states.add(0)
   for nn in expression:
+    doAssert(result.high + 1 <= int32.high)
     var n = nn
-    let ni = result.high + 1
+    let ni = int32(result.high + 1)
     case n.kind
     of matchableKind, assertionKind:
       n.outA = 0
@@ -1386,7 +1389,7 @@ proc nfa(expression: seq[Node]): seq[Node] =
     kind: reSkip,
     cp: "¿".toRune,
     outA: states[0],
-    outB: -1))
+    outB: -1'i32))
 
 type
   Regex* = object
@@ -1410,7 +1413,7 @@ type
   State = tuple
     ## temporary state to store node's
     ## index and capture's index while matching
-    ni: int
+    ni: int32
     ci: int
 
 iterator group(m: RegexMatch, i: int): Slice[int] =
@@ -1491,24 +1494,16 @@ type
     ## regular bitsets, it offers
     ## amortized O(1) time ``clear``
     ## at the cost of memory space
-    s: seq[int]
-    key: int
+    s: seq[int32]
+    key: int32
 
 proc initBitSet(size: int): BitSet =
-  BitSet(s: newSeq[int](size), key: 1)
-
-proc hardClear(bss: var BitSet) =
-  assert bss.key == bss.key.high
-  for k in bss.s.mitems:
-    if k == bss.key:
-      k = 1
-    else:
-      k = 0
-  bss.key = 1
+  BitSet(s: newSeq[int32](size), key: 1)
 
 proc clear(bss: var BitSet) =
   if bss.key == bss.key.high:
-    bss.hardClear()
+    bss.s.fill(0)
+    bss.key = 0
   inc bss.key
 
 proc incl(bss: var BitSet, x: int) =
@@ -1664,7 +1659,7 @@ proc toVisitStep(
 proc step(
     result: var States,
     pattern: Regex,
-    nIdx: int,
+    nIdx: int32,
     captured: var ElasticSeq[Capture],
     cIdx: int,
     visited: var BitSet,
@@ -1767,12 +1762,13 @@ proc fullMatch*(s: string | seq[Rune], pattern: Regex): Option[RegexMatch] =
   ##   assert "abcd".fullMatch(re"abc").isSome == false
   ##
   initDataSets(true)
+  let statesCount = pattern.states.high.int32
   for i, cp, nxt in s.peek:
     if cp == invalidRune:
       assert currStates.len == 0
       assert i == 0
       currStates.step(
-        pattern, pattern.states.high, captured, 0,
+        pattern, statesCount, captured, 0,
         visited, toVisit, i, cp, nxt)
       continue
     if currStates.len == 0:
@@ -1801,10 +1797,11 @@ proc contains*(s: string | seq[Rune], pattern: Regex): bool =
   ##   assert re"^(22)*$" notin "22222"
   ##
   initDataSets(false)
+  let statesCount = pattern.states.high.int32
   for i, cp, nxt in s.peek:
     visited.clear()
     currStates.step(
-      pattern, pattern.states.high, captured, 0,
+      pattern, statesCount, captured, 0,
       visited, toVisit, i, cp, nxt)
     if cp == invalidRune:
       continue
@@ -1835,10 +1832,11 @@ proc find*(s: string | seq[Rune], pattern: Regex): Option[RegexMatch] =
   ##     @[Slice[int](a: 0, b: 1), Slice[int](a: 2, b: 3)])
   ##
   initDataSets(true)
+  let statesCount = pattern.states.high.int32
   for i, cp, nxt in s.peek:
     visited.clear()
     currStates.step(
-      pattern, pattern.states.high, captured, 0,
+      pattern, statesCount, captured, 0,
       visited, toVisit, i, cp, nxt)
     if currStates.len > 0 and
         pattern.states[currStates[0].ni].kind == reEOE:
@@ -1863,13 +1861,13 @@ proc toPattern*(s: string): Regex =
   ## Parse and compile a regular expression.
   ## Use the ``re`` template if you
   ## care about performance.
-  var ns = s.parse.greediness
+  var ns = s.parse
   let gc = ns.fillGroups()
   var names: Table[string, int]
   if gc.names.len > 0:
     names = gc.names
   result = Regex(
-    states: ns.applyFlags.expandRepRange.joinAtoms.rpn.nfa,
+    states: ns.greediness.applyFlags.expandRepRange.joinAtoms.rpn.nfa,
     groupsCount: gc.count,
     namedGroups: names)
 

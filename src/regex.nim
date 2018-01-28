@@ -167,6 +167,18 @@ proc check(cond: bool, msg: string) =
   if not cond:
     raise newException(RegexError, msg)
 
+proc `%%`(formatstr: string, a: openArray[string]): string
+    {.noSideEffect, raises: [].} =
+  ## same as ``"$#" % ["foo"]`` but
+  ## returns empty string on error
+  try:
+    formatstr % a
+  except ValueError:
+    ""
+
+proc `%%`(formatstr: string, a: string): string =
+  formatstr %% [a]
+
 const
   # This is used as start
   # and end of string. It should
@@ -707,6 +719,7 @@ proc parseSet(sc: Scanner[Rune]): seq[Node] =
   ## ``Node`` of ``reSet`` or ``reNotSet`` kind.
   ## This proc is PCRE compatible and
   ## handles a ton of edge cases
+  let startPos = sc.pos
   var n = case sc.curr
   of "^".toRune:
     discard sc.next()
@@ -726,17 +739,23 @@ proc parseSet(sc: Scanner[Rune]): seq[Node] =
       isEscaped = true
       continue
     if isRange:
-      doAssert(cps.len > 0)
+      assert cps.len > 0
       var cp = cp
       if isEscaped:
         let nn = cp.toSetEscapedNode()
-        doAssert(nn.kind == reChar,
-          "invalid range in character class")
+        check(
+          nn.kind == reChar,
+          ("Invalid set range near position $#, " &
+           "range can't contain character-class" &
+           "/shorhand") %% $sc.pos)
         cp = nn.cp
       isRange = false
       isEscaped = false
       let start = cps.pop()
-      doAssert(start <= cp)
+      check(
+        start <= cp,
+        ("Invalid set range near position $#, " &
+         "start must be lesser than end") %% $sc.pos)
       n.ranges.add((
         rangeStart: start,
         rangeEnd: cp))
@@ -750,7 +769,7 @@ proc parseSet(sc: Scanner[Rune]): seq[Node] =
       if nn.kind == reChar:
         cps.add(nn.cp)
         continue
-      doAssert(nn.kind in shorthandKind)
+      assert nn.kind in shorthandKind
       n.shorthands.add(nn)
       if nxt == "-".toRune:
         cps.add(nxt)
@@ -763,9 +782,12 @@ proc parseSet(sc: Scanner[Rune]): seq[Node] =
   if isRange:
     cps.add("-".toRune)
   n.cps = cps.toSet
-  doAssert(not isEscaped)
-  doAssert(not n.isEmpty)
-  doAssert(hasEnd)
+  assert(not n.isEmpty)
+  assert(not isEscaped)
+  check(
+    hasEnd,
+    ("Invalid set near position $#, " &
+     "missing close symbol") %% $startPos)
   result = @[n]
 
 proc parseRepRange(sc: Scanner[Rune]): seq[Node] =
@@ -783,8 +805,8 @@ proc parseRepRange(sc: Scanner[Rune]): seq[Node] =
       continue
     check(
       cp.int in '0'.ord .. '9'.ord,
-      "Invalid repetition range near position " &
-      $sc.pos & ", can only contain [0-9]")
+      ("Invalid repetition range near position $#, " &
+       "can only contain [0-9]") %% $sc.pos)
     curr.add(char(cp.int))
   if first.isNil:  # {n}
     first = curr
@@ -800,17 +822,18 @@ proc parseRepRange(sc: Scanner[Rune]): seq[Node] =
     lastNum = last.parseInt().int16
   except ValueError, RangeError:
     raise newException(RegexError,
-      "Invalid repetition " &
-      "range near position " & $sc.pos &
-      ", max value is " & $int16.high &
-      ", but found: " & first & ", " & last)
+      ("Invalid repetition " &
+       "range near position $#, " &
+       "max value is $#, but found: $#, $#") %%
+      [$sc.pos, $int16.high, first, last])
   # for perf reasons. This becomes a?a?a?...
   # too many parallel states
   check(
     not (lastNum - firstNum > 100),
-    "Invalid repetition range near position " & $sc.pos &
-    ", can't have a range greater than 100 " &
-    "repetitions, but found: " & $(lastNum - firstNum))
+    ("Invalid repetition range near position $#, " &
+     "can't have a range greater than 100 " &
+     "repetitions, but found: $#") %%
+     [$sc.pos, $(lastNum - firstNum)])
   result = @[Node(
     kind: reRepRange,
     min: firstNum,
@@ -1935,6 +1958,12 @@ when isMainModule:
     except RegexError:
       result = true
 
+  proc raisesMsg(pattern: string): string =
+    try:
+      discard pattern.toPattern()
+    except RegexError as e:
+      result = e.msg
+
   doAssert(toAtoms(r"a(b|c)*d") == r"a~(b|c)*~d")
   doAssert(toAtoms(r"abc") == r"a~b~c")
   doAssert(toAtoms(r"(abc|def)") == r"(a~b~c|d~e~f)")
@@ -2185,10 +2214,20 @@ when isMainModule:
   doAssert("b".isMatch(re"[\b]"))
   doAssert("zz".isMatch(re"[\z][\z]"))
   doAssert(not "z".isMatch(re"[\z][\z]"))
-  # range out of order in character class (must raise)
-  # doAssert("b".isMatch(re"[d-c]"))
-  # invalid range in character class (must raise)
-  # doAssert("-".isMatch(re"[a-\w]"))
+  doAssert(raisesMsg(r"[a-\w]") ==
+    "Invalid set range near position 5, " &
+    "range can't contain character-class/shorhand")
+  doAssert(not raises(r"[a-\b]"))
+  doAssert(raisesMsg(r"[d-c]") ==
+    "Invalid set range near position 4, " &
+    "start must be lesser than end")
+  doAssert(raisesMsg(r"abc[]") ==
+    "Invalid set near position 4, missing close symbol")
+  doAssert(raisesMsg(r"[]abc") ==
+    "Invalid set near position 1, missing close symbol")
+  doAssert(raisesMsg(r"[abc") ==
+    "Invalid set near position 1, missing close symbol")
+
 
   # tnot_set
   doAssert("a".matchWithCapt(re"([^b])") == @[@["a"]])
@@ -2296,9 +2335,17 @@ when isMainModule:
   doAssert(not "".isMatch(re"(a{1,})"))
   doAssert("a".matchWithCapt(re"(a{1,})") == @[@["a"]])
   doAssert("aaa".matchWithCapt(re"(a{1,})") == @[@["aaa"]])
-  doAssert(raises(r"a{bad}"))
-  doAssert(raises(r"a{1111111111}"))
-  doAssert(raises(r"a{0,101}"))
+  doAssert(raisesMsg(r"a{bad}") ==
+    "Invalid repetition range near " &
+    "position 3, can only contain [0-9]")
+  doAssert(raisesMsg(r"a{1111111111}") ==
+    "Invalid repetition range near " &
+    "position 13, max value is 32767, " &
+    "but found: 1111111111, 1111111111")
+  doAssert(raisesMsg(r"a{0,101}") ==
+    "Invalid repetition range near " &
+    "position 8, can't have a range " &
+    "greater than 100 repetitions, but found: 101")
   doAssert(not raises(r"a{0,100}"))
   doAssert(raises(r"a{0,a}"))
   doAssert(raises(r"a{a,1}"))

@@ -156,6 +156,8 @@ import options
 import unicodedb
 import unicodeplus except isUpper, isLower
 
+export isSome, get
+
 const
   # This is used as start
   # and end of string. It should
@@ -1751,15 +1753,15 @@ template initDataSets(withCaptures) {.dirty.} =
       captured = initElasticSeq[Capture]()
       captured.add(Capture())
 
-proc fullMatch*(s: string | seq[Rune], pattern: Regex): Option[RegexMatch] =
+proc match*(s: string | seq[Rune], pattern: Regex): Option[RegexMatch] =
   ## return a match if the whole string
   ## matches the regular expression. This
   ## is similar to ``find(text, re"^regex$")``
   ## but has better performance
   ##
   ## .. code-block::
-  ##   assert "abcd".fullMatch(re"abcd").isSome == true
-  ##   assert "abcd".fullMatch(re"abc").isSome == false
+  ##   assert "abcd".match(re"abcd").isSome == true
+  ##   assert "abcd".match(re"abc").isSome == false
   ##
   initDataSets(true)
   let statesCount = pattern.states.high.int32
@@ -1785,35 +1787,37 @@ proc fullMatch*(s: string | seq[Rune], pattern: Regex): Option[RegexMatch] =
   setRegexMatch(result, currStates, pattern, captured)
 
 proc contains*(s: string | seq[Rune], pattern: Regex): bool =
-  ##  similar to ``find()`` but with better
-  ##  performance, since it returns as soon
+  ##  search for the pattern anywhere
+  ##  in the string. It returns as soon
   ##  as there is a match, even when the
-  ##  expression has repetitions
+  ##  expression has repetitions. Use
+  ##  `re"^regex$"` to match the whole
+  ##  string instead of searching
   ##
   ## .. code-block::
   ##   assert re"bc" in "abcd"
-  ##   assert re"bd" notin "abcd"
-  ##   assert re"(22)*" in "22222"
-  ##   assert re"^(22)*$" notin "22222"
+  ##   assert re"(23)+" in "23232"
+  ##   assert re"^(23)+$" notin "23232"
   ##
   initDataSets(false)
   let statesCount = pattern.states.high.int32
-  for i, cp, nxt in s.peek:
+  for _, cp, nxt in s.peek:
     visited.clear()
     currStates.step(
       pattern, statesCount, captured, 0,
-      visited, toVisit, i, cp, nxt)
+      visited, toVisit, 0, cp, nxt)
     if cp == invalidRune:
       continue
     for ni, _ in currStates.items:
       let n = pattern.states[ni]
-      if n.kind == reEOE:
-        return true
+      result = n.kind == reEOE
+      if result:
+        return
       if not n.match(cp):
         continue
       visited.clear()
       nextStates.stepFrom(
-        n, pattern, captured, 0, visited, toVisit, i, cp, nxt)
+        n, pattern, captured, 0, visited, toVisit, 0, cp, nxt)
     swap(currStates, nextStates)
     nextStates.clear()
   for ni, _ in currStates.items:
@@ -1878,8 +1882,8 @@ template re*(s: string): Regex =
   pattern
 
 when isMainModule:
-  proc isFullMatch(s: string, pattern: Regex): bool =
-    s.fullMatch(pattern).isSome
+  proc isMatch(s: string, pattern: Regex): bool =
+    s.match(pattern).isSome
 
   proc toAtoms(s: string): string =
     s.parse.greediness.applyFlags.expandRepRange.joinAtoms.`$`
@@ -1899,8 +1903,8 @@ when isMainModule:
       for slice in m.get().group(g):
         result[^1].add(s[slice])
 
-  proc fullMatchWithCapt(s: string, pattern: Regex): seq[seq[string]] =
-    s.fullMatch(pattern).toStrCaptures(s)
+  proc matchWithCapt(s: string, pattern: Regex): seq[seq[string]] =
+    s.match(pattern).toStrCaptures(s)
 
   proc findWithCapt(s: string, pattern: Regex): seq[seq[string]] =
     s.find(pattern).toStrCaptures(s)
@@ -1927,260 +1931,260 @@ when isMainModule:
   doAssert(toAtoms(r"(a*|b*)") != toAtoms(r"(a|b)*"))
 
   # tfull_match
-  doAssert("".isFullMatch(re""))
-  doAssert("a".isFullMatch(re"a"))
-  doAssert("ab".isFullMatch(re"(a)b"))
-  doAssert("aa".isFullMatch(re"(a)*"))
-  doAssert("aab".isFullMatch(re"((a)*b)"))
-  doAssert("abbbbccccd".isFullMatch(re"a(b|c)*d"))
-  doAssert("abbb".isFullMatch(re"((a)*(b)*)"))
-  doAssert("abbb".isFullMatch(re"((a(b)*)*(b)*)"))
-  doAssert("a".isFullMatch(re"a|b"))
-  doAssert("b".isFullMatch(re"a|b"))
-  doAssert(not "ab".isFullMatch(re"a(b|c)*d"))
-  doAssert(not "a".isFullMatch(re"b"))
-  doAssert(not "a".isFullMatch(re""))
+  doAssert("".isMatch(re""))
+  doAssert("a".isMatch(re"a"))
+  doAssert("ab".isMatch(re"(a)b"))
+  doAssert("aa".isMatch(re"(a)*"))
+  doAssert("aab".isMatch(re"((a)*b)"))
+  doAssert("abbbbccccd".isMatch(re"a(b|c)*d"))
+  doAssert("abbb".isMatch(re"((a)*(b)*)"))
+  doAssert("abbb".isMatch(re"((a(b)*)*(b)*)"))
+  doAssert("a".isMatch(re"a|b"))
+  doAssert("b".isMatch(re"a|b"))
+  doAssert(not "ab".isMatch(re"a(b|c)*d"))
+  doAssert(not "a".isMatch(re"b"))
+  doAssert(not "a".isMatch(re""))
 
   # trepetition_cycle
-  doAssert("aaa".isFullMatch(re"a**"))
-  doAssert("aaa".isFullMatch(re"(a*)*"))
-  doAssert("aaabbbaaa".isFullMatch(re"((a*|b*))*"))
-  doAssert("aaa".isFullMatch(re"a*****"))
-  #doAssert("aaa".isFullMatch(re"a*{,}"))  # must raise
-  doAssert("aaa".isFullMatch(re"(a?)*"))
-  doAssert("aaaa".isFullMatch(re"((a)*(a)*)*"))
+  doAssert("aaa".isMatch(re"a**"))
+  doAssert("aaa".isMatch(re"(a*)*"))
+  doAssert("aaabbbaaa".isMatch(re"((a*|b*))*"))
+  doAssert("aaa".isMatch(re"a*****"))
+  #doAssert("aaa".isMatch(re"a*{,}"))  # must raise
+  doAssert("aaa".isMatch(re"(a?)*"))
+  doAssert("aaaa".isMatch(re"((a)*(a)*)*"))
 
   # tcaptures
-  doAssert("ab".fullMatchWithCapt(re"(a)b") == @[@["a"]])
-  doAssert("aa".fullMatchWithCapt(re"(a)*") == @[@["a", "a"]])
+  doAssert("ab".matchWithCapt(re"(a)b") == @[@["a"]])
+  doAssert("aa".matchWithCapt(re"(a)*") == @[@["a", "a"]])
   doAssert(
-    "aab".fullMatchWithCapt(re"((a)*b)") ==
+    "aab".matchWithCapt(re"((a)*b)") ==
     @[@["aab"], @["a", "a"]])
   doAssert(
-    "abbbbccccd".fullMatchWithCapt(re"a(b|c)*d") ==
+    "abbbbccccd".matchWithCapt(re"a(b|c)*d") ==
     @[@["b", "b", "b", "b", "c", "c", "c", "c"]])
   doAssert(
-    "abbb".fullMatchWithCapt(re"((a)*(b)*)") ==
+    "abbb".matchWithCapt(re"((a)*(b)*)") ==
     @[@["abbb"], @["a"], @["b", "b", "b"]])
   doAssert(
-    "abbb".fullMatchWithCapt(re"((a(b)*)*(b)*)") ==
+    "abbb".matchWithCapt(re"((a(b)*)*(b)*)") ==
     @[@["abbb"], @["abbb"], @["b", "b", "b"], @[]])
-  doAssert("aa".fullMatchWithCapt(re"(a)+") == @[@["a", "a"]])
-  doAssert("abab".fullMatchWithCapt(re"(ab)+") == @[@["ab", "ab"]])
-  doAssert("a".fullMatchWithCapt(re"(a)?") == @[@["a"]])
-  doAssert("ab".fullMatchWithCapt(re"(ab)?") == @[@["ab"]])
+  doAssert("aa".matchWithCapt(re"(a)+") == @[@["a", "a"]])
+  doAssert("abab".matchWithCapt(re"(ab)+") == @[@["ab", "ab"]])
+  doAssert("a".matchWithCapt(re"(a)?") == @[@["a"]])
+  doAssert("ab".matchWithCapt(re"(ab)?") == @[@["ab"]])
   doAssert(
-    "aaabbbaaa".fullMatchWithCapt(re"(a*|b*)*") ==
+    "aaabbbaaa".matchWithCapt(re"(a*|b*)*") ==
     @[@["aaa", "bbb", "aaa"]])
   doAssert(
-    "abab".fullMatchWithCapt(re"(a(b))*") ==
+    "abab".matchWithCapt(re"(a(b))*") ==
     @[@["ab", "ab"], @["b", "b"]])
   # Following two should match the same
   doAssert(
-    "aaanasdnasd".fullMatchWithCapt(re"((a)*n?(asd)*)*") ==
+    "aaanasdnasd".matchWithCapt(re"((a)*n?(asd)*)*") ==
     @[@["aaanasd", "nasd"], @["a", "a", "a"], @["asd", "asd"]])
   doAssert(
-    "aaanasdnasd".fullMatchWithCapt(re"((a)*n?(asd))*") ==
+    "aaanasdnasd".matchWithCapt(re"((a)*n?(asd))*") ==
     @[@["aaanasd", "nasd"], @["a", "a", "a"], @["asd", "asd"]])
   doAssert(
-    "b".fullMatchWithCapt(re"(a)?b") ==
+    "b".matchWithCapt(re"(a)?b") ==
     @[newSeq[string]()])
   doAssert(
-    "ฅa".fullMatchWithCapt(re"(\w)(a)") ==
+    "ฅa".matchWithCapt(re"(\w)(a)") ==
     @[@["ฅ"], @["a"]])
 
   # tone_or_more_op
-  doAssert("aaaa".isFullMatch(re"a+"))
-  doAssert("abb".isFullMatch(re"ab+"))
-  doAssert("abaa".isFullMatch(re"aba+"))
-  doAssert(not "".isFullMatch(re"a+"))
-  doAssert(not "b".isFullMatch(re"a+"))
-  doAssert(not "aab".isFullMatch(re"b+"))
+  doAssert("aaaa".isMatch(re"a+"))
+  doAssert("abb".isMatch(re"ab+"))
+  doAssert("abaa".isMatch(re"aba+"))
+  doAssert(not "".isMatch(re"a+"))
+  doAssert(not "b".isMatch(re"a+"))
+  doAssert(not "aab".isMatch(re"b+"))
 
   # tzero_or_one_op
-  doAssert("a".isFullMatch(re"a?"))
-  doAssert("".isFullMatch(re"a?"))
-  doAssert("a".isFullMatch(re"ab?"))
-  doAssert("ab".isFullMatch(re"ab?"))
-  doAssert("aba".isFullMatch(re"ab?a"))
-  doAssert("aa".isFullMatch(re"ab?a"))
-  doAssert(not "aa".isFullMatch(re"a?"))
-  doAssert(not "b".isFullMatch(re"a?"))
-  doAssert(not "abb".isFullMatch(re"ab?"))
+  doAssert("a".isMatch(re"a?"))
+  doAssert("".isMatch(re"a?"))
+  doAssert("a".isMatch(re"ab?"))
+  doAssert("ab".isMatch(re"ab?"))
+  doAssert("aba".isMatch(re"ab?a"))
+  doAssert("aa".isMatch(re"ab?a"))
+  doAssert(not "aa".isMatch(re"a?"))
+  doAssert(not "b".isMatch(re"a?"))
+  doAssert(not "abb".isMatch(re"ab?"))
 
   # tescape
-  doAssert("(a)".isFullMatch(re"\(a\)"))
-  doAssert("a*b".isFullMatch(re"a\*b"))
-  doAssert("a*bbb".isFullMatch(re"a\*b*"))
-  doAssert("y".isFullMatch(re"\y"))
-  doAssert("\\".isFullMatch(re"\\"))
-  doAssert("\\\\".isFullMatch(re"\\\\"))
+  doAssert("(a)".isMatch(re"\(a\)"))
+  doAssert("a*b".isMatch(re"a\*b"))
+  doAssert("a*bbb".isMatch(re"a\*b*"))
+  doAssert("y".isMatch(re"\y"))
+  doAssert("\\".isMatch(re"\\"))
+  doAssert("\\\\".isMatch(re"\\\\"))
 
   # talphanum_shorthand
-  doAssert("a".isFullMatch(re"\w"))
-  doAssert("abc123".isFullMatch(re"\w*"))
-  doAssert("a".fullMatchWithCapt(re"(\w)") == @[@["a"]])
+  doAssert("a".isMatch(re"\w"))
+  doAssert("abc123".isMatch(re"\w*"))
+  doAssert("a".matchWithCapt(re"(\w)") == @[@["a"]])
 
   # tdigit
-  doAssert("1".isFullMatch(re"\d"))
-  doAssert("123".isFullMatch(re"\d*"))
-  doAssert("۲".isFullMatch(re"\d"))  # Kharosthi numeral
-  doAssert("⅕".isFullMatch(re"\d"))
+  doAssert("1".isMatch(re"\d"))
+  doAssert("123".isMatch(re"\d*"))
+  doAssert("۲".isMatch(re"\d"))  # Kharosthi numeral
+  doAssert("⅕".isMatch(re"\d"))
 
   # twhite_space_shorthand
-  doAssert(" ".isFullMatch(re"\s"))
-  doAssert("   ".isFullMatch(re"\s*"))
-  doAssert(" \t\r\f\v".isFullMatch(re"\s*"))
-  doAssert("\u20".isFullMatch(re"\s"))  # New Line
-  doAssert("\u2028".isFullMatch(re"\s"))  # Line separator
+  doAssert(" ".isMatch(re"\s"))
+  doAssert("   ".isMatch(re"\s*"))
+  doAssert(" \t\r\f\v".isMatch(re"\s*"))
+  doAssert("\u20".isMatch(re"\s"))  # New Line
+  doAssert("\u2028".isMatch(re"\s"))  # Line separator
 
   # talphanum_not_shorthand
-  doAssert(not "a".isFullMatch(re"\W"))
-  doAssert(not "abc123".isFullMatch(re"\W*"))
-  doAssert("!@#".isFullMatch(re"\W+"))
+  doAssert(not "a".isMatch(re"\W"))
+  doAssert(not "abc123".isMatch(re"\W*"))
+  doAssert("!@#".isMatch(re"\W+"))
 
   # tnot_digit
-  doAssert(not "1".isFullMatch(re"\D"))
-  doAssert(not "123".isFullMatch(re"\D*"))
-  doAssert(not "۲".isFullMatch(re"\D"))  # Kharosthi numeral
-  doAssert(not "⅕".isFullMatch(re"\D"))
-  doAssert("!@#".isFullMatch(re"\D+"))
-  doAssert("a".isFullMatch(re"\D"))
+  doAssert(not "1".isMatch(re"\D"))
+  doAssert(not "123".isMatch(re"\D*"))
+  doAssert(not "۲".isMatch(re"\D"))  # Kharosthi numeral
+  doAssert(not "⅕".isMatch(re"\D"))
+  doAssert("!@#".isMatch(re"\D+"))
+  doAssert("a".isMatch(re"\D"))
 
   # tnot_white_space_shorthand
-  doAssert("asd123!@#".isFullMatch(re"\S*"))
-  doAssert(not " ".isFullMatch(re"\S"))
-  doAssert(not "   ".isFullMatch(re"\S*"))
-  doAssert(not "\t".isFullMatch(re"\S"))
-  doAssert(not "\u20".isFullMatch(re"\S"))
-  doAssert(not "\r".isFullMatch(re"\S"))
-  doAssert(not "\f".isFullMatch(re"\S"))
-  doAssert(not "\v".isFullMatch(re"\S"))
-  doAssert(not "\u2028".isFullMatch(re"\S"))  # Line separator
+  doAssert("asd123!@#".isMatch(re"\S*"))
+  doAssert(not " ".isMatch(re"\S"))
+  doAssert(not "   ".isMatch(re"\S*"))
+  doAssert(not "\t".isMatch(re"\S"))
+  doAssert(not "\u20".isMatch(re"\S"))
+  doAssert(not "\r".isMatch(re"\S"))
+  doAssert(not "\f".isMatch(re"\S"))
+  doAssert(not "\v".isMatch(re"\S"))
+  doAssert(not "\u2028".isMatch(re"\S"))  # Line separator
 
   # tset
-  doAssert("a".isFullMatch(re"[a]"))
-  doAssert("a".isFullMatch(re"[abc]"))
-  doAssert("b".isFullMatch(re"[abc]"))
-  doAssert("c".isFullMatch(re"[abc]"))
-  doAssert(not "d".isFullMatch(re"[abc]"))
-  doAssert("a".isFullMatch(re"[\w]"))
-  doAssert("1".isFullMatch(re"[\w]"))
-  doAssert("1".isFullMatch(re"[\d]"))
-  doAssert("*".isFullMatch(re"[*]"))
-  doAssert("*".isFullMatch(re"[\*]"))
-  doAssert("*".isFullMatch(re"[a*]"))
-  doAssert("a".isFullMatch(re"[a*]"))
-  doAssert("a".isFullMatch(re"[a-z]"))
-  doAssert("f".isFullMatch(re"[a-z]"))
-  doAssert("z".isFullMatch(re"[a-z]"))
-  doAssert(not "A".isFullMatch(re"[a-z]"))
-  doAssert("0".isFullMatch(re"[0-9]"))
-  doAssert("5".isFullMatch(re"[0-9]"))
-  doAssert("9".isFullMatch(re"[0-9]"))
-  doAssert(not "a".isFullMatch(re"[0-9]"))
-  doAssert("(".isFullMatch(re"[()[\]{}]"))
-  doAssert(")".isFullMatch(re"[()[\]{}]"))
-  doAssert("}".isFullMatch(re"[()[\]{}]"))
-  doAssert("{".isFullMatch(re"[()[\]{}]"))
-  doAssert("[".isFullMatch(re"[()[\]{}]"))
-  doAssert("]".isFullMatch(re"[()[\]{}]"))
-  doAssert("(".isFullMatch(re"[]()[{}]"))
-  doAssert(")".isFullMatch(re"[]()[{}]"))
-  doAssert("}".isFullMatch(re"[]()[{}]"))
-  doAssert("{".isFullMatch(re"[]()[{}]"))
-  doAssert("[".isFullMatch(re"[]()[{}]"))
-  doAssert("]".isFullMatch(re"[]()[{}]"))
-  doAssert("\\".isFullMatch(re"[\\]"))
-  doAssert("\\".isFullMatch(re"[\\\]]"))
-  doAssert("]".isFullMatch(re"[\\\]]"))
-  doAssert("00".isFullMatch(re"[0-5][0-9]"))
-  doAssert("59".isFullMatch(re"[0-5][0-9]"))
-  doAssert(not "95".isFullMatch(re"[0-5][0-9]"))
-  doAssert("1".isFullMatch(re"[0-57-9]"))
-  doAssert("8".isFullMatch(re"[0-57-9]"))
-  doAssert(not "6".isFullMatch(re"[0-57-9]"))
-  doAssert("4".isFullMatch(re"[0-9A-Fa-f]"))
-  doAssert("b".isFullMatch(re"[0-9A-Fa-f]"))
-  doAssert("B".isFullMatch(re"[0-9A-Fa-f]"))
-  doAssert(not "-".isFullMatch(re"[0-9A-Fa-f]"))
-  doAssert("-".isFullMatch(re"[a\-z]"))
-  doAssert("a".isFullMatch(re"[a\-z]"))
-  doAssert("z".isFullMatch(re"[a\-z]"))
-  doAssert(not "b".isFullMatch(re"[a\-z]"))
-  doAssert("a".isFullMatch(re"[a-]"))
-  doAssert("-".isFullMatch(re"[a-]"))
-  doAssert("+".isFullMatch(re"[(+*)]"))
-  doAssert("*".isFullMatch(re"[(+*)]"))
-  doAssert("(".isFullMatch(re"[(+*)]"))
-  doAssert("[".isFullMatch(re"[[-\]]"))
-  doAssert("]".isFullMatch(re"[[-\]]"))
-  doAssert(not "-".isFullMatch(re"[[-\]]"))
-  doAssert("(".isFullMatch(re"[(-\)]"))
-  doAssert(")".isFullMatch(re"[(-\)]"))
-  doAssert(not "-".isFullMatch(re"[(-\)]"))
-  doAssert("\\".isFullMatch(re"[\\-\\)]"))
-  doAssert(not "-".isFullMatch(re"[\\-\\)]"))
-  doAssert("-".isFullMatch(re"[-]"))
-  doAssert("-".isFullMatch(re"[\-]"))
-  doAssert("-".isFullMatch(re"[\-\-]"))
-  doAssert("-".isFullMatch(re"[\--]"))
-  doAssert("-".isFullMatch(re"[\--\-]"))
-  doAssert("-".isFullMatch(re"[\---]"))
-  doAssert("b".isFullMatch(re"[\--\-a-z]"))
-  doAssert("b".isFullMatch(re"[\---a-z]"))
-  doAssert("b".isFullMatch(re"[-a-z]"))
-  doAssert("-".isFullMatch(re"[-a-z]"))
-  doAssert("a".isFullMatch(re"[-a]"))
-  doAssert("-".isFullMatch(re"[-a]"))
-  doAssert("b".isFullMatch(re"[a-d-z]"))
-  doAssert("-".isFullMatch(re"[a-d-z]"))
-  doAssert("z".isFullMatch(re"[a-d-z]"))
-  doAssert(not "e".isFullMatch(re"[a-d-z]"))
-  doAssert("]".isFullMatch(re"[]]"))
-  doAssert("]".isFullMatch(re"[\]]"))
-  doAssert(not "[".isFullMatch(re"[]]"))
-  doAssert(not "]]".isFullMatch(re"[]]"))
-  doAssert(not "-".isFullMatch(re"[[-\]]"))
-  doAssert(not "b".isFullMatch(re"[c-d]"))
-  doAssert("-".isFullMatch(re"[a\w-\wz]"))
-  doAssert("-".isFullMatch(re"[\w-a]"))
-  doAssert("-".isFullMatch(re"[\w-]"))
-  doAssert("a".isFullMatch(re"[\w-a]"))
-  doAssert("1".isFullMatch(re"[\w-a]"))
-  doAssert("-".isFullMatch(re"[db-c-f]"))
-  doAssert(not "e".isFullMatch(re"[db-c-f]"))
-  doAssert(not "-".isFullMatch(re"[=-_]"))
-  doAssert("A".isFullMatch(re"[\A]"))
-  doAssert("b".isFullMatch(re"[\b]"))
-  doAssert("zz".isFullMatch(re"[\z][\z]"))
-  doAssert(not "z".isFullMatch(re"[\z][\z]"))
+  doAssert("a".isMatch(re"[a]"))
+  doAssert("a".isMatch(re"[abc]"))
+  doAssert("b".isMatch(re"[abc]"))
+  doAssert("c".isMatch(re"[abc]"))
+  doAssert(not "d".isMatch(re"[abc]"))
+  doAssert("a".isMatch(re"[\w]"))
+  doAssert("1".isMatch(re"[\w]"))
+  doAssert("1".isMatch(re"[\d]"))
+  doAssert("*".isMatch(re"[*]"))
+  doAssert("*".isMatch(re"[\*]"))
+  doAssert("*".isMatch(re"[a*]"))
+  doAssert("a".isMatch(re"[a*]"))
+  doAssert("a".isMatch(re"[a-z]"))
+  doAssert("f".isMatch(re"[a-z]"))
+  doAssert("z".isMatch(re"[a-z]"))
+  doAssert(not "A".isMatch(re"[a-z]"))
+  doAssert("0".isMatch(re"[0-9]"))
+  doAssert("5".isMatch(re"[0-9]"))
+  doAssert("9".isMatch(re"[0-9]"))
+  doAssert(not "a".isMatch(re"[0-9]"))
+  doAssert("(".isMatch(re"[()[\]{}]"))
+  doAssert(")".isMatch(re"[()[\]{}]"))
+  doAssert("}".isMatch(re"[()[\]{}]"))
+  doAssert("{".isMatch(re"[()[\]{}]"))
+  doAssert("[".isMatch(re"[()[\]{}]"))
+  doAssert("]".isMatch(re"[()[\]{}]"))
+  doAssert("(".isMatch(re"[]()[{}]"))
+  doAssert(")".isMatch(re"[]()[{}]"))
+  doAssert("}".isMatch(re"[]()[{}]"))
+  doAssert("{".isMatch(re"[]()[{}]"))
+  doAssert("[".isMatch(re"[]()[{}]"))
+  doAssert("]".isMatch(re"[]()[{}]"))
+  doAssert("\\".isMatch(re"[\\]"))
+  doAssert("\\".isMatch(re"[\\\]]"))
+  doAssert("]".isMatch(re"[\\\]]"))
+  doAssert("00".isMatch(re"[0-5][0-9]"))
+  doAssert("59".isMatch(re"[0-5][0-9]"))
+  doAssert(not "95".isMatch(re"[0-5][0-9]"))
+  doAssert("1".isMatch(re"[0-57-9]"))
+  doAssert("8".isMatch(re"[0-57-9]"))
+  doAssert(not "6".isMatch(re"[0-57-9]"))
+  doAssert("4".isMatch(re"[0-9A-Fa-f]"))
+  doAssert("b".isMatch(re"[0-9A-Fa-f]"))
+  doAssert("B".isMatch(re"[0-9A-Fa-f]"))
+  doAssert(not "-".isMatch(re"[0-9A-Fa-f]"))
+  doAssert("-".isMatch(re"[a\-z]"))
+  doAssert("a".isMatch(re"[a\-z]"))
+  doAssert("z".isMatch(re"[a\-z]"))
+  doAssert(not "b".isMatch(re"[a\-z]"))
+  doAssert("a".isMatch(re"[a-]"))
+  doAssert("-".isMatch(re"[a-]"))
+  doAssert("+".isMatch(re"[(+*)]"))
+  doAssert("*".isMatch(re"[(+*)]"))
+  doAssert("(".isMatch(re"[(+*)]"))
+  doAssert("[".isMatch(re"[[-\]]"))
+  doAssert("]".isMatch(re"[[-\]]"))
+  doAssert(not "-".isMatch(re"[[-\]]"))
+  doAssert("(".isMatch(re"[(-\)]"))
+  doAssert(")".isMatch(re"[(-\)]"))
+  doAssert(not "-".isMatch(re"[(-\)]"))
+  doAssert("\\".isMatch(re"[\\-\\)]"))
+  doAssert(not "-".isMatch(re"[\\-\\)]"))
+  doAssert("-".isMatch(re"[-]"))
+  doAssert("-".isMatch(re"[\-]"))
+  doAssert("-".isMatch(re"[\-\-]"))
+  doAssert("-".isMatch(re"[\--]"))
+  doAssert("-".isMatch(re"[\--\-]"))
+  doAssert("-".isMatch(re"[\---]"))
+  doAssert("b".isMatch(re"[\--\-a-z]"))
+  doAssert("b".isMatch(re"[\---a-z]"))
+  doAssert("b".isMatch(re"[-a-z]"))
+  doAssert("-".isMatch(re"[-a-z]"))
+  doAssert("a".isMatch(re"[-a]"))
+  doAssert("-".isMatch(re"[-a]"))
+  doAssert("b".isMatch(re"[a-d-z]"))
+  doAssert("-".isMatch(re"[a-d-z]"))
+  doAssert("z".isMatch(re"[a-d-z]"))
+  doAssert(not "e".isMatch(re"[a-d-z]"))
+  doAssert("]".isMatch(re"[]]"))
+  doAssert("]".isMatch(re"[\]]"))
+  doAssert(not "[".isMatch(re"[]]"))
+  doAssert(not "]]".isMatch(re"[]]"))
+  doAssert(not "-".isMatch(re"[[-\]]"))
+  doAssert(not "b".isMatch(re"[c-d]"))
+  doAssert("-".isMatch(re"[a\w-\wz]"))
+  doAssert("-".isMatch(re"[\w-a]"))
+  doAssert("-".isMatch(re"[\w-]"))
+  doAssert("a".isMatch(re"[\w-a]"))
+  doAssert("1".isMatch(re"[\w-a]"))
+  doAssert("-".isMatch(re"[db-c-f]"))
+  doAssert(not "e".isMatch(re"[db-c-f]"))
+  doAssert(not "-".isMatch(re"[=-_]"))
+  doAssert("A".isMatch(re"[\A]"))
+  doAssert("b".isMatch(re"[\b]"))
+  doAssert("zz".isMatch(re"[\z][\z]"))
+  doAssert(not "z".isMatch(re"[\z][\z]"))
   # range out of order in character class (must raise)
-  # doAssert("b".isFullMatch(re"[d-c]"))
+  # doAssert("b".isMatch(re"[d-c]"))
   # invalid range in character class (must raise)
-  # doAssert("-".isFullMatch(re"[a-\w]"))
+  # doAssert("-".isMatch(re"[a-\w]"))
 
   # tnot_set
-  doAssert("a".fullMatchWithCapt(re"([^b])") == @[@["a"]])
-  doAssert("asd".fullMatchWithCapt(re"([^b]*)") == @[@["asd"]])
-  doAssert("ab".fullMatchWithCapt(re"([^b]*b)") == @[@["ab"]])
+  doAssert("a".matchWithCapt(re"([^b])") == @[@["a"]])
+  doAssert("asd".matchWithCapt(re"([^b]*)") == @[@["asd"]])
+  doAssert("ab".matchWithCapt(re"([^b]*b)") == @[@["ab"]])
   doAssert(
-    "asd123".fullMatchWithCapt(re"([^\d]*)(\d*)") ==
+    "asd123".matchWithCapt(re"([^\d]*)(\d*)") ==
     @[@["asd"], @["123"]])
   doAssert(
-    "asd123".fullMatchWithCapt(re"([asd]*)([^asd]*)") ==
+    "asd123".matchWithCapt(re"([asd]*)([^asd]*)") ==
     @[@["asd"], @["123"]])
   doAssert(
-    "<asd123!@#>".fullMatchWithCapt(re"(<[^>]*>)") ==
+    "<asd123!@#>".matchWithCapt(re"(<[^>]*>)") ==
     @[@["<asd123!@#>"]])
-  doAssert(not "a".isFullMatch(re"[^a]"))
-  #doAssert("^".isFullMatch(re"[^]"))  # should raise missing end
-  doAssert("^".isFullMatch(re"[\^]"))
-  doAssert("a".isFullMatch(re"[\^a]"))
-  doAssert(not "^".isFullMatch(re"[^^]"))
-  doAssert("a".isFullMatch(re"[^^]"))
-  doAssert("a".isFullMatch(re"[^-]"))
-  doAssert(not "-".isFullMatch(re"[^-]"))
+  doAssert(not "a".isMatch(re"[^a]"))
+  #doAssert("^".isMatch(re"[^]"))  # should raise missing end
+  doAssert("^".isMatch(re"[\^]"))
+  doAssert("a".isMatch(re"[\^a]"))
+  doAssert(not "^".isMatch(re"[^^]"))
+  doAssert("a".isMatch(re"[^^]"))
+  doAssert("a".isMatch(re"[^-]"))
+  doAssert(not "-".isMatch(re"[^-]"))
 
   # trepetition_range_expand
   doAssert(r"a{0}".toNfaStr == r"a".toNfaStr)
@@ -2198,318 +2202,318 @@ when isMainModule:
   doAssert(r"a{,}".toNfaStr == r"a*".toNfaStr)
 
   #trepetition_range
-  doAssert(not "".isFullMatch(re"a{0}"))
-  doAssert(not "".isFullMatch(re"a{0,0}"))
-  doAssert(not "".isFullMatch(re"a{,0}"))
-  doAssert("".isFullMatch(re"a{,2}"))
-  doAssert("a".isFullMatch(re"a{0}"))
-  doAssert("a".isFullMatch(re"a{0,0}"))
-  doAssert("a".isFullMatch(re"a{,0}"))
-  doAssert("a".isFullMatch(re"a{1}"))
-  doAssert("aa".isFullMatch(re"a{2}"))
-  doAssert("aaa".isFullMatch(re"a{3}"))
-  doAssert(not "aaaa".isFullMatch(re"a{3}"))
-  doAssert(not "".isFullMatch(re"a{1}"))
-  doAssert("a".isFullMatch(re"a{1,1}"))
-  doAssert("a".isFullMatch(re"a{1,2}"))
-  doAssert("aa".isFullMatch(re"a{1,2}"))
-  doAssert(not "aaa".isFullMatch(re"a{1,2}"))
-  doAssert(not "a".isFullMatch(re"a{2,4}"))
-  doAssert("a".isFullMatch(re"a{1,}"))
-  doAssert("aa".isFullMatch(re"a{1,}"))
-  doAssert("aaa".isFullMatch(re"a{1,}"))
-  doAssert("aaaaaaaaaa".isFullMatch(re"a{1,}"))
-  doAssert("aa".isFullMatch(re"a{2,}"))
-  doAssert("a".isFullMatch(re"a{,}"))
-  doAssert("aa".isFullMatch(re"a{,}"))
-  doAssert("aaaaaaaaaa".isFullMatch(re"a{,}"))
-  doAssert("".isFullMatch(re"a{,}"))
-  doAssert("aaaaaaaaaa".isFullMatch(re"a{0,}"))
-  doAssert("".isFullMatch(re"a{0,}"))
-  doAssert(not "a".isFullMatch(re"a{2,}"))
-  #doAssert("aaa".isFullMatch(re"a*{,}"))  # must raise
-  #doAssert("aaa".isFullMatch(re"a*{0}"))  # must raise
-  #doAssert("aaa".isFullMatch(re"a*{1}"))  # must raise
+  doAssert(not "".isMatch(re"a{0}"))
+  doAssert(not "".isMatch(re"a{0,0}"))
+  doAssert(not "".isMatch(re"a{,0}"))
+  doAssert("".isMatch(re"a{,2}"))
+  doAssert("a".isMatch(re"a{0}"))
+  doAssert("a".isMatch(re"a{0,0}"))
+  doAssert("a".isMatch(re"a{,0}"))
+  doAssert("a".isMatch(re"a{1}"))
+  doAssert("aa".isMatch(re"a{2}"))
+  doAssert("aaa".isMatch(re"a{3}"))
+  doAssert(not "aaaa".isMatch(re"a{3}"))
+  doAssert(not "".isMatch(re"a{1}"))
+  doAssert("a".isMatch(re"a{1,1}"))
+  doAssert("a".isMatch(re"a{1,2}"))
+  doAssert("aa".isMatch(re"a{1,2}"))
+  doAssert(not "aaa".isMatch(re"a{1,2}"))
+  doAssert(not "a".isMatch(re"a{2,4}"))
+  doAssert("a".isMatch(re"a{1,}"))
+  doAssert("aa".isMatch(re"a{1,}"))
+  doAssert("aaa".isMatch(re"a{1,}"))
+  doAssert("aaaaaaaaaa".isMatch(re"a{1,}"))
+  doAssert("aa".isMatch(re"a{2,}"))
+  doAssert("a".isMatch(re"a{,}"))
+  doAssert("aa".isMatch(re"a{,}"))
+  doAssert("aaaaaaaaaa".isMatch(re"a{,}"))
+  doAssert("".isMatch(re"a{,}"))
+  doAssert("aaaaaaaaaa".isMatch(re"a{0,}"))
+  doAssert("".isMatch(re"a{0,}"))
+  doAssert(not "a".isMatch(re"a{2,}"))
+  #doAssert("aaa".isMatch(re"a*{,}"))  # must raise
+  #doAssert("aaa".isMatch(re"a*{0}"))  # must raise
+  #doAssert("aaa".isMatch(re"a*{1}"))  # must raise
   doAssert(
-    "aaa".fullMatchWithCapt(re"(a){,}") ==
+    "aaa".matchWithCapt(re"(a){,}") ==
     @[@["a", "a", "a"]])
-  doAssert("aaa".fullMatchWithCapt(re"(a{,}){,}") == @[@["aaa"]])
+  doAssert("aaa".matchWithCapt(re"(a{,}){,}") == @[@["aaa"]])
   doAssert(
-    "aaaaa".fullMatchWithCapt(re"(a){5}") ==
+    "aaaaa".matchWithCapt(re"(a){5}") ==
     @[@["a", "a", "a", "a", "a"]])
-  doAssert("a".fullMatchWithCapt(re"(a){1,5}") == @[@["a"]])
+  doAssert("a".matchWithCapt(re"(a){1,5}") == @[@["a"]])
   doAssert(
-    "aaa".fullMatchWithCapt(re"(a){1,5}") ==
+    "aaa".matchWithCapt(re"(a){1,5}") ==
     @[@["a", "a", "a"]])
   doAssert(
-    "".fullMatchWithCapt(re"(a){,}") ==
+    "".matchWithCapt(re"(a){,}") ==
     @[newSeq[string]()])
-  doAssert("aaa".fullMatchWithCapt(re"(a{,}){,}") == @[@["aaa"]])
+  doAssert("aaa".matchWithCapt(re"(a{,}){,}") == @[@["aaa"]])
   doAssert(
-    "aaa".fullMatchWithCapt(re"(a{1}){,}") ==
+    "aaa".matchWithCapt(re"(a{1}){,}") ==
     @[@["a", "a", "a"]])
   doAssert(
-    "aaaa".fullMatchWithCapt(re"(a{2}){,}") ==
+    "aaaa".matchWithCapt(re"(a{2}){,}") ==
     @[@["aa", "aa"]])
   doAssert(
-    "aaaa".fullMatchWithCapt(re"(a{,3}){,}") ==
+    "aaaa".matchWithCapt(re"(a{,3}){,}") ==
     @[@["aaa", "a"]])
   doAssert(
-    "".fullMatchWithCapt(re"(a{,3}){,}") ==
+    "".matchWithCapt(re"(a{,3}){,}") ==
     @[newSeq[string]()])
   doAssert(
-    "aaa".fullMatchWithCapt(re"(a{1,}){,}") ==
+    "aaa".matchWithCapt(re"(a{1,}){,}") ==
     @[@["aaa"]])
   doAssert(
-    "".fullMatchWithCapt(re"(a{1,}){,}") ==
+    "".matchWithCapt(re"(a{1,}){,}") ==
     @[newSeq[string]()])
-  doAssert(not "".isFullMatch(re"(a{1,})"))
-  doAssert("a".fullMatchWithCapt(re"(a{1,})") == @[@["a"]])
-  doAssert("aaa".fullMatchWithCapt(re"(a{1,})") == @[@["aaa"]])
+  doAssert(not "".isMatch(re"(a{1,})"))
+  doAssert("a".matchWithCapt(re"(a{1,})") == @[@["a"]])
+  doAssert("aaa".matchWithCapt(re"(a{1,})") == @[@["aaa"]])
 
   #tnon_capturing_groups
-  doAssert("a".fullMatchWithCapt(re"(?:a)") == @[])
-  doAssert("aaa".fullMatchWithCapt(re"(?:aaa)") == @[])
+  doAssert("a".matchWithCapt(re"(?:a)") == @[])
+  doAssert("aaa".matchWithCapt(re"(?:aaa)") == @[])
   doAssert(
-    "abab".fullMatchWithCapt(re"(a(b))*") ==
+    "abab".matchWithCapt(re"(a(b))*") ==
     @[@["ab", "ab"], @["b", "b"]])
   doAssert(
-    "abab".fullMatchWithCapt(re"(?:a(b))*") ==
+    "abab".matchWithCapt(re"(?:a(b))*") ==
     @[@["b", "b"]])
   doAssert(
-    "abab".fullMatchWithCapt(re"(a(?:b))*") ==
+    "abab".matchWithCapt(re"(a(?:b))*") ==
     @[@["ab", "ab"]])
-  doAssert(")".fullMatchWithCapt(re"(\))") == @[@[")"]])
+  doAssert(")".matchWithCapt(re"(\))") == @[@[")"]])
 
   #tgreediness
   doAssert(
-    "a".fullMatchWithCapt(re"(a)??") ==
+    "a".matchWithCapt(re"(a)??") ==
     @[@["a"]])
   doAssert(
-    "aaa".fullMatchWithCapt(re"(a)*(a)*(a)*") ==
+    "aaa".matchWithCapt(re"(a)*(a)*(a)*") ==
     @[@["a", "a", "a"], @[], @[]])
   doAssert(
-    "aaa".fullMatchWithCapt(re"(a)*?(a)*(a)*?") ==
+    "aaa".matchWithCapt(re"(a)*?(a)*(a)*?") ==
     @[@[], @["a", "a", "a"], @[]])
   doAssert(
-    "aaa".fullMatchWithCapt(re"(a)*?(a)*?(a)*") ==
+    "aaa".matchWithCapt(re"(a)*?(a)*?(a)*") ==
     @[@[], @[], @["a", "a", "a"]])
   doAssert(
-    "aaa".fullMatchWithCapt(re"(a)*?(a)*?(a)*?") ==
+    "aaa".matchWithCapt(re"(a)*?(a)*?(a)*?") ==
     @[@[], @[], @["a", "a", "a"]])
   doAssert(
-    "aaaa".fullMatchWithCapt(re"(a)*?(a)*?(a)*?") ==
+    "aaaa".matchWithCapt(re"(a)*?(a)*?(a)*?") ==
     @[@[], @[], @["a", "a", "a", "a"]])
   doAssert(
-    "aa".fullMatchWithCapt(re"(a)?(aa?)") ==
+    "aa".matchWithCapt(re"(a)?(aa?)") ==
     @[@["a"], @["a"]])
   doAssert(
-    "aa".fullMatchWithCapt(re"(a)??(a)") ==
+    "aa".matchWithCapt(re"(a)??(a)") ==
     @[@["a"], @["a"]])
   doAssert(
-    "aa".fullMatchWithCapt(re"(a)??(aa?)") ==
+    "aa".matchWithCapt(re"(a)??(aa?)") ==
     @[@[], @["aa"]])
   doAssert(
-    "aaa".fullMatchWithCapt(re"(a)+(a)+(a)?") ==
+    "aaa".matchWithCapt(re"(a)+(a)+(a)?") ==
     @[@["a", "a"], @["a"], @[]])
   doAssert(
-    "aaa".fullMatchWithCapt(re"(a)+?(a)+(a)?") ==
+    "aaa".matchWithCapt(re"(a)+?(a)+(a)?") ==
     @[@["a"], @["a", "a"], @[]])
   doAssert(
-    "aaa".fullMatchWithCapt(re"(a)+?(a)+?(a)?") ==
+    "aaa".matchWithCapt(re"(a)+?(a)+?(a)?") ==
     @[@["a"], @["a"], @["a"]])
   doAssert(
-    "aaa".fullMatchWithCapt(re"(a){,}(a){,}(a){,}") ==
+    "aaa".matchWithCapt(re"(a){,}(a){,}(a){,}") ==
     @[@["a", "a", "a"], @[], @[]])
   doAssert(
-    "aaa".fullMatchWithCapt(re"(a){,}?(a){,}(a){,}?") ==
+    "aaa".matchWithCapt(re"(a){,}?(a){,}(a){,}?") ==
     @[@[], @["a", "a", "a"], @[]])
   doAssert(
-    "aaa".fullMatchWithCapt(re"(a){,}?(a){,}?(a){,}") ==
+    "aaa".matchWithCapt(re"(a){,}?(a){,}?(a){,}") ==
     @[@[], @[], @["a", "a", "a"]])
   doAssert(
-    "aaa".fullMatchWithCapt(re"(a){,}?(a){,}?(a){,}?") ==
+    "aaa".matchWithCapt(re"(a){,}?(a){,}?(a){,}?") ==
     @[@[], @[], @["a", "a", "a"]])
   doAssert(
-    "aaa".fullMatchWithCapt(re"(a){1,}(a){1,}(a)?") ==
+    "aaa".matchWithCapt(re"(a){1,}(a){1,}(a)?") ==
     @[@["a", "a"], @["a"], @[]])
   doAssert(
-    "aaa".fullMatchWithCapt(re"(a){1,}?(a){1,}(a)?") ==
+    "aaa".matchWithCapt(re"(a){1,}?(a){1,}(a)?") ==
     @[@["a"], @["a", "a"], @[]])
   doAssert(
-    "aaa".fullMatchWithCapt(re"(a){1,}?(a){1,}?(a)?") ==
+    "aaa".matchWithCapt(re"(a){1,}?(a){1,}?(a)?") ==
     @[@["a"], @["a"], @["a"]])
   doAssert(
-    "aaaa".fullMatch(re"(a*?)(a*?)(a*)").get().groups2() ==
+    "aaaa".match(re"(a*?)(a*?)(a*)").get().groups2() ==
     @[@[0 .. -1], @[0 .. -1], @[0 .. 3]])  # note the empty slices
   doAssert(
-    "aaaa".fullMatch(re"(a*)(a*?)(a*?)").get().groups2() ==
+    "aaaa".match(re"(a*)(a*?)(a*?)").get().groups2() ==
     @[@[0 .. 3], @[4 .. 3], @[4 .. 3]])  # note the empty slices
 
   # tassertions
   doAssert(
-    "bbaa aa".fullMatchWithCapt(re"([\w ]*?)(\baa\b)") ==
+    "bbaa aa".matchWithCapt(re"([\w ]*?)(\baa\b)") ==
     @[@["bbaa "], @["aa"]])
   doAssert(
-    "aa bbaa".fullMatchWithCapt(re"(\baa\b)([\w ]*)") ==
+    "aa bbaa".matchWithCapt(re"(\baa\b)([\w ]*)") ==
     @[@["aa"], @[" bbaa"]])
   doAssert(
-    "This island is great".fullMatchWithCapt(
+    "This island is great".matchWithCapt(
       re"([\w ]*?)(\bis\b)([\w ]*?)") ==
     @[@["This island "], @["is"], @[" great"]])
   doAssert(
-    "bbaabb".fullMatchWithCapt(re"([\w ]*?)(\Baa\B)([\w ]*?)") ==
+    "bbaabb".matchWithCapt(re"([\w ]*?)(\Baa\B)([\w ]*?)") ==
     @[@["bb"], @["aa"], @["bb"]])
   doAssert(
-    "This is my sister".fullMatchWithCapt(
+    "This is my sister".matchWithCapt(
       re"([\w ]*?)(\Bis\B)([\w ]*?)") ==
     @[@["This is my s"], @["is"], @["ter"]])
-  doAssert("aa".isFullMatch(re"\b\b\baa\b\b\b"))
-  doAssert("bb".isFullMatch(re"^^^^bb$$$$"))
-  doAssert("bb".isFullMatch(re"\A\A\A\Abb\z\z\z\z"))
+  doAssert("aa".isMatch(re"\b\b\baa\b\b\b"))
+  doAssert("bb".isMatch(re"^^^^bb$$$$"))
+  doAssert("bb".isMatch(re"\A\A\A\Abb\z\z\z\z"))
 
   # tdot_any_matcher
-  doAssert("a".isFullMatch(re"."))
-  doAssert("asd123!@#".isFullMatch(re".*"))
-  doAssert("| (•□•) | (❍ᴥ❍ʋ)".isFullMatch(re".*"))
+  doAssert("a".isMatch(re"."))
+  doAssert("asd123!@#".isMatch(re".*"))
+  doAssert("| (•□•) | (❍ᴥ❍ʋ)".isMatch(re".*"))
   doAssert(
-    "ฅ^•ﻌ•^ฅ".fullMatchWithCapt(re"(.*)") ==
+    "ฅ^•ﻌ•^ฅ".matchWithCapt(re"(.*)") ==
     @[@["ฅ^•ﻌ•^ฅ"]])
-  doAssert("\t".isFullMatch(re"."))
-  doAssert(not "\L".isFullMatch(re".*"))
+  doAssert("\t".isMatch(re"."))
+  doAssert(not "\L".isMatch(re".*"))
 
   # tgroup
-  doAssert("foobar".fullMatch(re"(\w*)").get().group(0) == @[0..5])
+  doAssert("foobar".match(re"(\w*)").get().group(0) == @[0..5])
   doAssert(
-    "foobar".fullMatch(re"(?P<foo>\w*)").get().group(0) == @[0..5])
+    "foobar".match(re"(?P<foo>\w*)").get().group(0) == @[0..5])
   doAssert(
-    "ab".fullMatch(re"(a)(b)").get().group(0) == @[0..0])
+    "ab".match(re"(a)(b)").get().group(0) == @[0..0])
   doAssert(
-    "ab".fullMatch(re"(a)(b)").get().group(1) == @[1..1])
+    "ab".match(re"(a)(b)").get().group(1) == @[1..1])
   doAssert(
-    "ab".fullMatch(re"(a)(b)").get().groups2() ==
+    "ab".match(re"(a)(b)").get().groups2() ==
     @[@[0..0], @[1..1]])
 
   # tnamed_groups
   doAssert(
-    "foobar".fullMatch(re"(?P<foo>\w*)").get().group("foo") ==
+    "foobar".match(re"(?P<foo>\w*)").get().group("foo") ==
     @[0..5])
   doAssert(
-    "foobar".fullMatch(re"(?P<foo>(?P<bar>\w*))").get().group("foo") ==
+    "foobar".match(re"(?P<foo>(?P<bar>\w*))").get().group("foo") ==
     @[0..5])
   doAssert(
-    "foobar".fullMatch(re"(?P<foo>(?P<bar>\w*))").get().group("bar") ==
+    "foobar".match(re"(?P<foo>(?P<bar>\w*))").get().group("bar") ==
     @[0..5])
   doAssert(
-    "aab".fullMatch(re"(?P<foo>(?P<bar>a)*b)").get().group("foo") ==
+    "aab".match(re"(?P<foo>(?P<bar>a)*b)").get().group("foo") ==
     @[0..2])
   doAssert(
-    "aab".fullMatch(re"(?P<foo>(?P<bar>a)*b)").get().group("bar") ==
+    "aab".match(re"(?P<foo>(?P<bar>a)*b)").get().group("bar") ==
     @[0..0, 1..1])
   doAssert(
-    "aab".fullMatch(re"((?P<bar>a)*b)").get().group("bar") ==
+    "aab".match(re"((?P<bar>a)*b)").get().group("bar") ==
     @[0..0, 1..1])
 
   #tflags
-  doAssert("foo\Lbar".isFullMatch(re"(?s).*"))
-  doAssert("foo\Lbar".isFullMatch(re"(?s:.*)"))
-  doAssert("foo\Lbar".isFullMatch(re"(?ssss).*"))
-  doAssert(not "foo\Lbar".isFullMatch(re"(?s-s).*"))
-  doAssert(not "foo\Lbar".isFullMatch(re"(?-s-s-s).*"))
-  doAssert(not "foo\Lbar".isFullMatch(re"(?-ss).*"))
-  doAssert(not "foo\Lbar".isFullMatch(re"(?-ss-ss).*"))
-  doAssert(not "foo\Lbar".isFullMatch(re"(?-sssss-s).*"))
-  doAssert(not "foo\Lbar".isFullMatch(re"(?s-s:.*)"))
-  doAssert(not "foo\Lbar".isFullMatch(re"(?------s----s:.*)"))
+  doAssert("foo\Lbar".isMatch(re"(?s).*"))
+  doAssert("foo\Lbar".isMatch(re"(?s:.*)"))
+  doAssert("foo\Lbar".isMatch(re"(?ssss).*"))
+  doAssert(not "foo\Lbar".isMatch(re"(?s-s).*"))
+  doAssert(not "foo\Lbar".isMatch(re"(?-s-s-s).*"))
+  doAssert(not "foo\Lbar".isMatch(re"(?-ss).*"))
+  doAssert(not "foo\Lbar".isMatch(re"(?-ss-ss).*"))
+  doAssert(not "foo\Lbar".isMatch(re"(?-sssss-s).*"))
+  doAssert(not "foo\Lbar".isMatch(re"(?s-s:.*)"))
+  doAssert(not "foo\Lbar".isMatch(re"(?------s----s:.*)"))
   doAssert(
-    "foo\Lbar".fullMatchWithCapt(re"((?s:.*))") ==
+    "foo\Lbar".matchWithCapt(re"((?s:.*))") ==
     @[@["foo\Lbar"]])
-  doAssert("a".fullMatchWithCapt(re"((?i:a))") == @[@["a"]])
-  doAssert("A".fullMatchWithCapt(re"((?i:a))") == @[@["A"]])
+  doAssert("a".matchWithCapt(re"((?i:a))") == @[@["a"]])
+  doAssert("A".matchWithCapt(re"((?i:a))") == @[@["A"]])
   doAssert(
-    "ABC".fullMatchWithCapt(re"((?i:aBc))") ==
+    "ABC".matchWithCapt(re"((?i:aBc))") ==
     @[@["ABC"]])
-  doAssert("a".fullMatchWithCapt(re"((?-i:a))") == @[@["a"]])
-  doAssert(not "A".isFullMatch(re"((?-i:a))"))
-  doAssert(not "A".isFullMatch(re"((?-ii-i:a))"))
-  doAssert("a".fullMatchWithCapt(re"((?i)a)") == @[@["a"]])
-  doAssert("A".fullMatchWithCapt(re"((?i)a)") == @[@["A"]])
-  doAssert("a".fullMatchWithCapt(re"((?-i)a)") == @[@["a"]])
-  doAssert(not "A".isFullMatch(re"((?-i)a)"))
-  doAssert("AaA".isFullMatch(re"(?i)a+"))
-  doAssert("AaA".isFullMatch(re"(?i)A+"))
-  doAssert("AbC".isFullMatch(re"(?i)abc"))
-  doAssert(not "b".isFullMatch(re"(?i)a"))
-  doAssert("A".isFullMatch(re"(?-i)(?i)a"))
-  doAssert(not "A".isFullMatch(re"(?i)(?-i)a"))
+  doAssert("a".matchWithCapt(re"((?-i:a))") == @[@["a"]])
+  doAssert(not "A".isMatch(re"((?-i:a))"))
+  doAssert(not "A".isMatch(re"((?-ii-i:a))"))
+  doAssert("a".matchWithCapt(re"((?i)a)") == @[@["a"]])
+  doAssert("A".matchWithCapt(re"((?i)a)") == @[@["A"]])
+  doAssert("a".matchWithCapt(re"((?-i)a)") == @[@["a"]])
+  doAssert(not "A".isMatch(re"((?-i)a)"))
+  doAssert("AaA".isMatch(re"(?i)a+"))
+  doAssert("AaA".isMatch(re"(?i)A+"))
+  doAssert("AbC".isMatch(re"(?i)abc"))
+  doAssert(not "b".isMatch(re"(?i)a"))
+  doAssert("A".isMatch(re"(?-i)(?i)a"))
+  doAssert(not "A".isMatch(re"(?i)(?-i)a"))
   doAssert(
-    "AaA".fullMatchWithCapt(re"((?i)a+)") ==
+    "AaA".matchWithCapt(re"((?i)a+)") ==
     @[@["AaA"]])
 
   doAssert(
-    "aa".fullMatchWithCapt(re"((?U)a*)(a*)") ==
+    "aa".matchWithCapt(re"((?U)a*)(a*)") ==
     @[@[""], @["aa"]])
   doAssert(
-    "aa".fullMatchWithCapt(re"((?U)a*?)(a*)") ==
+    "aa".matchWithCapt(re"((?U)a*?)(a*)") ==
     @[@["aa"], @[""]])
   doAssert(
-    "aa".fullMatchWithCapt(re"((?U-U)a*)(a*)") ==
+    "aa".matchWithCapt(re"((?U-U)a*)(a*)") ==
     @[@["aa"], @[""]])
   # no empty matches
   doAssert(
-    "aa".fullMatchWithCapt(re"(?U:(a)*)(a)*") ==
+    "aa".matchWithCapt(re"(?U:(a)*)(a)*") ==
     @[@[], @["a", "a"]])
   doAssert(
-    "aa".fullMatchWithCapt(re"((?U:a*))(a*)") ==
+    "aa".matchWithCapt(re"((?U:a*))(a*)") ==
     @[@[""], @["aa"]])
   doAssert(
-    "aa".fullMatchWithCapt(re"((?U:a*?))(a*)") ==
+    "aa".matchWithCapt(re"((?U:a*?))(a*)") ==
     @[@["aa"], @[""]])
   doAssert(
-    "aa".fullMatchWithCapt(re"((?U-U:a*))(a*)") ==
+    "aa".matchWithCapt(re"((?U-U:a*))(a*)") ==
     @[@["aa"], @[""]])
 
-  doAssert(not "a\Lb\L".isFullMatch(re"(?sm)a.b(?-sm:.)"))
-  doAssert("a\Lb\L".isFullMatch(re"(?ms)a.b(?s-m:.)"))
-  doAssert("a\L".isFullMatch(re"(?s)a."))
-  doAssert(not "a\L\L".isFullMatch(re"(?s)a.$."))
-  doAssert("a\L\L".isFullMatch(re"(?sm)a.$."))
-  doAssert(not "a\L\L".isFullMatch(re"(?-sm)a.$."))
-  doAssert(not "a\L\L".isFullMatch(re"(?s-m)a.$."))
-  doAssert("a\L\L".isFullMatch(re"(?s-m)(?m:a.$.)"))
-  doAssert(not "a\L\L".isFullMatch(re"(?i-sm)(?s:a.$.)"))
-  doAssert("a\L\L".isFullMatch(re"(?i-sm)(?sm:a.$.)"))
-  doAssert(not "a\L\L".isFullMatch(re"(?-sm)(?sm)(?-sm:a.$.)"))
-  doAssert("a\L\L".isFullMatch(re"(?sm)(?-sm)(?sm:a.$.)"))
-  doAssert(not "a\L\L".isFullMatch(re"(?-sm)(?sm:(?-sm:a.$.))"))
-  doAssert("a\L\L".isFullMatch(re"(?sm)(?-sm:(?sm:a.$.))"))
+  doAssert(not "a\Lb\L".isMatch(re"(?sm)a.b(?-sm:.)"))
+  doAssert("a\Lb\L".isMatch(re"(?ms)a.b(?s-m:.)"))
+  doAssert("a\L".isMatch(re"(?s)a."))
+  doAssert(not "a\L\L".isMatch(re"(?s)a.$."))
+  doAssert("a\L\L".isMatch(re"(?sm)a.$."))
+  doAssert(not "a\L\L".isMatch(re"(?-sm)a.$."))
+  doAssert(not "a\L\L".isMatch(re"(?s-m)a.$."))
+  doAssert("a\L\L".isMatch(re"(?s-m)(?m:a.$.)"))
+  doAssert(not "a\L\L".isMatch(re"(?i-sm)(?s:a.$.)"))
+  doAssert("a\L\L".isMatch(re"(?i-sm)(?sm:a.$.)"))
+  doAssert(not "a\L\L".isMatch(re"(?-sm)(?sm)(?-sm:a.$.)"))
+  doAssert("a\L\L".isMatch(re"(?sm)(?-sm)(?sm:a.$.)"))
+  doAssert(not "a\L\L".isMatch(re"(?-sm)(?sm:(?-sm:a.$.))"))
+  doAssert("a\L\L".isMatch(re"(?sm)(?-sm:(?sm:a.$.))"))
 
-  doAssert("Ǝ".isFullMatch(re"\w"))
-  doAssert("Ǝ".isFullMatch(re"(?u)\w"))
-  doAssert(not "Ǝ".isFullMatch(re"(?-u)\w"))
-  doAssert("abczABCZ0129".isFullMatch(re"(?-u)\w*"))
-  doAssert(not "\t".isFullMatch(re"(?-u)\w"))
+  doAssert("Ǝ".isMatch(re"\w"))
+  doAssert("Ǝ".isMatch(re"(?u)\w"))
+  doAssert(not "Ǝ".isMatch(re"(?-u)\w"))
+  doAssert("abczABCZ0129".isMatch(re"(?-u)\w*"))
+  doAssert(not "\t".isMatch(re"(?-u)\w"))
   # todo: test every ascii kind
-  doAssert("Ǝ".isFullMatch(re"(?u)[\w]"))
-  doAssert(not "Ǝ".isFullMatch(re"(?u)[^\w]"))
-  doAssert("Ǝ".isFullMatch(re"(?-u)[^\w]"))
-  doAssert(not "Ǝ".isFullMatch(re"(?-u)[\w]"))
-  doAssert(not "\t".isFullMatch(re"(?-u)[\w]"))
+  doAssert("Ǝ".isMatch(re"(?u)[\w]"))
+  doAssert(not "Ǝ".isMatch(re"(?u)[^\w]"))
+  doAssert("Ǝ".isMatch(re"(?-u)[^\w]"))
+  doAssert(not "Ǝ".isMatch(re"(?-u)[\w]"))
+  doAssert(not "\t".isMatch(re"(?-u)[\w]"))
 
   # tescaped_sequences
-  doAssert("\x07".isFullMatch(re"\a"))
-  doAssert("\x0C".isFullMatch(re"\f"))
-  doAssert("\t".isFullMatch(re"\t"))
-  doAssert("\L".isFullMatch(re"\n"))
-  doAssert("\r".isFullMatch(re"\r"))
-  doAssert("\x0B".isFullMatch(re"\v"))
-  doAssert(not "a".isFullMatch(re"\a"))
-  doAssert(".+*?()|[]{}^$".isFullMatch(re"\.\+\*\?\(\)\|\[\]\{\}\^\$"))
+  doAssert("\x07".isMatch(re"\a"))
+  doAssert("\x0C".isMatch(re"\f"))
+  doAssert("\t".isMatch(re"\t"))
+  doAssert("\L".isMatch(re"\n"))
+  doAssert("\r".isMatch(re"\r"))
+  doAssert("\x0B".isMatch(re"\v"))
+  doAssert(not "a".isMatch(re"\a"))
+  doAssert(".+*?()|[]{}^$".isMatch(re"\.\+\*\?\(\)\|\[\]\{\}\^\$"))
 
-  doAssert("\x07".isFullMatch(re"[\a]"))
-  doAssert("\x07".isFullMatch(re"[\a-\a]"))
-  doAssert(not "0".isFullMatch(re"[\a-\a]"))
-  #doAssert("|".isFullMatch(re"[a|b]"))  # ????
+  doAssert("\x07".isMatch(re"[\a]"))
+  doAssert("\x07".isMatch(re"[\a-\a]"))
+  doAssert(not "0".isMatch(re"[\a-\a]"))
+  #doAssert("|".isMatch(re"[a|b]"))  # ????
 
   # tfind
   doAssert("abcd".find(re"bc").isSome)
@@ -2523,6 +2527,6 @@ when isMainModule:
   # tcontains
   doAssert(re"bc" in "abcd")
   doAssert(re"bd" notin "abcd")
-  doAssert(re"(22)*" in "2222")
-  doAssert(re"(22)*" in "22222")
-  doAssert(re"^(22)*$" notin "22222")
+  doAssert(re"(23)+" in "2323")
+  doAssert(re"(23)+" in "23232")
+  doAssert(re"^(23)+$" notin "23232")

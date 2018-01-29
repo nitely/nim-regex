@@ -152,6 +152,7 @@ import strutils
 import sets
 import tables
 import options
+import deques
 
 import unicodedb
 import unicodeplus except isUpper, isLower
@@ -1001,14 +1002,14 @@ type
 proc fillGroups(expression: var seq[Node]): GroupsCapture =
   ## populate group indices, names and capturing mark
   var
-    groups = newSeq[int]()
+    groups = initDeque[int](32)
     nonCapt = 0
     names = initTable[string, int]()
     count = 0'i16
   for i, n in expression.mpairs:
     case n.kind
     of reGroupStart:
-      groups.add(i)
+      groups.addLast(i)
       if n.isCapturing:
         n.idx = count
         inc count
@@ -1022,7 +1023,7 @@ proc fillGroups(expression: var seq[Node]): GroupsCapture =
         groups.len > 0,
         "Invalid capturing group. " &
         "Found too many closing symbols")
-      let start = groups.pop()
+      let start = groups.popLast()
       n.isCapturing = expression[start].isCapturing
       n.idx = expression[start].idx
       if not n.isCapturing:
@@ -1091,7 +1092,7 @@ proc toggle(f: Flag): Flag =
   of flagNotUnicode:
     flagUnicode
 
-proc squash(flags: seq[seq[Flag]]): set[Flag] =
+proc squash(flags: Deque[seq[Flag]]): set[Flag] =
   result = {}
   for ff in flags:
     for f in ff:
@@ -1102,7 +1103,7 @@ proc applyFlags(expression: seq[Node]): seq[Node] =
   ## apply flags to each group
   result = newSeqOfCap[Node](expression.len)
   let sc = expression.scan()
-  var flags = newSeq[seq[Flag]]()  # todo: ofCap(groupsCount)
+  var flags = initDeque[seq[Flag]](32)
   for nn in sc:
     var n = nn
     for f in flags.squash():
@@ -1144,7 +1145,7 @@ proc applyFlags(expression: seq[Node]): seq[Node] =
     # Orphan flags are added to current group
     of reGroupStart:
       if n.flags.isNil:
-        flags.add(@[])
+        flags.addLast(@[])
         result.add(n)
         continue
       if sc.peek.kind == reSkip:
@@ -1152,13 +1153,13 @@ proc applyFlags(expression: seq[Node]): seq[Node] =
         doAssert(sc.peek.kind == reGroupEnd)
         discard sc.next()  # )
         if flags.len > 0:
-          flags[^1].add(n.flags)
+          flags[flags.len - 1].add(n.flags)
         else:
-          flags.add(n.flags)
+          flags.addLast(n.flags)
         continue  # skip (
-      flags.add(n.flags)
+      flags.addLast(n.flags)
     of reGroupEnd:
-      discard flags.pop()
+      discard flags.popLast()
     else:
       discard
     result.add(n)
@@ -1292,18 +1293,18 @@ proc hasPrecedence(a: NodeKind, b: NodeKind): bool =
     (opsPA(b).associativity == asyLeft and
       opsPA(b).precedence < opsPA(a).precedence))
 
-proc popGreaterThan(ops: var seq[Node], op: Node): seq[Node] =
+proc popGreaterThan(ops: var Deque[Node], op: Node): seq[Node] =
   doAssert(op.kind in opKind)
   result = newSeqOfCap[Node](ops.len)
   while (ops.len > 0 and
-      ops[^1].kind in opKind and
-      ops[^1].kind.hasPrecedence(op.kind)):
-    result.add(ops.pop())
+      ops[ops.len - 1].kind in opKind and
+      ops[ops.len - 1].kind.hasPrecedence(op.kind)):
+    result.add(ops.popLast())
 
-proc popUntilGroupStart(ops: var seq[Node]): seq[Node] =
+proc popUntilGroupStart(ops: var Deque[Node]): seq[Node] =
   result = newSeqOfCap[Node](ops.len)
   while true:
-    let op = ops.pop()
+    let op = ops.popLast()
     result.add(op)
     if op.kind == reGroupStart:
       break
@@ -1318,23 +1319,24 @@ proc rpn(expression: seq[Node]): seq[Node] =
   ## Suffix notation removes nesting and so it can
   ## be parsed in a linear way instead of recursively
   result = newSeqOfCap[Node](expression.len)
-  var ops: seq[Node] = @[]
+  var ops = initDeque[Node](32)
   for n in expression:
     case n.kind
     of matchableKind, assertionKind:
       result.add(n)
     of reGroupStart:
-      ops.add(n)
+      ops.addLast(n)
     of reGroupEnd:
       result.add(ops.popUntilGroupStart())
       result.add(n)
     of opKind:
       result.add(ops.popGreaterThan(n))
-      ops.add(n)
+      ops.addLast(n)
     else:
       doAssert(false, "unhandled node")
-  ops.reverse()
-  result.add(ops)
+  # reverse ops
+  for i in 1 .. ops.len:
+    result.add(ops[ops.len - i])
 
 type
   End = seq[int32]
@@ -1383,14 +1385,14 @@ proc nfa(expression: seq[Node]): seq[Node] =
   ## expression (in RPN) to an NFA, linearly.
   # The e-transitions are kept,
   # removing them showed minimal speed improvements
-  result = newSeqOfCap[Node](expression.len + 1)
+  result = newSeqOfCap[Node](expression.len + 2)
   result.add(initEOENode())
   var
     ends = newSeq[End](expression.len + 1)
-    states = newSeq[int32]()
+    states = initDeque[int32](32)
   ends.fill(@[])
   if expression.len == 0:
-    states.add(0)
+    states.addLast(0)
   for nn in expression:
     doAssert(result.high + 1 <= int32.high)
     var n = nn
@@ -1401,59 +1403,59 @@ proc nfa(expression: seq[Node]): seq[Node] =
       n.outB = -1
       ends.update(ni, n.outA, n.outB)
       result.add(n)
-      states.add(ni)
+      states.addLast(ni)
     of reJoiner:
       let
-        stateB = states.pop()
-        stateA = states.pop()
+        stateB = states.popLast()
+        stateA = states.popLast()
       result.combine(ends, stateA, stateB)
-      states.add(stateA)
+      states.addLast(stateA)
     of reOr:
-      n.outB = states.pop()
-      n.outA = states.pop()
+      n.outB = states.popLast()
+      n.outA = states.popLast()
       ends.update(ni, n.outA, n.outB)
       result.add(n)
-      states.add(ni)
+      states.addLast(ni)
     of reZeroOrMore:
-      n.outA = states.pop()
+      n.outA = states.popLast()
       n.outB = 0
       ends.update(ni, n.outA, n.outB)
       result.combine(ends, n.outA, ni)
       result.add(n)
-      states.add(ni)
+      states.addLast(ni)
       if n.isGreedy:
         swap(result[^1].outA, result[^1].outB)
     of reOneOrMore:
-      n.outA = states.pop()
+      n.outA = states.popLast()
       n.outB = 0
       ends.update(ni, n.outA, n.outB)
       result.combine(ends, n.outA, ni)
       result.add(n)
-      states.add(n.outA)
+      states.addLast(n.outA)
       if n.isGreedy:
         swap(result[^1].outA, result[^1].outB)
     of reZeroOrOne:
-      n.outA = states.pop()
+      n.outA = states.popLast()
       n.outB = 0
       ends.update(ni, n.outA, n.outB)
       result.add(n)
-      states.add(ni)
+      states.addLast(ni)
       if n.isGreedy:
         swap(result[^1].outA, result[^1].outB)
     of reGroupStart:
-      n.outA = states.pop()
+      n.outA = states.popLast()
       n.outB = -1
       ends.update(ni, n.outA, n.outB)
       result.add(n)
-      states.add(ni)
+      states.addLast(ni)
     of reGroupEnd:
       n.outA = 0
       n.outB = -1
       ends.update(ni, n.outA, n.outB)
-      let stateA = states.pop()
+      let stateA = states.popLast()
       result.combine(ends, stateA, ni)
       result.add(n)
-      states.add(stateA)
+      states.addLast(stateA)
     else:
       doAssert(false, "Unhandled node: $#" % $n.kind)
   doAssert(states.len == 1)

@@ -374,7 +374,7 @@ proc match(n: Node, r: Rune, nxt: Rune): bool =
   of reNotWordBoundaryAscii:
     not isWordBoundaryAscii(r, nxt)
   else:
-    doAssert(false)
+    assert false
     false
 
 proc `<=`(x, y: Rune): bool =
@@ -1018,6 +1018,10 @@ proc fillGroups(expression: var seq[Node]): GroupsCapture =
         assert n.isCapturing
         names[n.name] = n.idx
     of reGroupEnd:
+      check(
+        groups.len > 0,
+        "Invalid capturing group. " &
+        "Found too many closing symbols")
       let start = groups.pop()
       n.isCapturing = expression[start].isCapturing
       n.idx = expression[start].idx
@@ -1025,8 +1029,14 @@ proc fillGroups(expression: var seq[Node]): GroupsCapture =
         dec nonCapt
     else:
       discard
-    doAssert(count < int16.high)
-  doAssert(groups.len == 0)
+    check(
+      count < int16.high,
+      ("Invalid number of capturing groups, " &
+       "the limit is $#") %% $(int16.high - 1))
+  check(
+    groups.len == 0,
+    "Invalid capturing group. " &
+    "Found too many opening symbols")
   result = (
     count: count,
     names: names)
@@ -2521,6 +2531,20 @@ when isMainModule:
   doAssert(raisesMsg(r"a(?P<>abc)") ==
     "Invalid group name near position 2, " &
     "name can't be empty")
+  doAssert(raisesMsg(r"(a)b)") ==
+    "Invalid capturing group. " &
+    "Found too many closing symbols")
+  doAssert(raisesMsg(r"(b(a)") ==
+    "Invalid capturing group. " &
+    "Found too many opening symbols")
+  var manyGroups = newStringOfCap(int16.high * 3)
+  for _ in 0 ..< int16.high - 1:
+    manyGroups.add(r"(a)")
+  doAssert(not raises(manyGroups))
+  manyGroups.add(r"(a)")
+  doAssert(raisesMsg(manyGroups) ==
+    "Invalid number of capturing " &
+    "groups, the limit is 32766")
 
   #tflags
   doAssert("foo\Lbar".isMatch(re"(?s).*"))

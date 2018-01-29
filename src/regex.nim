@@ -747,7 +747,7 @@ proc parseSet(sc: Scanner[Rune]): seq[Node] =
           nn.kind == reChar,
           ("Invalid set range near position $#, " &
            "range can't contain character-class" &
-           "/shorhand") %% $sc.pos)
+           "/shorthand") %% $sc.pos)
         cp = nn.cp
       isRange = false
       isEscaped = false
@@ -852,7 +852,9 @@ proc toFlag(r: Rune): Flag =
   of "u".toRune:
     result = flagUnicode
   else:
-    doAssert(false)
+    raise newException(RegexError,
+      ("Invalid group flag, found $# " &
+       "but expected one of: i, m, s, U or u") %% $r)
 
 proc toNegFlag(r: Rune): Flag =
   case r
@@ -867,13 +869,16 @@ proc toNegFlag(r: Rune): Flag =
   of "u".toRune:
     result = flagNotUnicode
   else:
-    doAssert(false)
+    raise newException(RegexError,
+      ("Invalid group flag, found -$# " &
+       "but expected one of: -i, -m, -s, -U or -u") %% $r)
 
 proc parseGroupTag(sc: Scanner[Rune]): seq[Node] =
   ## parse a special group (name, flags, non-captures).
   ## Return a regular ``reGroupStart``
   ## if it's not special enough
   # A regular group
+  let startPos = sc.pos
   if sc.curr != "?".toRune:
     return @[initGroupStart()]
   discard sc.next()  # Consume "?"
@@ -883,14 +888,25 @@ proc parseGroupTag(sc: Scanner[Rune]): seq[Node] =
     result = @[initGroupStart(isCapturing = false)]
   of "P".toRune:
     discard sc.next()
-    doAssert(sc.curr == "<".toRune)
+    check(
+      sc.curr == "<".toRune,
+      ("Invalid group name near position $#, " &
+       "< opening symbol was expected") %% $startPos)
     discard sc.next()  # Consume "<"
     var name = newStringOfCap(75)
     for r in sc:
       if r == ">".toRune:
         break
       name.add(r.toUTF8)
-    doAssert(name.len > 0)
+    # todo: allow [a-zA-Z0-9] names only? check PCRE
+    check(
+      name.len > 0,
+      ("Invalid group name near position $#, " &
+       "name can't be empty") %% $startPos)
+    check(
+      sc.prev == ">".toRune,
+      ("Invalid group name near position $#, " &
+       "> closing symbol was expected") %% $startPos)
     result = @[initGroupStart(name)]
   of "i".toRune,
       "m".toRune,
@@ -921,8 +937,10 @@ proc parseGroupTag(sc: Scanner[Rune]): seq[Node] =
         kind: reSkip,
         cp: "¿".toRune))  # todo: remove?
   else:
-    doAssert(false)
-    discard
+    raise newException(RegexError,
+      ("Invalid group near position $#, " &
+       "unknown group type (?$#...)") %%
+       [$startPos, $sc.curr])
 
 proc subParse(sc: Scanner[Rune]): seq[Node] =
   let r = sc.prev
@@ -2216,7 +2234,7 @@ when isMainModule:
   doAssert(not "z".isMatch(re"[\z][\z]"))
   doAssert(raisesMsg(r"[a-\w]") ==
     "Invalid set range near position 5, " &
-    "range can't contain character-class/shorhand")
+    "range can't contain character-class/shorthand")
   doAssert(not raises(r"[a-\b]"))
   doAssert(raisesMsg(r"[d-c]") ==
     "Invalid set range near position 4, " &
@@ -2346,7 +2364,7 @@ when isMainModule:
     "Invalid repetition range near " &
     "position 8, can't have a range " &
     "greater than 100 repetitions, but found: 101")
-  doAssert(not raises(r"a{0,100}"))
+  doAssert(not raises(r"a{1,101}"))
   doAssert(raises(r"a{0,a}"))
   doAssert(raises(r"a{a,1}"))
   doAssert(raises(r"a{-1}"))
@@ -2494,6 +2512,16 @@ when isMainModule:
     "aab".match(re"((?P<bar>a)*b)").get().group("bar") ==
     @[0..0, 1..1])
 
+  doAssert(raisesMsg(r"abc(?Pabc)") ==
+    "Invalid group name near position " &
+    "4, < opening symbol was expected")
+  doAssert(raisesMsg(r"abc(?P<abc)") ==
+    "Invalid group name near position 4, " &
+    "> closing symbol was expected")
+  doAssert(raisesMsg(r"a(?P<>abc)") ==
+    "Invalid group name near position 2, " &
+    "name can't be empty")
+
   #tflags
   doAssert("foo\Lbar".isMatch(re"(?s).*"))
   doAssert("foo\Lbar".isMatch(re"(?s:.*)"))
@@ -2579,6 +2607,16 @@ when isMainModule:
   doAssert("Ǝ".isMatch(re"(?-u)[^\w]"))
   doAssert(not "Ǝ".isMatch(re"(?-u)[\w]"))
   doAssert(not "\t".isMatch(re"(?-u)[\w]"))
+
+  doAssert(raisesMsg(r"(?uq)") ==
+    "Invalid group flag, found q but " &
+    "expected one of: i, m, s, U or u")
+  doAssert(raisesMsg(r"(?u-q)") ==
+    "Invalid group flag, found -q but " &
+    "expected one of: -i, -m, -s, -U or -u")
+  doAssert(raisesMsg(r"abc(?q)") ==
+    "Invalid group near position 4, " &
+    "unknown group type (?q...)")
 
   # tescaped_sequences
   doAssert("\x07".isMatch(re"\a"))

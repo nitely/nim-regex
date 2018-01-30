@@ -1002,7 +1002,7 @@ type
 proc fillGroups(expression: var seq[Node]): GroupsCapture =
   ## populate group indices, names and capturing mark
   var
-    groups = initDeque[int](32)
+    groups = initDeque[int](64)
     nonCapt = 0
     names = initTable[string, int]()
     count = 0'i16
@@ -1103,7 +1103,7 @@ proc applyFlags(expression: seq[Node]): seq[Node] =
   ## apply flags to each group
   result = newSeqOfCap[Node](expression.len)
   let sc = expression.scan()
-  var flags = initDeque[seq[Flag]](32)
+  var flags = initDeque[seq[Flag]](64)
   for nn in sc:
     var n = nn
     for f in flags.squash():
@@ -1134,12 +1134,12 @@ proc applyFlags(expression: seq[Node]): seq[Node] =
           for nn in n.shorthands.mitems:
             nn.kind = nn.kind.toAsciiKind()
       else:
-        doAssert(f in {
+        assert f in {
           flagNotAnyMatchNewLine,
           flagNotMultiLine,
           flagNotCaseInsensitive,
           flagNotUnGreedy,
-          flagUnicode})
+          flagUnicode}
     case n.kind
     # (?flags)
     # Orphan flags are added to current group
@@ -1150,7 +1150,7 @@ proc applyFlags(expression: seq[Node]): seq[Node] =
         continue
       if sc.peek.kind == reSkip:
         discard sc.next()  # SKIP
-        doAssert(sc.peek.kind == reGroupEnd)
+        assert sc.peek.kind == reGroupEnd
         discard sc.next()  # )
         if flags.len > 0:
           flags[flags.len - 1].add(n.flags)
@@ -1167,7 +1167,7 @@ proc applyFlags(expression: seq[Node]): seq[Node] =
 proc expandOneRepRange(subExpr: seq[Node], n: Node): seq[Node] =
   ## expand a repetition-range expression
   ## into the equivalent repeated expression
-  doAssert(n.kind == reRepRange)
+  assert n.kind == reRepRange
   if n.max == -1:  # a{n,} -> aaa*
     result = newSeqOfCap[Node](subExpr.len * (n.min + 1) + 1)
     for _ in 0 ..< n.min:
@@ -1181,7 +1181,7 @@ proc expandOneRepRange(subExpr: seq[Node], n: Node): seq[Node] =
     for _ in 0 ..< n.max - 1:
       result.add(subExpr)
   else:  # a{n,m} -> aaa?a?
-    doAssert(n.min < n.max)
+    assert n.min < n.max
     result = newSeqOfCap[Node](subExpr.len * n.max + n.max - n.min)
     for _ in 0 ..< n.min:
       result.add(subExpr)
@@ -1204,7 +1204,10 @@ proc expandRepRange(expression: seq[Node]): seq[Node] =
     if n.kind != reRepRange:
       result.add(n)
       continue
-    doAssert(result.len > 0)
+    check(
+      result.len > 0,
+      "Invalid repeition range, " &
+      "nothing to repeat")
     case result[^1].kind
     of reGroupEnd:
       i = 0
@@ -1217,10 +1220,10 @@ proc expandRepRange(expression: seq[Node]): seq[Node] =
     of matchableKind:
       result.add(@[result[^1]].expandOneRepRange(n))
     else:
-      doAssert(
-        false,
-        "either char or shorthand (i.e: \\w) " &
-        "expected before repetition range")
+      raise newException(RegexError, (
+        "Invalid repetition range, either " &
+        "char, shorthand (i.e: \\w), group, or set " &
+        "expected before repetition range"))
 
 proc joinAtoms(expression: seq[Node]): seq[Node] =
   ## Put a ``~`` joiner between atoms. An atom is
@@ -1248,7 +1251,7 @@ proc joinAtoms(expression: seq[Node]): seq[Node] =
         reRepRange:
       inc atomsCount
     else:
-      doAssert(false, "Unhandled node")
+      assert false
     result.add(n)
 
 type
@@ -1265,7 +1268,7 @@ type
 proc opsPA(nk: NodeKind): OpsPA =
   ## return the precedence and
   ## associativity of a given node kind
-  doAssert(nk in opKind)
+  assert nk in opKind
   case nk
   of reRepRange,
       reZeroOrMore,
@@ -1277,7 +1280,7 @@ proc opsPA(nk: NodeKind): OpsPA =
   of reOr:
     result = (3, asyLeft)
   else:
-    doAssert(false, "Unhandled nodeKind")
+    assert false
 
 proc hasPrecedence(a: NodeKind, b: NodeKind): bool =
   ## Check ``b`` has precedence over ``a``.
@@ -1294,7 +1297,7 @@ proc hasPrecedence(a: NodeKind, b: NodeKind): bool =
       opsPA(b).precedence < opsPA(a).precedence))
 
 proc popGreaterThan(ops: var Deque[Node], op: Node): seq[Node] =
-  doAssert(op.kind in opKind)
+  assert op.kind in opKind
   result = newSeqOfCap[Node](ops.len)
   while (ops.len > 0 and
       ops[ops.len - 1].kind in opKind and
@@ -1319,7 +1322,7 @@ proc rpn(expression: seq[Node]): seq[Node] =
   ## Suffix notation removes nesting and so it can
   ## be parsed in a linear way instead of recursively
   result = newSeqOfCap[Node](expression.len)
-  var ops = initDeque[Node](32)
+  var ops = initDeque[Node](64)
   for n in expression:
     case n.kind
     of matchableKind, assertionKind:
@@ -1333,7 +1336,7 @@ proc rpn(expression: seq[Node]): seq[Node] =
       result.add(ops.popGreaterThan(n))
       ops.addLast(n)
     else:
-      doAssert(false, "unhandled node")
+      assert false
   # reverse ops
   for i in 1 .. ops.len:
     result.add(ops[ops.len - i])
@@ -1389,12 +1392,15 @@ proc nfa(expression: seq[Node]): seq[Node] =
   result.add(initEOENode())
   var
     ends = newSeq[End](expression.len + 1)
-    states = initDeque[int32](32)
+    states = initDeque[int32](64)
   ends.fill(@[])
   if expression.len == 0:
     states.addLast(0)
   for nn in expression:
-    doAssert(result.high + 1 <= int32.high)
+    check(
+      result.high < int32.high,
+      ("The expression is too long, " &
+       "limit is ~$#") %% $int32.high)
     var n = nn
     let ni = int32(result.high + 1)
     case n.kind
@@ -1457,8 +1463,8 @@ proc nfa(expression: seq[Node]): seq[Node] =
       result.add(n)
       states.addLast(stateA)
     else:
-      doAssert(false, "Unhandled node: $#" % $n.kind)
-  doAssert(states.len == 1)
+      assert(false, "Unhandled node: $#" %% $n.kind)
+  assert states.len == 1
   result.add(Node(
     kind: reSkip,
     cp: "¿".toRune,
@@ -2380,6 +2386,13 @@ when isMainModule:
   doAssert(raises(r"a{0,a}"))
   doAssert(raises(r"a{a,1}"))
   doAssert(raises(r"a{-1}"))
+  doAssert(raisesMsg(r"{10}") ==
+    "Invalid repeition range, " &
+    "nothing to repeat")
+  doAssert(raisesMsg(r"abc\A{10}") ==
+    "Invalid repetition range, either " &
+    "char, shorthand (i.e: \\w), group, or set " &
+    "expected before repetition range")
 
   #tnon_capturing_groups
   doAssert("a".matchWithCapt(re"(?:a)") == @[])
@@ -2539,6 +2552,7 @@ when isMainModule:
   doAssert(raisesMsg(r"(b(a)") ==
     "Invalid capturing group. " &
     "Found too many opening symbols")
+  #[
   var manyGroups = newStringOfCap(int16.high * 3)
   for _ in 0 ..< int16.high - 1:
     manyGroups.add(r"(a)")
@@ -2547,6 +2561,7 @@ when isMainModule:
   doAssert(raisesMsg(manyGroups) ==
     "Invalid number of capturing " &
     "groups, the limit is 32766")
+  ]#
 
   #tflags
   doAssert("foo\Lbar".isMatch(re"(?s).*"))

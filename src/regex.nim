@@ -1417,12 +1417,20 @@ proc nfa(expression: seq[Node]): seq[Node] =
       result.combine(ends, stateA, stateB)
       states.addLast(stateA)
     of reOr:
+      check(
+        states.len >= 2,
+        "Invalid OR conditional, nothing to " &
+        "match at right/left side of the condition")
       n.outB = states.popLast()
       n.outA = states.popLast()
       ends.update(ni, n.outA, n.outB)
       result.add(n)
       states.addLast(ni)
     of reZeroOrMore:
+      check(
+        states.len >= 1,
+        "Invalid `*` operator, " &
+        "nothing to repeat")
       n.outA = states.popLast()
       n.outB = 0
       ends.update(ni, n.outA, n.outB)
@@ -1432,6 +1440,10 @@ proc nfa(expression: seq[Node]): seq[Node] =
       if n.isGreedy:
         swap(result[^1].outA, result[^1].outB)
     of reOneOrMore:
+      check(
+        states.len >= 1,
+        "Invalid `+` operator, " &
+        "nothing to repeat")
       n.outA = states.popLast()
       n.outB = 0
       ends.update(ni, n.outA, n.outB)
@@ -1441,6 +1453,10 @@ proc nfa(expression: seq[Node]): seq[Node] =
       if n.isGreedy:
         swap(result[^1].outA, result[^1].outB)
     of reZeroOrOne:
+      check(
+        states.len >= 1,
+        "Invalid `?` operator, " &
+        "nothing to make optional")
       n.outA = states.popLast()
       n.outB = 0
       ends.update(ni, n.outA, n.outB)
@@ -1449,6 +1465,9 @@ proc nfa(expression: seq[Node]): seq[Node] =
       if n.isGreedy:
         swap(result[^1].outA, result[^1].outB)
     of reGroupStart:
+      check(
+        states.len >= 1,
+        "Invalid group, empty group is not allowed")
       n.outA = states.popLast()
       n.outB = -1
       ends.update(ni, n.outA, n.outB)
@@ -2084,6 +2103,12 @@ when isMainModule:
     "ฅa".matchWithCapt(re"(\w)(a)") ==
     @[@["ฅ"], @["a"]])
 
+  # tzero_or_more_op
+  doAssert(raisesMsg(r"*") ==
+    "Invalid `*` operator, nothing to repeat")
+  doAssert(raises(r"*abc"))
+  doAssert(not raises(r"\b*"))
+
   # tone_or_more_op
   doAssert("aaaa".isMatch(re"a+"))
   doAssert("abb".isMatch(re"ab+"))
@@ -2091,6 +2116,11 @@ when isMainModule:
   doAssert(not "".isMatch(re"a+"))
   doAssert(not "b".isMatch(re"a+"))
   doAssert(not "aab".isMatch(re"b+"))
+  doAssert(raisesMsg(r"(+)") ==
+    "Invalid `+` operator, nothing to repeat")
+  doAssert(raises(r"+"))
+  doAssert(raises(r"+abc"))
+  doAssert(not raises(r"\b+"))
 
   # tzero_or_one_op
   doAssert("a".isMatch(re"a?"))
@@ -2102,6 +2132,10 @@ when isMainModule:
   doAssert(not "aa".isMatch(re"a?"))
   doAssert(not "b".isMatch(re"a?"))
   doAssert(not "abb".isMatch(re"ab?"))
+  doAssert(raisesMsg(r"?") ==
+    "Invalid `?` operator, nothing to make optional")
+  doAssert(raises(r"?abc"))
+  doAssert(not raises(r"\b?"))
 
   # tescape
   doAssert("(a)".isMatch(re"\(a\)"))
@@ -2552,6 +2586,9 @@ when isMainModule:
   doAssert(raisesMsg(r"(b(a)") ==
     "Invalid capturing group. " &
     "Found too many opening symbols")
+  doAssert(raisesMsg(r"()") ==
+    "Invalid group, empty group is not allowed")
+  doAssert(not raises(r"(\b)"))
   #[
   var manyGroups = newStringOfCap(int16.high * 3)
   for _ in 0 ..< int16.high - 1:
@@ -2658,6 +2695,13 @@ when isMainModule:
   doAssert(raisesMsg(r"abc(?q)") ==
     "Invalid group near position 4, " &
     "unknown group type (?q...)")
+
+  # tor_op
+  doAssert(raisesMsg(r"|") ==
+    "Invalid OR conditional, nothing " &
+    "to match at right/left side of the condition")
+  doAssert(raises(r"abc|"))
+  doAssert(raises(r"|abc"))
 
   # tescaped_sequences
   doAssert("\x07".isMatch(re"\a"))

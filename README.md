@@ -27,7 +27,7 @@ Features:
 - [ ] Character classes matching as described in
   [UTS#18](http://www.unicode.org/reports/tr18/#Compatibility_Properties)
 - [ ] `[[:alnum:]]`, etc
-- [ ] User friendly compiling errors
+- [x] User friendly compiling errors
 - [ ] APIs (nre/re/re2/rust-regex API parity)
 
 ## Docs

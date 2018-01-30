@@ -255,7 +255,7 @@ type
   Node = object
     kind: NodeKind
     cp: Rune
-    outA, outB: int32
+    outA, outB: int16
     isGreedy: bool
     # reGroupStart, reGroupEnd
     idx: int16  # todo: rename?
@@ -1342,7 +1342,7 @@ proc rpn(expression: seq[Node]): seq[Node] =
     result.add(ops[ops.len - i])
 
 type
-  End = seq[int32]
+  End = seq[int16]
     ## store all the last
     ## states of a given state.
     ## Avoids having to recurse
@@ -1352,8 +1352,8 @@ type
 template combine(
     nfa: var seq[Node],
     ends: var seq[End],
-    org: int32,
-    target: int32) =
+    org: int16,
+    target: int16) =
   ## combine ends of ``org``
   ## with ``target``
   for e in ends[org]:
@@ -1365,9 +1365,9 @@ template combine(
 
 template update(
     ends: var seq[End],
-    ni: int32,
-    outA: int32,
-    outB: int32) =
+    ni: int16,
+    outA: int16,
+    outB: int16) =
   ## update the ends of Node ``ni``
   ## to point to ends of ``n.outA``
   ## and ``n.outB``. If either outA
@@ -1392,17 +1392,17 @@ proc nfa(expression: seq[Node]): seq[Node] =
   result.add(initEOENode())
   var
     ends = newSeq[End](expression.len + 1)
-    states = initDeque[int32](64)
+    states = initDeque[int16](64)
   ends.fill(@[])
   if expression.len == 0:
     states.addLast(0)
   for nn in expression:
     check(
-      result.high < int32.high,
+      result.high < int16.high,
       ("The expression is too long, " &
-       "limit is ~$#") %% $int32.high)
+       "limit is ~$#") %% $int16.high)
     var n = nn
-    let ni = int32(result.high + 1)
+    let ni = int16(result.high + 1)
     case n.kind
     of matchableKind, assertionKind:
       n.outA = 0
@@ -1469,7 +1469,7 @@ proc nfa(expression: seq[Node]): seq[Node] =
     kind: reSkip,
     cp: "¿".toRune,
     outA: states[0],
-    outB: -1'i32))
+    outB: -1))
 
 type
   Regex* = object
@@ -1493,7 +1493,7 @@ type
   State = tuple
     ## temporary state to store node's
     ## index and capture's index while matching
-    ni: int32
+    ni: int16
     ci: int
 
 iterator group(m: RegexMatch, i: int): Slice[int] =
@@ -1739,7 +1739,7 @@ proc toVisitStep(
 proc step(
     result: var States,
     pattern: Regex,
-    nIdx: int32,
+    nIdx: int16,
     captured: var ElasticSeq[Capture],
     cIdx: int,
     visited: var BitSet,
@@ -1842,7 +1842,7 @@ proc match*(s: string | seq[Rune], pattern: Regex): Option[RegexMatch] =
   ##   assert "abcd".match(re"abc").isSome == false
   ##
   initDataSets(true)
-  let statesCount = pattern.states.high.int32
+  let statesCount = pattern.states.high.int16
   for i, cp, nxt in s.peek:
     if cp == invalidRune:
       assert currStates.len == 0
@@ -1878,7 +1878,7 @@ proc contains*(s: string | seq[Rune], pattern: Regex): bool =
   ##   assert re"^(23)+$" notin "23232"
   ##
   initDataSets(false)
-  let statesCount = pattern.states.high.int32
+  let statesCount = pattern.states.high.int16
   for _, cp, nxt in s.peek:
     visited.clear()
     currStates.step(
@@ -1914,7 +1914,7 @@ proc find*(s: string | seq[Rune], pattern: Regex): Option[RegexMatch] =
   ##     @[Slice[int](a: 0, b: 1), Slice[int](a: 2, b: 3)])
   ##
   initDataSets(true)
-  let statesCount = pattern.states.high.int32
+  let statesCount = pattern.states.high.int16
   for i, cp, nxt in s.peek:
     visited.clear()
     currStates.step(

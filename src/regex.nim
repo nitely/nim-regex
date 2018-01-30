@@ -152,7 +152,6 @@ import strutils
 import sets
 import tables
 import options
-import deques
 
 import unicodedb
 import unicodeplus except isUpper, isLower
@@ -995,6 +994,47 @@ proc greediness(expression: seq[Node]): seq[Node] =
     result.add(n)
 
 type
+  ElasticSeq[T] = object
+    ## a seq that can grow and shrink
+    ## avoiding excessive allocations
+    s: seq[T]
+    pos: int
+
+proc initElasticSeq[T](size = 16): ElasticSeq[T] =
+  ElasticSeq[T](s: newSeq[T](size), pos: 0)
+
+proc isInitialized[T](ls: ElasticSeq[T]): bool =
+  not ls.s.isNil
+
+proc `[]`[T](ls: ElasticSeq[T], i: int): T =
+  ls.s[i]
+
+proc `[]`[T](ls: var ElasticSeq[T], i: int): var T =
+  ls.s[i]
+
+proc len[T](ls: ElasticSeq[T]): int =
+  ls.pos
+
+proc clear[T](ls: var ElasticSeq[T]) =
+  ls.pos = 0
+
+proc add[T](ls: var ElasticSeq[T], x: T) =
+  if ls.pos > ls.s.high:
+    ls.s.setLen(ls.s.len * 2)
+  ls.s[ls.pos] = x
+  inc ls.pos
+
+proc pop[T](ls: var ElasticSeq[T]): T =
+  dec ls.pos
+  ls.s[ls.pos]
+
+iterator items[T](ls: ElasticSeq[T]): T {.inline.} =
+  var i = 0
+  while i < ls.pos:
+    yield ls.s[i]
+    inc i
+
+type
   GroupsCapture = tuple
     count: int16
     names: Table[string, int]
@@ -1002,14 +1042,14 @@ type
 proc fillGroups(expression: var seq[Node]): GroupsCapture =
   ## populate group indices, names and capturing mark
   var
-    groups = initDeque[int](64)
+    groups = initElasticSeq[int](64)
     nonCapt = 0
     names = initTable[string, int]()
     count = 0'i16
   for i, n in expression.mpairs:
     case n.kind
     of reGroupStart:
-      groups.addLast(i)
+      groups.add(i)
       if n.isCapturing:
         n.idx = count
         inc count
@@ -1023,7 +1063,7 @@ proc fillGroups(expression: var seq[Node]): GroupsCapture =
         groups.len > 0,
         "Invalid capturing group. " &
         "Found too many closing symbols")
-      let start = groups.popLast()
+      let start = groups.pop()
       n.isCapturing = expression[start].isCapturing
       n.idx = expression[start].idx
       if not n.isCapturing:
@@ -1092,7 +1132,7 @@ proc toggle(f: Flag): Flag =
   of flagNotUnicode:
     flagUnicode
 
-proc squash(flags: Deque[seq[Flag]]): set[Flag] =
+proc squash(flags: ElasticSeq[seq[Flag]]): set[Flag] =
   result = {}
   for ff in flags:
     for f in ff:
@@ -1103,7 +1143,7 @@ proc applyFlags(expression: seq[Node]): seq[Node] =
   ## apply flags to each group
   result = newSeqOfCap[Node](expression.len)
   let sc = expression.scan()
-  var flags = initDeque[seq[Flag]](64)
+  var flags = initElasticSeq[seq[Flag]](64)
   for nn in sc:
     var n = nn
     for f in flags.squash():
@@ -1145,7 +1185,7 @@ proc applyFlags(expression: seq[Node]): seq[Node] =
     # Orphan flags are added to current group
     of reGroupStart:
       if n.flags.isNil:
-        flags.addLast(@[])
+        flags.add(@[])
         result.add(n)
         continue
       if sc.peek.kind == reSkip:
@@ -1155,11 +1195,11 @@ proc applyFlags(expression: seq[Node]): seq[Node] =
         if flags.len > 0:
           flags[flags.len - 1].add(n.flags)
         else:
-          flags.addLast(n.flags)
+          flags.add(n.flags)
         continue  # skip (
-      flags.addLast(n.flags)
+      flags.add(n.flags)
     of reGroupEnd:
-      discard flags.popLast()
+      discard flags.pop()
     else:
       discard
     result.add(n)
@@ -1296,18 +1336,18 @@ proc hasPrecedence(a: NodeKind, b: NodeKind): bool =
     (opsPA(b).associativity == asyLeft and
       opsPA(b).precedence < opsPA(a).precedence))
 
-proc popGreaterThan(ops: var Deque[Node], op: Node): seq[Node] =
+proc popGreaterThan(ops: var ElasticSeq[Node], op: Node): seq[Node] =
   assert op.kind in opKind
   result = newSeqOfCap[Node](ops.len)
   while (ops.len > 0 and
       ops[ops.len - 1].kind in opKind and
       ops[ops.len - 1].kind.hasPrecedence(op.kind)):
-    result.add(ops.popLast())
+    result.add(ops.pop())
 
-proc popUntilGroupStart(ops: var Deque[Node]): seq[Node] =
+proc popUntilGroupStart(ops: var ElasticSeq[Node]): seq[Node] =
   result = newSeqOfCap[Node](ops.len)
   while true:
-    let op = ops.popLast()
+    let op = ops.pop()
     result.add(op)
     if op.kind == reGroupStart:
       break
@@ -1322,19 +1362,19 @@ proc rpn(expression: seq[Node]): seq[Node] =
   ## Suffix notation removes nesting and so it can
   ## be parsed in a linear way instead of recursively
   result = newSeqOfCap[Node](expression.len)
-  var ops = initDeque[Node](64)
+  var ops = initElasticSeq[Node](64)
   for n in expression:
     case n.kind
     of matchableKind, assertionKind:
       result.add(n)
     of reGroupStart:
-      ops.addLast(n)
+      ops.add(n)
     of reGroupEnd:
       result.add(ops.popUntilGroupStart())
       result.add(n)
     of opKind:
       result.add(ops.popGreaterThan(n))
-      ops.addLast(n)
+      ops.add(n)
     else:
       assert false
   # reverse ops
@@ -1392,10 +1432,10 @@ proc nfa(expression: seq[Node]): seq[Node] =
   result.add(initEOENode())
   var
     ends = newSeq[End](expression.len + 1)
-    states = initDeque[int16](64)
+    states = initElasticSeq[int16](64)
   ends.fill(@[])
   if expression.len == 0:
-    states.addLast(0)
+    states.add(0)
   for nn in expression:
     check(
       result.high < int16.high,
@@ -1409,34 +1449,34 @@ proc nfa(expression: seq[Node]): seq[Node] =
       n.outB = -1
       ends.update(ni, n.outA, n.outB)
       result.add(n)
-      states.addLast(ni)
+      states.add(ni)
     of reJoiner:
       let
-        stateB = states.popLast()
-        stateA = states.popLast()
+        stateB = states.pop()
+        stateA = states.pop()
       result.combine(ends, stateA, stateB)
-      states.addLast(stateA)
+      states.add(stateA)
     of reOr:
       check(
         states.len >= 2,
         "Invalid OR conditional, nothing to " &
         "match at right/left side of the condition")
-      n.outB = states.popLast()
-      n.outA = states.popLast()
+      n.outB = states.pop()
+      n.outA = states.pop()
       ends.update(ni, n.outA, n.outB)
       result.add(n)
-      states.addLast(ni)
+      states.add(ni)
     of reZeroOrMore:
       check(
         states.len >= 1,
         "Invalid `*` operator, " &
         "nothing to repeat")
-      n.outA = states.popLast()
+      n.outA = states.pop()
       n.outB = 0
       ends.update(ni, n.outA, n.outB)
       result.combine(ends, n.outA, ni)
       result.add(n)
-      states.addLast(ni)
+      states.add(ni)
       if n.isGreedy:
         swap(result[^1].outA, result[^1].outB)
     of reOneOrMore:
@@ -1444,12 +1484,12 @@ proc nfa(expression: seq[Node]): seq[Node] =
         states.len >= 1,
         "Invalid `+` operator, " &
         "nothing to repeat")
-      n.outA = states.popLast()
+      n.outA = states.pop()
       n.outB = 0
       ends.update(ni, n.outA, n.outB)
       result.combine(ends, n.outA, ni)
       result.add(n)
-      states.addLast(n.outA)
+      states.add(n.outA)
       if n.isGreedy:
         swap(result[^1].outA, result[^1].outB)
     of reZeroOrOne:
@@ -1457,30 +1497,30 @@ proc nfa(expression: seq[Node]): seq[Node] =
         states.len >= 1,
         "Invalid `?` operator, " &
         "nothing to make optional")
-      n.outA = states.popLast()
+      n.outA = states.pop()
       n.outB = 0
       ends.update(ni, n.outA, n.outB)
       result.add(n)
-      states.addLast(ni)
+      states.add(ni)
       if n.isGreedy:
         swap(result[^1].outA, result[^1].outB)
     of reGroupStart:
       check(
         states.len >= 1,
         "Invalid group, empty group is not allowed")
-      n.outA = states.popLast()
+      n.outA = states.pop()
       n.outB = -1
       ends.update(ni, n.outA, n.outB)
       result.add(n)
-      states.addLast(ni)
+      states.add(ni)
     of reGroupEnd:
       n.outA = 0
       n.outB = -1
       ends.update(ni, n.outA, n.outB)
-      let stateA = states.popLast()
+      let stateA = states.pop()
       result.combine(ends, stateA, ni)
       result.add(n)
-      states.addLast(stateA)
+      states.add(stateA)
     else:
       assert(false, "Unhandled node: $#" %% $n.kind)
   assert states.len == 1
@@ -1610,44 +1650,6 @@ proc incl(bss: var BitSet, x: int) =
 
 proc contains(bss: var BitSet, x: int): bool =
   bss.s[x] == bss.key
-
-type
-  ElasticSeq[T] = object
-    ## a seq that can grow and shrink
-    ## avoiding excessive allocations
-    s: seq[T]
-    pos: int
-
-proc initElasticSeq[T](size = 16): ElasticSeq[T] =
-  ElasticSeq[T](s: newSeq[T](size), pos: 0)
-
-proc isInitialized[T](ls: ElasticSeq[T]): bool =
-  not ls.s.isNil
-
-proc `[]`[T](ls: ElasticSeq[T], i: int): T =
-  ls.s[i]
-
-proc len[T](ls: ElasticSeq[T]): int =
-  ls.pos
-
-proc clear[T](ls: var ElasticSeq[T]) =
-  ls.pos = 0
-
-proc add[T](ls: var ElasticSeq[T], x: T) =
-  if ls.pos > ls.s.high:
-    ls.s.setLen(ls.s.len * 2)
-  ls.s[ls.pos] = x
-  inc ls.pos
-
-proc pop[T](ls: var ElasticSeq[T]): T =
-  dec ls.pos
-  ls.s[ls.pos]
-
-iterator items[T](ls: ElasticSeq[T]): T {.inline.} =
-  var i = 0
-  while i < ls.pos:
-    yield ls.s[i]
-    inc i
 
 type
   States = tuple
@@ -1958,7 +1960,7 @@ proc find*(s: string | seq[Rune], pattern: Regex): Option[RegexMatch] =
     nextStates.clear()
   setRegexMatch(result, currStates, pattern, captured)
 
-proc toPattern*(s: string): Regex =
+proc toPattern*(s: string): Regex {.raises: [RegexError].} =
   ## Parse and compile a regular expression.
   ## Use the ``re`` template if you
   ## care about performance.

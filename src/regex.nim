@@ -2030,7 +2030,6 @@ proc incRune(s: string, n: var int) {.inline.} =
   fastRuneAt(s, n, r, true)
 
 iterator split*(s: string, sep: Regex): string =
-  # todo: unicode aware with fastRuneAt n to inc last
   # todo: pass/reuse data structures
   var
     first = 0
@@ -2040,11 +2039,16 @@ iterator split*(s: string, sep: Regex): string =
     first = last
     while last <= s.len:
       n = matchEnd(s, sep, last)
-      if last == n: s.incRune(last)
+      #if last == n: s.incRune(last)
       if n > 0: break
       s.incRune(last)
     yield substr(s, first, last - 1)
     if n > 0: last = n
+
+proc split*(s: string, sep: Regex): seq[string] =
+  result = newSeqOfCap[string](s.len)
+  for w in s.split(sep):
+    result.add(w)
 
 proc toPattern*(s: string): Regex {.raises: [RegexError].} =
   ## Parse and compile a regular expression.
@@ -2832,24 +2836,16 @@ when isMainModule:
     for word in split("a,b,c", re","):
       res.add(word)
     doAssert(res == @["a", "b", "c"])
-  block:
-    var res = newSeq[string]()
-    for word in split("00232this02939is39an22example111", re"\d+"):
-      res.add(word)
-    doAssert(res == @["", "this", "is", "an", "example", ""])
-  block:
-    var res = newSeq[string]()
-    for word in split("AAA :   : BBB", re"\s*:\s*"):
-      res.add(word)
-    doAssert(res == @["AAA", "", "BBB"])
-  block:
-    var res = newSeq[string]()
-    for word in split(",a,Ϊ,Ⓐ,弢,", re","):
-      res.add(word)
-    doAssert(res == @["", "a", "Ϊ", "Ⓐ", "弢", ""])
-  block:
-    var res = newSeq[string]()
-    # todo: use raw string once \x is implemented
-    for word in split("弢", re("\xAF")):  # "弢" == "\xF0\xAF\xA2\x94"
-      res.add(word)
-    doAssert(res == @["弢"])
+  doAssert(
+    split("00232this02939is39an22example111", re"\d+") ==
+    @["", "this", "is", "an", "example", ""])
+  doAssert(
+    split("AAA :   : BBB", re"\s*:\s*") ==
+    @["AAA", "", "BBB"])
+  doAssert(split("", re",") == @[""])
+  doAssert(split("abc", re"") == @["abc"])
+  doAssert(
+    split(",a,Ϊ,Ⓐ,弢,", re",") ==
+    @["", "a", "Ϊ", "Ⓐ", "弢", ""])
+  # todo: use raw string once \x is implemented
+  doAssert(split("弢", re("\xAF")) == @["弢"])  # "弢" == "\xF0\xAF\xA2\x94"

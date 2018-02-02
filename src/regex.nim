@@ -2039,8 +2039,7 @@ iterator split*(s: string, sep: Regex): string =
       if last == n: inc last
       if n > 0: break
       inc last
-    if first <= last:
-      yield s[first ..< last]
+    yield substr(s, first, last - 1)
     if n > 0: last = n
 
 proc toPattern*(s: string): Regex {.raises: [RegexError].} =
@@ -2826,7 +2825,17 @@ when isMainModule:
   # tsplit
   block:
     var res = newSeq[string]()
-    for word in split("00232this02939is39an22example111", re"\d+"):
-      echo word
     for word in split("a,b,c", re","):
-      echo word
+      res.add(word)
+    doAssert(res == @["a", "b", "c"])
+  block:
+    var res = newSeq[string]()
+    for word in split("00232this02939is39an22example111", re"\d+"):
+      res.add(word)
+    doAssert(res == @["", "this", "is", "an", "example", ""])
+  block:
+    var res = newSeq[string]()
+    for word in split("AAA :   : BBB", re"\s*:\s*"):
+      res.add(word)
+    doAssert(res == @["AAA", "", "BBB"])
+  # todo: test unicode

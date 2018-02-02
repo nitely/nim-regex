@@ -285,7 +285,7 @@ proc initEOENode(): Node =
   ## This is a dummy node that marks a match as successful
   Node(kind: reEOE, cp: "¿".toRune, outA: -1, outB: -1)
 
-template initSetNodeCommon(k: NodeKind): Node =
+template initSetNodeImpl(k: NodeKind): Node =
   ## base node
   assert k in {reSet, reNotSet}
   Node(
@@ -298,12 +298,12 @@ template initSetNodeCommon(k: NodeKind): Node =
 proc initSetNode(): Node =
   ## return a set ``Node``,
   ## parsed from an expression such as ``[a-z]``
-  initSetNodeCommon(reSet)
+  initSetNodeImpl(reSet)
 
 proc initNotSetNode(): Node =
   ## return a negated set ``Node``,
   ## parsed from an expression such as ``[^a-z]``
-  initSetNodeCommon(reNotSet)
+  initSetNodeImpl(reNotSet)
 
 proc initGroupStart(
     name: string = nil,
@@ -1554,6 +1554,7 @@ type
     ## index and capture's index while matching
     ni: int16
     ci: int
+    cpi: int
 
 iterator group(m: RegexMatch, i: int): Slice[int] =
   ## return slices for a given group.
@@ -1652,12 +1653,12 @@ proc contains(bss: var BitSet, x: int): bool =
   bss.s[x] == bss.key
 
 type
-  States = tuple
+  States = object
     states: ElasticSeq[State]
     ids: BitSet
 
 proc initStates(size: int): States =
-  result = (
+  result = States(
     states: initElasticSeq[State](),
     ids: initBitSet(size))
 
@@ -1748,14 +1749,37 @@ iterator peek[T: seq[Rune] | string](s: T): (int, Rune, Rune) {.inline.} =
     j = i
   yield (j, prev, invalidRune)
 
+iterator runesIt(s: string, start: int): (int, Rune) {.inline.} =
+  ## yield current Rune and
+  ## the ending index/start of next rune
+  var
+    i = start
+    result: Rune
+  while i < len(s):
+    fastRuneAt(s, i, result, true)
+    yield (i, result)
+
+iterator peek(s: string, start: int): (int, Rune, Rune) {.inline.} =
+  ## iterates over unicode characters yielding
+  ## next rune index, current rune and next rune
+  var
+    prev = invalidRune
+    j = 0
+  for i, r in s.runesIt(start):
+    yield (j, prev, r)
+    prev = r
+    j = i
+  yield (j, prev, invalidRune)
+
 proc toVisitStep(
     result: var ElasticSeq[State],
     n: Node,
-    cIdx: int) {.inline.} =
+    cIdx: int,
+    cpIdx: int) {.inline.} =
   if n.outB != -1:
-    result.add((ni: n.outB, ci: cIdx))
+    result.add((ni: n.outB, ci: cIdx, cpi: cpIdx))
   if n.outA != -1:
-    result.add((ni: n.outA, ci: cIdx))
+    result.add((ni: n.outA, ci: cIdx, cpi: cpIdx))
 
 proc step(
     result: var States,
@@ -1769,7 +1793,7 @@ proc step(
     cp: Rune,
     nxt: Rune) =
   assert toVisit.len == 0
-  toVisit.add((ni: nIdx, ci: cIdx))
+  toVisit.add((ni: nIdx, ci: cIdx, cpi: cpIdx))
   while toVisit.len > 0:
     let state = toVisit.pop()
     if state.ni in visited:
@@ -1781,31 +1805,31 @@ proc step(
       result.add(state)
     of assertionKind:
       if n.match(cp, nxt):
-        toVisitStep(toVisit, n, state.ci)
+        toVisitStep(toVisit, n, state.ci, state.cpi)
     of reGroupStart:
       if not (n.isCapturing and
           captured.isInitialized):
-        toVisitStep(toVisit, n, state.ci)
+        toVisitStep(toVisit, n, state.ci, state.cpi)
         continue
       captured.add(Capture(
         kind: captStart,
         cpIdx: cpIdx,
         prev: state.ci,
         idx: n.idx))
-      toVisitStep(toVisit, n, captured.len - 1)
+      toVisitStep(toVisit, n, captured.len - 1, state.cpi)
     of reGroupEnd:
       if not (n.isCapturing and
           captured.isInitialized):
-        toVisitStep(toVisit, n, state.ci)
+        toVisitStep(toVisit, n, state.ci, state.cpi)
         continue
       captured.add(Capture(
         kind: captEnd,
         cpIdx: cpIdx - 1,
         prev: state.ci,
         idx: n.idx))
-      toVisitStep(toVisit, n, captured.len - 1)
+      toVisitStep(toVisit, n, captured.len - 1, state.cpi)
     else:
-      toVisitStep(toVisit, n, state.ci)
+      toVisitStep(toVisit, n, state.ci, state.cpi)
 
 proc stepFrom(
     result: var States,
@@ -1831,11 +1855,11 @@ proc setRegexMatch(
     states: States,
     pattern: Regex,
     captured: ElasticSeq[Capture]) {.inline.} =
-  for ni, ci in states.items:
-    if pattern.states[ni].kind == reEOE:
+  for state in states.items:
+    if pattern.states[state.ni].kind == reEOE:
       var m = RegexMatch()
       if pattern.groupsCount > 0:
-        m.populateCaptures(captured, ci, pattern.groupsCount)
+        m.populateCaptures(captured, state.ci, pattern.groupsCount)
         m.namedGroups = pattern.namedGroups
       result = some(m)
       return
@@ -1874,13 +1898,13 @@ proc match*(s: string | seq[Rune], pattern: Regex): Option[RegexMatch] =
       continue
     if currStates.len == 0:
       break
-    for ni, ci in currStates.items:
-      let n = pattern.states[ni]
+    for state in currStates:
+      let n = pattern.states[state.ni]
       if not n.match(cp):
         continue
       visited.clear()
       nextStates.stepFrom(
-        n, pattern, captured, ci, visited, toVisit, i, cp, nxt)
+        n, pattern, captured, state.ci, visited, toVisit, i, cp, nxt)
     swap(currStates, nextStates)
     nextStates.clear()
   setRegexMatch(result, currStates, pattern, captured)
@@ -1907,8 +1931,8 @@ proc contains*(s: string | seq[Rune], pattern: Regex): bool =
       visited, toVisit, 0, cp, nxt)
     if cp == invalidRune:
       continue
-    for ni, _ in currStates.items:
-      let n = pattern.states[ni]
+    for state in currStates:
+      let n = pattern.states[state.ni]
       result = n.kind == reEOE
       if result:
         return
@@ -1919,8 +1943,8 @@ proc contains*(s: string | seq[Rune], pattern: Regex): bool =
         n, pattern, captured, 0, visited, toVisit, 0, cp, nxt)
     swap(currStates, nextStates)
     nextStates.clear()
-  for ni, _ in currStates.items:
-    result = pattern.states[ni].kind == reEOE
+  for state in currStates:
+    result = pattern.states[state.ni].kind == reEOE
     if result:
       return
 
@@ -1937,28 +1961,87 @@ proc find*(s: string | seq[Rune], pattern: Regex): Option[RegexMatch] =
   initDataSets(true)
   let statesCount = pattern.states.high.int16
   for i, cp, nxt in s.peek:
-    visited.clear()
-    currStates.step(
-      pattern, statesCount, captured, 0,
-      visited, toVisit, i, cp, nxt)
+    # stop trying to match when there is a match
+    if currStates.len == 0 or
+        pattern.states[currStates[currStates.len - 1].ni].kind != reEOE:
+      visited.clear()
+      currStates.step(
+        pattern, statesCount, captured, 0,
+        visited, toVisit, i, cp, nxt)
+    # break on longest match
     if currStates.len > 0 and
         pattern.states[currStates[0].ni].kind == reEOE:
       break
     if cp == invalidRune:
       continue
-    for ni, ci in currStates.items:
-      let n = pattern.states[ni]
+    for state in currStates:
+      let n = pattern.states[state.ni]
       if n.kind == reEOE:
-        nextStates.add((ni: ni, ci: ci))
-        continue
+        # todo: put in var stateEOE?
+        nextStates.add(state)
+        break
       if not n.match(cp):
         continue
       visited.clear()
       nextStates.stepFrom(
-        n, pattern, captured, ci, visited, toVisit, i, cp, nxt)
+        n, pattern, captured, state.ci, visited, toVisit, i, cp, nxt)
     swap(currStates, nextStates)
     nextStates.clear()
   setRegexMatch(result, currStates, pattern, captured)
+
+proc matchEnd(s: string, pattern: Regex, start = 0): int =
+  ## return char index of end of match
+  assert start >= 0
+  result = -1
+  initDataSets(true)
+  let statesCount = pattern.states.high.int16
+  for i, cp, nxt in s.peek(start):
+    if cp == invalidRune:
+      assert currStates.len == 0
+      assert i == 0
+      currStates.step(
+        pattern, statesCount, captured, 0,
+        visited, toVisit, i, cp, nxt)
+      continue
+    if currStates.len == 0:
+      break
+    if pattern.states[currStates[0].ni].kind == reEOE:
+      result = currStates[0].cpi
+      break
+    for state in currStates:
+      let n = pattern.states[state.ni]
+      if n.kind == reEOE:
+        nextStates.add(state)
+        break
+      if not n.match(cp):
+        continue
+      visited.clear()
+      nextStates.stepFrom(
+        n, pattern, captured, 0, visited, toVisit, i, cp, nxt)
+    swap(currStates, nextStates)
+    nextStates.clear()
+  for state in currStates.items:
+    if pattern.states[state.ni].kind == reEOE:
+      result = state.cpi
+      return
+
+iterator split*(s: string, sep: Regex): string =
+  # todo: unicode aware with fastRuneAt n to inc last
+  # todo: pass/reuse data structures
+  var
+    first = 0
+    last = 0
+    n = 0
+  while last <= s.len:
+    first = last
+    while last <= s.len:
+      n = matchEnd(s, sep, last)
+      if last == n: inc last
+      if n > 0: break
+      inc last
+    if first <= last:
+      yield s[first ..< last]
+    if n > 0: last = n
 
 proc toPattern*(s: string): Regex {.raises: [RegexError].} =
   ## Parse and compile a regular expression.
@@ -2056,13 +2139,16 @@ when isMainModule:
   doAssert(not "ab".isMatch(re"a(b|c)*d"))
   doAssert(not "a".isMatch(re"b"))
   doAssert(not "a".isMatch(re""))
+  # raw string need double "" instead of \" to escape,
+  # this is a Nim thing
+  doAssert(" \"word\" ".isMatch(re"\s"".*""\s"))
 
   # trepetition_cycle
   doAssert("aaa".isMatch(re"a**"))
   doAssert("aaa".isMatch(re"(a*)*"))
   doAssert("aaabbbaaa".isMatch(re"((a*|b*))*"))
   doAssert("aaa".isMatch(re"a*****"))
-  #doAssert("aaa".isMatch(re"a*{,}"))  # must raise
+  doAssert(raises(r"a*{,}"))
   doAssert("aaa".isMatch(re"(a?)*"))
   doAssert("aaaa".isMatch(re"((a)*(a)*)*"))
 
@@ -2300,7 +2386,6 @@ when isMainModule:
   doAssert(raisesMsg(r"[abc") ==
     "Invalid set near position 1, missing close symbol")
 
-
   # tnot_set
   doAssert("a".matchWithCapt(re"([^b])") == @[@["a"]])
   doAssert("asd".matchWithCapt(re"([^b]*)") == @[@["asd"]])
@@ -2315,7 +2400,9 @@ when isMainModule:
     "<asd123!@#>".matchWithCapt(re"(<[^>]*>)") ==
     @[@["<asd123!@#>"]])
   doAssert(not "a".isMatch(re"[^a]"))
-  #doAssert("^".isMatch(re"[^]"))  # should raise missing end
+  doAssert(raisesMsg(r"[^]") ==
+    "Invalid set near position 1, " &
+    "missing close symbol")
   doAssert("^".isMatch(re"[\^]"))
   doAssert("a".isMatch(re"[\^a]"))
   doAssert(not "^".isMatch(re"[^^]"))
@@ -2368,9 +2455,9 @@ when isMainModule:
   doAssert("aaaaaaaaaa".isMatch(re"a{0,}"))
   doAssert("".isMatch(re"a{0,}"))
   doAssert(not "a".isMatch(re"a{2,}"))
-  #doAssert("aaa".isMatch(re"a*{,}"))  # must raise
-  #doAssert("aaa".isMatch(re"a*{0}"))  # must raise
-  #doAssert("aaa".isMatch(re"a*{1}"))  # must raise
+  doAssert(raises(r"a*{,}"))
+  doAssert(raises(r"a*{0}"))
+  doAssert(raises(r"a*{1}"))
   doAssert(
     "aaa".matchWithCapt(re"(a){,}") ==
     @[@["a", "a", "a"]])
@@ -2735,3 +2822,11 @@ when isMainModule:
   doAssert(re"(23)+" in "2323")
   doAssert(re"(23)+" in "23232")
   doAssert(re"^(23)+$" notin "23232")
+
+  # tsplit
+  block:
+    var res = newSeq[string]()
+    for word in split("00232this02939is39an22example111", re"\d+"):
+      echo word
+    for word in split("a,b,c", re","):
+      echo word

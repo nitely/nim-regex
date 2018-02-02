@@ -2025,6 +2025,10 @@ proc matchEnd(s: string, pattern: Regex, start = 0): int =
       result = state.cpi
       return
 
+proc incRune(s: string, n: var int) {.inline.} =
+  var r: Rune
+  fastRuneAt(s, n, r, true)
+
 iterator split*(s: string, sep: Regex): string =
   # todo: unicode aware with fastRuneAt n to inc last
   # todo: pass/reuse data structures
@@ -2036,9 +2040,9 @@ iterator split*(s: string, sep: Regex): string =
     first = last
     while last <= s.len:
       n = matchEnd(s, sep, last)
-      if last == n: inc last
+      if last == n: s.incRune(last)
       if n > 0: break
-      inc last
+      s.incRune(last)
     yield substr(s, first, last - 1)
     if n > 0: last = n
 
@@ -2838,4 +2842,14 @@ when isMainModule:
     for word in split("AAA :   : BBB", re"\s*:\s*"):
       res.add(word)
     doAssert(res == @["AAA", "", "BBB"])
-  # todo: test unicode
+  block:
+    var res = newSeq[string]()
+    for word in split(",a,Ϊ,Ⓐ,弢,", re","):
+      res.add(word)
+    doAssert(res == @["", "a", "Ϊ", "Ⓐ", "弢", ""])
+  block:
+    var res = newSeq[string]()
+    # todo: use raw string once \x is implemented
+    for word in split("弢", re("\xAF")):  # "弢" == "\xF0\xAF\xA2\x94"
+      res.add(word)
+    doAssert(res == @["弢"])

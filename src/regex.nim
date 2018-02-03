@@ -1015,6 +1015,9 @@ proc `[]`[T](ls: var ElasticSeq[T], i: int): var T =
 proc len[T](ls: ElasticSeq[T]): int =
   ls.pos
 
+proc high[T](ls: ElasticSeq[T]): int =
+  ls.pos - 1
+
 proc clear[T](ls: var ElasticSeq[T]) =
   ls.pos = 0
 
@@ -1541,6 +1544,7 @@ type
     captures: seq[Slice[int]]
     groups: seq[Slice[int]] # todo: remove, merge with captures
     namedGroups: Table[string, int]
+    boundaries*: Slice[int]
   CaptureKind = enum
     captStart
     captEnd
@@ -1552,9 +1556,10 @@ type
   State = tuple
     ## temporary state to store node's
     ## index and capture's index while matching
-    ni: int16
-    ci: int
-    cpi: int
+    ni: int16  # node idx
+    ci: int  # capture idx
+    si: int  # match start idx
+    ei: int  # match end idx
 
 iterator group(m: RegexMatch, i: int): Slice[int] =
   ## return slices for a given group.
@@ -1732,22 +1737,11 @@ iterator runesIt(s: string): (int, Rune) {.inline.} =
     fastRuneAt(s, i, result, true)
     yield (i, result)
 
-iterator runesIt(s: seq[Rune]): (int, Rune) {.inline.} =
-  # no-op
-  for i, r in s:
-    yield (i, r)
-
-iterator peek[T: seq[Rune] | string](s: T): (int, Rune, Rune) {.inline.} =
-  ## iterates over unicode characters yielding
-  ## next rune index, current rune and next rune
-  var
-    prev = invalidRune
-    j = 0
-  for i, r in s.runesIt:
-    yield (j, prev, r)
-    prev = r
-    j = i
-  yield (j, prev, invalidRune)
+iterator runesIt(s: seq[Rune], start: int): (int, Rune) {.inline.} =
+  var i = start
+  while i < len(s):
+    yield (i, s[i])
+    inc i
 
 iterator runesIt(s: string, start: int): (int, Rune) {.inline.} =
   ## yield current Rune and
@@ -1759,105 +1753,116 @@ iterator runesIt(s: string, start: int): (int, Rune) {.inline.} =
     fastRuneAt(s, i, result, true)
     yield (i, result)
 
-iterator peek(s: string, start: int): (int, Rune, Rune) {.inline.} =
-  ## iterates over unicode characters yielding
-  ## next rune index, current rune and next rune
+template peekImpl(s, start) =
   var
     prev = invalidRune
     j = 0
-  for i, r in s.runesIt(start):
+  for i, r in runesIt(s, start):
     yield (j, prev, r)
     prev = r
     j = i
   yield (j, prev, invalidRune)
 
+iterator peek(s: string, start = 0): (int, Rune, Rune) {.inline.} =
+  ## iterates over unicode characters yielding
+  ## next rune index, current rune and next rune
+  peekImpl(s, start)
+
+#iterator peek(s: seq[Rune], start = 0): (int, Rune, Rune) {.inline.} =
+#  ## iterates over unicode characters yielding
+#  ## next rune index, current rune and next rune
+#  peekImpl(s, start)
+
 proc toVisitStep(
     result: var ElasticSeq[State],
     n: Node,
-    cIdx: int,
-    cpIdx: int) {.inline.} =
+    ci: int,
+    si: int,
+    ei: int) {.inline.} =
   if n.outB != -1:
-    result.add((ni: n.outB, ci: cIdx, cpi: cpIdx))
+    result.add((ni: n.outB, ci: ci, si: si, ei: ei))
   if n.outA != -1:
-    result.add((ni: n.outA, ci: cIdx, cpi: cpIdx))
+    result.add((ni: n.outA, ci: ci, si: si, ei: ei))
 
 proc step(
     result: var States,
     pattern: Regex,
-    nIdx: int16,
+    state: State,
     captured: var ElasticSeq[Capture],
-    cIdx: int,
     visited: var BitSet,
     toVisit: var ElasticSeq[State],
-    cpIdx: int,
     cp: Rune,
     nxt: Rune) =
   assert toVisit.len == 0
-  toVisit.add((ni: nIdx, ci: cIdx, cpi: cpIdx))
+  toVisit.add(state)
   while toVisit.len > 0:
-    let state = toVisit.pop()
-    if state.ni in visited:
+    let s = toVisit.pop()
+    if s.ni in visited:
       continue
-    visited.incl(state.ni)
-    let n = pattern.states[state.ni]
+    visited.incl(s.ni)
+    let n = pattern.states[s.ni]
     case n.kind
     of matchableKind, reEOE:
-      result.add(state)
+      result.add(s)
     of assertionKind:
       if n.match(cp, nxt):
-        toVisitStep(toVisit, n, state.ci, state.cpi)
+        toVisitStep(toVisit, n, s.ci, s.si, s.ei)
     of reGroupStart:
       if not (n.isCapturing and
           captured.isInitialized):
-        toVisitStep(toVisit, n, state.ci, state.cpi)
+        toVisitStep(toVisit, n, s.ci, s.si, s.ei)
         continue
       captured.add(Capture(
         kind: captStart,
-        cpIdx: cpIdx,
-        prev: state.ci,
+        cpIdx: state.ei,
+        prev: s.ci,
         idx: n.idx))
-      toVisitStep(toVisit, n, captured.len - 1, state.cpi)
+      toVisitStep(toVisit, n, captured.high, s.si, s.ei)
     of reGroupEnd:
       if not (n.isCapturing and
           captured.isInitialized):
-        toVisitStep(toVisit, n, state.ci, state.cpi)
+        toVisitStep(toVisit, n, s.ci, s.si, s.ei)
         continue
       captured.add(Capture(
         kind: captEnd,
-        cpIdx: cpIdx - 1,
-        prev: state.ci,
+        cpIdx: state.ei - 1,
+        prev: s.ci,
         idx: n.idx))
-      toVisitStep(toVisit, n, captured.len - 1, state.cpi)
+      toVisitStep(toVisit, n, captured.high, s.si, s.ei)
     else:
-      toVisitStep(toVisit, n, state.ci, state.cpi)
+      toVisitStep(toVisit, n, s.ci, s.si, s.ei)
 
 proc stepFrom(
     result: var States,
     n: Node,
     pattern: Regex,
     captured: var ElasticSeq[Capture],
-    cIdx: int,
+    ci: int,
+    si: int,
+    ei: int,
     visited: var BitSet,
     toVisit: var ElasticSeq[State],
-    cpIdx: int,
     cp: Rune,
     nxt: Rune) {.inline.} =
   ## go to next states
   if n.outA != -1:
+    let state = (ni: n.outA, ci: ci, si: si, ei: ei)
     result.step(
-      pattern, n.outA, captured, cIdx, visited, toVisit, cpIdx, cp, nxt)
+      pattern, state, captured, visited, toVisit, cp, nxt)
   if n.outB != -1:
+    let state = (ni: n.outB, ci: ci, si: si, ei: ei)
     result.step(
-      pattern, n.outB, captured, cIdx, visited, toVisit, cpIdx, cp, nxt)
+      pattern, state, captured, visited, toVisit, cp, nxt)
 
 proc setRegexMatch(
     result: var Option[RegexMatch],
     states: States,
     pattern: Regex,
     captured: ElasticSeq[Capture]) {.inline.} =
-  for state in states.items:
+  for state in states:
     if pattern.states[state.ni].kind == reEOE:
       var m = RegexMatch()
+      m.boundaries = state.si .. state.ei - 1
       if pattern.groupsCount > 0:
         m.populateCaptures(captured, state.ci, pattern.groupsCount)
         m.namedGroups = pattern.namedGroups
@@ -1876,15 +1881,15 @@ template initDataSets(withCaptures) {.dirty.} =
       captured = initElasticSeq[Capture]()
       captured.add(Capture())
 
-proc match*(s: string | seq[Rune], pattern: Regex): Option[RegexMatch] =
+proc match*(s: string, pattern: Regex): Option[RegexMatch] =
   ## return a match if the whole string
   ## matches the regular expression. This
   ## is similar to ``find(text, re"^regex$")``
   ## but has better performance
   ##
   ## .. code-block::
-  ##   assert "abcd".match(re"abcd").isSome == true
-  ##   assert "abcd".match(re"abc").isSome == false
+  ##   doAssert("abcd".match(re"abcd").isSome)
+  ##   doAssert(not "abcd".match(re"abc").isSome)
   ##
   initDataSets(true)
   let statesCount = pattern.states.high.int16
@@ -1892,24 +1897,24 @@ proc match*(s: string | seq[Rune], pattern: Regex): Option[RegexMatch] =
     if cp == invalidRune:
       assert currStates.len == 0
       assert i == 0
+      let state = (ni: statesCount, ci: 0, si: 0, ei: i)
       currStates.step(
-        pattern, statesCount, captured, 0,
-        visited, toVisit, i, cp, nxt)
+        pattern, state, captured, visited, toVisit, cp, nxt)
       continue
     if currStates.len == 0:
       break
-    for state in currStates:
-      let n = pattern.states[state.ni]
+    for s in currStates:
+      let n = pattern.states[s.ni]
       if not n.match(cp):
         continue
       visited.clear()
       nextStates.stepFrom(
-        n, pattern, captured, state.ci, visited, toVisit, i, cp, nxt)
+        n, pattern, captured, s.ci, s.si, i, visited, toVisit, cp, nxt)
     swap(currStates, nextStates)
     nextStates.clear()
   setRegexMatch(result, currStates, pattern, captured)
 
-proc contains*(s: string | seq[Rune], pattern: Regex): bool =
+proc contains*(s: string, pattern: Regex): bool =
   ##  search for the pattern anywhere
   ##  in the string. It returns as soon
   ##  as there is a match, even when the
@@ -1926,9 +1931,9 @@ proc contains*(s: string | seq[Rune], pattern: Regex): bool =
   let statesCount = pattern.states.high.int16
   for _, cp, nxt in s.peek:
     visited.clear()
+    let state = (ni: statesCount, ci: 0, si: 0, ei: 0)
     currStates.step(
-      pattern, statesCount, captured, 0,
-      visited, toVisit, 0, cp, nxt)
+      pattern, state, captured, visited, toVisit, cp, nxt)
     if cp == invalidRune:
       continue
     for state in currStates:
@@ -1940,7 +1945,7 @@ proc contains*(s: string | seq[Rune], pattern: Regex): bool =
         continue
       visited.clear()
       nextStates.stepFrom(
-        n, pattern, captured, 0, visited, toVisit, 0, cp, nxt)
+        n, pattern, captured, 0, 0, 0, visited, toVisit, cp, nxt)
     swap(currStates, nextStates)
     nextStates.clear()
   for state in currStates:
@@ -1948,26 +1953,28 @@ proc contains*(s: string | seq[Rune], pattern: Regex): bool =
     if result:
       return
 
-proc find*(s: string | seq[Rune], pattern: Regex): Option[RegexMatch] =
+proc find*(s: string, pattern: Regex, start = 0): Option[RegexMatch] =
   ## search through the string looking for the first
   ## location where there is a match
   ##
   ## .. code-block::
-  ##   assert "abcd".find(re"bc").isSome == true
-  ##   assert "abcd".find(re"de").isSome == false
-  ##   assert("2222".find(re"(22)*").get().group(0) ==
-  ##     @[Slice[int](a: 0, b: 1), Slice[int](a: 2, b: 3)])
+  ##   doAssert("abcd".find(re"bc").isSome)
+  ##   doAssert(not "abcd".find(re"de").isSome)
+  ##   doAssert("2222".find(re"(22)*").get().group(0) ==
+  ##     @[0 .. 1, 2 .. 3])
   ##
   initDataSets(true)
   let statesCount = pattern.states.high.int16
-  for i, cp, nxt in s.peek:
+  var si = start
+  for i, cp, nxt in s.peek(start):
     # stop trying to match when there is a match
     if currStates.len == 0 or
         pattern.states[currStates[currStates.len - 1].ni].kind != reEOE:
       visited.clear()
+      let state = (ni: statesCount, ci: 0, si: si, ei: si)
       currStates.step(
-        pattern, statesCount, captured, 0,
-        visited, toVisit, i, cp, nxt)
+        pattern, state, captured, visited, toVisit, cp, nxt)
+      si = i
     # break on longest match
     if currStates.len > 0 and
         pattern.states[currStates[0].ni].kind == reEOE:
@@ -1984,14 +1991,12 @@ proc find*(s: string | seq[Rune], pattern: Regex): Option[RegexMatch] =
         continue
       visited.clear()
       nextStates.stepFrom(
-        n, pattern, captured, state.ci, visited, toVisit, i, cp, nxt)
+        n, pattern, captured, state.ci, state.si, i, visited, toVisit, cp, nxt)
     swap(currStates, nextStates)
     nextStates.clear()
   setRegexMatch(result, currStates, pattern, captured)
 
 proc matchEnd(s: string, pattern: Regex, start = 0): int =
-  ## return char index of end of match
-  assert start >= 0
   result = -1
   initDataSets(true)
   let statesCount = pattern.states.high.int16
@@ -1999,14 +2004,13 @@ proc matchEnd(s: string, pattern: Regex, start = 0): int =
     if cp == invalidRune:
       assert currStates.len == 0
       assert i == 0
+      let state = (ni: statesCount, ci: 0, si: start, ei: i)
       currStates.step(
-        pattern, statesCount, captured, 0,
-        visited, toVisit, i, cp, nxt)
+        pattern, state, captured, visited, toVisit, cp, nxt)
       continue
     if currStates.len == 0:
       break
     if pattern.states[currStates[0].ni].kind == reEOE:
-      result = currStates[0].cpi
       break
     for state in currStates:
       let n = pattern.states[state.ni]
@@ -2017,15 +2021,16 @@ proc matchEnd(s: string, pattern: Regex, start = 0): int =
         continue
       visited.clear()
       nextStates.stepFrom(
-        n, pattern, captured, 0, visited, toVisit, i, cp, nxt)
+        n, pattern, captured, state.ci, state.si, i, visited, toVisit, cp, nxt)
     swap(currStates, nextStates)
     nextStates.clear()
-  for state in currStates.items:
+  for state in currStates:
     if pattern.states[state.ni].kind == reEOE:
-      result = state.cpi
+      result = state.ei
       return
 
 proc incRune(s: string, n: var int) {.inline.} =
+  ## return next rune char index from a given index
   var r: Rune
   fastRuneAt(s, n, r, true)
 
@@ -2821,7 +2826,11 @@ when isMainModule:
   doAssert("2222".findWithCapt(re"(22)*") ==
     @[@["22", "22"]])
   doAssert("2222".find(re"(22)*").get().group(0) ==
-    @[Slice[int](a: 0, b: 1), Slice[int](a: 2, b: 3)])
+    @[0 .. 1, 2 .. 3])
+  doAssert("abcd".find(re"(ab)").get().group(0) == @[0 .. 1])
+  doAssert("abcd".find(re"(bc)").get().group(0) == @[1 .. 2])
+  doAssert("abcd".find(re"(cd)").get().group(0) == @[2 .. 3])
+  doAssert("abcd".find(re"bc").get().boundaries == 1 .. 2)
 
   # tcontains
   doAssert(re"bc" in "abcd")
@@ -2831,11 +2840,9 @@ when isMainModule:
   doAssert(re"^(23)+$" notin "23232")
 
   # tsplit
-  block:
-    var res = newSeq[string]()
-    for word in split("a,b,c", re","):
-      res.add(word)
-    doAssert(res == @["a", "b", "c"])
+  doAssert(
+    split("a,b,c", re",") ==
+    @["a", "b", "c"])
   doAssert(
     split("00232this02939is39an22example111", re"\d+") ==
     @["", "this", "is", "an", "example", ""])

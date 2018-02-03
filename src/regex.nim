@@ -1561,7 +1561,7 @@ type
     si: int  # match start idx
     ei: int  # match end idx
 
-iterator group(m: RegexMatch, i: int): Slice[int] =
+iterator group*(m: RegexMatch, i: int): Slice[int] =
   ## return slices for a given group.
   ## Slices of end > start are empty
   ## matches (i.e.: ``re"(\d?)"``)
@@ -1569,22 +1569,22 @@ iterator group(m: RegexMatch, i: int): Slice[int] =
   for idx in m.groups[i]:
     yield m.captures[idx]
 
-proc group(m: RegexMatch, i: int): seq[Slice[int]] =
+proc group*(m: RegexMatch, i: int): seq[Slice[int]] =
   ## return slices for a given group.
   ## Use the iterator version if you care about performance
   m.captures[m.groups[i]]
 
-iterator group(m: RegexMatch, s: string): Slice[int] =
+iterator group*(m: RegexMatch, s: string): Slice[int] =
   ## return slices for a given group
   for idx in m.groups[m.namedGroups[s]]:
     yield m.captures[idx]
 
-proc group(m: RegexMatch, s: string): seq[Slice[int]] =
+proc group*(m: RegexMatch, s: string): seq[Slice[int]] =
   ## return slices for a given group.
   ## Use the iterator version if you care about performance
   m.group(m.namedGroups[s])
 
-proc groupsCount(m: RegexMatch): int =
+proc groupsCount*(m: RegexMatch): int =
   ## return the number of capturing groups
   ##
   ## .. code-block::

@@ -1897,19 +1897,19 @@ proc match*(s: string, pattern: Regex): Option[RegexMatch] =
     if cp == invalidRune:
       assert currStates.len == 0
       assert i == 0
-      let state = (ni: statesCount, ci: 0, si: 0, ei: i)
+      let state = (ni: statesCount, ci: 0, si: 0, ei: 0)
       currStates.step(
         pattern, state, captured, visited, toVisit, cp, nxt)
       continue
     if currStates.len == 0:
       break
-    for s in currStates:
-      let n = pattern.states[s.ni]
+    for st in currStates:
+      let n = pattern.states[st.ni]
       if not n.match(cp):
         continue
       visited.clear()
       nextStates.stepFrom(
-        n, pattern, captured, s.ci, s.si, i, visited, toVisit, cp, nxt)
+        n, pattern, captured, st.ci, st.si, i, visited, toVisit, cp, nxt)
     swap(currStates, nextStates)
     nextStates.clear()
   setRegexMatch(result, currStates, pattern, captured)
@@ -1936,8 +1936,8 @@ proc contains*(s: string, pattern: Regex): bool =
       pattern, state, captured, visited, toVisit, cp, nxt)
     if cp == invalidRune:
       continue
-    for state in currStates:
-      let n = pattern.states[state.ni]
+    for st in currStates:
+      let n = pattern.states[st.ni]
       result = n.kind == reEOE
       if result:
         return
@@ -1981,20 +1981,38 @@ proc find*(s: string, pattern: Regex, start = 0): Option[RegexMatch] =
       break
     if cp == invalidRune:
       continue
-    for state in currStates:
-      let n = pattern.states[state.ni]
+    for st in currStates:
+      let n = pattern.states[st.ni]
       if n.kind == reEOE:
         # todo: put in var stateEOE?
-        nextStates.add(state)
+        nextStates.add(st)
         break
       if not n.match(cp):
         continue
       visited.clear()
       nextStates.stepFrom(
-        n, pattern, captured, state.ci, state.si, i, visited, toVisit, cp, nxt)
+        n, pattern, captured, st.ci, st.si, i, visited, toVisit, cp, nxt)
     swap(currStates, nextStates)
     nextStates.clear()
   setRegexMatch(result, currStates, pattern, captured)
+
+iterator findAll*(s: string, pattern: Regex, start = 0): Slice[int] =
+  ## search through the string and return each match
+  # todo: ignore groups (findBounds(...))
+  var i = start
+  while i < s.len:
+    let m = find(s, pattern, i)
+    if not isSome(m): break
+    let b = m.get().boundaries
+    yield b
+    if b.b == i: inc i
+    else: i = b.b
+
+proc findAll*(s: string, pattern: Regex, start = 0): seq[Slice[int]] =
+  ## search through the string and return each match
+  result = newSeqOfCap[Slice[int]](s.len)
+  for slc in findAll(s, pattern, start):
+    result.add(slc)
 
 proc matchEnd(s: string, pattern: Regex, start = 0): int =
   result = -1
@@ -2004,7 +2022,7 @@ proc matchEnd(s: string, pattern: Regex, start = 0): int =
     if cp == invalidRune:
       assert currStates.len == 0
       assert i == 0
-      let state = (ni: statesCount, ci: 0, si: start, ei: i)
+      let state = (ni: statesCount, ci: 0, si: 0, ei: 0)
       currStates.step(
         pattern, state, captured, visited, toVisit, cp, nxt)
       continue
@@ -2012,16 +2030,16 @@ proc matchEnd(s: string, pattern: Regex, start = 0): int =
       break
     if pattern.states[currStates[0].ni].kind == reEOE:
       break
-    for state in currStates:
-      let n = pattern.states[state.ni]
+    for st in currStates:
+      let n = pattern.states[st.ni]
       if n.kind == reEOE:
-        nextStates.add(state)
+        nextStates.add(st)
         break
       if not n.match(cp):
         continue
       visited.clear()
       nextStates.stepFrom(
-        n, pattern, captured, state.ci, state.si, i, visited, toVisit, cp, nxt)
+        n, pattern, captured, st.ci, st.si, i, visited, toVisit, cp, nxt)
     swap(currStates, nextStates)
     nextStates.clear()
   for state in currStates:
@@ -2840,9 +2858,7 @@ when isMainModule:
   doAssert(re"^(23)+$" notin "23232")
 
   # tsplit
-  doAssert(
-    split("a,b,c", re",") ==
-    @["a", "b", "c"])
+  doAssert(split("a,b,c", re",") == @["a", "b", "c"])
   doAssert(
     split("00232this02939is39an22example111", re"\d+") ==
     @["", "this", "is", "an", "example", ""])
@@ -2856,3 +2872,9 @@ when isMainModule:
     @["", "a", "Ϊ", "Ⓐ", "弢", ""])
   # todo: use raw string once \x is implemented
   doAssert(split("弢", re("\xAF")) == @["弢"])  # "弢" == "\xF0\xAF\xA2\x94"
+
+  # tfindall
+  doAssert(findAll("abcabc", re"bc") == @[1 .. 2, 4 .. 5])
+  doAssert(findAll("aa", re"a") == @[0 .. 0, 1 .. 1])
+  doAssert(findAll("a", re"a") == @[0 .. 0])
+  doAssert(findAll("a", re"b") == @[])

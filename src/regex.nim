@@ -1563,7 +1563,7 @@ type
 
 iterator group*(m: RegexMatch, i: int): Slice[int] =
   ## return slices for a given group.
-  ## Slices of end > start are empty
+  ## Slices of start > end are empty
   ## matches (i.e.: ``re"(\d?)"``)
   ## and they are included same as in PCRE.
   for idx in m.groups[i]:
@@ -2005,7 +2005,7 @@ iterator findAll*(s: string, pattern: Regex, start = 0): Slice[int] =
     if not isSome(m): break
     let b = m.get().boundaries
     yield b
-    if b.b == i: inc i
+    if b.b == i or b.a > b.b: inc i
     else: i = b.b
 
 proc findAll*(s: string, pattern: Regex, start = 0): seq[Slice[int]] =
@@ -2840,6 +2840,7 @@ when isMainModule:
   # tfind
   doAssert("abcd".find(re"bc").isSome)
   doAssert(not "abcd".find(re"ac").isSome)
+  doAssert("a".find(re"").isSome)
   doAssert("abcd".find(re"^abcd$").isSome)
   doAssert("2222".findWithCapt(re"(22)*") ==
     @[@["22", "22"]])
@@ -2878,3 +2879,7 @@ when isMainModule:
   doAssert(findAll("aa", re"a") == @[0 .. 0, 1 .. 1])
   doAssert(findAll("a", re"a") == @[0 .. 0])
   doAssert(findAll("a", re"b") == @[])
+  doAssert(findAll("", re"b") == @[])
+  doAssert(findAll("a", re"") == @[0 .. -1])
+  doAssert(findAll("ab", re"") == @[0 .. -1, 1 .. 0])
+  doAssert(findAll("a", re"\b") == @[0 .. -1])

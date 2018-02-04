@@ -1919,13 +1919,13 @@ proc contains*(s: string, pattern: Regex): bool =
   ##  in the string. It returns as soon
   ##  as there is a match, even when the
   ##  expression has repetitions. Use
-  ##  `re"^regex$"` to match the whole
+  ##  ``re"^regex$"`` to match the whole
   ##  string instead of searching
   ##
   ## .. code-block::
-  ##   assert re"bc" in "abcd"
-  ##   assert re"(23)+" in "23232"
-  ##   assert re"^(23)+$" notin "23232"
+  ##   doAssert(re"bc" in "abcd")
+  ##   doAssert(re"(23)+" in "23232")
+  ##   doAssert(re"^(23)+$" notin "23232")
   ##
   initDataSets(false)
   let statesCount = pattern.states.high.int16
@@ -1996,8 +1996,11 @@ proc find*(s: string, pattern: Regex, start = 0): Option[RegexMatch] =
     nextStates.clear()
   setRegexMatch(result, currStates, pattern, captured)
 
-iterator findAll*(s: string, pattern: Regex, start = 0): Slice[int] =
-  ## search through the string and return each match
+iterator findAll*(
+    s: string, pattern: Regex, start = 0): Slice[int] {.inline.} =
+  ## search through the string and
+  ## return each match. Empty matches
+  ## (start > end) are included
   # todo: ignore groups (findBounds(...))
   var i = start
   while i < s.len:
@@ -2009,7 +2012,9 @@ iterator findAll*(s: string, pattern: Regex, start = 0): Slice[int] =
     else: i = b.b
 
 proc findAll*(s: string, pattern: Regex, start = 0): seq[Slice[int]] =
-  ## search through the string and return each match
+  ## search through the string and
+  ## return each match. Empty matches
+  ## (start > end) are included
   result = newSeqOfCap[Slice[int]](s.len)
   for slc in findAll(s, pattern, start):
     result.add(slc)
@@ -2052,7 +2057,8 @@ proc incRune(s: string, n: var int) {.inline.} =
   var r: Rune
   fastRuneAt(s, n, r, true)
 
-iterator split*(s: string, sep: Regex): string =
+iterator split*(s: string, sep: Regex): string {.inline.} =
+  ## return not matched substrings
   # todo: pass/reuse data structures
   var
     first = 0
@@ -2069,6 +2075,7 @@ iterator split*(s: string, sep: Regex): string =
     if n > 0: last = n
 
 proc split*(s: string, sep: Regex): seq[string] =
+  ## return not matched substrings
   result = newSeqOfCap[string](s.len)
   for w in s.split(sep):
     result.add(w)
@@ -2850,6 +2857,9 @@ when isMainModule:
   doAssert("abcd".find(re"(bc)").get().group(0) == @[1 .. 2])
   doAssert("abcd".find(re"(cd)").get().group(0) == @[2 .. 3])
   doAssert("abcd".find(re"bc").get().boundaries == 1 .. 2)
+  doAssert("aΪⒶ弢".find(re"Ϊ").get().boundaries == 1 .. 2)
+  doAssert("aΪⒶ弢".find(re"Ⓐ").get().boundaries == 3 .. 5)
+  doAssert("aΪⒶ弢".find(re"弢").get().boundaries == 6 .. 9)
 
   # tcontains
   doAssert(re"bc" in "abcd")
@@ -2883,3 +2893,7 @@ when isMainModule:
   doAssert(findAll("a", re"") == @[0 .. -1])
   doAssert(findAll("ab", re"") == @[0 .. -1, 1 .. 0])
   doAssert(findAll("a", re"\b") == @[0 .. -1])
+  doAssert(findAll("aΪⒶ弢", re"Ϊ") == @[1 .. 2])
+  doAssert(findAll("aΪⒶ弢", re"Ⓐ") == @[3 .. 5])
+  doAssert(findAll("aΪⒶ弢", re"弢") == @[6 .. 9])
+  doAssert(findAll("aΪⒶ弢aΪⒶ弢", re"Ⓐ") == @[3 .. 5, 13 .. 15])

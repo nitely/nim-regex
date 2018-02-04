@@ -2009,6 +2009,7 @@ iterator findAll*(
   ##     doAssert(m.boundaries == expected[i])
   ##     inc i
   ##
+  # todo: pass/reuse data structures
   var i = start
   while i < s.len:
     let m = find(s, pattern, i)

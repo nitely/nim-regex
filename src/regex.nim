@@ -1575,12 +1575,12 @@ proc group*(m: RegexMatch, i: int): seq[Slice[int]] =
   m.captures[m.groups[i]]
 
 iterator group*(m: RegexMatch, s: string): Slice[int] =
-  ## return slices for a given group
+  ## return slices for a given named group
   for idx in m.groups[m.namedGroups[s]]:
     yield m.captures[idx]
 
 proc group*(m: RegexMatch, s: string): seq[Slice[int]] =
-  ## return slices for a given group.
+  ## return slices for a given named group.
   ## Use the iterator version if you care about performance
   m.group(m.namedGroups[s])
 
@@ -1997,25 +1997,41 @@ proc find*(s: string, pattern: Regex, start = 0): Option[RegexMatch] =
   setRegexMatch(result, currStates, pattern, captured)
 
 iterator findAll*(
-    s: string, pattern: Regex, start = 0): Slice[int] {.inline.} =
+    s: string, pattern: Regex, start = 0): RegexMatch {.inline.} =
   ## search through the string and
   ## return each match. Empty matches
   ## (start > end) are included
-  # todo: ignore groups (findBounds(...))
+  ##
+  ## .. code-block::
+  ##   var i = 0
+  ##   let expected = [1 .. 2, 4 .. 5]
+  ##   for m in findAll("abcabc", re"bc"):
+  ##     doAssert(m.boundaries == expected[i])
+  ##     inc i
+  ##
   var i = start
   while i < s.len:
     let m = find(s, pattern, i)
     if not isSome(m): break
-    let b = m.get().boundaries
-    yield b
+    let mm = m.get()
+    yield mm
+    let b = mm.boundaries
     if b.b == i or b.a > b.b: inc i
     else: i = b.b
 
-proc findAll*(s: string, pattern: Regex, start = 0): seq[Slice[int]] =
+proc findAll*(s: string, pattern: Regex, start = 0): seq[RegexMatch] =
   ## search through the string and
   ## return each match. Empty matches
   ## (start > end) are included
-  result = newSeqOfCap[Slice[int]](s.len)
+  ##
+  ## .. code-block::
+  ##   let
+  ##     expected = [1 .. 2, 4 .. 5]
+  ##     ms = findAll("abcabc", re"bc")
+  ##   for i, m in ms:
+  ##     doAssert(m.boundaries == expected[i])
+  ##
+  result = newSeqOfCap[RegexMatch](s.len)
   for slc in findAll(s, pattern, start):
     result.add(slc)
 
@@ -2127,6 +2143,11 @@ when isMainModule:
 
   proc findWithCapt(s: string, pattern: Regex): seq[seq[string]] =
     s.find(pattern).toStrCaptures(s)
+
+  proc findAllb(s: string, pattern: Regex): seq[Slice[int]] =
+    result = newSeqOfCap[Slice[int]](s.len)
+    for m in findAll(s, pattern):
+      result.add(m.boundaries)
 
   proc raises(pattern: string): bool =
     result = false
@@ -2885,15 +2906,15 @@ when isMainModule:
   doAssert(split("弢", re("\xAF")) == @["弢"])  # "弢" == "\xF0\xAF\xA2\x94"
 
   # tfindall
-  doAssert(findAll("abcabc", re"bc") == @[1 .. 2, 4 .. 5])
-  doAssert(findAll("aa", re"a") == @[0 .. 0, 1 .. 1])
-  doAssert(findAll("a", re"a") == @[0 .. 0])
-  doAssert(findAll("a", re"b") == @[])
-  doAssert(findAll("", re"b") == @[])
-  doAssert(findAll("a", re"") == @[0 .. -1])
-  doAssert(findAll("ab", re"") == @[0 .. -1, 1 .. 0])
-  doAssert(findAll("a", re"\b") == @[0 .. -1])
-  doAssert(findAll("aΪⒶ弢", re"Ϊ") == @[1 .. 2])
-  doAssert(findAll("aΪⒶ弢", re"Ⓐ") == @[3 .. 5])
-  doAssert(findAll("aΪⒶ弢", re"弢") == @[6 .. 9])
-  doAssert(findAll("aΪⒶ弢aΪⒶ弢", re"Ⓐ") == @[3 .. 5, 13 .. 15])
+  doAssert(findAllb("abcabc", re"bc") == @[1 .. 2, 4 .. 5])
+  doAssert(findAllb("aa", re"a") == @[0 .. 0, 1 .. 1])
+  doAssert(findAllb("a", re"a") == @[0 .. 0])
+  doAssert(findAllb("a", re"b") == @[])
+  doAssert(findAllb("", re"b") == @[])
+  doAssert(findAllb("a", re"") == @[0 .. -1])
+  doAssert(findAllb("ab", re"") == @[0 .. -1, 1 .. 0])
+  doAssert(findAllb("a", re"\b") == @[0 .. -1])
+  doAssert(findAllb("aΪⒶ弢", re"Ϊ") == @[1 .. 2])
+  doAssert(findAllb("aΪⒶ弢", re"Ⓐ") == @[3 .. 5])
+  doAssert(findAllb("aΪⒶ弢", re"弢") == @[6 .. 9])
+  doAssert(findAllb("aΪⒶ弢aΪⒶ弢", re"Ⓐ") == @[3 .. 5, 13 .. 15])

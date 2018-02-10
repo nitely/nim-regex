@@ -1881,7 +1881,7 @@ template initDataSets(withCaptures) {.dirty.} =
       captured = initElasticSeq[Capture]()
       captured.add(Capture())
 
-proc match*(s: string, pattern: Regex): Option[RegexMatch] =
+proc match*(s: string, pattern: Regex, start=0): Option[RegexMatch] =
   ## return a match if the whole string
   ## matches the regular expression. This
   ## is similar to ``find(text, re"^regex$")``
@@ -1893,7 +1893,7 @@ proc match*(s: string, pattern: Regex): Option[RegexMatch] =
   ##
   initDataSets(true)
   let statesCount = pattern.states.high.int16
-  for i, cp, nxt in s.peek:
+  for i, cp, nxt in s.peek(start):
     if cp == invalidRune:
       assert currStates.len == 0
       assert i == 0
@@ -2037,6 +2037,7 @@ proc findAll*(s: string, pattern: Regex, start = 0): seq[RegexMatch] =
     result.add(slc)
 
 proc matchEnd(s: string, pattern: Regex, start = 0): int =
+  # todo: this is the same as startsWith, refactor
   result = -1
   initDataSets(true)
   let statesCount = pattern.states.high.int16
@@ -2096,6 +2097,63 @@ proc split*(s: string, sep: Regex): seq[string] =
   result = newSeqOfCap[string](s.len)
   for w in s.split(sep):
     result.add(w)
+
+proc startsWith*(s: string, pattern: Regex, start = 0): bool =
+  ## return whether the string
+  ## starts with the pattern or not
+  ##
+  ## .. code-block::
+  ##   doAssert("abc".startsWith(re"\w"))
+  ##   doAssert(not "abc".startsWith(re"\d"))
+  ##
+  # todo: this is the same as matchEnd, refactor
+  result = false
+  initDataSets(true)
+  let statesCount = pattern.states.high.int16
+  for i, cp, nxt in s.peek(start):
+    if cp == invalidRune:
+      assert currStates.len == 0
+      assert i == 0
+      let state = (ni: statesCount, ci: 0, si: 0, ei: 0)
+      currStates.step(
+        pattern, state, captured, visited, toVisit, cp, nxt)
+      continue
+    if currStates.len == 0:
+      break
+    if pattern.states[currStates[0].ni].kind == reEOE:
+      break
+    for st in currStates:
+      let n = pattern.states[st.ni]
+      if n.kind == reEOE:
+        nextStates.add(st)
+        break
+      if not n.match(cp):
+        continue
+      visited.clear()
+      nextStates.stepFrom(
+        n, pattern, captured, st.ci, st.si, i, visited, toVisit, cp, nxt)
+    swap(currStates, nextStates)
+    nextStates.clear()
+  for state in currStates:
+    result = pattern.states[state.ni].kind == reEOE
+    if result:
+      return
+
+proc endsWith*(s: string, pattern: Regex): bool =
+  ## return whether the string
+  ## ends with the pattern or not
+  ##
+  ## .. code-block::
+  ##   doAssert("abc".endsWith(re"\w"))
+  ##   doAssert(not "abc".endsWith(re"\d"))
+  ##
+  # todo: pass/reuse data structures
+  result = false
+  var i = 0
+  while i < s.len:
+    result = isSome(match(s, pattern, i))
+    if result: break
+    s.incRune(i)
 
 proc toPattern*(s: string): Regex {.raises: [RegexError].} =
   ## Parse and compile a regular expression.
@@ -2919,3 +2977,25 @@ when isMainModule:
   doAssert(findAllb("aΪⒶ弢", re"Ⓐ") == @[3 .. 5])
   doAssert(findAllb("aΪⒶ弢", re"弢") == @[6 .. 9])
   doAssert(findAllb("aΪⒶ弢aΪⒶ弢", re"Ⓐ") == @[3 .. 5, 13 .. 15])
+
+  # tstarts_with
+  doAssert("abc".startsWith(re"ab"))
+  doAssert(not "abc".startsWith(re"bc"))
+  doAssert(startsWith("弢ⒶΪ", re"弢Ⓐ"))
+  doAssert(startsWith("弢", re("\xF0\xAF\xA2\x94")))
+  doAssert(not startsWith("弢", re("\xF0\xAF\xA2")))
+  doAssert("abc".startsWith(re"\w"))
+  doAssert(not "abc".startsWith(re"\d"))
+  doAssert("abc".startsWith(re"(a|b)"))
+  doAssert("bc".startsWith(re"(a|b)"))
+  doAssert(not "c".startsWith(re"(a|b)"))
+
+  # tends_with
+  doAssert("abc".endsWith(re"bc"))
+  doAssert(not "abc".endsWith(re"ab"))
+  doAssert(endsWith("弢ⒶΪ", re"ⒶΪ"))
+  doAssert(endsWith("弢", re("\xF0\xAF\xA2\x94")))
+  doAssert(not endsWith("弢", re("\xAF\xA2\x94")))
+  doAssert("abc".endsWith(re"(b|c)"))
+  doAssert("ab".endsWith(re"(b|c)"))
+  doAssert(not "a".endsWith(re"(b|c)"))

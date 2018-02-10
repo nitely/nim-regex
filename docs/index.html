@@ -1254,8 +1254,8 @@ function main() {
     title="group(m: RegexMatch; s: string): seq[Slice[int]]"><wbr />group<span class="attachedType" style="visibility:hidden">RegexMatch</span></a></li>
   <li><a class="reference" href="#groupsCount,RegexMatch"
     title="groupsCount(m: RegexMatch): int"><wbr />groups<wbr />Count<span class="attachedType" style="visibility:hidden">RegexMatch</span></a></li>
-  <li><a class="reference" href="#match,string,Regex"
-    title="match(s: string; pattern: Regex): Option[RegexMatch]"><wbr />match<span class="attachedType" style="visibility:hidden">RegexMatch</span></a></li>
+  <li><a class="reference" href="#match,string,Regex,int"
+    title="match(s: string; pattern: Regex; start = 0): Option[RegexMatch]"><wbr />match<span class="attachedType" style="visibility:hidden">RegexMatch</span></a></li>
   <li><a class="reference" href="#contains,string,Regex"
     title="contains(s: string; pattern: Regex): bool"><wbr />contains<span class="attachedType" style="visibility:hidden">Regex</span></a></li>
   <li><a class="reference" href="#find,string,Regex,int"
@@ -1264,6 +1264,10 @@ function main() {
     title="findAll(s: string; pattern: Regex; start = 0): seq[RegexMatch]"><wbr />find<wbr />All<span class="attachedType" style="visibility:hidden">RegexMatch</span></a></li>
   <li><a class="reference" href="#split,string,Regex"
     title="split(s: string; sep: Regex): seq[string]"><wbr />split<span class="attachedType" style="visibility:hidden">Regex</span></a></li>
+  <li><a class="reference" href="#startsWith,string,Regex,int"
+    title="startsWith(s: string; pattern: Regex; start = 0): bool"><wbr />starts<wbr />With<span class="attachedType" style="visibility:hidden">Regex</span></a></li>
+  <li><a class="reference" href="#endsWith,string,Regex"
+    title="endsWith(s: string; pattern: Regex): bool"><wbr />ends<wbr />With<span class="attachedType" style="visibility:hidden">Regex</span></a></li>
   <li><a class="reference" href="#toPattern,string"
     title="toPattern(s: string): Regex"><wbr />to<wbr />Pattern<span class="attachedType" style="visibility:hidden">Regex</span></a></li>
 
@@ -1429,7 +1433,7 @@ return the number of capturing groups<pre class="listing"><span class="Keyword">
     <span class="Identifier">echo</span> <span class="Identifier">text</span><span class="Punctuation">[</span><span class="Identifier">slice</span><span class="Punctuation">]</span></pre>
 
 </dd>
-<dt id="match"><a name="match,string,Regex"></a><pre><span class="Keyword">proc</span> <span class="Identifier">match</span><span class="Other">(</span><span class="Identifier">s</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">;</span> <span class="Identifier">pattern</span><span class="Other">:</span> <span class="Identifier">Regex</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">Option</span><span class="Other">[</span><span class="Identifier">RegexMatch</span><span class="Other">]</span> <span class="Other pragmabegin">{.</span><div class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></div><span class="Other pragmaend">.}</span></pre></dt>
+<dt id="match"><a name="match,string,Regex,int"></a><pre><span class="Keyword">proc</span> <span class="Identifier">match</span><span class="Other">(</span><span class="Identifier">s</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">;</span> <span class="Identifier">pattern</span><span class="Other">:</span> <span class="Identifier">Regex</span><span class="Other">;</span> <span class="Identifier">start</span> <span class="Other">=</span> <span class="DecNumber">0</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">Option</span><span class="Other">[</span><span class="Identifier">RegexMatch</span><span class="Other">]</span> <span class="Other pragmabegin">{.</span><div class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></div><span class="Other pragmaend">.}</span></pre></dt>
 <dd>
 return a match if the whole string matches the regular expression. This is similar to <tt class="docutils literal"><span class="pre">find(text, re&quot;^regex$&quot;)</span></tt> but has better performance<pre class="listing"><span class="Identifier">doAssert</span><span class="Punctuation">(</span><span class="StringLit">&quot;abcd&quot;</span><span class="Operator">.</span><span class="Identifier">match</span><span class="Punctuation">(</span><span class="RawData">re&quot;abcd&quot;</span><span class="Punctuation">)</span><span class="Operator">.</span><span class="Identifier">isSome</span><span class="Punctuation">)</span>
 <span class="Identifier">doAssert</span><span class="Punctuation">(</span><span class="Keyword">not</span> <span class="StringLit">&quot;abcd&quot;</span><span class="Operator">.</span><span class="Identifier">match</span><span class="Punctuation">(</span><span class="RawData">re&quot;abc&quot;</span><span class="Punctuation">)</span><span class="Operator">.</span><span class="Identifier">isSome</span><span class="Punctuation">)</span></pre>
@@ -1463,6 +1467,18 @@ search through the string and return each match. Empty matches (start &gt; end) 
 <dt id="split"><a name="split,string,Regex"></a><pre><span class="Keyword">proc</span> <span class="Identifier">split</span><span class="Other">(</span><span class="Identifier">s</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">;</span> <span class="Identifier">sep</span><span class="Other">:</span> <span class="Identifier">Regex</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">string</span><span class="Other">]</span> <span class="Other pragmabegin">{.</span><div class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></div><span class="Other pragmaend">.}</span></pre></dt>
 <dd>
 return not matched substrings
+
+</dd>
+<dt id="startsWith"><a name="startsWith,string,Regex,int"></a><pre><span class="Keyword">proc</span> <span class="Identifier">startsWith</span><span class="Other">(</span><span class="Identifier">s</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">;</span> <span class="Identifier">pattern</span><span class="Other">:</span> <span class="Identifier">Regex</span><span class="Other">;</span> <span class="Identifier">start</span> <span class="Other">=</span> <span class="DecNumber">0</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">bool</span> <span class="Other pragmabegin">{.</span><div class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></div><span class="Other pragmaend">.}</span></pre></dt>
+<dd>
+return whether the string starts with the pattern or not<pre class="listing"><span class="Identifier">doAssert</span><span class="Punctuation">(</span><span class="StringLit">&quot;abc&quot;</span><span class="Operator">.</span><span class="Identifier">startsWith</span><span class="Punctuation">(</span><span class="RawData">re&quot;\w&quot;</span><span class="Punctuation">)</span><span class="Punctuation">)</span>
+<span class="Identifier">doAssert</span><span class="Punctuation">(</span><span class="Keyword">not</span> <span class="StringLit">&quot;abc&quot;</span><span class="Operator">.</span><span class="Identifier">startsWith</span><span class="Punctuation">(</span><span class="RawData">re&quot;\d&quot;</span><span class="Punctuation">)</span><span class="Punctuation">)</span></pre>
+
+</dd>
+<dt id="endsWith"><a name="endsWith,string,Regex"></a><pre><span class="Keyword">proc</span> <span class="Identifier">endsWith</span><span class="Other">(</span><span class="Identifier">s</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">;</span> <span class="Identifier">pattern</span><span class="Other">:</span> <span class="Identifier">Regex</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">bool</span> <span class="Other pragmabegin">{.</span><div class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></div><span class="Other pragmaend">.}</span></pre></dt>
+<dd>
+return whether the string ends with the pattern or not<pre class="listing"><span class="Identifier">doAssert</span><span class="Punctuation">(</span><span class="StringLit">&quot;abc&quot;</span><span class="Operator">.</span><span class="Identifier">endsWith</span><span class="Punctuation">(</span><span class="RawData">re&quot;\w&quot;</span><span class="Punctuation">)</span><span class="Punctuation">)</span>
+<span class="Identifier">doAssert</span><span class="Punctuation">(</span><span class="Keyword">not</span> <span class="StringLit">&quot;abc&quot;</span><span class="Operator">.</span><span class="Identifier">endsWith</span><span class="Punctuation">(</span><span class="RawData">re&quot;\d&quot;</span><span class="Punctuation">)</span><span class="Punctuation">)</span></pre>
 
 </dd>
 <dt id="toPattern"><a name="toPattern,string"></a><pre><span class="Keyword">proc</span> <span class="Identifier">toPattern</span><span class="Other">(</span><span class="Identifier">s</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">Regex</span> <span class="Other pragmabegin">{.</span><div class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RegexError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></div><span class="Other pragmaend">.}</span></pre></dt>
@@ -1520,7 +1536,7 @@ Parse and compile a regular expression at compile-time
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br/>
-        <small>Made with Nim. Generated: 2018-02-04 18:15:15 UTC</small>
+        <small>Made with Nim. Generated: 2018-02-10 07:49:50 UTC</small>
       </div>
     </div>
   </div>

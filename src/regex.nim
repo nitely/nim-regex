@@ -331,10 +331,13 @@ proc isAlphaNum(r: Rune): bool {.inline.} =
 proc isAlphaNumAscii(r: Rune): bool {.inline.} =
   ## return ``true`` if the given
   ## rune is in ``[A-Za-z0-9]`` range
-  r.int in {
-    'A'.ord .. 'Z'.ord,
-    'a'.ord .. 'z'.ord,
-    '0'.ord .. '9'.ord}
+  case r.int
+  of 'A'.ord .. 'Z'.ord,
+      'a'.ord .. 'z'.ord,
+      '0'.ord .. '9'.ord:
+    true
+  else:
+    false
 
 template isWordBoundaryImpl(r, nxt, alnumProc): bool =
   let
@@ -394,13 +397,27 @@ proc isWhiteSpace(r: Rune): bool {.inline.} =
   utmWhiteSpace in unicodeTypes(r)
 
 proc isWhiteSpaceAscii(r: Rune): bool {.inline.} =
-  r.int in {
-    ' '.ord,
-    '\t'.ord,
-    '\L'.ord,
-    '\r'.ord,
-    '\f'.ord,
-    '\v'.ord}
+  case r.int
+  of ' '.ord,
+      '\t'.ord,
+      '\L'.ord,
+      '\r'.ord,
+      '\f'.ord,
+      '\v'.ord:
+    true
+  else:
+    false
+
+proc isDigitAscii(r: Rune): bool {.inline.} =
+  case r.int
+  of '0'.ord .. '9'.ord:
+    true
+  else:
+    false
+
+proc isAnyAscii(r: Rune): bool {.inline.} =
+  (r.int <= int8.high and
+   r != lineBreakRune)
 
 # todo: can not use unicodeplus due to
 # https://github.com/nim-lang/Nim/issues/7059
@@ -454,20 +471,19 @@ proc match(n: Node, r: Rune): bool =
   of reAlphaNumAscii:
     r.isAlphaNumAscii()
   of reDigitAscii:
-    r.int in {'0'.ord .. '9'.ord}
+    r.isDigitAscii()
   of reWhiteSpaceAscii:
     r.isWhiteSpaceAscii()
   of reNotAlphaNumAscii:
     not r.isAlphaNumAscii()
   of reNotDigitAscii:
-    r.int notin {'0'.ord .. '9'.ord}
+    not r.isDigitAscii()
   of reNotWhiteSpaceAscii:
     not r.isWhiteSpaceAscii()
   of reAnyAscii:
-    (r.int in {0 .. 127} and
-     r != lineBreakRune)
+    r.isAnyAscii()
   of reAnyNLAscii:
-    r.int in {0 .. 127}
+    r.isAnyAscii() or r == lineBreakRune
   else:
     assert n.kind == reChar
     n.cp == r

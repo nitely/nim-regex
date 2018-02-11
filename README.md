@@ -24,7 +24,7 @@ Features:
 - [ ] `\123`
 - [ ] `\x7F`
 - [ ] `\x{10FFFF}`
-- [ ] Character classes matching as described in
+- [x] Character classes matching as described in
   [UTS#18](http://www.unicode.org/reports/tr18/#Compatibility_Properties)
 - [ ] `[[:alnum:]]`, etc
 - [x] User friendly compiling errors

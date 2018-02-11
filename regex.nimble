@@ -7,7 +7,7 @@ license       = "MIT"
 srcDir = "src"
 
 requires "nim >= 0.17.2"
-requires "unicodedb >= 0.2 & <= 0.3"
+requires "unicodedb >= 0.2.3 & <= 0.3"
 requires "unicodeplus >= 0.1 & <= 0.2"
 
 task test, "Test":

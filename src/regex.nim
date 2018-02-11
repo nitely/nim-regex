@@ -325,6 +325,9 @@ proc isEmpty(n: Node): bool =
     n.ranges.len == 0 and
     n.shorthands.len == 0)
 
+proc isAlphaNum(r: Rune): bool {.inline.} =
+  utmWord in unicodeTypes(r)
+
 proc isAlphaNumAscii(r: Rune): bool {.inline.} =
   ## return ``true`` if the given
   ## rune is in ``[A-Za-z0-9]`` range
@@ -343,7 +346,7 @@ template isWordBoundaryImpl(r, nxt, alnumProc): bool =
 proc isWordBoundary(r: Rune, nxt: Rune): bool {.inline.} =
   ## check if current match
   ## is a boundary (i.e the end of a word)
-  isWordBoundaryImpl(r, nxt, isalnum)
+  isWordBoundaryImpl(r, nxt, isAlphaNum)
 
 proc isWordBoundaryAscii(r: Rune, nxt: Rune): bool {.inline.} =
   ## check if current match
@@ -388,15 +391,7 @@ proc contains(sr: seq[SetRange], r: Rune): bool =
       break
 
 proc isWhiteSpace(r: Rune): bool {.inline.} =
-  result = (
-    r.int in {
-      ' '.ord,
-      '\t'.ord,
-      '\L'.ord,
-      '\r'.ord,
-      '\f'.ord,
-      '\v'.ord} or
-    r.category()[0] == 'Z')
+  utmWhiteSpace in unicodeTypes(r)
 
 proc isWhiteSpaceAscii(r: Rune): bool {.inline.} =
   r.int in {
@@ -428,13 +423,13 @@ proc match(n: Node, r: Rune): bool =
   of reEOE:
     false
   of reAlphaNum:
-    r.isAlnum()
+    r.isAlphaNum()
   of reNotAlphaNum:
-    not r.isAlnum()
+    not r.isAlphaNum()
   of reDigit:
-    r.isNumeric()
+    r.isDecimal()
   of reNotDigit:
-    not r.isNumeric()
+    not r.isDecimal()
   of reWhiteSpace:
     r.isWhiteSpace()
   of reNotWhiteSpace:
@@ -1996,6 +1991,11 @@ proc find*(s: string, pattern: Regex, start = 0): Option[RegexMatch] =
     nextStates.clear()
   setRegexMatch(result, currStates, pattern, captured)
 
+proc runeIncAt(s: string, n: var int) {.inline.} =
+  ## increment ``n`` up to
+  ## next rune's index
+  inc(n, runeLenAt(s, n))
+
 iterator findAll*(
     s: string, pattern: Regex, start = 0): RegexMatch {.inline.} =
   ## search through the string and
@@ -2017,7 +2017,7 @@ iterator findAll*(
     let mm = m.get()
     yield mm
     let b = mm.boundaries
-    if b.b == i or b.a > b.b: inc i
+    if b.b == i or b.a > b.b: inc i  # todo: incRune and test
     else: i = b.b
 
 proc findAll*(s: string, pattern: Regex, start = 0): seq[RegexMatch] =
@@ -2037,7 +2037,6 @@ proc findAll*(s: string, pattern: Regex, start = 0): seq[RegexMatch] =
     result.add(slc)
 
 proc matchEnd(s: string, pattern: Regex, start = 0): int =
-  # todo: this is the same as startsWith, refactor
   result = -1
   initDataSets(true)
   let statesCount = pattern.states.high.int16
@@ -2070,13 +2069,16 @@ proc matchEnd(s: string, pattern: Regex, start = 0): int =
       result = state.ei
       return
 
-proc incRune(s: string, n: var int) {.inline.} =
-  ## return next rune char index from a given index
-  var r: Rune
-  fastRuneAt(s, n, r, true)
-
 iterator split*(s: string, sep: Regex): string {.inline.} =
   ## return not matched substrings
+  ##
+  ## .. code-block::
+  ##   var i = 0
+  ##   let expected = ["", "a", "Ϊ", "Ⓐ", "弢", ""]
+  ##   for s in split("11a22Ϊ33Ⓐ44弢55", re"\d+"):
+  ##     doAssert(s == expected[i])
+  ##     inc i
+  ##
   # todo: pass/reuse data structures
   var
     first = 0
@@ -2088,12 +2090,17 @@ iterator split*(s: string, sep: Regex): string {.inline.} =
       n = matchEnd(s, sep, last)
       #if last == n: s.incRune(last)
       if n > 0: break
-      s.incRune(last)
+      s.runeIncAt(last)
     yield substr(s, first, last - 1)
     if n > 0: last = n
 
 proc split*(s: string, sep: Regex): seq[string] =
   ## return not matched substrings
+  ##
+  ## .. code-block::
+  ##   doAssert(split("11a22Ϊ33Ⓐ44弢55", re"\d+") ==
+  ##     @["", "a", "Ϊ", "Ⓐ", "弢", ""])
+  ##
   result = newSeqOfCap[string](s.len)
   for w in s.split(sep):
     result.add(w)
@@ -2106,38 +2113,8 @@ proc startsWith*(s: string, pattern: Regex, start = 0): bool =
   ##   doAssert("abc".startsWith(re"\w"))
   ##   doAssert(not "abc".startsWith(re"\d"))
   ##
-  # todo: this is the same as matchEnd, refactor
-  result = false
-  initDataSets(true)
-  let statesCount = pattern.states.high.int16
-  for i, cp, nxt in s.peek(start):
-    if cp == invalidRune:
-      assert currStates.len == 0
-      assert i == 0
-      let state = (ni: statesCount, ci: 0, si: 0, ei: 0)
-      currStates.step(
-        pattern, state, captured, visited, toVisit, cp, nxt)
-      continue
-    if currStates.len == 0:
-      break
-    if pattern.states[currStates[0].ni].kind == reEOE:
-      break
-    for st in currStates:
-      let n = pattern.states[st.ni]
-      if n.kind == reEOE:
-        nextStates.add(st)
-        break
-      if not n.match(cp):
-        continue
-      visited.clear()
-      nextStates.stepFrom(
-        n, pattern, captured, st.ci, st.si, i, visited, toVisit, cp, nxt)
-    swap(currStates, nextStates)
-    nextStates.clear()
-  for state in currStates:
-    result = pattern.states[state.ni].kind == reEOE
-    if result:
-      return
+  # todo: shortest match (matchEnd matches longest match), for perf
+  matchEnd(s, pattern, start) != -1
 
 proc endsWith*(s: string, pattern: Regex): bool =
   ## return whether the string
@@ -2152,13 +2129,20 @@ proc endsWith*(s: string, pattern: Regex): bool =
   var i = 0
   while i < s.len:
     result = isSome(match(s, pattern, i))
-    if result: break
-    s.incRune(i)
+    if result: return
+    s.runeIncAt(i)
 
 proc toPattern*(s: string): Regex {.raises: [RegexError].} =
   ## Parse and compile a regular expression.
   ## Use the ``re`` template if you
   ## care about performance.
+  ##
+  ## .. code-block::
+  ##   # compiled at run-time
+  ##   let patternA = toPattern(r"aa?")
+  ##   # compiled at compile-time
+  ##   const patternB = toPattern(r"aa?")
+  ##
   var ns = s.parse
   let gc = ns.fillGroups()
   var names: Table[string, int]
@@ -2359,7 +2343,7 @@ when isMainModule:
   doAssert("1".isMatch(re"\d"))
   doAssert("123".isMatch(re"\d*"))
   doAssert("۲".isMatch(re"\d"))  # Kharosthi numeral
-  doAssert("⅕".isMatch(re"\d"))
+  doAssert(not "⅕".isMatch(re"\d"))
 
   # twhite_space_shorthand
   doAssert(" ".isMatch(re"\s"))
@@ -2377,7 +2361,7 @@ when isMainModule:
   doAssert(not "1".isMatch(re"\D"))
   doAssert(not "123".isMatch(re"\D*"))
   doAssert(not "۲".isMatch(re"\D"))  # Kharosthi numeral
-  doAssert(not "⅕".isMatch(re"\D"))
+  doAssert("⅕".isMatch(re"\D"))
   doAssert("!@#".isMatch(re"\D+"))
   doAssert("a".isMatch(re"\D"))
 
@@ -2957,12 +2941,20 @@ when isMainModule:
     split("AAA :   : BBB", re"\s*:\s*") ==
     @["AAA", "", "BBB"])
   doAssert(split("", re",") == @[""])
+  doAssert(split(",,", re",") == @["", "", ""])
   doAssert(split("abc", re"") == @["abc"])
   doAssert(
     split(",a,Ϊ,Ⓐ,弢,", re",") ==
     @["", "a", "Ϊ", "Ⓐ", "弢", ""])
   # todo: use raw string once \x is implemented
   doAssert(split("弢", re("\xAF")) == @["弢"])  # "弢" == "\xF0\xAF\xA2\x94"
+  block:
+    var
+      expected = ["", "a", "Ϊ", "Ⓐ", "弢", ""]
+      i = 0
+    for s in split("11a22Ϊ33Ⓐ44弢55", re"\d+"):
+      doAssert(s == expected[i])
+      inc i
 
   # tfindall
   doAssert(findAllb("abcabc", re"bc") == @[1 .. 2, 4 .. 5])

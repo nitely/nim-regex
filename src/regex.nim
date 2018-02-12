@@ -152,6 +152,7 @@ import strutils
 import sets
 import tables
 import options
+from parseutils import parseHex
 
 import unicodedb
 import unicodeplus except isUpper, isLower
@@ -626,6 +627,9 @@ iterator items[T](sc: Scanner[T]): T =
     inc sc.pos
     yield sc.s[sc.pos - 1]
 
+proc finished[T](sc: Scanner[T]): bool =
+  sc.pos > sc.s.high
+
 proc prev[T](sc: Scanner[T]): T =
   sc.s[sc.pos - 1]
 
@@ -951,7 +955,40 @@ proc parseGroupTag(sc: Scanner[Rune]): seq[Node] =
     raise newException(RegexError,
       ("Invalid group near position $#, " &
        "unknown group type (?$#...)") %%
-       [$startPos, $sc.curr])
+      [$startPos, $sc.curr])
+
+proc parseUnicodeLit(sc: Scanner[Rune], size: int): Node =
+  let startPos = sc.pos
+  var rawCP = newString(size)
+  for i in 0 ..< size:
+    check(
+      not sc.finished(),
+      ("Invalid unicode literal near position $#. " &
+       "Expected $# hex digits, but found $#") %%
+      [$startPos, $size, $i])
+    check(
+      sc.curr.int in {
+        '0'.ord .. '9'.ord,
+        'a'.ord .. 'z'.ord,
+        'A'.ord .. 'Z'.ord},
+      ("Invalid unicode literal near position $#. " &
+       "Expected hex digit, but found $#") %%
+      [$startPos, $sc.curr])
+    rawCP[i] = sc.next().int.char
+  var cp = 0
+  discard parseHex("0x$#" %% rawCp, cp)
+  result = Rune(cp).toCharNode
+
+proc parseEscapedLit(sc: Scanner[Rune]): Node =
+  case sc.curr
+  of "u".toRune:
+    discard sc.next()
+    result = parseUnicodeLit(sc, 4)
+  of "U".toRune:
+    discard sc.next()
+    result = parseUnicodeLit(sc, 8)
+  else:
+    result = next(sc).toEscapedNode
 
 proc subParse(sc: Scanner[Rune]): seq[Node] =
   let r = sc.prev
@@ -979,7 +1016,7 @@ proc subParse(sc: Scanner[Rune]): seq[Node] =
   of ".".toRune:
     @[Node(kind: reAny, cp: r)]
   of "\\".toRune:
-    @[sc.next().toEscapedNode]
+    @[sc.parseEscapedLit()]
   else:
     @[r.toCharNode]
 
@@ -3007,3 +3044,27 @@ when isMainModule:
   doAssert("abc".endsWith(re"(b|c)"))
   doAssert("ab".endsWith(re"(b|c)"))
   doAssert(not "a".endsWith(re"(b|c)"))
+
+  # tliterals
+  doAssert("a".isMatch(re"\u0061"))
+  doAssert(not "b".isMatch(re"\u0061"))
+  doAssert("b".isMatch(re"\u0062"))
+  doAssert("Ⓐ".isMatch(re"\u24b6"))
+  doAssert("Ⓐ".isMatch(re"\u24B6"))
+  doAssert(raisesMsg(r"\u123") ==
+    "Invalid unicode literal near position 2. " &
+    "Expected 4 hex digits, but found 3")
+  doAssert(raisesMsg(r"\u123@abc") ==
+    "Invalid unicode literal near position 2. " &
+    "Expected hex digit, but found @")
+  doAssert("a".isMatch(re"\U00000061"))
+  doAssert(not "b".isMatch(re"\U00000061"))
+  doAssert("b".isMatch(re"\U00000062"))
+  doAssert("弢".isMatch(re"\U0002f894"))
+  doAssert("弢".isMatch(re"\U0002F894"))
+  doAssert(raisesMsg(r"\U123") ==
+    "Invalid unicode literal near position 2. " &
+    "Expected 8 hex digits, but found 3")
+  doAssert(raisesMsg(r"\U123@a") ==
+    "Invalid unicode literal near position 2. " &
+    "Expected hex digit, but found @")

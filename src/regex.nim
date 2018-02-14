@@ -725,11 +725,104 @@ proc toEscapedNode(r: Rune): Node =
   if result.kind == reChar:
     result = r.toEscapedSeqNode
 
-proc toSetEscapedNode(r: Rune): Node =
-  ## return either a shorthand or a char node
-  result = r.toShorthandNode
-  if result.kind == reChar:
-    result = r.toEscapedSeqNode
+proc parseUnicodeLit(sc: Scanner[Rune], size: int): Node =
+  let startPos = sc.pos
+  var rawCP = newString(size)
+  for i in 0 ..< size:
+    check(
+      not sc.finished,
+      ("Invalid unicode literal near position $#. " &
+       "Expected $# hex digits, but found $#") %%
+      [$startPos, $size, $i])
+    check(
+      sc.curr.int in {
+        '0'.ord .. '9'.ord,
+        'a'.ord .. 'z'.ord,
+        'A'.ord .. 'Z'.ord},
+      ("Invalid unicode literal near position $#. " &
+       "Expected hex digit, but found $#") %%
+      [$startPos, $sc.curr])
+    rawCP[i] = sc.next().int.char
+  var cp = 0
+  discard parseHex(rawCp, cp)
+  check(
+    cp != -1 and cp <= int32.high,
+    ("Invalid unicode literal near position $#. " &
+     "$# value is too big.") %% [$startPos, rawCp])
+  result = Rune(cp).toCharNode
+
+proc parseUnicodeLitX(sc: Scanner[Rune]): Node =
+  assert sc.peek == "{".toRune
+  discard sc.next()
+  var i = 0
+  while i < 8:
+    if sc.finished:
+      break
+    if sc.curr == "}".toRune:
+      break
+    discard sc.next()
+    inc i
+  sc.pos = sc.pos - i
+  result = parseUnicodeLit(sc, i)
+  check(
+    sc.peek == "}".toRune,
+    ("Invalid unicode literal, " &
+     "`}` expected at position $#") %% $(sc.pos + 1))
+  discard sc.next()
+
+proc parseOctalLit(sc: Scanner[Rune]): Node =
+  let startPos = sc.pos
+  var rawCP = newString(3)
+  for i in 0 ..< 3:
+    check(
+      not sc.finished,
+      ("Invalid octal literal near position $#. " &
+       "Expected 3 octal digits, but found $#") %%
+      [$startPos, $i])
+    check(
+      sc.curr.int in {'0'.ord .. '7'.ord},
+      ("Invalid octal literal near position $#. " &
+       "Expected octal digit, but found $#") %%
+      [$startPos, $sc.curr])
+    rawCP[i] = sc.next().int.char
+  var cp = 0
+  discard parseOct(rawCp, cp)
+  result = Rune(cp).toCharNode
+
+proc parseEscapedLit(sc: Scanner[Rune]): Node =
+  ## Parse a escaped literal. If the escaped sequence
+  ## is not a literal then a ``EscapedNode`` is returned
+  case sc.curr
+  of "u".toRune:
+    discard sc.next()
+    result = parseUnicodeLit(sc, 4)
+  of "U".toRune:
+    discard sc.next()
+    result = parseUnicodeLit(sc, 8)
+  of "x".toRune:
+    discard sc.next()
+    case sc.peek
+    of "{".toRune:
+      result = parseUnicodeLitX(sc)
+    else:
+      result = parseUnicodeLit(sc, 2)
+  of "0".toRune .. "7".toRune:
+    result = parseOctalLit(sc)
+  else:
+    result = next(sc).toEscapedNode
+
+proc parseEscapedSeq(sc: Scanner[Rune]): Node =
+  ## Parse a escaped literal or escaped sequence.
+  ## Alias for ``parseEscapedLit``
+  parseEscapedLit(sc)
+
+proc parseSetEscapedSeq(sc: Scanner[Rune]): Node =
+  ## Just like regular ``parseEscapedSeq``
+  ## but treats assertions as chars (ignore escaping)
+  let cp = sc.peek
+  result = parseEscapedLit(sc)
+  if result.kind in assertionKind:
+    result = cp.toCharNode
 
 proc parseSet(sc: Scanner[Rune]): seq[Node] =
   ## parse a set atom (i.e ``[a-z]``) into a
@@ -744,63 +837,61 @@ proc parseSet(sc: Scanner[Rune]): seq[Node] =
   else:
     initSetNode()
   var
-    isRange, isEscaped, hasEnd = false
+    hasEnd = false
     cps = newSeq[Rune]()
-  for cp, nxt in sc.peek:
-    if cp == "]".toRune and
-        not isEscaped and
-        (not n.isEmpty or cps.len > 0):
-      hasEnd = true
-      break
-    if cp == "\\".toRune and not isEscaped:
-      isEscaped = true
-      continue
-    if isRange:
-      assert cps.len > 0
-      var cp = cp
-      if isEscaped:
-        let nn = cp.toSetEscapedNode()
+  for cp in sc:
+    case cp
+    of "]".toRune:
+      hasEnd = not n.isEmpty or cps.len > 0
+      if hasEnd:
+        break
+      cps.add(cp)
+    of "\\".toRune:
+      let nn = parseSetEscapedSeq(sc)
+      case nn.kind
+      of reChar:
+        cps.add(nn.cp)
+      else:
+        assert nn.kind in shorthandKind
+        n.shorthands.add(nn)
+        # can't be range so discard
+        if sc.peek == "-".toRune:
+          cps.add(sc.next())
+    of "-".toRune:
+      if cps.len == 0:
+        cps.add(cp)
+        continue
+      var last: Rune
+      case sc.peek
+      of "]".toRune:
+        cps.add(cp)
+        continue
+      of "\\".toRune:
+        discard sc.next()
+        let nn = parseSetEscapedSeq(sc)
         check(
           nn.kind == reChar,
           ("Invalid set range near position $#, " &
-           "range can't contain character-class" &
-           "/shorthand") %% $sc.pos)
-        cp = nn.cp
-      isRange = false
-      isEscaped = false
-      let start = cps.pop()
+           "range can't contain a character-class " &
+           "or assertion") %% $sc.pos)
+        last = nn.cp
+      else:
+        if sc.finished:
+          continue
+        last = sc.next()
+      let first = cps.pop()
       check(
-        start <= cp,
+        first <= last,
         ("Invalid set range near position $#, " &
          "start must be lesser than end") %% $sc.pos)
       n.ranges.add((
-        rangeStart: start,
-        rangeEnd: cp))
-      if nxt == "-".toRune:
-        cps.add(nxt)
-        discard sc.next()
-      continue
-    if isEscaped:
-      isEscaped = false
-      let nn = cp.toSetEscapedNode()
-      if nn.kind == reChar:
-        cps.add(nn.cp)
-        continue
-      assert nn.kind in shorthandKind
-      n.shorthands.add(nn)
-      if nxt == "-".toRune:
-        cps.add(nxt)
-        discard sc.next()
-      continue
-    if cp == "-".toRune and cps.len > 0:
-      isRange = true
-      continue
-    cps.add(cp)
-  if isRange:
-    cps.add("-".toRune)
+        rangeStart: first,
+        rangeEnd: last))
+      if sc.peek == "-".toRune:
+        cps.add(sc.next())
+    else:
+      cps.add(cp)
   n.cps = cps.toSet
-  assert(not n.isEmpty)
-  assert(not isEscaped)
   check(
     hasEnd,
     ("Invalid set near position $#, " &
@@ -966,93 +1057,11 @@ proc parseGroupTag(sc: Scanner[Rune]): seq[Node] =
        "unknown group type (?$#...)") %%
       [$startPos, $sc.curr])
 
-proc parseUnicodeLit(sc: Scanner[Rune], size: int): Node =
-  let startPos = sc.pos
-  var rawCP = newString(size)
-  for i in 0 ..< size:
-    check(
-      not sc.finished,
-      ("Invalid unicode literal near position $#. " &
-       "Expected $# hex digits, but found $#") %%
-      [$startPos, $size, $i])
-    check(
-      sc.curr.int in {
-        '0'.ord .. '9'.ord,
-        'a'.ord .. 'z'.ord,
-        'A'.ord .. 'Z'.ord},
-      ("Invalid unicode literal near position $#. " &
-       "Expected hex digit, but found $#") %%
-      [$startPos, $sc.curr])
-    rawCP[i] = sc.next().int.char
-  var cp = 0
-  discard parseHex(rawCp, cp)
-  check(
-    cp != -1 and cp <= int32.high,
-    ("Invalid unicode literal near position $#. " &
-     "$# value is too big.") %% [$startPos, rawCp])
-  result = Rune(cp).toCharNode
-
-proc parseUnicodeLitX(sc: Scanner[Rune]): Node =
-  assert sc.peek == "{".toRune
-  discard sc.next()
-  var i = 0
-  while i < 8:
-    if sc.finished:
-      break
-    if sc.curr == "}".toRune:
-      break
-    discard sc.next()
-    inc i
-  sc.pos = sc.pos - i
-  result = parseUnicodeLit(sc, i)
-  check(
-    sc.peek == "}".toRune,
-    ("Invalid unicode literal, " &
-     "`}` expected at position $#") %% $(sc.pos + 1))
-  discard sc.next()
-
-proc parseOctalLit(sc: Scanner[Rune]): Node =
-  let startPos = sc.pos
-  var rawCP = newString(3)
-  for i in 0 ..< 3:
-    check(
-      not sc.finished,
-      ("Invalid octal literal near position $#. " &
-       "Expected 3 octal digits, but found $#") %%
-      [$startPos, $i])
-    check(
-      sc.curr.int in {'0'.ord .. '7'.ord},
-      ("Invalid octal literal near position $#. " &
-       "Expected octal digit, but found $#") %%
-      [$startPos, $sc.curr])
-    rawCP[i] = sc.next().int.char
-  var cp = 0
-  discard parseOct(rawCp, cp)
-  result = Rune(cp).toCharNode
-
-proc parseEscapedLit(sc: Scanner[Rune]): Node =
-  case sc.curr
-  of "u".toRune:
-    discard sc.next()
-    result = parseUnicodeLit(sc, 4)
-  of "U".toRune:
-    discard sc.next()
-    result = parseUnicodeLit(sc, 8)
-  of "x".toRune:
-    discard sc.next()
-    case sc.peek
-    of "{".toRune:
-      result = parseUnicodeLitX(sc)
-    else:
-      result = parseUnicodeLit(sc, 2)
-  of "0".toRune .. "7".toRune:
-    result = parseOctalLit(sc)
-  else:
-    result = next(sc).toEscapedNode
-
 proc subParse(sc: Scanner[Rune]): seq[Node] =
   let r = sc.prev
   case r
+  of "\\".toRune:
+    @[sc.parseEscapedSeq()]
   of "[".toRune:
     sc.parseSet()
   of "{".toRune:
@@ -1075,8 +1084,6 @@ proc subParse(sc: Scanner[Rune]): seq[Node] =
     @[Node(kind: reEndSym, cp: r)]
   of ".".toRune:
     @[Node(kind: reAny, cp: r)]
-  of "\\".toRune:
-    @[sc.parseEscapedLit()]
   else:
     @[r.toCharNode]
 
@@ -2588,7 +2595,7 @@ when isMainModule:
   doAssert(not "z".isMatch(re"[\z][\z]"))
   doAssert(raisesMsg(r"[a-\w]") ==
     "Invalid set range near position 5, " &
-    "range can't contain character-class/shorthand")
+    "range can't contain a character-class or assertion")
   doAssert(not raises(r"[a-\b]"))
   doAssert(raisesMsg(r"[d-c]") ==
     "Invalid set range near position 4, " &
@@ -2599,6 +2606,12 @@ when isMainModule:
     "Invalid set near position 1, missing close symbol")
   doAssert(raisesMsg(r"[abc") ==
     "Invalid set near position 1, missing close symbol")
+  doAssert("a".isMatch(re"[\u0061]"))
+  doAssert(not "b".isMatch(re"[\u0061]"))
+  doAssert("a".isMatch(re"[\U00000061]"))
+  doAssert("a".isMatch(re"[\x61]"))
+  doAssert("a".isMatch(re"[\x{61}]"))
+  doAssert("abab".isMatch(re"[\x61-\x62]*"))
 
   # tnot_set
   doAssert("a".matchWithCapt(re"([^b])") == @[@["a"]])
@@ -3157,6 +3170,9 @@ when isMainModule:
   doAssert("aa".isMatch(re"\141a"))
   doAssert("\u1ff".isMatch(re"\777"))
   doAssert("888".isMatch(re"\888"))
+  doAssert(raisesMsg(r"\12") ==
+    "Invalid octal literal near position 1. " &
+    "Expected 3 octal digits, but found 2")
   doAssert(raisesMsg(r"\12@") ==
     "Invalid octal literal near position 1. " &
     "Expected octal digit, but found @")

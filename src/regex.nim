@@ -110,6 +110,8 @@ Escape sequences
   \123       octal character code (up to three digits)
   \x7F       hex character code (exactly two digits)
   \x{10FFFF} any hex character code corresponding to a Unicode code point
+  \u007F     hex character code (exactly four digits)
+  \U0010FFFF hex character code (exactly eight digits)
 
 Perl character classes (Unicode friendly)
 #########################################
@@ -152,7 +154,7 @@ import strutils
 import sets
 import tables
 import options
-from parseutils import parseHex
+import parseutils
 
 import unicodedb
 import unicodeplus except isUpper, isLower
@@ -830,17 +832,24 @@ proc parseRepRange(sc: Scanner[Rune]): seq[Node] =
   if last.len == 0:  # {n,} or {,}
     last = "-1"
   var
-    firstNum: int16
-    lastNum: int16
+    firstNum: int
+    lastNum: int
   try:
-    firstNum = first.parseInt().int16
-    lastNum = last.parseInt().int16
-  except ValueError, RangeError:
+    discard parseInt(first, firstNum)
+    discard parseInt(last, lastNum)
+  except OverflowError:
     raise newException(RegexError,
       ("Invalid repetition " &
        "range near position $#, " &
        "max value is $#, but found: $#, $#") %%
       [$sc.pos, $int16.high, first, last])
+  check(
+    firstNum <= int16.high and
+    lastNum <= int16.high,
+    ("Invalid repetition " &
+     "range near position $#, " &
+     "max value is $#, but found: $#, $#") %%
+    [$sc.pos, $int16.high, first, last])
   # for perf reasons. This becomes a?a?a?...
   # too many parallel states
   check(
@@ -851,8 +860,8 @@ proc parseRepRange(sc: Scanner[Rune]): seq[Node] =
      [$sc.pos, $(lastNum - firstNum)])
   result = @[Node(
     kind: reRepRange,
-    min: firstNum,
-    max: lastNum)]
+    min: firstNum.int16,
+    max: lastNum.int16)]
 
 proc toFlag(r: Rune): Flag =
   case r

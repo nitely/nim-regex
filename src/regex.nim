@@ -858,6 +858,9 @@ proc parseSet(sc: Scanner[Rune]): seq[Node] =
         if sc.peek == "-".toRune:
           cps.add(sc.next())
     of "-".toRune:
+      if sc.finished:
+        # no end
+        continue
       if cps.len == 0:
         cps.add(cp)
         continue
@@ -876,8 +879,7 @@ proc parseSet(sc: Scanner[Rune]): seq[Node] =
            "or assertion") %% $sc.pos)
         last = nn.cp
       else:
-        if sc.finished:
-          continue
+        assert(not sc.finished)
         last = sc.next()
       let first = cps.pop()
       check(
@@ -2606,6 +2608,13 @@ when isMainModule:
     "Invalid set near position 1, missing close symbol")
   doAssert(raisesMsg(r"[abc") ==
     "Invalid set near position 1, missing close symbol")
+  doAssert(raises(r"[a"))
+  doAssert(raises(r"[a-"))
+  doAssert(raises(r"[-a"))
+  doAssert(raises(r"[\\"))
+  doAssert(raises(r"[]"))
+  doAssert(raises(r"[]a"))
+  doAssert(raises(r"[-"))
   doAssert("a".isMatch(re"[\u0061]"))
   doAssert(not "b".isMatch(re"[\u0061]"))
   doAssert("a".isMatch(re"[\U00000061]"))

@@ -985,7 +985,11 @@ proc parseUnicodeLit(sc: Scanner[Rune], size: int): Node =
       [$startPos, $sc.curr])
     rawCP[i] = sc.next().int.char
   var cp = 0
-  discard parseHex("0x$#" %% rawCp, cp)
+  discard parseHex(rawCp, cp)
+  check(
+    cp != -1 and cp <= int32.high,
+    ("Invalid unicode literal near position $#. " &
+     "$# value is too big.") %% [$startPos, rawCp])
   result = Rune(cp).toCharNode
 
 proc parseUnicodeLitX(sc: Scanner[Rune]): Node =
@@ -1007,6 +1011,25 @@ proc parseUnicodeLitX(sc: Scanner[Rune]): Node =
      "`}` expected at position $#") %% $(sc.pos + 1))
   discard sc.next()
 
+proc parseOctalLit(sc: Scanner[Rune]): Node =
+  let startPos = sc.pos
+  var rawCP = newString(3)
+  for i in 0 ..< 3:
+    check(
+      not sc.finished,
+      ("Invalid octal literal near position $#. " &
+       "Expected 3 octal digits, but found $#") %%
+      [$startPos, $i])
+    check(
+      sc.curr.int in {'0'.ord .. '7'.ord},
+      ("Invalid octal literal near position $#. " &
+       "Expected octal digit, but found $#") %%
+      [$startPos, $sc.curr])
+    rawCP[i] = sc.next().int.char
+  var cp = 0
+  discard parseOct(rawCp, cp)
+  result = Rune(cp).toCharNode
+
 proc parseEscapedLit(sc: Scanner[Rune]): Node =
   case sc.curr
   of "u".toRune:
@@ -1022,6 +1045,8 @@ proc parseEscapedLit(sc: Scanner[Rune]): Node =
       result = parseUnicodeLitX(sc)
     else:
       result = parseUnicodeLit(sc, 2)
+  of "0".toRune .. "7".toRune:
+    result = parseOctalLit(sc)
   else:
     result = next(sc).toEscapedNode
 
@@ -3103,6 +3128,9 @@ when isMainModule:
   doAssert(raisesMsg(r"\U123@a") ==
     "Invalid unicode literal near position 2. " &
     "Expected hex digit, but found @")
+  doAssert(raisesMsg(r"\UFFFFFFFF") ==
+    "Invalid unicode literal near position 2. " &
+    "FFFFFFFF value is too big.")
   doAssert("a".isMatch(re"\x{61}"))
   doAssert("a".isMatch(re"\x{061}"))
   doAssert(not "b".isMatch(re"\x{61}"))
@@ -3110,6 +3138,8 @@ when isMainModule:
   doAssert("Ⓐ".isMatch(re"\x{000024b6}"))
   doAssert("弢".isMatch(re"\x{2f894}"))
   doAssert("弢".isMatch(re"\x{0002f894}"))
+  doAssert(raises(r"\x{FFFFFFFF}"))
+  doAssert(not raises(r"\x{7fffffff}"))
   doAssert(raisesMsg(r"\x{2f894") ==
     "Invalid unicode literal, `}` " &
     "expected at position 9")
@@ -3121,3 +3151,12 @@ when isMainModule:
     "Expected hex digit, but found @")
   doAssert("a".isMatch(re"\x61"))
   doAssert("aa".isMatch(re"\x61a"))
+  doAssert("a".isMatch(re"\x61"))
+  doAssert("a".isMatch(re"\141"))
+  doAssert(not "b".isMatch(re"\141"))
+  doAssert("aa".isMatch(re"\141a"))
+  doAssert("\u1ff".isMatch(re"\777"))
+  doAssert("888".isMatch(re"\888"))
+  doAssert(raisesMsg(r"\12@") ==
+    "Invalid octal literal near position 1. " &
+    "Expected octal digit, but found @")

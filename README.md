@@ -21,7 +21,7 @@ Features:
 - [ ] `\p{Greek}`
 - [ ] `\P{Greek}`
 - [ ] `x` group flag
-- [ ] `\123`
+- [x] `\123`
 - [x] `\x7F`
 - [x] `\x{10FFFF}`
 - [x] Character classes matching as described in

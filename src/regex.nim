@@ -645,7 +645,7 @@ proc peekImpl[T](sc: Scanner[T], default: T): T {.inline.} =
   ## same as ``curr`` except it
   ## returns a default/invalid value when
   ## the data is fully consumed
-  if sc.pos >= sc.s.high:
+  if sc.pos > sc.s.high:
     default
   else:
     sc.s[sc.pos]
@@ -962,7 +962,7 @@ proc parseUnicodeLit(sc: Scanner[Rune], size: int): Node =
   var rawCP = newString(size)
   for i in 0 ..< size:
     check(
-      not sc.finished(),
+      not sc.finished,
       ("Invalid unicode literal near position $#. " &
        "Expected $# hex digits, but found $#") %%
       [$startPos, $size, $i])
@@ -979,6 +979,25 @@ proc parseUnicodeLit(sc: Scanner[Rune], size: int): Node =
   discard parseHex("0x$#" %% rawCp, cp)
   result = Rune(cp).toCharNode
 
+proc parseUnicodeLitX(sc: Scanner[Rune]): Node =
+  assert sc.peek == "{".toRune
+  discard sc.next()
+  var i = 0
+  while i < 8:
+    if sc.finished:
+      break
+    if sc.curr == "}".toRune:
+      break
+    discard sc.next()
+    inc i
+  sc.pos = sc.pos - i
+  result = parseUnicodeLit(sc, i)
+  check(
+    sc.peek == "}".toRune,
+    ("Invalid unicode literal, " &
+     "`}` expected at position $#") %% $(sc.pos + 1))
+  discard sc.next()
+
 proc parseEscapedLit(sc: Scanner[Rune]): Node =
   case sc.curr
   of "u".toRune:
@@ -987,6 +1006,13 @@ proc parseEscapedLit(sc: Scanner[Rune]): Node =
   of "U".toRune:
     discard sc.next()
     result = parseUnicodeLit(sc, 8)
+  of "x".toRune:
+    discard sc.next()
+    case sc.peek
+    of "{".toRune:
+      result = parseUnicodeLitX(sc)
+    else:
+      result = parseUnicodeLit(sc, 2)
   else:
     result = next(sc).toEscapedNode
 
@@ -3068,3 +3094,21 @@ when isMainModule:
   doAssert(raisesMsg(r"\U123@a") ==
     "Invalid unicode literal near position 2. " &
     "Expected hex digit, but found @")
+  doAssert("a".isMatch(re"\x{61}"))
+  doAssert("a".isMatch(re"\x{061}"))
+  doAssert(not "b".isMatch(re"\x{61}"))
+  doAssert("Ⓐ".isMatch(re"\x{24b6}"))
+  doAssert("Ⓐ".isMatch(re"\x{000024b6}"))
+  doAssert("弢".isMatch(re"\x{2f894}"))
+  doAssert("弢".isMatch(re"\x{0002f894}"))
+  doAssert(raisesMsg(r"\x{2f894") ==
+    "Invalid unicode literal, `}` " &
+    "expected at position 9")
+  doAssert(raisesMsg(r"\x{00000000A}") ==
+    "Invalid unicode literal, `}` " &
+    "expected at position 12")
+  doAssert(raisesMsg(r"\x{61@}") ==
+    "Invalid unicode literal near position 3. " &
+    "Expected hex digit, but found @")
+  doAssert("a".isMatch(re"\x61"))
+  doAssert("aa".isMatch(re"\x61a"))

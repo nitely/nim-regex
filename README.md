@@ -22,8 +22,8 @@ Features:
 - [ ] `\P{Greek}`
 - [ ] `x` group flag
 - [ ] `\123`
-- [ ] `\x7F`
-- [ ] `\x{10FFFF}`
+- [x] `\x7F`
+- [x] `\x{10FFFF}`
 - [x] Character classes matching as described in
   [UTS#18](http://www.unicode.org/reports/tr18/#Compatibility_Properties)
 - [ ] `[[:alnum:]]`, etc

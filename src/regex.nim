@@ -235,9 +235,11 @@ type
     reAlphaNum,  # \w
     reDigit,  # \d
     reWhiteSpace,  # \s
+    reUCC,  # \pN or \p{Nn}
     reNotAlphaNum,  # \W
     reNotDigit,  # \D
     reNotWhiteSpace,  # \S
+    reNotUCC,  # \PN or \P{Nn}
     reAny,  # .
     reAnyNL,  # . new-line
     reWordBoundaryAscii,  # \b ascii only
@@ -270,6 +272,8 @@ type
     cps: HashSet[Rune]
     ranges: seq[SetRange]  # todo: interval tree
     shorthands: seq[Node]
+    # reUCC, reNotUCC
+    cc: string
 
 proc toCharNode(r: Rune): Node =
   ## return a ``Node`` that is meant to be matched
@@ -434,6 +438,12 @@ proc swapCase(r: Rune): Rune =
   else:
     result = r
 
+proc cmpCharClass(r: Rune, cc: string): bool =
+  if cc.len == 1:
+    cc[0] == r.category()[0]
+  else:
+    cc == r.category()
+
 proc match(n: Node, r: Rune): bool =
   ## match for ``Node`` of matchable kind.
   ## Return whether the node matches
@@ -477,12 +487,16 @@ proc match(n: Node, r: Rune): bool =
     r.isDigitAscii()
   of reWhiteSpaceAscii:
     r.isWhiteSpaceAscii()
+  of reUCC:
+    cmpCharClass(r, n.cc)
   of reNotAlphaNumAscii:
     not r.isAlphaNumAscii()
   of reNotDigitAscii:
     not r.isDigitAscii()
   of reNotWhiteSpaceAscii:
     not r.isWhiteSpaceAscii()
+  of reNotUCC:
+    not cmpCharClass(r, n.cc)
   of reAnyAscii:
     r.isAnyAscii()
   of reAnyNLAscii:
@@ -514,9 +528,11 @@ const
     reAlphaNum,
     reDigit,
     reWhiteSpace,
+    reUCC,
     reNotAlphaNum,
     reNotDigit,
     reNotWhiteSpace,
+    reNotUCC,
     reAlphaNumAscii,
     reDigitAscii,
     reWhiteSpaceAscii,
@@ -529,9 +545,11 @@ const
     reAlphaNum,
     reDigit,
     reWhiteSpace,
+    reUCC,
     reNotAlphaNum,
     reNotDigit,
     reNotWhiteSpace,
+    reNotUCC,
     reAny,
     reAnyNL,
     reSet,
@@ -662,6 +680,24 @@ iterator peek[T](sc: Scanner[T]): (T, T) =
   for s in sc:
     yield (s, sc.peek)
 
+proc find(sc: Scanner[Rune], r: Rune): int =
+  ## return number of consumed chars.
+  ## The scanner position is not moved.
+  ## ``-1`` is returned when char is not found
+  # be careful when using this
+  # as it may lead to O(n^2) time
+  result = 0
+  let pos = sc.pos
+  while true:
+    if sc.finished:
+      result = -1
+      break
+    if sc.curr == r:
+      break
+    discard sc.next()
+    inc result
+  sc.pos = pos
+
 proc toShorthandNode(r: Rune): Node =
   ## the given character must be a shorthand or
   ## else a ``CharNode`` is returned
@@ -754,16 +790,17 @@ proc parseUnicodeLit(sc: Scanner[Rune], size: int): Node =
 proc parseUnicodeLitX(sc: Scanner[Rune]): Node =
   assert sc.peek == "{".toRune
   discard sc.next()
-  var i = 0
-  while i < 8:
-    if sc.finished:
-      break
-    if sc.curr == "}".toRune:
-      break
-    discard sc.next()
-    inc i
-  sc.pos = sc.pos - i
-  result = parseUnicodeLit(sc, i)
+  let litEnd = sc.find("}".toRune)
+  check(
+    litEnd != -1,
+    ("Invalid unicode literal near position $#, " &
+     "missing `}`") %% $sc.pos)
+  check(
+    litEnd <= 8,
+    ("Invalid unicode literal near position $#, " &
+     "expected at most 8 chars, found $#") %%
+    [$sc.pos, $litEnd])
+  result = parseUnicodeLit(sc, litEnd)
   check(
     sc.peek == "}".toRune,
     ("Invalid unicode literal, " &
@@ -789,9 +826,60 @@ proc parseOctalLit(sc: Scanner[Rune]): Node =
   discard parseOct(rawCp, cp)
   result = Rune(cp).toCharNode
 
-proc parseEscapedLit(sc: Scanner[Rune]): Node =
-  ## Parse a escaped literal. If the escaped sequence
-  ## is not a literal then a ``EscapedNode`` is returned
+proc parseUnicodeNameX(sc: Scanner[Rune]): Node =
+  let startPos = sc.pos
+  assert sc.peek == "{".toRune
+  discard sc.next()
+  let nameEnd = sc.find("}".toRune)
+  check(
+    nameEnd != -1,
+    ("Invalid unicode name near position $#, " &
+     "missing `}`") %% $sc.pos)
+  var name = newString(nameEnd)
+  for i in 0 ..< nameEnd:
+    check(
+      sc.curr.int in {
+        'a'.ord .. 'z'.ord,
+        'A'.ord .. 'Z'.ord},
+      ("Invalid unicode name, expected char in range " &
+       "a-z, A-Z at position $#" %% $(sc.pos + 1)))
+    name[i] = sc.next().int.char
+  check(
+    sc.peek == "}".toRune,
+    ("Invalid unicode name, " &
+     "`}` expected at position $#") %% $(sc.pos + 1))
+  discard sc.next()
+  check(name in [
+      "Cn", "Lu", "Ll", "Lt", "Mn", "Mc", "Me", "Nd", "Nl",
+      "No", "Zs", "Zl", "Zp", "Cc", "Cf", "Cs", "Co", "Cn",
+      "Lm", "Lo", "Pc", "Pd", "Ps", "Pe", "Pi", "Pf", "Po",
+      "Sm", "Sc", "Sk", "So", "C", "L", "M", "N",
+      "Z", "P", "S"],
+    ("Invalid unicode name near position $#. " &
+     "Found $#") %% [$startPos, name])
+  result = Node(
+    kind: reUCC,
+    cp: "¿".toRune,
+    cc: name)
+
+proc parseUnicodeName(sc: Scanner[Rune]): Node =
+  let startPos = sc.pos
+  case sc.peek
+  of "{".toRune:
+    result = parseUnicodeNameX(sc)
+  else:
+    check(sc.peek in [
+        "C".toRune, "L".toRune, "M".toRune, "N".toRune,
+        "Z".toRune, "P".toRune, "S".toRune],
+      ("Invalid unicode name near position $#. " &
+       "Found $#") %% [$startPos, sc.peek.toUTF8])
+    result = Node(
+      kind: reUCC,
+      cp: "¿".toRune,
+      cc: sc.next().toUTF8)
+
+proc parseEscapedSeq(sc: Scanner[Rune]): Node =
+  ## Parse a escaped sequence
   case sc.curr
   of "u".toRune:
     discard sc.next()
@@ -808,19 +896,21 @@ proc parseEscapedLit(sc: Scanner[Rune]): Node =
       result = parseUnicodeLit(sc, 2)
   of "0".toRune .. "7".toRune:
     result = parseOctalLit(sc)
+  of "p".toRune:
+    discard sc.next()
+    result = parseUnicodeName(sc)
+  of "P".toRune:
+    discard sc.next()
+    result = parseUnicodeName(sc)
+    result.kind = reNotUCC
   else:
     result = next(sc).toEscapedNode
-
-proc parseEscapedSeq(sc: Scanner[Rune]): Node =
-  ## Parse a escaped literal or escaped sequence.
-  ## Alias for ``parseEscapedLit``
-  parseEscapedLit(sc)
 
 proc parseSetEscapedSeq(sc: Scanner[Rune]): Node =
   ## Just like regular ``parseEscapedSeq``
   ## but treats assertions as chars (ignore escaping)
   let cp = sc.peek
-  result = parseEscapedLit(sc)
+  result = parseEscapedSeq(sc)
   if result.kind in assertionKind:
     result = cp.toCharNode
 
@@ -2613,6 +2703,7 @@ when isMainModule:
   doAssert(raises(r"[-a"))
   doAssert(raises(r"[\\"))
   doAssert(raises(r"[]"))
+  doAssert(raises(r"[^]"))
   doAssert(raises(r"[]a"))
   doAssert(raises(r"[-"))
   doAssert("a".isMatch(re"[\u0061]"))
@@ -2621,6 +2712,7 @@ when isMainModule:
   doAssert("a".isMatch(re"[\x61]"))
   doAssert("a".isMatch(re"[\x{61}]"))
   doAssert("abab".isMatch(re"[\x61-\x62]*"))
+  doAssert("a".isMatch(re"[\141]"))
 
   # tnot_set
   doAssert("a".matchWithCapt(re"([^b])") == @[@["a"]])
@@ -3163,11 +3255,10 @@ when isMainModule:
   doAssert(raises(r"\x{FFFFFFFF}"))
   doAssert(not raises(r"\x{7fffffff}"))
   doAssert(raisesMsg(r"\x{2f894") ==
-    "Invalid unicode literal, `}` " &
-    "expected at position 9")
+    "Invalid unicode literal near position 3, missing `}`")
   doAssert(raisesMsg(r"\x{00000000A}") ==
-    "Invalid unicode literal, `}` " &
-    "expected at position 12")
+    "Invalid unicode literal near position 3, " &
+    "expected at most 8 chars, found 9")
   doAssert(raisesMsg(r"\x{61@}") ==
     "Invalid unicode literal near position 3. " &
     "Expected hex digit, but found @")
@@ -3185,3 +3276,28 @@ when isMainModule:
   doAssert(raisesMsg(r"\12@") ==
     "Invalid octal literal near position 1. " &
     "Expected octal digit, but found @")
+
+  # tchar_class
+  doAssert("a".isMatch(re"\pL"))
+  doAssert(not "a".isMatch(re"\PL"))
+  doAssert(not "1".isMatch(re"\pL"))
+  doAssert("1".isMatch(re"\PL"))
+  doAssert("aa".isMatch(re"\pLa"))
+  doAssert("1".isMatch(re"\pN"))
+  doAssert("_".isMatch(re"\pP"))
+  doAssert("+".isMatch(re"\pS"))
+  doAssert(" ".isMatch(re"\pZ"))
+  doAssert(raisesMsg(r"\pB") ==
+    "Invalid unicode name near position 2. Found B")
+  doAssert("a".isMatch(re"\p{L}"))
+  doAssert("ǅ".isMatch(re"\p{Lt}"))
+  doAssert(not "ǅ".isMatch(re"\P{Lt}"))
+  doAssert(not "a".isMatch(re"\p{Lt}"))
+  doAssert("a".isMatch(re"\P{Lt}"))
+  doAssert(raisesMsg(r"\p{Bb}") ==
+    "Invalid unicode name near position 2. Found Bb")
+  doAssert(raisesMsg(r"\p{11}") ==
+    "Invalid unicode name, expected char in range " &
+    "a-z, A-Z at position 4")
+  doAssert(raisesMsg(r"\p11") ==
+    "Invalid unicode name near position 2. Found 1")

@@ -16,10 +16,10 @@ Features:
 
 ## Status
 
-- [ ] `\pN`
-- [ ] `\PN`
-- [ ] `\p{Greek}`
-- [ ] `\P{Greek}`
+- [x] `\pN`
+- [x] `\PN`
+- [x] `\p{Greek}`
+- [x] `\P{Greek}`
 - [ ] `x` group flag
 - [x] `\123`
 - [x] `\x7F`

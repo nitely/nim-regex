@@ -682,10 +682,8 @@ iterator peek[T](sc: Scanner[T]): (T, T) =
 
 proc find(sc: Scanner[Rune], r: Rune): int =
   ## return number of consumed chars.
-  ## The scanner position is not moved.
+  ## The scanner's position is not moved.
   ## ``-1`` is returned when char is not found
-  # be careful when using this
-  # as it may lead to O(n^2) time
   result = 0
   let pos = sc.pos
   while true:
@@ -1149,43 +1147,39 @@ proc parseGroupTag(sc: Scanner[Rune]): seq[Node] =
        "unknown group type (?$#...)") %%
       [$startPos, $sc.curr])
 
-proc subParse(sc: Scanner[Rune]): seq[Node] =
-  let r = sc.prev
-  case r
-  of "\\".toRune:
-    @[sc.parseEscapedSeq()]
-  of "[".toRune:
-    sc.parseSet()
-  of "{".toRune:
-    sc.parseRepRange()
-  of "(".toRune:
-    sc.parseGroupTag()
-  of "|".toRune:
-    @[Node(kind: reOr, cp: r)]
-  of "*".toRune:
-    @[Node(kind: reZeroOrMore, cp: r)]
-  of "+".toRune:
-    @[Node(kind: reOneOrMore, cp: r)]
-  of "?".toRune:
-    @[Node(kind: reZeroOrOne, cp: r)]
-  of ")".toRune:
-    @[Node(kind: reGroupEnd, cp: r)]
-  of "^".toRune:
-    @[Node(kind: reStartSym, cp: r)]
-  of "$".toRune:
-    @[Node(kind: reEndSym, cp: r)]
-  of ".".toRune:
-    @[Node(kind: reAny, cp: r)]
-  else:
-    @[r.toCharNode]
-
 proc parse(expression: string): seq[Node] =
   ## convert a ``string`` regex expression
   ## into a ``Node`` expression
   result = newSeqOfCap[Node](expression.len)
   let sc = expression.toRunes.scan()
-  for _ in sc:
-    result.add(sc.subParse())
+  for r in sc:
+    case r
+    of "\\".toRune:
+      result.add(sc.parseEscapedSeq())
+    of "[".toRune:
+      result.add(sc.parseSet())
+    of "{".toRune:
+      result.add(sc.parseRepRange())
+    of "(".toRune:
+      result.add(sc.parseGroupTag())
+    of "|".toRune:
+      result.add(Node(kind: reOr, cp: r))
+    of "*".toRune:
+      result.add(Node(kind: reZeroOrMore, cp: r))
+    of "+".toRune:
+      result.add(Node(kind: reOneOrMore, cp: r))
+    of "?".toRune:
+      result.add(Node(kind: reZeroOrOne, cp: r))
+    of ")".toRune:
+      result.add(Node(kind: reGroupEnd, cp: r))
+    of "^".toRune:
+      result.add(Node(kind: reStartSym, cp: r))
+    of "$".toRune:
+      result.add(Node(kind: reEndSym, cp: r))
+    of ".".toRune:
+      result.add(Node(kind: reAny, cp: r))
+    else:
+      result.add(r.toCharNode)
 
 proc greediness(expression: seq[Node]): seq[Node] =
   ## apply greediness to an expression
@@ -3289,6 +3283,8 @@ when isMainModule:
   doAssert(" ".isMatch(re"\pZ"))
   doAssert(raisesMsg(r"\pB") ==
     "Invalid unicode name near position 2. Found B")
+  doAssert(raisesMsg(r"\p11") ==
+    "Invalid unicode name near position 2. Found 1")
   doAssert("a".isMatch(re"\p{L}"))
   doAssert("ǅ".isMatch(re"\p{Lt}"))
   doAssert(not "ǅ".isMatch(re"\P{Lt}"))
@@ -3299,5 +3295,3 @@ when isMainModule:
   doAssert(raisesMsg(r"\p{11}") ==
     "Invalid unicode name, expected char in range " &
     "a-z, A-Z at position 4")
-  doAssert(raisesMsg(r"\p11") ==
-    "Invalid unicode name near position 2. Found 1")

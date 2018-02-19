@@ -20,7 +20,7 @@ Features:
 - [x] `\PN`
 - [x] `\p{Greek}`
 - [x] `\P{Greek}`
-- [ ] `x` group flag
+- [x] `x` group flag
 - [x] `\123`
 - [x] `\x7F`
 - [x] `\x{10FFFF}`

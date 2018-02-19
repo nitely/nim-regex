@@ -212,7 +212,9 @@ type
     flagUnGreedy,  # U
     flagNotUnGreedy,  # -U
     flagUnicode,  # u
-    flagNotUnicode  # -u
+    flagNotUnicode,  # -u
+    flagVerbose,  # x
+    flagNotVerbose  # -x
   NodeKind = enum
     reChar,
     reCharCI,
@@ -847,7 +849,8 @@ proc parseUnicodeNameX(sc: Scanner[Rune]): Node =
     ("Invalid unicode name, " &
      "`}` expected at position $#") %% $(sc.pos + 1))
   discard sc.next()
-  check(name in [
+  check(
+    name in [
       "Cn", "Lu", "Ll", "Lt", "Mn", "Mc", "Me", "Nd", "Nl",
       "No", "Zs", "Zl", "Zp", "Cc", "Cf", "Cs", "Co", "Cn",
       "Lm", "Lo", "Pc", "Pd", "Ps", "Pe", "Pi", "Pf", "Po",
@@ -866,7 +869,8 @@ proc parseUnicodeName(sc: Scanner[Rune]): Node =
   of "{".toRune:
     result = parseUnicodeNameX(sc)
   else:
-    check(sc.peek in [
+    check(
+      sc.peek in [
         "C".toRune, "L".toRune, "M".toRune, "N".toRune,
         "Z".toRune, "P".toRune, "S".toRune],
       ("Invalid unicode name near position $#. " &
@@ -912,13 +916,13 @@ proc parseSetEscapedSeq(sc: Scanner[Rune]): Node =
   if result.kind in assertionKind:
     result = cp.toCharNode
 
-proc parseSet(sc: Scanner[Rune]): seq[Node] =
+proc parseSet(sc: Scanner[Rune]): Node =
   ## parse a set atom (i.e ``[a-z]``) into a
   ## ``Node`` of ``reSet`` or ``reNotSet`` kind.
   ## This proc is PCRE compatible and
   ## handles a ton of edge cases
   let startPos = sc.pos
-  var n = case sc.curr
+  result = case sc.peek
   of "^".toRune:
     discard sc.next()
     initNotSetNode()
@@ -930,7 +934,7 @@ proc parseSet(sc: Scanner[Rune]): seq[Node] =
   for cp in sc:
     case cp
     of "]".toRune:
-      hasEnd = not n.isEmpty or cps.len > 0
+      hasEnd = not result.isEmpty or cps.len > 0
       if hasEnd:
         break
       cps.add(cp)
@@ -941,7 +945,7 @@ proc parseSet(sc: Scanner[Rune]): seq[Node] =
         cps.add(nn.cp)
       else:
         assert nn.kind in shorthandKind
-        n.shorthands.add(nn)
+        result.shorthands.add(nn)
         # can't be range so discard
         if sc.peek == "-".toRune:
           cps.add(sc.next())
@@ -974,21 +978,20 @@ proc parseSet(sc: Scanner[Rune]): seq[Node] =
         first <= last,
         ("Invalid set range near position $#, " &
          "start must be lesser than end") %% $sc.pos)
-      n.ranges.add((
+      result.ranges.add((
         rangeStart: first,
         rangeEnd: last))
       if sc.peek == "-".toRune:
         cps.add(sc.next())
     else:
       cps.add(cp)
-  n.cps = cps.toSet
+  result.cps = cps.toSet
   check(
     hasEnd,
     ("Invalid set near position $#, " &
      "missing close symbol") %% $startPos)
-  result = @[n]
 
-proc parseRepRange(sc: Scanner[Rune]): seq[Node] =
+proc parseRepRange(sc: Scanner[Rune]): Node =
   ## parse a repetition range ``{n,m}``
   var
     first, last: string
@@ -1039,10 +1042,10 @@ proc parseRepRange(sc: Scanner[Rune]): seq[Node] =
      "can't have a range greater than 100 " &
      "repetitions, but found: $#") %%
      [$sc.pos, $(lastNum - firstNum)])
-  result = @[Node(
+  result = Node(
     kind: reRepRange,
     min: firstNum.int16,
-    max: lastNum.int16)]
+    max: lastNum.int16)
 
 proc toFlag(r: Rune): Flag =
   case r
@@ -1056,6 +1059,8 @@ proc toFlag(r: Rune): Flag =
     result = flagUnGreedy
   of "u".toRune:
     result = flagUnicode
+  of "x".toRune:
+    result = flagVerbose
   else:
     raise newException(RegexError,
       ("Invalid group flag, found $# " &
@@ -1073,24 +1078,34 @@ proc toNegFlag(r: Rune): Flag =
     result = flagNotUnGreedy
   of "u".toRune:
     result = flagNotUnicode
+  of "x".toRune:
+    result = flagNotVerbose
   else:
     raise newException(RegexError,
       ("Invalid group flag, found -$# " &
        "but expected one of: -i, -m, -s, -U or -u") %% $r)
 
-proc parseGroupTag(sc: Scanner[Rune]): seq[Node] =
+template checkEmptyGroup() =
+  check(
+    peek(sc) != toRune(")"),
+    ("Invalid group near position $#, " &
+     "empty group is not allowed") %% $startPos)
+
+proc parseGroupTag(sc: Scanner[Rune]): Node =
   ## parse a special group (name, flags, non-captures).
   ## Return a regular ``reGroupStart``
   ## if it's not special enough
   # A regular group
   let startPos = sc.pos
   if sc.curr != "?".toRune:
-    return @[initGroupStart()]
+    checkEmptyGroup()
+    return initGroupStart()
   discard sc.next()  # Consume "?"
   case sc.curr
   of ":".toRune:
     discard sc.next()
-    result = @[initGroupStart(isCapturing = false)]
+    checkEmptyGroup()
+    result = initGroupStart(isCapturing = false)
   of "P".toRune:
     discard sc.next()
     check(
@@ -1112,18 +1127,21 @@ proc parseGroupTag(sc: Scanner[Rune]): seq[Node] =
       sc.prev == ">".toRune,
       ("Invalid group name near position $#, " &
        "> closing symbol was expected") %% $startPos)
-    result = @[initGroupStart(name)]
+    checkEmptyGroup()
+    result = initGroupStart(name)
   of "i".toRune,
       "m".toRune,
       "s".toRune,
       "U".toRune,
       "u".toRune,
+      "x".toRune,
       "-".toRune:
     var
       flags: seq[Flag] = @[]
       isNegated = false
     for cp in sc:
       if cp == ":".toRune:
+        checkEmptyGroup()
         break
       if cp == "-".toRune:
         isNegated = true
@@ -1134,52 +1152,87 @@ proc parseGroupTag(sc: Scanner[Rune]): seq[Node] =
         flags.add(toFlag(cp))
       if sc.peek == ")".toRune:
         break
-    result = @[initGroupStart(
+    result = initGroupStart(
       flags = flags,
-      isCapturing = false)]
-    if sc.peek == ")".toRune:
-      result.add(Node(
-        kind: reSkip,
-        cp: "¿".toRune))  # todo: remove?
+      isCapturing = false)
   else:
     raise newException(RegexError,
       ("Invalid group near position $#, " &
        "unknown group type (?$#...)") %%
       [$startPos, $sc.curr])
 
+proc subParse(sc: Scanner[Rune]): Node =
+  let r = sc.prev
+  case r
+  of "\\".toRune:
+    sc.parseEscapedSeq()
+  of "[".toRune:
+    sc.parseSet()
+  of "{".toRune:
+    sc.parseRepRange()
+  of "(".toRune:
+    sc.parseGroupTag()
+  of "|".toRune:
+    Node(kind: reOr, cp: r)
+  of "*".toRune:
+    Node(kind: reZeroOrMore, cp: r)
+  of "+".toRune:
+    Node(kind: reOneOrMore, cp: r)
+  of "?".toRune:
+    Node(kind: reZeroOrOne, cp: r)
+  of ")".toRune:
+    Node(kind: reGroupEnd, cp: r)
+  of "^".toRune:
+    Node(kind: reStartSym, cp: r)
+  of "$".toRune:
+    Node(kind: reEndSym, cp: r)
+  of ".".toRune:
+    Node(kind: reAny, cp: r)
+  else:
+    r.toCharNode
+
 proc parse(expression: string): seq[Node] =
   ## convert a ``string`` regex expression
   ## into a ``Node`` expression
   result = newSeqOfCap[Node](expression.len)
+  var verbosity = newSeq[bool]()
   let sc = expression.toRunes.scan()
   for r in sc:
-    case r
-    of "\\".toRune:
-      result.add(sc.parseEscapedSeq())
-    of "[".toRune:
-      result.add(sc.parseSet())
-    of "{".toRune:
-      result.add(sc.parseRepRange())
+    # todo: refactor
+    # todo: refactor!
+    # todo: refactor!!
+    if verbosity.len > 0 and verbosity[^1]:
+      if r.isWhiteSpaceAscii() or r == "\r".toRune:
+        continue
+      if r == "#".toRune:
+        for r2 in sc:
+          if r2 == "\n".toRune:
+            break
+        continue
+
+    result.add(sc.subParse())
+
+    case r:
     of "(".toRune:
-      result.add(sc.parseGroupTag())
-    of "|".toRune:
-      result.add(Node(kind: reOr, cp: r))
-    of "*".toRune:
-      result.add(Node(kind: reZeroOrMore, cp: r))
-    of "+".toRune:
-      result.add(Node(kind: reOneOrMore, cp: r))
-    of "?".toRune:
-      result.add(Node(kind: reZeroOrOne, cp: r))
+      if verbosity.len > 0:
+        if sc.peek != ")".toRune:
+          verbosity.add(verbosity[^1])
+      else:
+        verbosity.add(false)
+      for f in result[^1].flags:
+        case f:
+        of flagVerbose:
+          verbosity[^1] = true
+        of flagNotVerbose:
+          verbosity[^1] = false
+        else: discard
     of ")".toRune:
-      result.add(Node(kind: reGroupEnd, cp: r))
-    of "^".toRune:
-      result.add(Node(kind: reStartSym, cp: r))
-    of "$".toRune:
-      result.add(Node(kind: reEndSym, cp: r))
-    of ".".toRune:
-      result.add(Node(kind: reAny, cp: r))
-    else:
-      result.add(r.toCharNode)
+      if verbosity.len > 0:
+        if result[^2].kind != reGroupStart:
+          discard verbosity.pop()
+        # else: empty group (?flags)
+      # else: unbalanced parentheses, it'll raise later
+    else: discard
 
 proc greediness(expression: seq[Node]): seq[Node] =
   ## apply greediness to an expression
@@ -1335,6 +1388,10 @@ proc toggle(f: Flag): Flag =
     flagNotUnicode
   of flagNotUnicode:
     flagUnicode
+  of flagVerbose:
+    flagNotVerbose
+  of flagNotVerbose:
+    flagVerbose
 
 proc squash(flags: ElasticSeq[seq[Flag]]): set[Flag] =
   result = {}
@@ -1383,7 +1440,9 @@ proc applyFlags(expression: seq[Node]): seq[Node] =
           flagNotMultiLine,
           flagNotCaseInsensitive,
           flagNotUnGreedy,
-          flagUnicode}
+          flagUnicode,
+          flagVerbose,
+          flagNotVerbose}
     case n.kind
     # (?flags)
     # Orphan flags are added to current group
@@ -1392,10 +1451,8 @@ proc applyFlags(expression: seq[Node]): seq[Node] =
         flags.add(@[])
         result.add(n)
         continue
-      if sc.peek.kind == reSkip:
-        discard sc.next()  # SKIP
-        assert sc.peek.kind == reGroupEnd
-        discard sc.next()  # )
+      if sc.peek.kind == reGroupEnd:
+        discard sc.next()
         if flags.len > 0:
           flags[flags.len - 1].add(n.flags)
         else:
@@ -1709,9 +1766,6 @@ proc nfa(expression: seq[Node]): seq[Node] =
       if n.isGreedy:
         swap(result[^1].outA, result[^1].outB)
     of reGroupStart:
-      check(
-        states.len >= 1,
-        "Invalid group, empty group is not allowed")
       n.outA = states.pop()
       n.outB = -1
       ends.update(ni, n.outA, n.outB)
@@ -2998,7 +3052,8 @@ when isMainModule:
     "Invalid capturing group. " &
     "Found too many opening symbols")
   doAssert(raisesMsg(r"()") ==
-    "Invalid group, empty group is not allowed")
+    "Invalid group near position 1, " &
+    "empty group is not allowed")
   doAssert(not raises(r"(\b)"))
   #[
   var manyGroups = newStringOfCap(int16.high * 3)
@@ -3096,6 +3151,39 @@ when isMainModule:
   doAssert("Ǝ".isMatch(re"(?-u)[^\w]"))
   doAssert(not "Ǝ".isMatch(re"(?-u)[\w]"))
   doAssert(not "\t".isMatch(re"(?-u)[\w]"))
+  doAssert("ƎƎ".isMatch(re"(?-u)[^\w](?u)\w"))
+
+  doAssert("a".isMatch(re"(?x)a"))
+  doAssert("a".isMatch(re"(?x)a "))
+  doAssert("a".isMatch(re"(?x)a   "))
+  doAssert("a".isMatch(re"(?x) a "))
+  doAssert("a".isMatch(re("(?x)a\L   \L   \L")))
+  doAssert("a".isMatch(re("(?x)\L a \L")))
+  doAssert("a".isMatch(re"""(?x)a"""))
+  doAssert("a".isMatch(re"""(?x)
+    a
+    """))
+  doAssert("a".isMatch(re"""(?x)(
+    a
+    )"""))
+  doAssert("a".isMatch(re"""(?x)
+    a  # should ignore this comment
+    """))
+  doAssert("aa ".isMatch(re"(?x)a  (?-x)a "))
+  doAssert("a a".isMatch(re"a (?x)a  "))
+  doAssert("aa".isMatch(re"((?x)a    )a"))
+  doAssert("aa ".isMatch(re"""(?x)
+    a    #    comment
+    (?-x)a """))
+  doAssert("aaa".isMatch(re"""(?x)  # comment
+    a  # comment
+    a  # comment
+    a  # comment
+    # comment"""))
+  doAssert("12.0".isMatch(re"""(?x)
+    \d +  # the integral part
+    \.    # the decimal point
+    \d *  # some fractional digits"""))
 
   doAssert(raisesMsg(r"(?uq)") ==
     "Invalid group flag, found q but " &
@@ -3167,8 +3255,7 @@ when isMainModule:
   doAssert(
     split(",a,Ϊ,Ⓐ,弢,", re",") ==
     @["", "a", "Ϊ", "Ⓐ", "弢", ""])
-  # todo: use raw string once \x is implemented
-  doAssert(split("弢", re("\xAF")) == @["弢"])  # "弢" == "\xF0\xAF\xA2\x94"
+  doAssert(split("弢", re"\xAF") == @["弢"])  # "弢" == "\xF0\xAF\xA2\x94"
   block:
     var
       expected = ["", "a", "Ϊ", "Ⓐ", "弢", ""]

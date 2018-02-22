@@ -11,6 +11,7 @@ Features:
 * Regular expressions are (optionally) compiled at compile-time
 * Captures all group repetitions (not just the last one)
 * Unicode level-1 support
+* Descriptive error messages
 
 > This is a WIP. API is not stable
 

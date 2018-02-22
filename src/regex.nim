@@ -631,6 +631,59 @@ proc `$`(n: seq[Node]): string =
     result.add($nn)
 
 type
+  ElasticSeq[T] = object
+    ## a seq that can grow and shrink
+    ## avoiding excessive allocations
+    s: seq[T]
+    pos: int
+
+proc initElasticSeq[T](size = 16): ElasticSeq[T] =
+  ElasticSeq[T](s: newSeq[T](size), pos: 0)
+
+proc isInitialized[T](ls: ElasticSeq[T]): bool =
+  not ls.s.isNil
+
+proc `[]`[T](ls: ElasticSeq[T], i: int): T =
+  ls.s[i]
+
+proc `[]`[T](ls: var ElasticSeq[T], i: int): var T =
+  ls.s[i]
+
+proc `[]`[T](ls: ElasticSeq[T], i: BackwardsIndex): T =
+  `[]`(ls, ls.len - int(i))
+
+proc `[]`[T](ls: var ElasticSeq[T], i: BackwardsIndex): T =
+  `[]`(ls, ls.len - int(i))
+
+proc `[]=`[T](ls: var ElasticSeq[T], i: BackwardsIndex, x: T) =
+  ls.s[ls.len - int(i)] = x
+
+proc len[T](ls: ElasticSeq[T]): int =
+  ls.pos
+
+proc high[T](ls: ElasticSeq[T]): int =
+  ls.pos - 1
+
+proc clear[T](ls: var ElasticSeq[T]) =
+  ls.pos = 0
+
+proc add[T](ls: var ElasticSeq[T], x: T) =
+  if ls.pos > ls.s.high:
+    ls.s.setLen(ls.s.len * 2)
+  ls.s[ls.pos] = x
+  inc ls.pos
+
+proc pop[T](ls: var ElasticSeq[T]): T =
+  dec ls.pos
+  ls.s[ls.pos]
+
+iterator items[T](ls: ElasticSeq[T]): T {.inline.} =
+  var i = 0
+  while i < ls.pos:
+    yield ls.s[i]
+    inc i
+
+type
   Scanner[T: Rune|Node] = ref object
     ## A scanner is a common
     ## construct for reading data
@@ -1117,8 +1170,16 @@ proc parseGroupTag(sc: Scanner[Rune]): Node =
     for r in sc:
       if r == ">".toRune:
         break
-      name.add(r.toUTF8)
-    # todo: allow [a-zA-Z0-9] names only? check PCRE
+      check(
+        r.int in {
+          'a'.ord .. 'z'.ord,
+          'A'.ord .. 'Z'.ord,
+          '0'.ord .. '9'.ord,
+          '-'.ord, '_'.ord},
+        ("Invalid group name near position $#. " &
+         "Expected: a-z, A-Z, 0-9, " &
+         "-, or _. But found `$#`") %% [$startPos, $r])
+      name.add(r.int.char)
     check(
       name.len > 0,
       ("Invalid group name near position $#, " &
@@ -1191,48 +1252,70 @@ proc subParse(sc: Scanner[Rune]): Node =
   else:
     r.toCharNode
 
+proc skip(sc: Scanner[Rune], vb: ElasticSeq[bool]): bool =
+  ## skip white-spaces and comments on verbose mode
+  result = false
+  if vb.len == 0 or not vb[^1]:
+    return
+  result = case sc.prev
+  of " ".toRune,
+      "\t".toRune,
+      "\L".toRune,
+      "\r".toRune,
+      "\f".toRune,
+      "\v".toRune:
+    true
+  of "#".toRune:
+    for r in sc:
+      if r == "\L".toRune:
+        break
+    true
+  else:
+    false
+
+proc verbosity(
+    vb: var ElasticSeq[bool],
+    sc: Scanner[Rune],
+    n: Node) =
+  ## update verbose mode on current group
+  case n.kind:
+  of reGroupStart:
+    if vb.len > 0:
+      vb.add(vb[^1])
+    else:
+      vb.add(false)
+    for f in n.flags:
+      case f:
+      of flagVerbose:
+        vb[^1] = true
+      of flagNotVerbose:
+        vb[^1] = false
+      else:
+        discard
+    if sc.peek == ")".toRune:  # (?flags)
+      if vb.len > 1:  # set outter group
+        vb[^2] = vb[^1]
+      else:
+        vb.add(vb[^1])
+  of reGroupEnd:
+    if vb.len > 0:
+      discard vb.pop()
+    # else: unbalanced parentheses,
+    # it'll raise later
+  else:
+    discard
+
 proc parse(expression: string): seq[Node] =
   ## convert a ``string`` regex expression
   ## into a ``Node`` expression
   result = newSeqOfCap[Node](expression.len)
-  var verbosity = newSeq[bool]()
+  var vb = initElasticSeq[bool](64)
   let sc = expression.toRunes.scan()
-  for r in sc:
-    # todo: refactor
-    # todo: refactor!
-    # todo: refactor!!
-    if verbosity.len > 0 and verbosity[^1]:
-      if r.isWhiteSpaceAscii() or r == "\r".toRune:
-        continue
-      if r == "#".toRune:
-        for r2 in sc:
-          if r2 == "\n".toRune:
-            break
-        continue
-
+  for _ in sc:
+    if sc.skip(vb):
+      continue
     result.add(sc.subParse())
-
-    case r:
-    of "(".toRune:
-      if verbosity.len > 0:
-        if sc.peek != ")".toRune:
-          verbosity.add(verbosity[^1])
-      else:
-        verbosity.add(false)
-      for f in result[^1].flags:
-        case f:
-        of flagVerbose:
-          verbosity[^1] = true
-        of flagNotVerbose:
-          verbosity[^1] = false
-        else: discard
-    of ")".toRune:
-      if verbosity.len > 0:
-        if result[^2].kind != reGroupStart:
-          discard verbosity.pop()
-        # else: empty group (?flags)
-      # else: unbalanced parentheses, it'll raise later
-    else: discard
+    vb.verbosity(sc, result[^1])
 
 proc greediness(expression: seq[Node]): seq[Node] =
   ## apply greediness to an expression
@@ -1246,50 +1329,6 @@ proc greediness(expression: seq[Node]): seq[Node] =
       n.isGreedy = true
       discard sc.next
     result.add(n)
-
-type
-  ElasticSeq[T] = object
-    ## a seq that can grow and shrink
-    ## avoiding excessive allocations
-    s: seq[T]
-    pos: int
-
-proc initElasticSeq[T](size = 16): ElasticSeq[T] =
-  ElasticSeq[T](s: newSeq[T](size), pos: 0)
-
-proc isInitialized[T](ls: ElasticSeq[T]): bool =
-  not ls.s.isNil
-
-proc `[]`[T](ls: ElasticSeq[T], i: int): T =
-  ls.s[i]
-
-proc `[]`[T](ls: var ElasticSeq[T], i: int): var T =
-  ls.s[i]
-
-proc len[T](ls: ElasticSeq[T]): int =
-  ls.pos
-
-proc high[T](ls: ElasticSeq[T]): int =
-  ls.pos - 1
-
-proc clear[T](ls: var ElasticSeq[T]) =
-  ls.pos = 0
-
-proc add[T](ls: var ElasticSeq[T], x: T) =
-  if ls.pos > ls.s.high:
-    ls.s.setLen(ls.s.len * 2)
-  ls.s[ls.pos] = x
-  inc ls.pos
-
-proc pop[T](ls: var ElasticSeq[T]): T =
-  dec ls.pos
-  ls.s[ls.pos]
-
-iterator items[T](ls: ElasticSeq[T]): T {.inline.} =
-  var i = 0
-  while i < ls.pos:
-    yield ls.s[i]
-    inc i
 
 type
   GroupsCapture = tuple
@@ -1403,8 +1442,8 @@ proc squash(flags: ElasticSeq[seq[Flag]]): set[Flag] =
 proc applyFlags(expression: seq[Node]): seq[Node] =
   ## apply flags to each group
   result = newSeqOfCap[Node](expression.len)
-  let sc = expression.scan()
   var flags = initElasticSeq[seq[Flag]](64)
+  let sc = expression.scan()
   for nn in sc:
     var n = nn
     for f in flags.squash():
@@ -3039,7 +3078,7 @@ when isMainModule:
   doAssert(raisesMsg(r"abc(?Pabc)") ==
     "Invalid group name near position " &
     "4, < opening symbol was expected")
-  doAssert(raisesMsg(r"abc(?P<abc)") ==
+  doAssert(raisesMsg(r"abc(?P<abc") ==
     "Invalid group name near position 4, " &
     "> closing symbol was expected")
   doAssert(raisesMsg(r"a(?P<>abc)") ==
@@ -3054,6 +3093,11 @@ when isMainModule:
   doAssert(raisesMsg(r"()") ==
     "Invalid group near position 1, " &
     "empty group is not allowed")
+  doAssert(raisesMsg(r"a(?P<asd)") ==
+    "Invalid group name near position 2. " &
+    "Expected: a-z, A-Z, 0-9, -, or _. But found `)`")
+  doAssert(not raises(r"(?P<abcdefghijklmnopqrstuvwxyz" &
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_>abc)"))
   doAssert(not raises(r"(\b)"))
   #[
   var manyGroups = newStringOfCap(int16.high * 3)
@@ -3159,19 +3203,32 @@ when isMainModule:
   doAssert("a".isMatch(re"(?x) a "))
   doAssert("a".isMatch(re("(?x)a\L   \L   \L")))
   doAssert("a".isMatch(re("(?x)\L a \L")))
+  doAssert("a".isMatch(re"(?x: a )"))
   doAssert("a".isMatch(re"""(?x)a"""))
   doAssert("a".isMatch(re"""(?x)
     a
     """))
+  doAssert("a".isMatch(re"""(?x:
+    a
+    )"""))
   doAssert("a".isMatch(re"""(?x)(
     a
     )"""))
   doAssert("a".isMatch(re"""(?x)
     a  # should ignore this comment
     """))
+  doAssert("a".isMatch(re"""(?x:
+    a  # should ignore this comment
+    )"""))
   doAssert("aa ".isMatch(re"(?x)a  (?-x)a "))
   doAssert("a a".isMatch(re"a (?x)a  "))
   doAssert("aa".isMatch(re"((?x)a    )a"))
+  doAssert("aa".isMatch(re"(?x:a    )a"))
+  doAssert("a ".isMatch(re"(?x)a\ "))
+  doAssert("a ".isMatch(re"(?x)a\   "))
+  doAssert("a#".isMatch(re"(?x)a\#"))
+  doAssert("a ".isMatch(re"(?x)a[ ]"))
+  doAssert("a\n".isMatch(re"(?x)a\n"))
   doAssert("aa ".isMatch(re"""(?x)
     a    #    comment
     (?-x)a """))
@@ -3184,6 +3241,17 @@ when isMainModule:
     \d +  # the integral part
     \.    # the decimal point
     \d *  # some fractional digits"""))
+  doAssert(re"""(?x)    # verbose mode
+    ^                   # beginning of string
+    M{0,4}              # thousands - 0 to 4 M's
+    (CM|CD|D?C{0,3})    # hundreds - 900 (CM), 400 (CD), 0-300 (0 to 3 C's),
+                        #            or 500-800 (D, followed by 0 to 3 C's)
+    (XC|XL|L?X{0,3})    # tens - 90 (XC), 40 (XL), 0-30 (0 to 3 X's),
+                        #        or 50-80 (L, followed by 0 to 3 X's)
+    (IX|IV|V?I{0,3})    # ones - 9 (IX), 4 (IV), 0-3 (0 to 3 I's),
+                        #        or 5-8 (V, followed by 0 to 3 I's)
+    $                   # end of string
+    """ in "MMMMDCCCLXXXVIII")
 
   doAssert(raisesMsg(r"(?uq)") ==
     "Invalid group flag, found q but " &

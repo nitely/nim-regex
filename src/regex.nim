@@ -199,9 +199,6 @@ proc toRune(s: string): Rune =
   result = s.runeAt(0)
 
 type
-  SetRange = tuple
-    rangeStart: Rune
-    rangeEnd: Rune
   Flag = enum
     flagCaseInsensitive,  # i
     flagNotCaseInsensitive,  # -i
@@ -272,7 +269,7 @@ type
     min, max: int16
     # reSet, reNotSet
     cps: HashSet[Rune]
-    ranges: seq[SetRange]  # todo: interval tree
+    ranges: seq[Slice[Rune]]  # todo: interval tree
     shorthands: seq[Node]
     # reUCC, reNotUCC
     cc: string
@@ -395,11 +392,11 @@ proc match(n: Node, r: Rune, nxt: Rune): bool =
 proc `<=`(x, y: Rune): bool =
   x.int <= y.int
 
-proc contains(sr: seq[SetRange], r: Rune): bool =
+proc contains(sr: seq[Slice[Rune]], r: Rune): bool =
   result = false
-  for first, last in sr.items:
-    if first <= r and r <= last:
-      result = true
+  for sl in sr:
+    result = r in sl
+    if result:
       break
 
 proc isWhiteSpace(r: Rune): bool {.inline.} =
@@ -612,8 +609,8 @@ proc `$`(n: Node): string =
       inc i
     for cp in cps.sorted(cmp):
       str.add(cp.toUTF8)
-    for rs, re in n.ranges.items:
-      str.add(rs.toUTF8 & '-' & re.toUTF8)
+    for sl in n.ranges:
+      str.add(sl.a.toUTF8 & '-' & sl.b.toUTF8)
     for nn in n.shorthands:
       str.add('\\' & nn.cp.toUTF8)
     str.add(']')
@@ -644,11 +641,19 @@ proc isInitialized[T](ls: ElasticSeq[T]): bool =
   not ls.s.isNil
 
 proc `[]`[T](ls: ElasticSeq[T], i: int): T =
+  assert i < ls.pos
   ls.s[i]
 
 proc `[]`[T](ls: var ElasticSeq[T], i: int): var T =
+  assert i < ls.pos
   ls.s[i]
 
+proc `[]=`[T](ls: var ElasticSeq[T], i: int, x: T) =
+  assert i < ls.pos
+  ls.s[i] = x
+
+#[
+# todo: fixme supported in nim >= 0.18
 proc `[]`[T](ls: ElasticSeq[T], i: BackwardsIndex): T =
   `[]`(ls, ls.len - int(i))
 
@@ -657,6 +662,7 @@ proc `[]`[T](ls: var ElasticSeq[T], i: BackwardsIndex): T =
 
 proc `[]=`[T](ls: var ElasticSeq[T], i: BackwardsIndex, x: T) =
   ls.s[ls.len - int(i)] = x
+]#
 
 proc len[T](ls: ElasticSeq[T]): int =
   ls.pos
@@ -969,6 +975,77 @@ proc parseSetEscapedSeq(sc: Scanner[Rune]): Node =
   if result.kind in assertionKind:
     result = cp.toCharNode
 
+proc parseAsciiSet(result: var Node, sc: Scanner[Rune]) =
+  # todo: use it
+  assert sc.peek == ":".toRune
+  discard sc.next()
+  let startPos = sc.pos
+  var name = ""
+  for r in sc:
+    if r == "]".toRune:
+      break
+    name.add(r.toUTF8)
+  # todo: add missing names
+  case name
+  of "alpha":
+    result.ranges.add([
+      "a".toRune .. "z".toRune,
+      "A".toRune .. "Z".toRune])
+  of "alnum":
+    result.ranges.add([
+      "0".toRune .. "9".toRune,
+      "a".toRune .. "z".toRune,
+      "A".toRune .. "Z".toRune])
+  of "ascii":
+    result.ranges.add(
+      "\x00".toRune .. "\x7F".toRune)
+  of "blank":
+    result.cps.incl(toSet([
+      "\t".toRune, " ".toRune]))
+  of "cntrl":
+    result.ranges.add(
+      "\x00".toRune .. "\x1F".toRune)
+    result.cps.incl("\x7F".toRune)
+  of "digit":
+    result.ranges.add(
+      "0".toRune .. "9".toRune)
+  of "graph":
+    result.cps.incl(toSet([
+      "!".toRune, "-".toRune, "~".toRune]))
+  of "lower":
+    result.ranges.add(
+      "a".toRune .. "z".toRune)
+  of "print":
+    result.cps.incl(toSet([
+      " ".toRune, "-".toRune, "~".toRune]))
+  of "punct":
+    result.ranges.add([
+      "!".toRune .. "/".toRune,
+      ":".toRune .. "@".toRune,
+      "[".toRune .. "`".toRune,
+      "{".toRune .. "~".toRune])
+  of "space":
+    result.cps.incl(toSet([
+      "\t".toRune, "\L".toRune, "\v".toRune,
+      "\f".toRune, "\r".toRune, " ".toRune]))
+  of "upper":
+    result.ranges.add(
+      "A".toRune .. "Z".toRune)
+  of "word":
+    result.ranges.add([
+      "0".toRune .. "9".toRune,
+      "a".toRune .. "z".toRune,
+      "A".toRune .. "Z".toRune])
+    result.cps.incl("_".toRune)
+  of "xdigit":
+    result.ranges.add([
+      "0".toRune .. "9".toRune,
+      "a".toRune .. "f".toRune,
+      "A".toRune .. "F".toRune])
+  else:
+    # todo: raise error
+    assert false
+
 proc parseSet(sc: Scanner[Rune]): Node =
   ## parse a set atom (i.e ``[a-z]``) into a
   ## ``Node`` of ``reSet`` or ``reNotSet`` kind.
@@ -1031,9 +1108,7 @@ proc parseSet(sc: Scanner[Rune]): Node =
         first <= last,
         ("Invalid set range near position $#, " &
          "start must be lesser than end") %% $sc.pos)
-      result.ranges.add((
-        rangeStart: first,
-        rangeEnd: last))
+      result.ranges.add(first .. last)
       if sc.peek == "-".toRune:
         cps.add(sc.next())
     else:
@@ -1255,7 +1330,7 @@ proc subParse(sc: Scanner[Rune]): Node =
 proc skip(sc: Scanner[Rune], vb: ElasticSeq[bool]): bool =
   ## skip white-spaces and comments on verbose mode
   result = false
-  if vb.len == 0 or not vb[^1]:
+  if vb.len == 0 or not vb[vb.high]:
     return
   result = case sc.prev
   of " ".toRune,
@@ -1281,22 +1356,22 @@ proc verbosity(
   case n.kind:
   of reGroupStart:
     if vb.len > 0:
-      vb.add(vb[^1])
+      vb.add(vb[vb.high])
     else:
       vb.add(false)
     for f in n.flags:
       case f:
       of flagVerbose:
-        vb[^1] = true
+        vb[vb.high] = true
       of flagNotVerbose:
-        vb[^1] = false
+        vb[vb.high] = false
       else:
         discard
     if sc.peek == ")".toRune:  # (?flags)
       if vb.len > 1:  # set outter group
-        vb[^2] = vb[^1]
+        vb[vb.high - 1] = vb[vb.high]
       else:
-        vb.add(vb[^1])
+        vb.add(vb[vb.high])
   of reGroupEnd:
     if vb.len > 0:
       discard vb.pop()
@@ -1689,7 +1764,7 @@ type
     ## a state to find its ends,
     ## but have to keep them up-to-date
 
-template combine(
+proc combine(
     nfa: var seq[Node],
     ends: var seq[End],
     org: int16,
@@ -1703,7 +1778,7 @@ template combine(
       nfa[e].outB = target
   ends[org] = ends[target]
 
-template update(
+proc update(
     ends: var seq[End],
     ni: int16,
     outA: int16,

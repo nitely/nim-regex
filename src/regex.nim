@@ -976,16 +976,22 @@ proc parseSetEscapedSeq(sc: Scanner[Rune]): Node =
     result = cp.toCharNode
 
 proc parseAsciiSet(result: var Node, sc: Scanner[Rune]) =
-  # todo: use it
+  ## Parse an ascii set (i.e: ``[:ascii:]``).
+  ## The ascii set will get expanded
+  ## and merged with the outter set
+  let startPos = sc.pos
   assert sc.peek == ":".toRune
   discard sc.next()
-  let startPos = sc.pos
-  var name = ""
+  var name = newStringOfCap(16)
   for r in sc:
-    if r == "]".toRune:
+    if r == ":".toRune:
       break
     name.add(r.toUTF8)
-  # todo: add missing names
+  check(
+    sc.peek == "]".toRune,
+    ("Invalid ascii set near position $#, " &
+     "expected [:name:]") %% $startPos)
+  discard sc.next
   case name
   of "alpha":
     result.ranges.add([
@@ -1010,14 +1016,14 @@ proc parseAsciiSet(result: var Node, sc: Scanner[Rune]) =
     result.ranges.add(
       "0".toRune .. "9".toRune)
   of "graph":
-    result.cps.incl(toSet([
-      "!".toRune, "-".toRune, "~".toRune]))
+    result.ranges.add(
+      "!".toRune .. "~".toRune)
   of "lower":
     result.ranges.add(
       "a".toRune .. "z".toRune)
   of "print":
-    result.cps.incl(toSet([
-      " ".toRune, "-".toRune, "~".toRune]))
+    result.ranges.add(
+      " ".toRune .. "~".toRune)
   of "punct":
     result.ranges.add([
       "!".toRune .. "/".toRune,
@@ -1043,8 +1049,9 @@ proc parseAsciiSet(result: var Node, sc: Scanner[Rune]) =
       "a".toRune .. "f".toRune,
       "A".toRune .. "F".toRune])
   else:
-    # todo: raise error
-    assert false
+    raise newException(RegexError,
+      ("Invalid ascii set near position $#. " &
+       "`$#` is not a valid name") %% [$startPos, name])
 
 proc parseSet(sc: Scanner[Rune]): Node =
   ## parse a set atom (i.e ``[a-z]``) into a
@@ -1111,9 +1118,14 @@ proc parseSet(sc: Scanner[Rune]): Node =
       result.ranges.add(first .. last)
       if sc.peek == "-".toRune:
         cps.add(sc.next())
+    of "[".toRune:
+      if sc.peek == ":".toRune:
+        parseAsciiSet(result, sc)
+      else:
+        cps.add(cp)
     else:
       cps.add(cp)
-  result.cps = cps.toSet
+  result.cps.incl(cps.toSet)
   check(
     hasEnd,
     ("Invalid set near position $#, " &
@@ -3525,3 +3537,42 @@ when isMainModule:
   doAssert(raisesMsg(r"\p{11}") ==
     "Invalid unicode name, expected char in range " &
     "a-z, A-Z at position 4")
+
+  # tascii_set
+  doAssert(r"[[:alnum:]]".toAtoms == "[0-9a-zA-Z]")
+  doAssert(r"[[:alpha:]]".toAtoms == "[a-zA-Z]")
+  doAssert(r"[[:ascii:]]".toAtoms == "[\x00-\x7F]")
+  doAssert(r"[[:blank:]]".toAtoms == "[\t ]")
+  doAssert(r"[[:cntrl:]]".toAtoms == "[\x7F\x00-\x1F]")
+  doAssert(r"[[:digit:]]".toAtoms == "[0-9]")
+  doAssert(r"[[:graph:]]".toAtoms == "[!-~]")
+  doAssert(r"[[:lower:]]".toAtoms == "[a-z]")
+  doAssert(r"[[:print:]]".toAtoms == "[ -~]")
+  doAssert(r"[[:punct:]]".toAtoms == "[!-/:-@[-`{-~]")
+  doAssert(r"[[:space:]]".toAtoms == "[\t\n\v\f\r ]")
+  doAssert(r"[[:upper:]]".toAtoms == "[A-Z]")
+  doAssert(r"[[:word:]]".toAtoms == "[_0-9a-zA-Z]")
+  doAssert(r"[[:xdigit:]]".toAtoms == "[0-9a-fA-F]")
+  doAssert("d".isMatch(re"[[:alnum:]]"))
+  doAssert("5".isMatch(re"[[:alnum:]]"))
+  doAssert(not "{".isMatch(re"[[:alnum:]]"))
+  doAssert("{".isMatch(re"[[:alnum:]{]"))
+  doAssert("-".isMatch(re"[[:alnum:]-z]"))
+  doAssert(raisesMsg(r"[z-[:alnum:]]") ==
+    "Invalid set range near position 4, " &
+    "start must be lesser than end")
+  doAssert("a".isMatch(re"[[[[:alnum:]]"))
+  doAssert("[".isMatch(re"[[[:alnum:]]"))
+  doAssert(not ":".isMatch(re"[[:alnum:]]"))
+  doAssert(":".isMatch(re"[:alnum:]"))
+  doAssert(not "5".isMatch(re"[[:alpha:]]"))
+  doAssert(not "a".isMatch(re"[[:digit:]]"))
+  doAssert("5".isMatch(re"[[:alpha:][:digit:]]"))
+  doAssert("a".isMatch(re"[[:alpha:][:digit:]]"))
+  doAssert(raisesMsg(r"[[:abc:]]") ==
+    "Invalid ascii set near position 2. " &
+    "`abc` is not a valid name")
+  doAssert(raisesMsg(r"[[:alnum]]") ==
+    "Invalid ascii set near position 2, expected [:name:]")
+  doAssert(raisesMsg(r"[[:alnum:") ==
+    "Invalid ascii set near position 2, expected [:name:]")

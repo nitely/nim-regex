@@ -1420,14 +1420,14 @@ proc greediness(expression: seq[Node]): seq[Node] =
 type
   GroupsCapture = tuple
     count: int16
-    names: Table[string, int]
+    names: Table[string, int16]
 
 proc fillGroups(expression: var seq[Node]): GroupsCapture =
   ## populate group indices, names and capturing mark
   var
     groups = initElasticSeq[int](64)
     nonCapt = 0
-    names = initTable[string, int]()
+    names = initTable[string, int16]()
     count = 0'i16
   for i, n in expression.mpairs:
     case n.kind
@@ -1919,12 +1919,12 @@ type
     ## a compiled regular expression
     states: seq[Node]
     groupsCount: int16
-    namedGroups: Table[string, int]
+    namedGroups: Table[string, int16]
   RegexMatch* = object
     ## result from matching operations
     captures: seq[Slice[int]]
     groups: seq[Slice[int]] # todo: remove, merge with captures
-    namedGroups: Table[string, int]
+    namedGroups: Table[string, int16]
     boundaries*: Slice[int]
   CaptureKind = enum
     captStart
@@ -2572,7 +2572,7 @@ proc toPattern*(s: string): Regex {.raises: [RegexError].} =
   ##
   var ns = s.parse
   let gc = ns.fillGroups()
-  var names: Table[string, int]
+  var names: Table[string, int16]
   if gc.names.len > 0:
     names = gc.names
   result = Regex(

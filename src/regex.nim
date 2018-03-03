@@ -978,7 +978,7 @@ proc parseSetEscapedSeq(sc: Scanner[Rune]): Node =
 proc parseAsciiSet(result: var Node, sc: Scanner[Rune]) =
   ## Parse an ascii set (i.e: ``[:ascii:]``).
   ## The ascii set will get expanded
-  ## and merged with the outter set
+  ## and merged with the outer set
   let startPos = sc.pos
   assert sc.peek == ":".toRune
   discard sc.next()
@@ -2404,7 +2404,7 @@ iterator findAll*(
     yield mm
     let b = mm.boundaries
     if b.b == i or b.a > b.b: inc i  # todo: incRune and test
-    else: i = b.b
+    else: i = b.b + 1
 
 proc findAll*(s: string, pattern: Regex, start = 0): seq[RegexMatch] =
   ## search through the string and
@@ -2423,6 +2423,9 @@ proc findAll*(s: string, pattern: Regex, start = 0): seq[RegexMatch] =
     result.add(slc)
 
 proc matchEnd(s: string, pattern: Regex, start = 0): int =
+  ## return end index of the longest match.
+  ## Return ``-1`` when there is no match.
+  ## Pattern is anchored to the start of the string
   result = -1
   initDataSets(true)
   let statesCount = pattern.states.high.int16
@@ -2518,12 +2521,50 @@ proc endsWith*(s: string, pattern: Regex): bool =
     if result: return
     s.runeIncAt(i)
 
+proc toFlatCaptures(result: var seq[string], m: RegexMatch, s: string)  =
+  ## Concat capture repetitions
+  var
+    i, n = 0
+    ss: string
+  for g in 0 ..< m.groupsCount:
+    n = 0
+    for sl in m.group(g):
+      if sl.b >= sl.a:
+        n.inc(sl.b - sl.a + 1)
+    ss = newString(n)
+    i = 0
+    for sl in m.group(g):
+      for c in sl:
+        ss[i] = s[c]
+        inc i
+    assert i == n
+    result[g] = ss
+
+# todo: add limit
+proc replace*(s: string, pattern: Regex, by: string): string =
+  ## Replace matched substring.
+  ## Matched groups can be accessed with ``$N``
+  ## notation, where ``N`` is the group's index,
+  ## starting at 1 (1-indexed).
+  ## `$$`` means literal ``$``.
+  result = ""
+  var
+    i = 0
+    capts = newSeq[string](pattern.groupsCount)
+  for m in findAll(s, pattern):
+    result.add(substr(s, i, m.boundaries.a - 1))  # todo: loop over
+    toFlatCaptures(capts, m, s)
+    if capts.len > 0:
+      result.addf(by, capts)
+    i = m.boundaries.b + 1
+  result.add(substr(s, i))  # todo: loop over
+
 proc toPattern*(s: string): Regex {.raises: [RegexError].} =
   ## Parse and compile a regular expression.
   ## Use the ``re`` template if you
   ## care about performance.
   ##
-  ## .. code-block::
+  ## .. code-block:: nim
   ##   # compiled at run-time
   ##   let patternA = toPattern(r"aa?")
   ##   # compiled at compile-time
@@ -3432,6 +3473,7 @@ when isMainModule:
   doAssert(findAllb("aΪⒶ弢", re"Ⓐ") == @[3 .. 5])
   doAssert(findAllb("aΪⒶ弢", re"弢") == @[6 .. 9])
   doAssert(findAllb("aΪⒶ弢aΪⒶ弢", re"Ⓐ") == @[3 .. 5, 13 .. 15])
+  doAssert(findAllb("aaa", re"a*") == @[0 .. 2])
 
   # tstarts_with
   doAssert("abc".startsWith(re"ab"))
@@ -3576,3 +3618,34 @@ when isMainModule:
     "Invalid ascii set near position 2, expected [:name:]")
   doAssert(raisesMsg(r"[[:alnum:") ==
     "Invalid ascii set near position 2, expected [:name:]")
+
+  # treplace
+  doAssert("a".replace(re"(a)", "m($1)") ==
+    "m(a)")
+  doAssert("a".replace(re"(a)", "m($1) m($1)") ==
+    "m(a) m(a)")
+  doAssert("aaa".replace(re"(a*)", "m($1)") ==
+    "m(aaa)")
+  doAssert("abc".replace(re"(a(b)c)", "m($1) m($2)") ==
+    "m(abc) m(b)")
+  doAssert("abc".replace(re"(a(b))(c)", "m($1) m($2) m($3)") ==
+    "m(ab) m(b) m(c)")
+  doAssert("abcabc".replace(re"(abc)*", "m($1)") ==
+    "m(abcabc)")
+  doAssert("abcabc".replace(re"(abc)", "m($1)") ==
+    "m(abc)m(abc)")
+  doAssert("abcabc".replace(re"(abc)", "m($1)") ==
+    "m(abc)m(abc)")
+  doAssert("abcab".replace(re"(abc)", "m($1)") ==
+    "m(abc)ab")
+  doAssert("abcabc".replace(re"((abc)*)", "m($1) m($2)") ==
+    "m(abcabc) m(abcabc)")
+  doAssert("abcabc".replace(re"((a)bc)*", "m($1) m($2)") ==
+    "m(abcabc) m(aa)")
+  doAssert("abc".replace(re"(b)", "m($1)") ==
+    "am(b)c")
+  doAssert("abc".replace(re"d", "m($1)") ==
+    "abc")
+  doAssert("abc".replace(re"(d)", "m($1)") ==
+    "abc")
+  # todo: test unicode

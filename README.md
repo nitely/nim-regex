@@ -29,7 +29,7 @@ Features:
   [UTS#18](http://www.unicode.org/reports/tr18/#Compatibility_Properties)
 - [x] `[[:alnum:]]`, etc
 - [x] User friendly compiling errors
-- [ ] APIs (nre/re/re2/rust-regex API parity)
+- [x] APIs (nre/re/re2/rust-regex API parity)
 
 ## Docs
 

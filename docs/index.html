@@ -12,7 +12,7 @@
 <link rel="shortcut icon" href="data:image/x-icon;base64,AAABAAEAEBAAAAEAIABoBAAAFgAAACgAAAAQAAAAIAAAAAEAIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AAAAAAUAAAAF////AP///wD///8A////AP///wD///8A////AP///wD///8A////AAAAAAIAAABbAAAAlQAAAKIAAACbAAAAmwAAAKIAAACVAAAAWwAAAAL///8A////AP///wD///8A////AAAAABQAAADAAAAAYwAAAA3///8A////AP///wD///8AAAAADQAAAGMAAADAAAAAFP///wD///8A////AP///wAAAACdAAAAOv///wD///8A////AP///wD///8A////AP///wD///8AAAAAOgAAAJ3///8A////AP///wAAAAAnAAAAcP///wAAAAAoAAAASv///wD///8A////AP///wAAAABKAAAAKP///wAAAABwAAAAJ////wD///8AAAAAgQAAABwAAACIAAAAkAAAAJMAAACtAAAAFQAAABUAAACtAAAAkwAAAJAAAACIAAAAHAAAAIH///8A////AAAAAKQAAACrAAAAaP///wD///8AAAAARQAAANIAAADSAAAARf///wD///8AAAAAaAAAAKsAAACk////AAAAADMAAACcAAAAnQAAABj///8A////AP///wAAAAAYAAAAGP///wD///8A////AAAAABgAAACdAAAAnAAAADMAAAB1AAAAwwAAAP8AAADpAAAAsQAAAE4AAAAb////AP///wAAAAAbAAAATgAAALEAAADpAAAA/wAAAMMAAAB1AAAAtwAAAOkAAAD/AAAA/wAAAP8AAADvAAAA3gAAAN4AAADeAAAA3gAAAO8AAAD/AAAA/wAAAP8AAADpAAAAtwAAAGUAAAA/AAAA3wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAADfAAAAPwAAAGX///8A////AAAAAEgAAADtAAAAvwAAAL0AAADGAAAA7wAAAO8AAADGAAAAvQAAAL8AAADtAAAASP///wD///8A////AP///wD///8AAAAAO////wD///8A////AAAAAIcAAACH////AP///wD///8AAAAAO////wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A//8AAP//AAD4HwAA7/cAAN/7AAD//wAAoYUAAJ55AACf+QAAh+EAAAAAAADAAwAA4AcAAP5/AAD//wAA//8AAA=="/>
 
 <!-- Google fonts -->
-<link href='https://fonts.googleapis.com/css?family=Raleway:400,600,900' rel='stylesheet' type='text/css'/>
+<link href='https://fonts.googleapis.com/css?family=Lato:400,600,900' rel='stylesheet' type='text/css'/>
 <link href='https://fonts.googleapis.com/css?family=Source+Code+Pro:400,500,600' rel='stylesheet' type='text/css'/>
 
 <!-- CSS -->
@@ -45,18 +45,19 @@ html {
 
 /* Where we want fancier font if available */
 h1, h2, h3, h4, h5, h6, p.module-desc, table.docinfo + blockquote p, table.docinfo blockquote p, h1 + blockquote p {
-  font-family: "Raleway", "Helvetica Neue", "HelveticaNeue", Helvetica, Arial, sans-serif !important; }
+  font-family: "Lato", "Helvetica Neue", "HelveticaNeue", Helvetica, Arial, sans-serif !important; }
 
 h1.title {
   font-weight: 900; }
 
 body {
-  font-family: "Helvetica Neue", "HelveticaNeue", "Raleway", Helvetica, Arial, sans-serif;
+  font-family: "Lato", "Helvetica Neue", "HelveticaNeue", Helvetica, Arial, sans-serif;
   font-weight: 400;
-  font-size: 14px;
+  font-size: 16px;
   line-height: 20px;
-  color: #666;
-  background-color: rgba(252, 248, 244, 0.75); }
+  color: #444;
+  letter-spacing: 0.15px;
+  background-color: rgba(252, 248, 244, 0.45); }
 
 /* Skeleton grid */
 .container {
@@ -172,8 +173,8 @@ cite {
   font-style: italic !important; }
 
 dt > pre {
-  border-color: rgba(0, 0, 0, 0.15);
-  background-color: transparent;
+  border-color: rgba(0, 0, 0, 0.1);
+  background-color: rgba(255, 255, 255, 0.3);
   margin: 15px 0px 5px; }
 
 dd > pre {
@@ -189,6 +190,17 @@ dd > pre {
 .line-nums-table {
   width: 100%;
   table-layout: fixed; }
+
+/* Nim search input */
+div#searchInput {
+  margin-bottom: 8px;
+}
+div#searchInput input#searchInput {
+  width: 10em;
+}
+div.search-groupby {
+  margin-bottom: 8px;
+}
 
 table.line-nums-table {
   border-radius: 4px;
@@ -333,7 +345,7 @@ img {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); }
 
 p {
-  margin: 0 0 12px; }
+  margin: 0 0 8px; }
 
 small {
   font-size: 85%; }
@@ -353,7 +365,7 @@ h3,
 h4,
 h5,
 h6 {
-  font-family: "Helvetica Neue", "HelveticaNeue", "Raleway", Helvetica, Arial, sans-serif;
+  font-family: "Lato", "Helvetica Neue", "HelveticaNeue", Helvetica, Arial, sans-serif;
   font-weight: 600;
   line-height: 20px;
   color: inherit;
@@ -361,6 +373,7 @@ h6 {
 
 h1 {
   font-size: 2em;
+  font-weight: 400;
   padding-bottom: .15em;
   border-bottom: 1px solid #aaaaaa;
   margin-top: 1.0em;
@@ -491,13 +504,13 @@ pre {
   box-sizing: border-box;
   min-width: calc(100% - 19.5px);
   padding: 9.5px;
-  margin: 0.25em 10px 0.25em 10px;
-  font-size: 14px;
+  margin: 0.25em 10px 10px 10px;
+  font-size: 15px;
   line-height: 20px;
   white-space: pre !important;
   overflow-y: hidden;
   overflow-x: visible;
-  background-color: whitesmoke;
+  background-color: rgba(0, 0, 0, 0.01);
   border: 1px solid #cccccc;
   -webkit-border-radius: 4px;
   -moz-border-radius: 4px;
@@ -776,14 +789,14 @@ div.admonition p.admonition-title, div.hint p.admonition-title,
 div.important p.admonition-title, div.note p.admonition-title,
 div.tip p.admonition-title {
   font-weight: bold;
-  font-family: "Helvetica Neue", "HelveticaNeue", "Raleway", Helvetica, Arial, sans-serif; }
+  font-family: "Lato", "Helvetica Neue", "HelveticaNeue", Helvetica, Arial, sans-serif; }
 
 div.attention p.admonition-title, div.caution p.admonition-title,
 div.danger p.admonition-title, div.error p.admonition-title,
 div.warning p.admonition-title, .code .error {
   color: #b30000;
   font-weight: bold;
-  font-family: "Helvetica Neue", "HelveticaNeue", "Raleway", Helvetica, Arial, sans-serif; }
+  font-family: "Lato", "Helvetica Neue", "HelveticaNeue", Helvetica, Arial, sans-serif; }
 
 /* Uncomment (and remove this text!) to get reduced vertical space in
    compound paragraphs.
@@ -830,7 +843,7 @@ div.sidebar {
   clear: right; }
 
 div.sidebar p.rubric {
-  font-family: "Helvetica Neue", "HelveticaNeue", "Raleway", Helvetica, Arial, sans-serif;
+  font-family: "Lato", "Helvetica Neue", "HelveticaNeue", Helvetica, Arial, sans-serif;
   font-size: medium; }
 
 div.system-messages {
@@ -937,12 +950,12 @@ p.rubric {
   text-align: center; }
 
 p.sidebar-title {
-  font-family: "Helvetica Neue", "HelveticaNeue", "Raleway", Helvetica, Arial, sans-serif;
+  font-family: "Lato", "Helvetica Neue", "HelveticaNeue", Helvetica, Arial, sans-serif;
   font-weight: bold;
   font-size: larger; }
 
 p.sidebar-subtitle {
-  font-family: "Helvetica Neue", "HelveticaNeue", "Raleway", Helvetica, Arial, sans-serif;
+  font-family: "Lato", "Helvetica Neue", "HelveticaNeue", Helvetica, Arial, sans-serif;
   font-weight: bold; }
 
 p.topic-title {
@@ -984,15 +997,15 @@ pre.code .inserted, code .inserted {
   background-color: #A3D289; }
 
 span.classifier {
-  font-family: "Helvetica Neue", "HelveticaNeue", "Raleway", Helvetica, Arial, sans-serif;
+  font-family: "Lato", "Helvetica Neue", "HelveticaNeue", Helvetica, Arial, sans-serif;
   font-style: oblique; }
 
 span.classifier-delimiter {
-  font-family: "Helvetica Neue", "HelveticaNeue", "Raleway", Helvetica, Arial, sans-serif;
+  font-family: "Lato", "Helvetica Neue", "HelveticaNeue", Helvetica, Arial, sans-serif;
   font-weight: bold; }
 
 span.interpreted {
-  font-family: "Helvetica Neue", "HelveticaNeue", "Raleway", Helvetica, Arial, sans-serif; }
+  font-family: "Lato", "Helvetica Neue", "HelveticaNeue", Helvetica, Arial, sans-serif; }
 
 span.option {
   white-space: nowrap; }
@@ -1015,7 +1028,7 @@ table.docinfo {
   margin: 0em;
   margin-top: 2em;
   margin-bottom: 2em;
-  font-family: "Raleway", "Helvetica Neue", "HelveticaNeue", Helvetica, Arial, sans-serif !important;
+  font-family: "Lato", "Helvetica Neue", "HelveticaNeue", Helvetica, Arial, sans-serif !important;
   color: #444444; }
 
 table.docutils {
@@ -1145,21 +1158,26 @@ dt pre > span.Operator ~ span.Identifier, dt pre > span.Operator ~ span.Operator
   background-repeat: no-repeat;
   background-image: url("data:image/x-icon;base64,AAABAAEAEBAAAAEAIABoBAAAFgAAACgAAAAQAAAAIAAAAAEAIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AAAAAAUAAAAF////AP///wD///8A////AP///wD///8A////AP///wD///8A////AAAAAAIAAABbAAAAlQAAAKIAAACbAAAAmwAAAKIAAACVAAAAWwAAAAL///8A////AP///wD///8A////AAAAABQAAADAAAAAYwAAAA3///8A////AP///wD///8AAAAADQAAAGMAAADAAAAAFP///wD///8A////AP///wAAAACdAAAAOv///wD///8A////AP///wD///8A////AP///wD///8AAAAAOgAAAJ3///8A////AP///wAAAAAnAAAAcP///wAAAAAoAAAASv///wD///8A////AP///wAAAABKAAAAKP///wAAAABwAAAAJ////wD///8AAAAAgQAAABwAAACIAAAAkAAAAJMAAACtAAAAFQAAABUAAACtAAAAkwAAAJAAAACIAAAAHAAAAIH///8A////AAAAAKQAAACrAAAAaP///wD///8AAAAARQAAANIAAADSAAAARf///wD///8AAAAAaAAAAKsAAACk////AAAAADMAAACcAAAAnQAAABj///8A////AP///wAAAAAYAAAAGP///wD///8A////AAAAABgAAACdAAAAnAAAADMAAAB1AAAAwwAAAP8AAADpAAAAsQAAAE4AAAAb////AP///wAAAAAbAAAATgAAALEAAADpAAAA/wAAAMMAAAB1AAAAtwAAAOkAAAD/AAAA/wAAAP8AAADvAAAA3gAAAN4AAADeAAAA3gAAAO8AAAD/AAAA/wAAAP8AAADpAAAAtwAAAGUAAAA/AAAA3wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAADfAAAAPwAAAGX///8A////AAAAAEgAAADtAAAAvwAAAL0AAADGAAAA7wAAAO8AAADGAAAAvQAAAL8AAADtAAAASP///wD///8A////AP///wD///8AAAAAO////wD///8A////AAAAAIcAAACH////AP///wD///8AAAAAO////wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A//8AAP//AAD4HwAA7/cAAN/7AAD//wAAoYUAAJ55AACf+QAAh+EAAAAAAADAAwAA4AcAAP5/AAD//wAA//8AAA==");
   margin-bottom: -5px; }
-  div.pragma {
-    display: none;
-  }
-  span.pragmabegin {
-    cursor: pointer;
-  }
-  span.pragmaend {
-    cursor: pointer;
-  }
+div.pragma {
+  display: none;
+}
+span.pragmabegin {
+  cursor: pointer;
+}
+span.pragmaend {
+  cursor: pointer;
+}
 
 div.search_results {
   background-color: antiquewhite;
   margin: 3em;
   padding: 1em;
   border: 1px solid #4d4d4d;
+}
+
+div#global-links ul {
+  margin-left: 0;
+  list-style-type: none;
 }
 </style>
 
@@ -1198,7 +1216,11 @@ function main() {
     <h1 class="title">Module regex</h1>
     <div class="row">
   <div class="three columns">
-  <div>
+  <div id="global-links">
+    <ul class="simple">
+    </ul>
+  </div>
+  <div id="searchInput">
     Search: <input type="text" id="searchInput"
       onkeyup="search()" />
   </div>
@@ -1235,12 +1257,12 @@ function main() {
     title="Regex = object
   states: seq[Node]
   groupsCount: int16
-  namedGroups: Table[string, int]"><wbr />Regex<span class="attachedType" style="visibility:hidden"></span></a></li>
+  namedGroups: Table[string, int16]"><wbr />Regex<span class="attachedType" style="visibility:hidden"></span></a></li>
   <li><a class="reference" href="#RegexMatch"
     title="RegexMatch = object
   captures: seq[Slice[int]]
   groups: seq[Slice[int]]
-  namedGroups: Table[string, int]
+  namedGroups: Table[string, int16]
   boundaries*: Slice[int]"><wbr />Regex<wbr />Match<span class="attachedType" style="visibility:hidden"></span></a></li>
 
   </ul>
@@ -1268,13 +1290,15 @@ function main() {
     title="startsWith(s: string; pattern: Regex; start = 0): bool"><wbr />starts<wbr />With<span class="attachedType" style="visibility:hidden">Regex</span></a></li>
   <li><a class="reference" href="#endsWith,string,Regex"
     title="endsWith(s: string; pattern: Regex): bool"><wbr />ends<wbr />With<span class="attachedType" style="visibility:hidden">Regex</span></a></li>
+  <li><a class="reference" href="#replace,string,Regex,string"
+    title="replace(s: string; pattern: Regex; by: string): string"><wbr />replace<span class="attachedType" style="visibility:hidden">Regex</span></a></li>
   <li><a class="reference" href="#toPattern,string"
     title="toPattern(s: string): Regex"><wbr />to<wbr />Pattern<span class="attachedType" style="visibility:hidden">Regex</span></a></li>
 
   </ul>
 </li>
 <li>
-  <a class="reference reference-toplevel" href="#14" id="64">Iterators</a>
+  <a class="reference reference-toplevel" href="#15" id="65">Iterators</a>
   <ul class="simple simple-toc-section">
       <li><a class="reference" href="#group.i,RegexMatch,int"
     title="group(m: RegexMatch; i: int): Slice[int]"><wbr />group<span class="attachedType" style="visibility:hidden">RegexMatch</span></a></li>
@@ -1288,7 +1312,7 @@ function main() {
   </ul>
 </li>
 <li>
-  <a class="reference reference-toplevel" href="#17" id="67">Templates</a>
+  <a class="reference reference-toplevel" href="#18" id="68">Templates</a>
   <ul class="simple simple-toc-section">
       <li><a class="reference" href="#re.t,string"
     title="re(s: string): Regex"><wbr />re<span class="attachedType" style="visibility:hidden">Regex</span></a></li>
@@ -1303,7 +1327,7 @@ function main() {
   <div id="tocRoot"></div>
   <p class="module-desc">A library for parsing, compiling, and executing regular expressions. The match time is linear with respect to the length of the input and the regular expression. So, it can handle input from untrusted users. Its syntax is similar to PCRE but lacks a few features that can not be implemented while keeping the space/time complexity guarantees, i.e.: backreferences and look-around assertions.
 <h1><a class="toc-backref" id="syntax" href="#syntax">Syntax</a></h1>
-<h2><a class="toc-backref" id="syntax-matching-one-character" href="#syntax-matching-one-character">Matching one character</a></h2><pre class="listing"><span class="Operator">.</span>          <span class="Identifier">any</span> <span class="Identifier">character</span> <span class="Keyword">except</span> <span class="Identifier">new</span> <span class="Identifier">line</span> <span class="Punctuation">(</span><span class="Identifier">includes</span> <span class="Identifier">new</span> <span class="Identifier">line</span> <span class="Keyword">with</span> <span class="Identifier">s</span> <span class="Identifier">flag</span><span class="Punctuation">)</span>
+<h2><a class="toc-backref" id="syntax-matching-one-character" href="#syntax-matching-one-character">Matching one character</a></h2><pre class="listing"><span class="Operator">.</span>          <span class="Identifier">any</span> <span class="Identifier">character</span> <span class="Keyword">except</span> <span class="Identifier">new</span> <span class="Identifier">line</span> <span class="Punctuation">(</span><span class="Identifier">includes</span> <span class="Identifier">new</span> <span class="Identifier">line</span> <span class="Identifier">with</span> <span class="Identifier">s</span> <span class="Identifier">flag</span><span class="Punctuation">)</span>
 <span class="Operator">\</span><span class="Identifier">d</span>         <span class="Identifier">digit</span> <span class="Punctuation">(</span><span class="Operator">\</span><span class="Identifier">p</span><span class="Punctuation">{</span><span class="Identifier">Nd</span><span class="Punctuation">}</span><span class="Punctuation">)</span>
 <span class="Operator">\</span><span class="Identifier">D</span>         <span class="Keyword">not</span> <span class="Identifier">digit</span>
 <span class="Operator">\</span><span class="Identifier">pN</span>        <span class="Identifier">One</span><span class="Operator">-</span><span class="Identifier">letter</span> <span class="Identifier">name</span> <span class="Identifier">Unicode</span> <span class="Identifier">character</span> <span class="Identifier">class</span>
@@ -1330,10 +1354,10 @@ function main() {
 <span class="Identifier">x</span><span class="Punctuation">{</span><span class="Identifier">n</span><span class="Punctuation">,</span><span class="Identifier">m</span><span class="Punctuation">}</span><span class="Operator">?</span>  <span class="Identifier">at</span> <span class="Identifier">least</span> <span class="Identifier">n</span> <span class="Identifier">x</span> <span class="Keyword">and</span> <span class="Identifier">at</span> <span class="Identifier">most</span> <span class="Identifier">m</span> <span class="Identifier">x</span> <span class="Punctuation">(</span><span class="Identifier">ungreedy</span><span class="Operator">/</span><span class="Identifier">lazy</span><span class="Punctuation">)</span>
 <span class="Identifier">x</span><span class="Punctuation">{</span><span class="Identifier">n</span><span class="Punctuation">,</span><span class="Punctuation">}</span><span class="Operator">?</span>   <span class="Identifier">at</span> <span class="Identifier">least</span> <span class="Identifier">n</span> <span class="Identifier">x</span> <span class="Punctuation">(</span><span class="Identifier">ungreedy</span><span class="Operator">/</span><span class="Identifier">lazy</span><span class="Punctuation">)</span>
 <span class="Identifier">x</span><span class="Punctuation">{</span><span class="Identifier">n</span><span class="Punctuation">}</span><span class="Operator">?</span>    <span class="Identifier">exactly</span> <span class="Identifier">n</span> <span class="Identifier">x</span></pre>
-<h2><a class="toc-backref" id="syntax-empty-matches" href="#syntax-empty-matches">Empty matches</a></h2><pre class="listing"><span class="Operator">^</span>   <span class="Identifier">the</span> <span class="Identifier">beginning</span> <span class="Keyword">of</span> <span class="Identifier">text</span> <span class="Punctuation">(</span><span class="Keyword">or</span> <span class="Identifier">start</span><span class="Operator">-</span><span class="Keyword">of</span><span class="Operator">-</span><span class="Identifier">line</span> <span class="Keyword">with</span> <span class="Identifier">multi</span><span class="Operator">-</span><span class="Identifier">line</span> <span class="Identifier">mode</span><span class="Punctuation">)</span>
-<span class="Operator">$</span>   <span class="Identifier">the</span> <span class="Keyword">end</span> <span class="Keyword">of</span> <span class="Identifier">text</span> <span class="Punctuation">(</span><span class="Keyword">or</span> <span class="Keyword">end</span><span class="Operator">-</span><span class="Keyword">of</span><span class="Operator">-</span><span class="Identifier">line</span> <span class="Keyword">with</span> <span class="Identifier">multi</span><span class="Operator">-</span><span class="Identifier">line</span> <span class="Identifier">mode</span><span class="Punctuation">)</span>
-<span class="Operator">\</span><span class="Identifier">A</span>  <span class="Identifier">only</span> <span class="Identifier">the</span> <span class="Identifier">beginning</span> <span class="Keyword">of</span> <span class="Identifier">text</span> <span class="Punctuation">(</span><span class="Identifier">even</span> <span class="Keyword">with</span> <span class="Identifier">multi</span><span class="Operator">-</span><span class="Identifier">line</span> <span class="Identifier">mode</span> <span class="Identifier">enabled</span><span class="Punctuation">)</span>
-<span class="Operator">\</span><span class="Identifier">z</span>  <span class="Identifier">only</span> <span class="Identifier">the</span> <span class="Keyword">end</span> <span class="Keyword">of</span> <span class="Identifier">text</span> <span class="Punctuation">(</span><span class="Identifier">even</span> <span class="Keyword">with</span> <span class="Identifier">multi</span><span class="Operator">-</span><span class="Identifier">line</span> <span class="Identifier">mode</span> <span class="Identifier">enabled</span><span class="Punctuation">)</span>
+<h2><a class="toc-backref" id="syntax-empty-matches" href="#syntax-empty-matches">Empty matches</a></h2><pre class="listing"><span class="Operator">^</span>   <span class="Identifier">the</span> <span class="Identifier">beginning</span> <span class="Keyword">of</span> <span class="Identifier">text</span> <span class="Punctuation">(</span><span class="Keyword">or</span> <span class="Identifier">start</span><span class="Operator">-</span><span class="Keyword">of</span><span class="Operator">-</span><span class="Identifier">line</span> <span class="Identifier">with</span> <span class="Identifier">multi</span><span class="Operator">-</span><span class="Identifier">line</span> <span class="Identifier">mode</span><span class="Punctuation">)</span>
+<span class="Operator">$</span>   <span class="Identifier">the</span> <span class="Keyword">end</span> <span class="Keyword">of</span> <span class="Identifier">text</span> <span class="Punctuation">(</span><span class="Keyword">or</span> <span class="Keyword">end</span><span class="Operator">-</span><span class="Keyword">of</span><span class="Operator">-</span><span class="Identifier">line</span> <span class="Identifier">with</span> <span class="Identifier">multi</span><span class="Operator">-</span><span class="Identifier">line</span> <span class="Identifier">mode</span><span class="Punctuation">)</span>
+<span class="Operator">\</span><span class="Identifier">A</span>  <span class="Identifier">only</span> <span class="Identifier">the</span> <span class="Identifier">beginning</span> <span class="Keyword">of</span> <span class="Identifier">text</span> <span class="Punctuation">(</span><span class="Identifier">even</span> <span class="Identifier">with</span> <span class="Identifier">multi</span><span class="Operator">-</span><span class="Identifier">line</span> <span class="Identifier">mode</span> <span class="Identifier">enabled</span><span class="Punctuation">)</span>
+<span class="Operator">\</span><span class="Identifier">z</span>  <span class="Identifier">only</span> <span class="Identifier">the</span> <span class="Keyword">end</span> <span class="Keyword">of</span> <span class="Identifier">text</span> <span class="Punctuation">(</span><span class="Identifier">even</span> <span class="Identifier">with</span> <span class="Identifier">multi</span><span class="Operator">-</span><span class="Identifier">line</span> <span class="Identifier">mode</span> <span class="Identifier">enabled</span><span class="Punctuation">)</span>
 <span class="Operator">\</span><span class="Identifier">b</span>  <span class="Identifier">a</span> <span class="Identifier">Unicode</span> <span class="Identifier">word</span> <span class="Identifier">boundary</span> <span class="Punctuation">(</span><span class="Operator">\</span><span class="Identifier">w</span> <span class="Identifier">on</span> <span class="Identifier">one</span> <span class="Identifier">side</span> <span class="Keyword">and</span> <span class="Operator">\</span><span class="Identifier">W</span><span class="Punctuation">,</span> <span class="Operator">\</span><span class="Identifier">A</span><span class="Punctuation">,</span> <span class="Keyword">or</span> <span class="Operator">\</span><span class="Identifier">z</span> <span class="Identifier">on</span> <span class="Identifier">other</span><span class="Punctuation">)</span>
 <span class="Operator">\</span><span class="Identifier">B</span>  <span class="Keyword">not</span> <span class="Identifier">a</span> <span class="Identifier">Unicode</span> <span class="Identifier">word</span> <span class="Identifier">boundary</span></pre>
 <h2><a class="toc-backref" id="syntax-grouping-and-flags" href="#syntax-grouping-and-flags">Grouping and flags</a></h2><pre class="listing"><span class="Punctuation">(</span><span class="Identifier">exp</span><span class="Punctuation">)</span>          <span class="Identifier">numbered</span> <span class="Identifier">capture</span> <span class="Identifier">group</span> <span class="Punctuation">(</span><span class="Identifier">indexed</span> <span class="Identifier">by</span> <span class="Identifier">opening</span> <span class="Identifier">parenthesis</span><span class="Punctuation">)</span>
@@ -1346,7 +1370,7 @@ function main() {
 <span class="Identifier">s</span>  <span class="Identifier">allow</span> <span class="Operator">.</span> <span class="Identifier">to</span> <span class="Identifier">match</span> <span class="Operator">\</span><span class="Identifier">L</span> <span class="Punctuation">(</span><span class="Identifier">new</span> <span class="Identifier">line</span><span class="Punctuation">)</span>
 <span class="Identifier">U</span>  <span class="Identifier">swap</span> <span class="Identifier">the</span> <span class="Identifier">meaning</span> <span class="Keyword">of</span> <span class="Identifier">x</span><span class="Operator">*</span> <span class="Keyword">and</span> <span class="Identifier">x</span><span class="Operator">*?</span> <span class="Punctuation">(</span><span class="Identifier">un</span><span class="Operator">-</span><span class="Identifier">greedy</span> <span class="Identifier">mode</span><span class="Punctuation">)</span>
 <span class="Identifier">u</span>  <span class="Identifier">Unicode</span> <span class="Identifier">support</span> <span class="Punctuation">(</span><span class="Identifier">enabled</span> <span class="Identifier">by</span> <span class="Identifier">default</span><span class="Punctuation">)</span>
-<span class="Identifier">x</span>  <span class="Identifier">ignore</span> <span class="Identifier">whitespace</span> <span class="Keyword">and</span> <span class="Identifier">allow</span> <span class="Identifier">line</span> <span class="Identifier">comments</span> <span class="Punctuation">(</span><span class="Identifier">starting</span> <span class="Keyword">with</span> <span class="Punctuation">`</span><span class="Comment">#`)</span></pre><p><cite>All flags are disabled by default unless stated otherwise</cite></p>
+<span class="Identifier">x</span>  <span class="Identifier">ignore</span> <span class="Identifier">whitespace</span> <span class="Keyword">and</span> <span class="Identifier">allow</span> <span class="Identifier">line</span> <span class="Identifier">comments</span> <span class="Punctuation">(</span><span class="Identifier">starting</span> <span class="Identifier">with</span> <span class="Punctuation">`</span><span class="Comment">#`)</span></pre><p><cite>All flags are disabled by default unless stated otherwise</cite></p>
 
 <h2><a class="toc-backref" id="syntax-escape-sequences" href="#syntax-escape-sequences">Escape sequences</a></h2><pre class="listing"><span class="Operator">\*</span>         <span class="Identifier">literal</span> <span class="Operator">*</span><span class="Punctuation">,</span> <span class="Identifier">works</span> <span class="Keyword">for</span> <span class="Identifier">any</span> <span class="Identifier">punctuation</span> <span class="Identifier">character</span><span class="Punctuation">:</span> <span class="Operator">\.+*?</span><span class="Punctuation">(</span><span class="Punctuation">)</span><span class="Operator">|</span><span class="Punctuation">[</span><span class="Punctuation">]</span><span class="Punctuation">{</span><span class="Punctuation">}</span><span class="Operator">^$</span>
 <span class="Operator">\</span><span class="Identifier">a</span>         <span class="Identifier">bell</span> <span class="Punctuation">(</span><span class="Operator">\</span><span class="Identifier">x07</span><span class="Punctuation">)</span>
@@ -1357,7 +1381,9 @@ function main() {
 <span class="Operator">\</span><span class="Identifier">v</span>         <span class="Identifier">vertical</span> <span class="Identifier">tab</span> <span class="Punctuation">(</span><span class="Operator">\</span><span class="Identifier">x0B</span><span class="Punctuation">)</span>
 <span class="Operator">\</span><span class="DecNumber">123</span>       <span class="Identifier">octal</span> <span class="Identifier">character</span> <span class="Identifier">code</span> <span class="Punctuation">(</span><span class="Identifier">up</span> <span class="Identifier">to</span> <span class="Identifier">three</span> <span class="Identifier">digits</span><span class="Punctuation">)</span>
 <span class="Operator">\</span><span class="Identifier">x7F</span>       <span class="Identifier">hex</span> <span class="Identifier">character</span> <span class="Identifier">code</span> <span class="Punctuation">(</span><span class="Identifier">exactly</span> <span class="Identifier">two</span> <span class="Identifier">digits</span><span class="Punctuation">)</span>
-<span class="Operator">\</span><span class="Identifier">x</span><span class="Punctuation">{</span><span class="DecNumber">10</span><span class="Identifier">FFFF</span><span class="Punctuation">}</span> <span class="Identifier">any</span> <span class="Identifier">hex</span> <span class="Identifier">character</span> <span class="Identifier">code</span> <span class="Identifier">corresponding</span> <span class="Identifier">to</span> <span class="Identifier">a</span> <span class="Identifier">Unicode</span> <span class="Identifier">code</span> <span class="Identifier">point</span></pre>
+<span class="Operator">\</span><span class="Identifier">x</span><span class="Punctuation">{</span><span class="DecNumber">10</span><span class="Identifier">FFFF</span><span class="Punctuation">}</span> <span class="Identifier">any</span> <span class="Identifier">hex</span> <span class="Identifier">character</span> <span class="Identifier">code</span> <span class="Identifier">corresponding</span> <span class="Identifier">to</span> <span class="Identifier">a</span> <span class="Identifier">Unicode</span> <span class="Identifier">code</span> <span class="Identifier">point</span>
+<span class="Operator">\</span><span class="Identifier">u007F</span>     <span class="Identifier">hex</span> <span class="Identifier">character</span> <span class="Identifier">code</span> <span class="Punctuation">(</span><span class="Identifier">exactly</span> <span class="Identifier">four</span> <span class="Identifier">digits</span><span class="Punctuation">)</span>
+<span class="Operator">\</span><span class="Identifier">U0010FFFF</span> <span class="Identifier">hex</span> <span class="Identifier">character</span> <span class="Identifier">code</span> <span class="Punctuation">(</span><span class="Identifier">exactly</span> <span class="Identifier">eight</span> <span class="Identifier">digits</span><span class="Punctuation">)</span></pre>
 <h2><a class="toc-backref" id="syntax-perl-character-classes-unicode-friendly" href="#syntax-perl-character-classes-unicode-friendly">Perl character classes (Unicode friendly)</a></h2><p>These classes are based on the definitions provided in <a class="reference external" href="http://www.unicode.org/reports/tr18/#Compatibility_Properties">UTS#18</a></p>
 <pre class="listing"><span class="Operator">\</span><span class="Identifier">d</span>  <span class="Identifier">digit</span> <span class="Punctuation">(</span><span class="Operator">\</span><span class="Identifier">p</span><span class="Punctuation">{</span><span class="Identifier">Nd</span><span class="Punctuation">}</span><span class="Punctuation">)</span>
 <span class="Operator">\</span><span class="Identifier">D</span>  <span class="Keyword">not</span> <span class="Identifier">digit</span>
@@ -1382,7 +1408,7 @@ function main() {
   <div class="section" id="6">
 <h1><a class="toc-backref" href="#6">Imports</a></h1>
 <dl class="item">
-<a class="reference external" href="unicode.html">unicode</a>, <a class="reference external" href="algorithm.html">algorithm</a>, <a class="reference external" href="strutils.html">strutils</a>, <a class="reference external" href="sets.html">sets</a>, <a class="reference external" href="tables.html">tables</a>, <a class="reference external" href="options.html">options</a>, <a class="reference external" href="unicodedb.html">unicodedb</a>, <a class="reference external" href="unicodeplus.html">unicodeplus</a>
+<a class="reference external" href="unicode.html">unicode</a>, <a class="reference external" href="algorithm.html">algorithm</a>, <a class="reference external" href="strutils.html">strutils</a>, <a class="reference external" href="sets.html">sets</a>, <a class="reference external" href="tables.html">tables</a>, <a class="reference external" href="options.html">options</a>, <a class="reference external" href="parseutils.html">parseutils</a>, <a class="reference external" href="unicodedb.html">unicodedb</a>, <a class="reference external" href="unicodeplus.html">unicodeplus</a>
 </dl></div>
 <div class="section" id="7">
 <h1><a class="toc-backref" href="#7">Types</a></h1>
@@ -1395,7 +1421,7 @@ function main() {
 <dt id="Regex"><a name="Regex"></a><pre><span class="Identifier">Regex</span> <span class="Other">=</span> <span class="Keyword">object</span>
   <span class="Identifier">states</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">Node</span><span class="Other">]</span>
   <span class="Identifier">groupsCount</span><span class="Other">:</span> <span class="Identifier">int16</span>
-  <span class="Identifier">namedGroups</span><span class="Other">:</span> <span class="Identifier">Table</span><span class="Other">[</span><span class="Identifier">string</span><span class="Other">,</span> <span class="Identifier">int</span><span class="Other">]</span>
+  <span class="Identifier">namedGroups</span><span class="Other">:</span> <span class="Identifier">Table</span><span class="Other">[</span><span class="Identifier">string</span><span class="Other">,</span> <span class="Identifier">int16</span><span class="Other">]</span>
 </pre></dt>
 <dd>
 a compiled regular expression
@@ -1404,7 +1430,7 @@ a compiled regular expression
 <dt id="RegexMatch"><a name="RegexMatch"></a><pre><span class="Identifier">RegexMatch</span> <span class="Other">=</span> <span class="Keyword">object</span>
   <span class="Identifier">captures</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">Slice</span><span class="Other">[</span><span class="Identifier">int</span><span class="Other">]</span><span class="Other">]</span>
   <span class="Identifier">groups</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">Slice</span><span class="Other">[</span><span class="Identifier">int</span><span class="Other">]</span><span class="Other">]</span>
-  <span class="Identifier">namedGroups</span><span class="Other">:</span> <span class="Identifier">Table</span><span class="Other">[</span><span class="Identifier">string</span><span class="Other">,</span> <span class="Identifier">int</span><span class="Other">]</span>
+  <span class="Identifier">namedGroups</span><span class="Other">:</span> <span class="Identifier">Table</span><span class="Other">[</span><span class="Identifier">string</span><span class="Other">,</span> <span class="Identifier">int16</span><span class="Other">]</span>
   <span class="Identifier">boundaries</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Slice</span><span class="Other">[</span><span class="Identifier">int</span><span class="Other">]</span>
 </pre></dt>
 <dd>
@@ -1466,7 +1492,8 @@ search through the string and return each match. Empty matches (start &gt; end) 
 </dd>
 <dt id="split"><a name="split,string,Regex"></a><pre><span class="Keyword">proc</span> <span class="Identifier">split</span><span class="Other">(</span><span class="Identifier">s</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">;</span> <span class="Identifier">sep</span><span class="Other">:</span> <span class="Identifier">Regex</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">string</span><span class="Other">]</span> <span class="Other pragmabegin">{.</span><div class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></div><span class="Other pragmaend">.}</span></pre></dt>
 <dd>
-return not matched substrings
+return not matched substrings<pre class="listing"><span class="Identifier">doAssert</span><span class="Punctuation">(</span><span class="Identifier">split</span><span class="Punctuation">(</span><span class="StringLit">&quot;11a22Ϊ33Ⓐ44弢55&quot;</span><span class="Punctuation">,</span> <span class="RawData">re&quot;\d+&quot;</span><span class="Punctuation">)</span> <span class="Operator">==</span>
+  <span class="Operator">@</span><span class="Punctuation">[</span><span class="StringLit">&quot;&quot;</span><span class="Punctuation">,</span> <span class="StringLit">&quot;a&quot;</span><span class="Punctuation">,</span> <span class="StringLit">&quot;Ϊ&quot;</span><span class="Punctuation">,</span> <span class="StringLit">&quot;Ⓐ&quot;</span><span class="Punctuation">,</span> <span class="StringLit">&quot;弢&quot;</span><span class="Punctuation">,</span> <span class="StringLit">&quot;&quot;</span><span class="Punctuation">]</span><span class="Punctuation">)</span></pre>
 
 </dd>
 <dt id="startsWith"><a name="startsWith,string,Regex,int"></a><pre><span class="Keyword">proc</span> <span class="Identifier">startsWith</span><span class="Other">(</span><span class="Identifier">s</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">;</span> <span class="Identifier">pattern</span><span class="Other">:</span> <span class="Identifier">Regex</span><span class="Other">;</span> <span class="Identifier">start</span> <span class="Other">=</span> <span class="DecNumber">0</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">bool</span> <span class="Other pragmabegin">{.</span><div class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></div><span class="Other pragmaend">.}</span></pre></dt>
@@ -1481,15 +1508,24 @@ return whether the string ends with the pattern or not<pre class="listing"><span
 <span class="Identifier">doAssert</span><span class="Punctuation">(</span><span class="Keyword">not</span> <span class="StringLit">&quot;abc&quot;</span><span class="Operator">.</span><span class="Identifier">endsWith</span><span class="Punctuation">(</span><span class="RawData">re&quot;\d&quot;</span><span class="Punctuation">)</span><span class="Punctuation">)</span></pre>
 
 </dd>
+<dt id="replace"><a name="replace,string,Regex,string"></a><pre><span class="Keyword">proc</span> <span class="Identifier">replace</span><span class="Other">(</span><span class="Identifier">s</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">;</span> <span class="Identifier">pattern</span><span class="Other">:</span> <span class="Identifier">Regex</span><span class="Other">;</span> <span class="Identifier">by</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">string</span> <span class="Other pragmabegin">{.</span><div class="pragma">
+    <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">UnpackError</span><span class="Other">,</span> <span class="Identifier">ValueError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></div><span class="Other pragmaend">.}</span></pre></dt>
+<dd>
+Replace matched substring. Matched groups can be accessed with <tt class="docutils literal"><span class="pre">$N</span></tt> notation, where <tt class="docutils literal"><span class="pre">N</span></tt> is the group's index, starting at 1 (1-indexed). <tt class="docutils literal"><span class="pre">$$</span></tt> means literal <tt class="docutils literal"><span class="pre">$</span></tt>.
+
+</dd>
 <dt id="toPattern"><a name="toPattern,string"></a><pre><span class="Keyword">proc</span> <span class="Identifier">toPattern</span><span class="Other">(</span><span class="Identifier">s</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">Regex</span> <span class="Other pragmabegin">{.</span><div class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RegexError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></div><span class="Other pragmaend">.}</span></pre></dt>
 <dd>
-Parse and compile a regular expression. Use the <tt class="docutils literal"><span class="pre">re</span></tt> template if you care about performance.
+Parse and compile a regular expression. Use the <tt class="docutils literal"><span class="pre">re</span></tt> template if you care about performance.<pre class="listing"><span class="Comment"># compiled at run-time</span>
+<span class="Keyword">let</span> <span class="Identifier">patternA</span> <span class="Operator">=</span> <span class="Identifier">toPattern</span><span class="Punctuation">(</span><span class="RawData">r&quot;aa?&quot;</span><span class="Punctuation">)</span>
+<span class="Comment"># compiled at compile-time</span>
+<span class="Keyword">const</span> <span class="Identifier">patternB</span> <span class="Operator">=</span> <span class="Identifier">toPattern</span><span class="Punctuation">(</span><span class="RawData">r&quot;aa?&quot;</span><span class="Punctuation">)</span></pre>
 
 </dd>
 
 </dl></div>
-<div class="section" id="14">
-<h1><a class="toc-backref" href="#14">Iterators</a></h1>
+<div class="section" id="15">
+<h1><a class="toc-backref" href="#15">Iterators</a></h1>
 <dl class="item">
 <dt id="group"><a name="group.i,RegexMatch,int"></a><pre><span class="Keyword">iterator</span> <span class="Identifier">group</span><span class="Other">(</span><span class="Identifier">m</span><span class="Other">:</span> <span class="Identifier">RegexMatch</span><span class="Other">;</span> <span class="Identifier">i</span><span class="Other">:</span> <span class="Identifier">int</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">Slice</span><span class="Other">[</span><span class="Identifier">int</span><span class="Other">]</span> <span class="Other pragmabegin">{.</span><div class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></div><span class="Other pragmaend">.}</span></pre></dt>
 <dd>
@@ -1513,13 +1549,17 @@ search through the string and return each match. Empty matches (start &gt; end) 
 </dd>
 <dt id="split"><a name="split.i,string,Regex"></a><pre><span class="Keyword">iterator</span> <span class="Identifier">split</span><span class="Other">(</span><span class="Identifier">s</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">;</span> <span class="Identifier">sep</span><span class="Other">:</span> <span class="Identifier">Regex</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">string</span> <span class="Other pragmabegin">{.</span><div class="pragma"><span class="Identifier">inline</span><span class="Other">,</span> <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></div><span class="Other pragmaend">.}</span></pre></dt>
 <dd>
-return not matched substrings
+return not matched substrings<pre class="listing"><span class="Keyword">var</span> <span class="Identifier">i</span> <span class="Operator">=</span> <span class="DecNumber">0</span>
+<span class="Keyword">let</span> <span class="Identifier">expected</span> <span class="Operator">=</span> <span class="Punctuation">[</span><span class="StringLit">&quot;&quot;</span><span class="Punctuation">,</span> <span class="StringLit">&quot;a&quot;</span><span class="Punctuation">,</span> <span class="StringLit">&quot;Ϊ&quot;</span><span class="Punctuation">,</span> <span class="StringLit">&quot;Ⓐ&quot;</span><span class="Punctuation">,</span> <span class="StringLit">&quot;弢&quot;</span><span class="Punctuation">,</span> <span class="StringLit">&quot;&quot;</span><span class="Punctuation">]</span>
+<span class="Keyword">for</span> <span class="Identifier">s</span> <span class="Keyword">in</span> <span class="Identifier">split</span><span class="Punctuation">(</span><span class="StringLit">&quot;11a22Ϊ33Ⓐ44弢55&quot;</span><span class="Punctuation">,</span> <span class="RawData">re&quot;\d+&quot;</span><span class="Punctuation">)</span><span class="Punctuation">:</span>
+  <span class="Identifier">doAssert</span><span class="Punctuation">(</span><span class="Identifier">s</span> <span class="Operator">==</span> <span class="Identifier">expected</span><span class="Punctuation">[</span><span class="Identifier">i</span><span class="Punctuation">]</span><span class="Punctuation">)</span>
+  <span class="Identifier">inc</span> <span class="Identifier">i</span></pre>
 
 </dd>
 
 </dl></div>
-<div class="section" id="17">
-<h1><a class="toc-backref" href="#17">Templates</a></h1>
+<div class="section" id="18">
+<h1><a class="toc-backref" href="#18">Templates</a></h1>
 <dl class="item">
 <dt id="re"><a name="re.t,string"></a><pre><span class="Keyword">template</span> <span class="Identifier">re</span><span class="Other">(</span><span class="Identifier">s</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">Regex</span></pre></dt>
 <dd>
@@ -1536,7 +1576,7 @@ Parse and compile a regular expression at compile-time
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br/>
-        <small>Made with Nim. Generated: 2018-02-10 07:49:50 UTC</small>
+        <small>Made with Nim. Generated: 2018-03-04 14:11:49 UTC</small>
       </div>
     </div>
   </div>

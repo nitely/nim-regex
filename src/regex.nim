@@ -2549,11 +2549,11 @@ proc flatCaptures(result: var seq[string], m: RegexMatch, s: string) =
 
 # todo: add limit
 proc replace*(s: string, pattern: Regex, by: string): string =
-  ## Replace matched substring.
+  ## Replace matched substrings.
   ## Matched groups can be accessed with ``$N``
   ## notation, where ``N`` is the group's index,
   ## starting at 1 (1-indexed).
-  ## `$$`` means literal ``$``.
+  ## ``$$`` means literal ``$``.
   result = ""
   var
     i = 0

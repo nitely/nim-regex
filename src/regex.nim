@@ -470,10 +470,9 @@ proc match(n: Node, r: Rune): bool =
     if not matches:
       for nn in n.shorthands:
         matches = nn.match(r)
-    if n.kind == reSet:
-      matches
-    else:
-      not matches
+        if matches: break
+    ((matches and n.kind == reSet) or
+     (not matches and n.kind == reNotSet))
   of reAny:
     r != lineBreakRune
   of reAnyNL:
@@ -612,7 +611,7 @@ proc `$`(n: Node): string =
     for sl in n.ranges:
       str.add(sl.a.toUTF8 & '-' & sl.b.toUTF8)
     for nn in n.shorthands:
-      str.add('\\' & nn.cp.toUTF8)
+      str.add($nn)
     str.add(']')
     str
   of reSkip:
@@ -975,13 +974,19 @@ proc parseSetEscapedSeq(sc: Scanner[Rune]): Node =
   if result.kind in assertionKind:
     result = cp.toCharNode
 
-proc parseAsciiSet(result: var Node, sc: Scanner[Rune]) =
+proc parseAsciiSet(sc: Scanner[Rune]): Node =
   ## Parse an ascii set (i.e: ``[:ascii:]``).
   ## The ascii set will get expanded
   ## and merged with the outer set
   let startPos = sc.pos
   assert sc.peek == ":".toRune
   discard sc.next()
+  result = case sc.peek
+  of "^".toRune:
+    discard sc.next()
+    initNotSetNode()
+  else:
+    initSetNode()
   var name = newStringOfCap(16)
   for r in sc:
     if r == ":".toRune:
@@ -1120,11 +1125,13 @@ proc parseSet(sc: Scanner[Rune]): Node =
         cps.add(sc.next())
     of "[".toRune:
       if sc.peek == ":".toRune:
-        parseAsciiSet(result, sc)
+        # todo: rename shorhands
+        result.shorthands.add(parseAsciiSet(sc))
       else:
         cps.add(cp)
     else:
       cps.add(cp)
+  # todo: use ref and set to nil when empty !!
   result.cps.incl(cps.toSet)
   check(
     hasEnd,
@@ -2268,7 +2275,7 @@ proc match*(s: string, pattern: Regex, start=0): Option[RegexMatch] =
   ## is similar to ``find(text, re"^regex$")``
   ## but has better performance
   ##
-  ## .. code-block::
+  ## .. code-block:: nim
   ##   doAssert("abcd".match(re"abcd").isSome)
   ##   doAssert(not "abcd".match(re"abc").isSome)
   ##
@@ -2303,7 +2310,7 @@ proc contains*(s: string, pattern: Regex): bool =
   ##  ``re"^regex$"`` to match the whole
   ##  string instead of searching
   ##
-  ## .. code-block::
+  ## .. code-block:: nim
   ##   doAssert(re"bc" in "abcd")
   ##   doAssert(re"(23)+" in "23232")
   ##   doAssert(re"^(23)+$" notin "23232")
@@ -2338,7 +2345,7 @@ proc find*(s: string, pattern: Regex, start = 0): Option[RegexMatch] =
   ## search through the string looking for the first
   ## location where there is a match
   ##
-  ## .. code-block::
+  ## .. code-block:: nim
   ##   doAssert("abcd".find(re"bc").isSome)
   ##   doAssert(not "abcd".find(re"de").isSome)
   ##   doAssert("2222".find(re"(22)*").get().group(0) ==
@@ -2388,7 +2395,7 @@ iterator findAll*(
   ## return each match. Empty matches
   ## (start > end) are included
   ##
-  ## .. code-block::
+  ## .. code-block:: nim
   ##   var i = 0
   ##   let expected = [1 .. 2, 4 .. 5]
   ##   for m in findAll("abcabc", re"bc"):
@@ -2411,7 +2418,7 @@ proc findAll*(s: string, pattern: Regex, start = 0): seq[RegexMatch] =
   ## return each match. Empty matches
   ## (start > end) are included
   ##
-  ## .. code-block::
+  ## .. code-block:: nim
   ##   let
   ##     expected = [1 .. 2, 4 .. 5]
   ##     ms = findAll("abcabc", re"bc")
@@ -2427,7 +2434,7 @@ proc matchEnd(s: string, pattern: Regex, start = 0): int =
   ## Return ``-1`` when there is no match.
   ## Pattern is anchored to the start of the string
   result = -1
-  initDataSets(true)
+  initDataSets(false)
   let statesCount = pattern.states.high.int16
   for i, cp, nxt in s.peek(start):
     if cp == invalidRune:
@@ -2461,7 +2468,7 @@ proc matchEnd(s: string, pattern: Regex, start = 0): int =
 iterator split*(s: string, sep: Regex): string {.inline.} =
   ## return not matched substrings
   ##
-  ## .. code-block::
+  ## .. code-block:: nim
   ##   var i = 0
   ##   let expected = ["", "a", "Ϊ", "Ⓐ", "弢", ""]
   ##   for s in split("11a22Ϊ33Ⓐ44弢55", re"\d+"):
@@ -2486,7 +2493,7 @@ iterator split*(s: string, sep: Regex): string {.inline.} =
 proc split*(s: string, sep: Regex): seq[string] =
   ## return not matched substrings
   ##
-  ## .. code-block::
+  ## .. code-block:: nim
   ##   doAssert(split("11a22Ϊ33Ⓐ44弢55", re"\d+") ==
   ##     @["", "a", "Ϊ", "Ⓐ", "弢", ""])
   ##
@@ -2498,7 +2505,7 @@ proc startsWith*(s: string, pattern: Regex, start = 0): bool =
   ## return whether the string
   ## starts with the pattern or not
   ##
-  ## .. code-block::
+  ## .. code-block:: nim
   ##   doAssert("abc".startsWith(re"\w"))
   ##   doAssert(not "abc".startsWith(re"\d"))
   ##
@@ -2509,7 +2516,7 @@ proc endsWith*(s: string, pattern: Regex): bool =
   ## return whether the string
   ## ends with the pattern or not
   ##
-  ## .. code-block::
+  ## .. code-block:: nim
   ##   doAssert("abc".endsWith(re"\w"))
   ##   doAssert(not "abc".endsWith(re"\d"))
   ##
@@ -2521,7 +2528,7 @@ proc endsWith*(s: string, pattern: Regex): bool =
     if result: return
     s.runeIncAt(i)
 
-proc toFlatCaptures(result: var seq[string], m: RegexMatch, s: string)  =
+proc flatCaptures(result: var seq[string], m: RegexMatch, s: string) =
   ## Concat capture repetitions
   var
     i, n = 0
@@ -2529,7 +2536,7 @@ proc toFlatCaptures(result: var seq[string], m: RegexMatch, s: string)  =
   for g in 0 ..< m.groupsCount:
     n = 0
     for sl in m.group(g):
-      if sl.b >= sl.a:
+      if sl.a <= sl.b:
         n.inc(sl.b - sl.a + 1)
     ss = newString(n)
     i = 0
@@ -2553,7 +2560,7 @@ proc replace*(s: string, pattern: Regex, by: string): string =
     capts = newSeq[string](pattern.groupsCount)
   for m in findAll(s, pattern):
     result.add(substr(s, i, m.boundaries.a - 1))  # todo: loop over
-    toFlatCaptures(capts, m, s)
+    flatCaptures(capts, m, s)
     if capts.len > 0:
       result.addf(by, capts)
     i = m.boundaries.b + 1
@@ -3581,20 +3588,22 @@ when isMainModule:
     "a-z, A-Z at position 4")
 
   # tascii_set
-  doAssert(r"[[:alnum:]]".toAtoms == "[0-9a-zA-Z]")
-  doAssert(r"[[:alpha:]]".toAtoms == "[a-zA-Z]")
-  doAssert(r"[[:ascii:]]".toAtoms == "[\x00-\x7F]")
-  doAssert(r"[[:blank:]]".toAtoms == "[\t ]")
-  doAssert(r"[[:cntrl:]]".toAtoms == "[\x7F\x00-\x1F]")
-  doAssert(r"[[:digit:]]".toAtoms == "[0-9]")
-  doAssert(r"[[:graph:]]".toAtoms == "[!-~]")
-  doAssert(r"[[:lower:]]".toAtoms == "[a-z]")
-  doAssert(r"[[:print:]]".toAtoms == "[ -~]")
-  doAssert(r"[[:punct:]]".toAtoms == "[!-/:-@[-`{-~]")
-  doAssert(r"[[:space:]]".toAtoms == "[\t\n\v\f\r ]")
-  doAssert(r"[[:upper:]]".toAtoms == "[A-Z]")
-  doAssert(r"[[:word:]]".toAtoms == "[_0-9a-zA-Z]")
-  doAssert(r"[[:xdigit:]]".toAtoms == "[0-9a-fA-F]")
+  doAssert(r"[[:alnum:]]".toAtoms == "[[0-9a-zA-Z]]")
+  doAssert(r"[[:^alnum:]]".toAtoms == "[[^0-9a-zA-Z]]")
+  doAssert(r"[[:alpha:]]".toAtoms == "[[a-zA-Z]]")
+  doAssert(r"[[:ascii:]]".toAtoms == "[[\x00-\x7F]]")
+  doAssert(r"[[:blank:]]".toAtoms == "[[\t ]]")
+  doAssert(r"[[:cntrl:]]".toAtoms == "[[\x7F\x00-\x1F]]")
+  doAssert(r"[[:digit:]]".toAtoms == "[[0-9]]")
+  doAssert(r"[[:graph:]]".toAtoms == "[[!-~]]")
+  doAssert(r"[[:lower:]]".toAtoms == "[[a-z]]")
+  doAssert(r"[[:print:]]".toAtoms == "[[ -~]]")
+  doAssert(r"[[:punct:]]".toAtoms == "[[!-/:-@[-`{-~]]")
+  doAssert(r"[[:space:]]".toAtoms == "[[\t\n\v\f\r ]]")
+  doAssert(r"[[:upper:]]".toAtoms == "[[A-Z]]")
+  doAssert(r"[[:word:]]".toAtoms == "[[_0-9a-zA-Z]]")
+  doAssert(r"[[:xdigit:]]".toAtoms == "[[0-9a-fA-F]]")
+  doAssert(r"[[:alpha:][:digit:]]".toAtoms == "[[a-zA-Z][0-9]]")
   doAssert("d".isMatch(re"[[:alnum:]]"))
   doAssert("5".isMatch(re"[[:alnum:]]"))
   doAssert(not "{".isMatch(re"[[:alnum:]]"))
@@ -3607,6 +3616,8 @@ when isMainModule:
   doAssert("[".isMatch(re"[[[:alnum:]]"))
   doAssert(not ":".isMatch(re"[[:alnum:]]"))
   doAssert(":".isMatch(re"[:alnum:]"))
+  doAssert(not "a".isMatch(re"[[:^alnum:]]"))
+  doAssert("{".isMatch(re"[[:^alnum:]]"))
   doAssert(not "5".isMatch(re"[[:alpha:]]"))
   doAssert(not "a".isMatch(re"[[:digit:]]"))
   doAssert("5".isMatch(re"[[:alpha:][:digit:]]"))

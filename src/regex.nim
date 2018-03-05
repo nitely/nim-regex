@@ -2553,10 +2553,23 @@ proc replace*(
     by: string,
     limit = 0): string =
   ## Replace matched substrings.
+  ##
   ## Matched groups can be accessed with ``$N``
   ## notation, where ``N`` is the group's index,
-  ## starting at 1 (1-indexed).
-  ## ``$$`` means literal ``$``.
+  ## starting at 1 (1-indexed). ``$$`` means
+  ## literal ``$``.
+  ##
+  ## If ``limit`` is given, at most ``limit``
+  ## replacements are done. ``limit`` of 0
+  ## means there is no limit
+  ##
+  ## .. code-block:: nim
+  ##   doAssert("aaa".replace(re"a", "b", 1) == "baa")
+  ##   doAssert("abc".replace(re"(a(b)c)", "m($1) m($2)") ==
+  ##     "m(abc) m(b)")
+  ##   doAssert("Nim is awesome!".replace(re"(\w\B)", "$1_") ==
+  ##     "N_i_m i_s a_w_e_s_o_m_e!")
+  ##
   result = ""
   var
     i = 0
@@ -3668,4 +3681,6 @@ when isMainModule:
   doAssert("abc".replace(re"(d)", "m($1)") == "abc")
   doAssert("aaa".replace(re"a", "b") == "bbb")
   doAssert("aaa".replace(re"a", "b", 1) == "baa")
+  doAssert("Nim is awesome!".replace(re"(\w\B)", "$1_") ==
+    "N_i_m i_s a_w_e_s_o_m_e!")
   # todo: test unicode

@@ -2547,8 +2547,11 @@ proc flatCaptures(result: var seq[string], m: RegexMatch, s: string) =
     assert i == n
     result[g] = ss
 
-# todo: add limit
-proc replace*(s: string, pattern: Regex, by: string): string =
+proc replace*(
+    s: string,
+    pattern: Regex,
+    by: string,
+    limit = 0): string =
   ## Replace matched substrings.
   ## Matched groups can be accessed with ``$N``
   ## notation, where ``N`` is the group's index,
@@ -2557,13 +2560,20 @@ proc replace*(s: string, pattern: Regex, by: string): string =
   result = ""
   var
     i = 0
+    j = 0
     capts = newSeq[string](pattern.groupsCount)
   for m in findAll(s, pattern):
     result.add(substr(s, i, m.boundaries.a - 1))  # todo: loop over
+    # fixme: remove check once this is fixed
+    # https://github.com/nim-lang/Nim/issues/7293
     flatCaptures(capts, m, s)
     if capts.len > 0:
       result.addf(by, capts)
+    else:
+      result.add(by)
     i = m.boundaries.b + 1
+    inc j
+    if limit > 0 and j == limit: break
   result.add(substr(s, i))  # todo: loop over
 
 proc toPattern*(s: string): Regex {.raises: [RegexError].} =
@@ -3653,10 +3663,9 @@ when isMainModule:
     "m(abcabc) m(abcabc)")
   doAssert("abcabc".replace(re"((a)bc)*", "m($1) m($2)") ==
     "m(abcabc) m(aa)")
-  doAssert("abc".replace(re"(b)", "m($1)") ==
-    "am(b)c")
-  doAssert("abc".replace(re"d", "m($1)") ==
-    "abc")
-  doAssert("abc".replace(re"(d)", "m($1)") ==
-    "abc")
+  doAssert("abc".replace(re"(b)", "m($1)") == "am(b)c")
+  doAssert("abc".replace(re"d", "m($1)") == "abc")
+  doAssert("abc".replace(re"(d)", "m($1)") == "abc")
+  doAssert("aaa".replace(re"a", "b") == "bbb")
+  doAssert("aaa".replace(re"a", "b", 1) == "baa")
   # todo: test unicode

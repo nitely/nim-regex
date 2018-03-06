@@ -2572,13 +2572,10 @@ proc replace*(
   ##
   result = ""
   var
-    i = 0
-    j = 0
+    i, j = 0
     capts = newSeq[string](pattern.groupsCount)
   for m in findAll(s, pattern):
     result.add(substr(s, i, m.boundaries.a - 1))  # todo: loop over
-    # fixme: remove check once this is fixed
-    # https://github.com/nim-lang/Nim/issues/7293
     flatCaptures(capts, m, s)
     if capts.len > 0:
       result.addf(by, capts)
@@ -2588,6 +2585,36 @@ proc replace*(
     inc j
     if limit > 0 and j == limit: break
   result.add(substr(s, i))  # todo: loop over
+
+proc replace*(
+    s: string,
+    pattern: Regex,
+    by: proc (m: RegexMatch, s: string): string,
+    limit = 0): string =
+  ## Replace matched substrings.
+  ##
+  ## If ``limit`` is given, at most ``limit``
+  ## replacements are done. ``limit`` of 0
+  ## means there is no limit
+  ##
+  ## .. code-block:: nim
+  ##   proc removeEvenWords(m: RegexMatch, s: string): string =
+  ##     result = ""
+  ##     if m.group(1).len mod 2 != 0:
+  ##       result = s[m.group(0)[0]]
+  ##
+  ##   doAssert("Es macht Spaß, alle geraden Wörter zu entfernen!".replace(
+  ##     re"((\w)+\s*)", removeEvenWords) == "macht , geraden entfernen!")
+  ##
+  result = ""
+  var i, j = 0
+  for m in findAll(s, pattern):
+    result.add(substr(s, i, m.boundaries.a - 1))
+    result.add(by(m, s))
+    i = m.boundaries.b + 1
+    inc j
+    if limit > 0 and j == limit: break
+  result.add(substr(s, i))
 
 proc toPattern*(s: string): Regex {.raises: [RegexError].} =
   ## Parse and compile a regular expression.
@@ -3683,4 +3710,25 @@ when isMainModule:
   doAssert("aaa".replace(re"a", "b", 1) == "baa")
   doAssert("Nim is awesome!".replace(re"(\w\B)", "$1_") ==
     "N_i_m i_s a_w_e_s_o_m_e!")
-  # todo: test unicode
+
+  block:
+    proc by(m: RegexMatch, s: string): string =
+      result = "m("
+      for g in 0 ..< m.groupsCount:
+        for sl in m.group(g):
+          result.add(s[sl])
+          result.add(',')
+      result.add(')')
+
+    doAssert("abc".replace(re"(b)", by) == "am(b,)c")
+    doAssert("aaa".replace(re"(a*)", by) == "m(aaa,)")
+    doAssert("aaa".replace(re"(a)*", by) == "m(a,a,a,)")
+
+  block:
+    proc removeEvenWords(m: RegexMatch, s: string): string =
+      result = ""
+      if m.group(1).len mod 2 != 0:
+        result = s[m.group(0)[0]]
+
+    doAssert("Es macht Spaß, alle geraden Wörter zu entfernen!".replace(
+      re"((\w)+\s*)", removeEvenWords) == "macht , geraden entfernen!")

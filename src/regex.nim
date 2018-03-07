@@ -2547,6 +2547,21 @@ proc flatCaptures(result: var seq[string], m: RegexMatch, s: string) =
     assert i == n
     result[g] = ss
 
+proc addsubstr(result: var string, s: string, first, last: int) =
+  let
+    first = max(first, 0)
+    last = min(last, s.high)
+  if first > last: return
+  let n = result.len
+  result.setLen(result.len + (last - first) + 1)
+  var j = 0
+  for i in first .. last:
+    result[n + j] = s[i]
+    inc j
+
+proc addsubstr(result: var string, s: string, first: int) =
+  addsubstr(result, s, first, s.high)
+
 proc replace*(
     s: string,
     pattern: Regex,
@@ -2575,7 +2590,7 @@ proc replace*(
     i, j = 0
     capts = newSeq[string](pattern.groupsCount)
   for m in findAll(s, pattern):
-    result.add(substr(s, i, m.boundaries.a - 1))  # todo: loop over
+    result.addsubstr(s, i, m.boundaries.a - 1)
     flatCaptures(capts, m, s)
     if capts.len > 0:
       result.addf(by, capts)
@@ -2584,7 +2599,7 @@ proc replace*(
     i = m.boundaries.b + 1
     inc j
     if limit > 0 and j == limit: break
-  result.add(substr(s, i))  # todo: loop over
+  result.addsubstr(s, i)
 
 proc replace*(
     s: string,
@@ -2603,18 +2618,20 @@ proc replace*(
   ##     if m.group(1).len mod 2 != 0:
   ##       result = s[m.group(0)[0]]
   ##
-  ##   doAssert("Es macht Spaß, alle geraden Wörter zu entfernen!".replace(
-  ##     re"((\w)+\s*)", removeEvenWords) == "macht , geraden entfernen!")
+  ##   let
+  ##     text = "Es macht Spaß, alle geraden Wörter zu entfernen!"
+  ##     expected = "macht , geraden entfernen!"
+  ##   doAssert(text.replace(re"((\w)+\s*)", removeEvenWords) == expected)
   ##
   result = ""
   var i, j = 0
   for m in findAll(s, pattern):
-    result.add(substr(s, i, m.boundaries.a - 1))
+    result.addsubstr(s, i, m.boundaries.a - 1)
     result.add(by(m, s))
     i = m.boundaries.b + 1
     inc j
     if limit > 0 and j == limit: break
-  result.add(substr(s, i))
+  result.addsubstr(s, i)
 
 proc toPattern*(s: string): Regex {.raises: [RegexError].} =
   ## Parse and compile a regular expression.
@@ -3726,9 +3743,12 @@ when isMainModule:
 
   block:
     proc removeEvenWords(m: RegexMatch, s: string): string =
-      result = ""
       if m.group(1).len mod 2 != 0:
         result = s[m.group(0)[0]]
+      else:
+        result = ""
 
-    doAssert("Es macht Spaß, alle geraden Wörter zu entfernen!".replace(
-      re"((\w)+\s*)", removeEvenWords) == "macht , geraden entfernen!")
+    let
+      text = "Es macht Spaß, alle geraden Wörter zu entfernen!"
+      expected = "macht , geraden entfernen!"
+    doAssert(text.replace(re"((\w)+\s*)", removeEvenWords) == expected)

@@ -2554,6 +2554,7 @@ proc addsubstr(result: var string, s: string, first, last: int) =
   if first > last: return
   let n = result.len
   result.setLen(result.len + (last - first) + 1)
+  # todo: copyMem
   var j = 0
   for i in first .. last:
     result[n + j] = s[i]

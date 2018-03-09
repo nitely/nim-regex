@@ -1982,18 +1982,6 @@ proc groupsCount*(m: RegexMatch): int =
   ##
   m.groups.len
 
-# todo: remove?
-proc groups2(m: RegexMatch): seq[seq[Slice[int]]] =
-  ## return slices for each group.
-  result = newSeq[seq[Slice[int]]](m.groups.len)
-  var j = 0
-  for i, g in m.groups:
-    result[i] = newSeq[Slice[int]](m.groups[i].b - m.groups[i].a + 1)
-    j = 0
-    for idx in g:
-      result[i][j] = m.captures[idx]
-      inc j
-
 proc stringify(pattern: Regex, nIdx: int, visited: var set[int16]): string =
   ## NFA to string representation.
   ## For debugging purposes
@@ -2677,11 +2665,15 @@ when isMainModule:
       m: Option[RegexMatch],
       s: string): seq[seq[string]] =
     assert m.isSome
-    result = @[]
-    for g in 0 ..< m.get().groupsCount:
-      result.add(@[])
-      for slice in m.get().group(g):
-        result[^1].add(s[slice])
+    let mm = m.get()
+    result = newSeq[seq[string]](mm.groups.len)
+    var j = 0
+    for i, gbounds in mm.groups:
+      result[i] = newSeq[string](gbounds.b - gbounds.a + 1)
+      j = 0
+      for cbounds in mm.group(i):
+        result[i][j] = s[cbounds]
+        inc j
 
   proc matchWithCapt(s: string, pattern: Regex): seq[seq[string]] =
     s.match(pattern).toStrCaptures(s)
@@ -3208,11 +3200,11 @@ when isMainModule:
     "aaa".matchWithCapt(re"(a){1,}?(a){1,}?(a)?") ==
     @[@["a"], @["a"], @["a"]])
   doAssert(
-    "aaaa".match(re"(a*?)(a*?)(a*)").get().groups2() ==
-    @[@[0 .. -1], @[0 .. -1], @[0 .. 3]])  # note the empty slices
+    "aaaa".match(re"(a*?)(a*?)(a*)").toStrCaptures("aaaa") ==
+    @[@[""], @[""], @["aaaa"]])
   doAssert(
-    "aaaa".match(re"(a*)(a*?)(a*?)").get().groups2() ==
-    @[@[0 .. 3], @[4 .. 3], @[4 .. 3]])  # note the empty slices
+    "aaaa".match(re"(a*)(a*?)(a*?)").toStrCaptures("aaaa") ==
+    @[@["aaaa"], @[""], @[""]])
 
   # tassertions
   doAssert(
@@ -3255,8 +3247,8 @@ when isMainModule:
   doAssert(
     "ab".match(re"(a)(b)").get().group(1) == @[1..1])
   doAssert(
-    "ab".match(re"(a)(b)").get().groups2() ==
-    @[@[0..0], @[1..1]])
+    "ab".match(re"(a)(b)").toStrCaptures("ab") ==
+    @[@["a"], @["b"]])
 
   # tnamed_groups
   doAssert(

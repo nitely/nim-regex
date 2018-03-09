@@ -1954,6 +1954,17 @@ iterator group*(m: RegexMatch, i: int): Slice[int] =
   ## Slices of start > end are empty
   ## matches (i.e.: ``re"(\d?)"``)
   ## and they are included same as in PCRE.
+  ##
+  ## .. code-block:: nim
+  ##   let
+  ##     expected = ["a", "b", "c"]
+  ##     text = "abc"
+  ##     m = text.match(re"(\w)+").get()
+  ##   var i = 0
+  ##   for bounds in m.group(0):
+  ##     doAssert(expected[i] == text[bounds])
+  ##     inc i
+  ##
   for idx in m.groups[i]:
     yield m.captures[idx]
 
@@ -1964,6 +1975,17 @@ proc group*(m: RegexMatch, i: int): seq[Slice[int]] =
 
 iterator group*(m: RegexMatch, s: string): Slice[int] =
   ## return slices for a given named group
+  ##
+  ## .. code-block:: nim
+  ##   let
+  ##     expected = ["a", "b", "c"]
+  ##     text = "abc"
+  ##     m = text.match(re"(?P<foo>\w)+").get()
+  ##   var i = 0
+  ##   for bounds in m.group("foo"):
+  ##     doAssert(expected[i] == text[bounds])
+  ##     inc i
+  ##
   for idx in m.groups[m.namedGroups[s]]:
     yield m.captures[idx]
 
@@ -1975,10 +1997,9 @@ proc group*(m: RegexMatch, s: string): seq[Slice[int]] =
 proc groupsCount*(m: RegexMatch): int =
   ## return the number of capturing groups
   ##
-  ## .. code-block::
-  ##   for gi in 0 ..< m.groupsCount:
-  ##     for slice in m.group(gi):
-  ##       echo text[slice]
+  ## .. code-block:: nim
+  ##   doAssert(re"(a)(b)".groupsCount == 2)
+  ##   doAssert(re"((ab))".groupsCount == 2)
   ##
   m.groups.len
 
@@ -3249,6 +3270,26 @@ when isMainModule:
   doAssert(
     "ab".match(re"(a)(b)").toStrCaptures("ab") ==
     @[@["a"], @["b"]])
+  block:
+    let
+      expected = ["a", "b", "c"]
+      text = "abc"
+      m = text.match(re"(?P<foo>\w)+").get()
+    var i = 0
+    for bounds in m.group("foo"):
+      doAssert(expected[i] == text[bounds])
+      inc i
+  block:
+    let
+      expected = ["a", "b", "c"]
+      text = "abc"
+      m = text.match(re"(\w)+").get()
+    var i = 0
+    for bounds in m.group(0):
+      doAssert(expected[i] == text[bounds])
+      inc i
+  doAssert(re"(a)(b)".groupsCount == 2)
+  doAssert(re"((ab))".groupsCount == 2)
 
   # tnamed_groups
   doAssert(

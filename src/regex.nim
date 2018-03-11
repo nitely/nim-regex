@@ -1527,6 +1527,10 @@ proc toggle(f: Flag): Flag =
     flagVerbose
 
 proc squash(flags: ElasticSeq[seq[Flag]]): array[Flag, bool] =
+  ## Nested groups may contain flags,
+  ## this will set/unset those flags
+  ## in order. It should be done each time
+  ## there is a group start/end
   for ff in flags:
     for f in ff:
       result[f.toggle()] = false
@@ -1546,15 +1550,28 @@ proc applyFlag(n: var Node, f: Flag) =
     else:
       discard
   of flagCaseInsensitive:
-    # todo: support sets?
     if n.kind == reChar and n.cp != n.cp.swapCase():
       n.kind = reCharCI
+    # todo: apply recursevely to
+    #       shorthands of reSet/reNotSet (i.e: [:ascii:])
+    if n.kind in {reSet, reNotSet}:
+      var cps = initSet[Rune]()
+      cps.incl(n.cps)
+      for cp in cps:
+        let cpsc = cp.swapCase()
+        if cp != cpsc:
+          n.cps.incl(cpsc)
+      for sl in n.ranges[0 .. ^1]:
+        let
+          cpa = sl.a.swapCase()
+          cpb = sl.b.swapCase()
+        if sl.a != cpa and sl.b != cpb:
+          n.ranges.add(cpa .. cpb)
   of flagUnGreedy:
     if n.kind in opKind:
       n.isGreedy = not n.isGreedy
   of flagNotUnicode:
     n.kind = n.kind.toAsciiKind()
-    # todo: remove, add reSetAscii and reNotSetAscii
     if n.kind in {reSet, reNotSet}:
       for nn in n.shorthands.mitems:
         nn.kind = nn.kind.toAsciiKind()
@@ -1583,7 +1600,7 @@ proc applyFlags(expression: seq[Node]): seq[Node] =
         flags.add(@[])
         result.add(n)
         continue
-      if sc.peek.kind == reGroupEnd:
+      if sc.peek.kind == reGroupEnd:  # (?flags)
         discard sc.next()
         if flags.len > 0:
           flags[flags.len - 1].add(n.flags)
@@ -3383,6 +3400,16 @@ when isMainModule:
   doAssert(
     "AaA".matchWithCapt(re"((?i)a+)") ==
     @[@["AaA"]])
+  doAssert("A".isMatch(re"(?i)[a]"))
+  doAssert("a".isMatch(re"(?i)[a]"))
+  doAssert(not "@".isMatch(re"(?i)[a]"))
+  doAssert("a".isMatch(re"(?i)[A]"))
+  doAssert("A".isMatch(re"(?i)[A]"))
+  doAssert("C".isMatch(re"(?i)[a-z]"))
+  doAssert("c".isMatch(re"(?i)[a-z]"))
+  doAssert(not "@".isMatch(re"(?i)[a-z]"))
+  doAssert("c".isMatch(re"(?i)[A-Z]"))
+  doAssert("C".isMatch(re"(?i)[A-Z]"))
 
   doAssert(
     "aa".matchWithCapt(re"((?U)a*)(a*)") ==

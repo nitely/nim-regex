@@ -1526,12 +1526,47 @@ proc toggle(f: Flag): Flag =
   of flagNotVerbose:
     flagVerbose
 
-proc squash(flags: ElasticSeq[seq[Flag]]): set[Flag] =
-  result = {}
+proc squash(flags: ElasticSeq[seq[Flag]]): array[Flag, bool] =
   for ff in flags:
     for f in ff:
-      result.excl(f.toggle())
-      result.incl(f)
+      result[f.toggle()] = false
+      result[f] = true
+
+proc applyFlag(n: var Node, f: Flag) =
+  case f
+  of flagAnyMatchNewLine:
+    if n.kind == reAny:
+      n.kind = reAnyNL
+  of flagMultiLine:
+    case n.kind
+    of reStartSym:
+      n.kind = reStartSymML
+    of reEndSym:
+      n.kind = reEndSymML
+    else:
+      discard
+  of flagCaseInsensitive:
+    # todo: support sets?
+    if n.kind == reChar and n.cp != n.cp.swapCase():
+      n.kind = reCharCI
+  of flagUnGreedy:
+    if n.kind in opKind:
+      n.isGreedy = not n.isGreedy
+  of flagNotUnicode:
+    n.kind = n.kind.toAsciiKind()
+    # todo: remove, add reSetAscii and reNotSetAscii
+    if n.kind in {reSet, reNotSet}:
+      for nn in n.shorthands.mitems:
+        nn.kind = nn.kind.toAsciiKind()
+  else:
+    assert f in {
+      flagNotAnyMatchNewLine,
+      flagNotMultiLine,
+      flagNotCaseInsensitive,
+      flagNotUnGreedy,
+      flagUnicode,
+      flagVerbose,
+      flagNotVerbose}
 
 proc applyFlags(expression: seq[Node]): seq[Node] =
   ## apply flags to each group
@@ -1540,42 +1575,6 @@ proc applyFlags(expression: seq[Node]): seq[Node] =
   let sc = expression.scan()
   for nn in sc:
     var n = nn
-    for f in flags.squash():
-      # todo: move to its own function
-      case f
-      of flagAnyMatchNewLine:
-        if n.kind == reAny:
-          n.kind = reAnyNL
-      of flagMultiLine:
-        case n.kind
-        of reStartSym:
-          n.kind = reStartSymML
-        of reEndSym:
-          n.kind = reEndSymML
-        else:
-          discard
-      of flagCaseInsensitive:
-        # todo: support sets?
-        if n.kind == reChar and n.cp != n.cp.swapCase():
-          n.kind = reCharCI
-      of flagUnGreedy:
-        if n.kind in opKind:
-          n.isGreedy = not n.isGreedy
-      of flagNotUnicode:
-        n.kind = n.kind.toAsciiKind()
-        # todo: remove, add reSetAscii and reNotSetAscii
-        if n.kind in {reSet, reNotSet}:
-          for nn in n.shorthands.mitems:
-            nn.kind = nn.kind.toAsciiKind()
-      else:
-        assert f in {
-          flagNotAnyMatchNewLine,
-          flagNotMultiLine,
-          flagNotCaseInsensitive,
-          flagNotUnGreedy,
-          flagUnicode,
-          flagVerbose,
-          flagNotVerbose}
     case n.kind
     # (?flags)
     # Orphan flags are added to current group
@@ -1595,7 +1594,10 @@ proc applyFlags(expression: seq[Node]): seq[Node] =
     of reGroupEnd:
       discard flags.pop()
     else:
-      discard
+      let ff = flags.squash()
+      for f in Flag.low .. Flag.high:
+        if ff[f]:
+          applyFlag(n, f)
     result.add(n)
 
 proc expandOneRepRange(subExpr: seq[Node], n: Node): seq[Node] =
@@ -1930,7 +1932,7 @@ type
   RegexMatch* = object
     ## result from matching operations
     captures: seq[Slice[int]]
-    groups: seq[Slice[int]] # todo: remove, merge with captures
+    groups: seq[Slice[int]]
     namedGroups: Table[string, int16]
     boundaries*: Slice[int]
   CaptureKind = enum
@@ -1986,8 +1988,8 @@ iterator group*(m: RegexMatch, s: string): Slice[int] =
   ##     doAssert(expected[i] == text[bounds])
   ##     inc i
   ##
-  for idx in m.groups[m.namedGroups[s]]:
-    yield m.captures[idx]
+  for bounds in m.group(m.namedGroups[s]):
+    yield bounds
 
 proc group*(m: RegexMatch, s: string): seq[Slice[int]] =
   ## return slices for a given named group.

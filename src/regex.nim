@@ -2209,9 +2209,19 @@ proc initDataSets(
     currStates: initStates(size),
     nextStates: initStates(size))
   if withCaptures:
-    #if pattern.groupsCount > 0:
     result.captured = initElasticSeq[Capture]()
     result.captured.add(Capture())
+
+proc clear(ds: var DataSets) =
+  ## lear all data sets. This is
+  ## pretty much a perf free op
+  ds.visited.clear()
+  ds.toVisit.clear()
+  ds.currStates.clear()
+  ds.nextStates.clear()
+  if ds.captured.isInitialized:
+    ds.captured.clear()
+    ds.captured.add(Capture())
 
 proc toVisitStep(
     result: var ElasticSeq[State],
@@ -2375,19 +2385,14 @@ proc contains*(s: string, pattern: Regex): bool =
     if result:
       return
 
-proc find*(s: string, pattern: Regex, start = 0): Option[RegexMatch] =
+proc findImpl(
+    ds: var DataSets,
+    s: string,
+    pattern: Regex,
+    start = 0): Option[RegexMatch] =
   ## search through the string looking for the first
   ## location where there is a match
-  ##
-  ## .. code-block:: nim
-  ##   doAssert("abcd".find(re"bc").isSome)
-  ##   doAssert(not "abcd".find(re"de").isSome)
-  ##   doAssert("2222".find(re"(22)*").get().group(0) ==
-  ##     @[0 .. 1, 2 .. 3])
-  ##
-  var ds = initDataSets(
-    pattern.states.len,
-    pattern.groupsCount > 0)
+  ds.clear()
   let statesCount = pattern.states.high.int16
   var si = start
   for i, cp, nxt in s.peek(start):
@@ -2419,6 +2424,21 @@ proc find*(s: string, pattern: Regex, start = 0): Option[RegexMatch] =
     ds.nextStates.clear()
   setRegexMatch(result, pattern, ds)
 
+proc find*(s: string, pattern: Regex, start = 0): Option[RegexMatch] =
+  ## search through the string looking for the first
+  ## location where there is a match
+  ##
+  ## .. code-block:: nim
+  ##   doAssert("abcd".find(re"bc").isSome)
+  ##   doAssert(not "abcd".find(re"de").isSome)
+  ##   doAssert("2222".find(re"(22)*").get().group(0) ==
+  ##     @[0 .. 1, 2 .. 3])
+  ##
+  var ds = initDataSets(
+    pattern.states.len,
+    pattern.groupsCount > 0)
+  result = findImpl(ds, s, pattern, start)
+
 proc runeIncAt(s: string, n: var int) {.inline.} =
   ## increment ``n`` up to
   ## next rune's index
@@ -2437,10 +2457,13 @@ iterator findAll*(
   ##     doAssert(m.boundaries == expected[i])
   ##     inc i
   ##
-  # todo: pass/reuse data structures
-  var i = start
+  var
+    ds = initDataSets(
+      pattern.states.len,
+      pattern.groupsCount > 0)
+    i = start
   while i < s.len:
-    let m = find(s, pattern, i)
+    let m = findImpl(ds, s, pattern, i)
     if not isSome(m): break
     let mm = m.get()
     yield mm

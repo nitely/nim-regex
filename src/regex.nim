@@ -2487,13 +2487,17 @@ proc findAll*(s: string, pattern: Regex, start = 0): seq[RegexMatch] =
   for slc in findAll(s, pattern, start):
     result.add(slc)
 
-proc matchEnd(s: string, pattern: Regex, start = 0): int =
+proc matchEndImpl(
+    ds: var DataSets,
+    s: string,
+    pattern: Regex,
+    start = 0): int =
   ## return end index of the longest match.
   ## Return ``-1`` when there is no match.
   ## Pattern is anchored to the start of the string
+  assert(not ds.captured.isInitialized)
+  ds.clear()
   result = -1
-  var ds = initDataSets(
-    pattern.states.len, false)
   let statesCount = pattern.states.high.int16
   for i, cp, nxt in s.peek(start):
     if cp == invalidRune:
@@ -2523,6 +2527,13 @@ proc matchEnd(s: string, pattern: Regex, start = 0): int =
       result = state.ei
       return
 
+proc matchEnd(s: string, pattern: Regex, start = 0): int =
+  ## return end index of the longest match.
+  ## Return ``-1`` when there is no match.
+  ## Pattern is anchored to the start of the string
+  var ds = initDataSets(pattern.states.len, false)
+  result = matchEndImpl(ds, s, pattern, start)
+
 iterator split*(s: string, sep: Regex): string {.inline.} =
   ## return not matched substrings
   ##
@@ -2533,15 +2544,15 @@ iterator split*(s: string, sep: Regex): string {.inline.} =
   ##     doAssert(s == expected[i])
   ##     inc i
   ##
-  # todo: pass/reuse data structures
   var
+    ds = initDataSets(sep.states.len, false)
     first = 0
     last = 0
     n = 0
   while last <= s.len:
     first = last
     while last <= s.len:
-      n = matchEnd(s, sep, last)
+      n = matchEndImpl(ds, s, sep, last)
       #if last == n: s.incRune(last)
       if n > 0: break
       s.runeIncAt(last)
@@ -2644,6 +2655,7 @@ proc replace*(
   ##   doAssert("Nim is awesome!".replace(re"(\w\B)", "$1_") ==
   ##     "N_i_m i_s a_w_e_s_o_m_e!")
   ##
+  # todo: reuse ds
   result = ""
   var
     i, j = 0
@@ -2682,6 +2694,7 @@ proc replace*(
   ##     expected = "macht , geraden entfernen!"
   ##   doAssert(text.replace(re"((\w)+\s*)", removeEvenWords) == expected)
   ##
+  # todo: reuse ds
   result = ""
   var i, j = 0
   for m in findAll(s, pattern):

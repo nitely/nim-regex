@@ -2312,19 +2312,12 @@ proc setRegexMatch(
       result = some(m)
       return
 
-proc match*(s: string, pattern: Regex, start=0): Option[RegexMatch] =
-  ## return a match if the whole string
-  ## matches the regular expression. This
-  ## is similar to ``find(text, re"^regex$")``
-  ## but has better performance
-  ##
-  ## .. code-block:: nim
-  ##   doAssert("abcd".match(re"abcd").isSome)
-  ##   doAssert(not "abcd".match(re"abc").isSome)
-  ##
-  var ds = initDataSets(
-    pattern.states.len,
-    pattern.groupsCount > 0)
+proc matchImpl(
+    ds: var DataSets,
+    s: string,
+    pattern: Regex,
+    start=0): Option[RegexMatch] =
+  ds.clear()
   let statesCount = pattern.states.high.int16
   for i, cp, nxt in s.peek(start):
     if cp == invalidRune:
@@ -2345,6 +2338,21 @@ proc match*(s: string, pattern: Regex, start=0): Option[RegexMatch] =
     swap(ds.currStates, ds.nextStates)
     ds.nextStates.clear()
   setRegexMatch(result, pattern, ds)
+
+proc match*(s: string, pattern: Regex, start=0): Option[RegexMatch] =
+  ## return a match if the whole string
+  ## matches the regular expression. This
+  ## is similar to ``find(text, re"^regex$")``
+  ## but has better performance
+  ##
+  ## .. code-block:: nim
+  ##   doAssert("abcd".match(re"abcd").isSome)
+  ##   doAssert(not "abcd".match(re"abc").isSome)
+  ##
+  var ds = initDataSets(
+    pattern.states.len,
+    pattern.groupsCount > 0)
+  result = matchImpl(ds, s, pattern, start)
 
 proc contains*(s: string, pattern: Regex): bool =
   ##  search for the pattern anywhere
@@ -2444,6 +2452,21 @@ proc runeIncAt(s: string, n: var int) {.inline.} =
   ## next rune's index
   inc(n, runeLenAt(s, n))
 
+iterator findAllImpl(
+    ds: var DataSets,
+    s: string,
+    pattern: Regex,
+    start = 0): RegexMatch {.inline.} =
+  var i = start
+  while i < s.len:
+    let m = findImpl(ds, s, pattern, i)
+    if not isSome(m): break
+    let mm = m.get()
+    yield mm
+    let b = mm.boundaries
+    if b.b == i or b.a > b.b: inc i  # todo: incRune and test
+    else: i = b.b + 1
+
 iterator findAll*(
     s: string, pattern: Regex, start = 0): RegexMatch {.inline.} =
   ## search through the string and
@@ -2461,15 +2484,8 @@ iterator findAll*(
     ds = initDataSets(
       pattern.states.len,
       pattern.groupsCount > 0)
-    i = start
-  while i < s.len:
-    let m = findImpl(ds, s, pattern, i)
-    if not isSome(m): break
-    let mm = m.get()
-    yield mm
-    let b = mm.boundaries
-    if b.b == i or b.a > b.b: inc i  # todo: incRune and test
-    else: i = b.b + 1
+  for m in findAllImpl(ds, s, pattern, start):
+    yield m
 
 proc findAll*(s: string, pattern: Regex, start = 0): seq[RegexMatch] =
   ## search through the string and
@@ -2589,11 +2605,14 @@ proc endsWith*(s: string, pattern: Regex): bool =
   ##   doAssert("abc".endsWith(re"\w"))
   ##   doAssert(not "abc".endsWith(re"\d"))
   ##
-  # todo: pass/reuse data structures
   result = false
-  var i = 0
+  var
+    ds = initDataSets(
+      pattern.states.len,
+      pattern.groupsCount > 0)
+    i = 0
   while i < s.len:
-    result = isSome(match(s, pattern, i))
+    result = isSome(matchImpl(ds, s, pattern, i))
     if result: return
     s.runeIncAt(i)
 
@@ -2655,12 +2674,14 @@ proc replace*(
   ##   doAssert("Nim is awesome!".replace(re"(\w\B)", "$1_") ==
   ##     "N_i_m i_s a_w_e_s_o_m_e!")
   ##
-  # todo: reuse ds
   result = ""
   var
     i, j = 0
     capts = newSeq[string](pattern.groupsCount)
-  for m in findAll(s, pattern):
+    ds = initDataSets(
+      pattern.states.len,
+      pattern.groupsCount > 0)
+  for m in findAllImpl(ds, s, pattern):
     result.addsubstr(s, i, m.boundaries.a - 1)
     flatCaptures(capts, m, s)
     if capts.len > 0:
@@ -2694,10 +2715,13 @@ proc replace*(
   ##     expected = "macht , geraden entfernen!"
   ##   doAssert(text.replace(re"((\w)+\s*)", removeEvenWords) == expected)
   ##
-  # todo: reuse ds
   result = ""
-  var i, j = 0
-  for m in findAll(s, pattern):
+  var
+    i, j = 0
+    ds = initDataSets(
+      pattern.states.len,
+      pattern.groupsCount > 0)
+  for m in findAllImpl(ds, s, pattern):
     result.addsubstr(s, i, m.boundaries.a - 1)
     result.add(by(m, s))
     i = m.boundaries.b + 1

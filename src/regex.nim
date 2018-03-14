@@ -2018,8 +2018,8 @@ proc groupsCount*(m: RegexMatch): int =
   ## return the number of capturing groups
   ##
   ## .. code-block:: nim
-  ##   doAssert(re"(a)(b)".groupsCount == 2)
-  ##   doAssert(re"((ab))".groupsCount == 2)
+  ##   doAssert("ab".match(re"(a)(b)").get().groupsCount == 2)
+  ##   doAssert("ab".match(re"((ab))").get().groupsCount == 2)
   ##
   m.groups.len
 
@@ -2816,4 +2816,3 @@ when isMainModule:
   doAssert(r"[[:word:]]".toAtoms == "[[_0-9a-zA-Z]]")
   doAssert(r"[[:xdigit:]]".toAtoms == "[[0-9a-fA-F]]")
   doAssert(r"[[:alpha:][:digit:]]".toAtoms == "[[a-zA-Z][0-9]]")
-  

@@ -5,6 +5,7 @@ author = "Esteban Castro Borsani (@nitely)"
 description = "Linear time regex matching"
 license = "MIT"
 srcDir = "src"
+skipDirs = @["tests"]
 
 requires "nim >= 0.17.2"
 requires "unicodedb >= 0.2.3 & < 0.3"

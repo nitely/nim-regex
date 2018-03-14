@@ -2145,22 +2145,6 @@ proc populateCaptures(
       dec result.groups[c.idx].a
     curr = c.prev
 
-iterator runesIt(s: string): (int, Rune) {.inline.} =
-  ## yield current Rune and
-  ## the ending index/start of next rune
-  var
-    i = 0
-    result: Rune
-  while i < len(s):
-    fastRuneAt(s, i, result, true)
-    yield (i, result)
-
-iterator runesIt(s: seq[Rune], start: int): (int, Rune) {.inline.} =
-  var i = start
-  while i < len(s):
-    yield (i, s[i])
-    inc i
-
 iterator runesIt(s: string, start: int): (int, Rune) {.inline.} =
   ## yield current Rune and
   ## the ending index/start of next rune
@@ -2171,7 +2155,9 @@ iterator runesIt(s: string, start: int): (int, Rune) {.inline.} =
     fastRuneAt(s, i, result, true)
     yield (i, result)
 
-template peekImpl(s, start) =
+iterator peek(s: string, start = 0): (int, Rune, Rune) {.inline.} =
+  ## iterates over unicode characters yielding
+  ## next rune index, current rune and next rune
   var
     prev = invalidRune
     j = 0
@@ -2180,16 +2166,6 @@ template peekImpl(s, start) =
     prev = r
     j = i
   yield (j, prev, invalidRune)
-
-iterator peek(s: string, start = 0): (int, Rune, Rune) {.inline.} =
-  ## iterates over unicode characters yielding
-  ## next rune index, current rune and next rune
-  peekImpl(s, start)
-
-#iterator peek(s: seq[Rune], start = 0): (int, Rune, Rune) {.inline.} =
-#  ## iterates over unicode characters yielding
-#  ## next rune index, current rune and next rune
-#  peekImpl(s, start)
 
 type
   DataSets = tuple

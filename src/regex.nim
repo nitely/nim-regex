@@ -1434,7 +1434,6 @@ proc fillGroups(expression: var seq[Node]): GroupsCapture =
   ## populate group indices, names and capturing mark
   var
     groups = initElasticSeq[int](64)
-    nonCapt = 0
     names = initTable[string, int16]()
     count = 0'i16
   for i, n in expression.mpairs:
@@ -1444,8 +1443,6 @@ proc fillGroups(expression: var seq[Node]): GroupsCapture =
       if n.isCapturing:
         n.idx = count
         inc count
-      else:
-        inc nonCapt
       if not n.name.isNil:
         assert n.isCapturing
         names[n.name] = n.idx
@@ -1457,8 +1454,6 @@ proc fillGroups(expression: var seq[Node]): GroupsCapture =
       let start = groups.pop()
       n.isCapturing = expression[start].isCapturing
       n.idx = expression[start].idx
-      if not n.isCapturing:
-        dec nonCapt
     else:
       discard
     check(

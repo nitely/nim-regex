@@ -1027,6 +1027,13 @@ test "treplace":
       expected = "macht , geraden entfernen!"
     check(text.replace(re"((\w)+\s*)", removeEvenWords) == expected)
 
+test "tcompiletime":
+  static:
+    doAssert("a".isMatch(re"a"))
+    # see https://github.com/nitely/nim-regex/issues/4
+    #doAssert("a".isMatch(re"\w"))
+    doAssert("a".isMatch(re"(?-u)\w"))
+
 test "tmisc":
   check("abc".match(re"[^^]+").get().boundaries == 0 .. 2)
   check(not "^".isMatch(re"[^^]+"))

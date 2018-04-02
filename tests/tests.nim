@@ -1127,3 +1127,8 @@ test "tmisc":
     0 ..< "①②③".len)
   check("①②③".find(re"[^④⑤]*").get().boundaries ==
     0 ..< "①②③".len)
+
+test "tlook_around":
+  check("ab".isMatch(re"a(?=b)\w"))
+  check(not "ab".isMatch(re"a(?=c)\w"))
+  check("ab".matchWithCapt(re"(a(?=b))b") == @[@["a"]])

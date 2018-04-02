@@ -253,6 +253,10 @@ type
     reAnyNLAscii,  # . new-line ascii only
     reSet,  # [abc]
     reNotSet,  # [^abc]
+    reLookahead,  # (?=...)
+    reLookbehind,  # (?<=...)
+    reNotLookahead,  # (?!...)
+    reNotLookbehind,  # (?<!...)
     reSkip,  # dummy
     reEOE  # End of expression
   Node = object
@@ -385,6 +389,14 @@ proc match(n: Node, r: Rune, nxt: Rune): bool =
     isWordBoundaryAscii(r, nxt)
   of reNotWordBoundaryAscii:
     not isWordBoundaryAscii(r, nxt)
+  of reLookahead:
+    n.cp == nxt
+  of reNotLookahead:
+    n.cp != nxt
+  of reLookbehind:
+    n.cp == r
+  of reNotLookbehind:
+    n.cp != r
   else:
     assert false
     false
@@ -521,7 +533,11 @@ const
     reWordBoundary,
     reNotWordBoundary,
     reWordBoundaryAscii,
-    reNotWordBoundaryAscii}
+    reNotWordBoundaryAscii,
+    reLookahead,
+    reLookbehind,
+    reNotLookahead,
+    reNotLookbehind}
   shorthandKind = {
     reAlphaNum,
     reDigit,
@@ -1311,6 +1327,30 @@ proc parseGroupTag(sc: Scanner[Rune]): Node =
     result = initGroupStart(
       flags = flags,
       isCapturing = false)
+  #reLookahead,
+  #reLookbehind,
+  of "=".toRune:
+    discard sc.next()
+    # todo: support sets and more
+    case sc.peek
+    of "\\".toRune:
+      let n = parseEscapedSeq(sc)
+      check(
+        n.kind == reChar,
+        "Invalid lookahead. A " &
+        "character was expected, but " &
+        "found a special symbol")
+      result = Node(kind: reLookahead, cp: n.cp)
+    else:
+      check(
+        not sc.finished,
+        "Invalid lookahead. A character " &
+        "was expected, but found nothing (end of string)")
+      result = Node(kind: reLookahead, cp: sc.next())
+    check(
+      sc.peek == ")".toRune,
+      "Invalid lookahead, expected closing symbol")
+    discard sc.next()
   else:
     raise newException(RegexError,
       ("Invalid group near position $#, " &
@@ -1349,6 +1389,7 @@ proc subParse(sc: Scanner[Rune]): Node =
 
 proc skip(sc: Scanner[Rune], vb: ElasticSeq[bool]): bool =
   ## skip white-spaces and comments on verbose mode
+  # todo: consume
   result = false
   if vb.len == 0 or not vb[vb.high]:
     return
@@ -1588,9 +1629,9 @@ proc applyFlags(expression: seq[Node]): seq[Node] =
   let sc = expression.scan()
   for nn in sc:
     var n = nn
-    case n.kind
     # (?flags)
     # Orphan flags are added to current group
+    case n.kind
     of reGroupStart:
       if n.flags.isNil:
         flags.add(@[])
@@ -2036,7 +2077,7 @@ proc stringify(pattern: Regex, nIdx: int16, visited: var set[int16]): string =
     result.add(pattern.stringify(n.outB, visited))
   result.add("]")
 
-proc `$`(pattern: Regex): string =
+proc `$`(pattern: Regex): string {.used.} =
   ## NFA to string representation.
   ## For debugging purposes
   var visited: set[int16] = {}

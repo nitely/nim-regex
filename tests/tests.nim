@@ -1130,5 +1130,6 @@ test "tmisc":
 
 test "tlook_around":
   check("ab".isMatch(re"a(?=b)\w"))
+  check(not "ab".isMatch(re"a(?=b)"))
   check(not "ab".isMatch(re"a(?=c)\w"))
   check("ab".matchWithCapt(re"(a(?=b))b") == @[@["a"]])

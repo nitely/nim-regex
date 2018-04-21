@@ -156,7 +156,8 @@ import tables
 import options
 import parseutils
 
-import unicodedb
+import unicodedb/properties
+import unicodedb/types
 import unicodeplus except isUpper, isLower
 
 export Option, isSome, get

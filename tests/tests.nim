@@ -868,25 +868,30 @@ test "tliterals":
   check("Ⓐ".isMatch(re"\u24b6"))
   check("Ⓐ".isMatch(re"\u24B6"))
   check(raisesMsg(r"\u123") ==
-    "Invalid unicode literal near position 2. " &
-    "Expected 4 hex digits, but found 3")
+    "Invalid unicode literal. Expected 4 hex digits, but found 3\n" &
+    "\\u123\n" &
+    "^")
   check(raisesMsg(r"\u123@abc") ==
-    "Invalid unicode literal near position 2. " &
-    "Expected hex digit, but found @")
+    "Invalid unicode literal. Expected hex digit, but found @\n" &
+    "\\u123@abc\n" &
+    "^")
   check("a".isMatch(re"\U00000061"))
   check(not "b".isMatch(re"\U00000061"))
   check("b".isMatch(re"\U00000062"))
   check("弢".isMatch(re"\U0002f894"))
   check("弢".isMatch(re"\U0002F894"))
   check(raisesMsg(r"\U123") ==
-    "Invalid unicode literal near position 2. " &
-    "Expected 8 hex digits, but found 3")
+    "Invalid unicode literal. Expected 8 hex digits, but found 3\n" &
+    "\\U123\n" &
+    "^")
   check(raisesMsg(r"\U123@a") ==
-    "Invalid unicode literal near position 2. " &
-    "Expected hex digit, but found @")
+    "Invalid unicode literal. Expected hex digit, but found @\n" &
+    "\\U123@a\n" &
+    "^")
   check(raisesMsg(r"\UFFFFFFFF") ==
-    "Invalid unicode literal near position 2. " &
-    "FFFFFFFF value is too big.")
+    "Invalid unicode literal. FFFFFFFF value is too big\n" &
+    "\\UFFFFFFFF\n" &
+    "^")
   check("a".isMatch(re"\x{61}"))
   check("a".isMatch(re"\x{061}"))
   check(not "b".isMatch(re"\x{61}"))
@@ -897,13 +902,17 @@ test "tliterals":
   check(raises(r"\x{FFFFFFFF}"))
   check(not raises(r"\x{7fffffff}"))
   check(raisesMsg(r"\x{2f894") ==
-    "Invalid unicode literal near position 3, missing `}`")
+    "Invalid unicode literal. Expected `}`\n" &
+    "\\x{2f894\n" &
+    "^")
   check(raisesMsg(r"\x{00000000A}") ==
-    "Invalid unicode literal near position 3, " &
-    "expected at most 8 chars, found 9")
+    "Invalid unicode literal. Expected at most 8 chars, found 9\n" &
+    "\\x{00000000A}\n" &
+    "^")
   check(raisesMsg(r"\x{61@}") ==
-    "Invalid unicode literal near position 3. " &
-    "Expected hex digit, but found @")
+    "Invalid unicode literal. Expected hex digit, but found @\n" &
+    "\\x{61@}\n" &
+    "^")
   check("a".isMatch(re"\x61"))
   check("aa".isMatch(re"\x61a"))
   check("a".isMatch(re"\x61"))

@@ -167,10 +167,6 @@ type
   ## raised when the pattern
   ## is not a valid regex
 
-proc check(cond: bool, msg: string) =
-  if not cond:
-    raise newException(RegexError, msg)
-
 proc `%%`(formatstr: string, a: openArray[string]): string
     {.noSideEffect, raises: [].} =
   ## same as ``"$#" % ["foo"]`` but
@@ -182,6 +178,28 @@ proc `%%`(formatstr: string, a: openArray[string]): string
 
 proc `%%`(formatstr: string, a: string): string =
   formatstr %% [a]
+
+proc check(cond: bool, msg: string) =
+  if not cond:
+    raise newException(RegexError, msg)
+
+proc check(cond: bool, msg: string, at: int, exp: string) =
+  if not cond:
+    # todo: overflow check
+    let span = max(0, at-15) .. min(exp.len-1, at+15)
+    var pointer = span.a
+    var expMsg = msg
+    expMsg.add("\n")
+    if span.a > 0:
+      let cleft = "~$# chars~" %% $span.a
+      inc(pointer, cleft.len)
+      expMsg.add(cleft)
+    expMsg.add(runeSubStr(exp, span.a, span.b+1))
+    if span.b < exp.len-1:
+      expMsg.add("~$# chars~" %% $span.b)
+    expMsg.add("\n")
+    expMsg.add(align("^", pointer))
+    raise newException(RegexError, expMsg)
 
 const
   # This is used as start
@@ -643,6 +661,7 @@ proc `$`(n: seq[Node]): string =
   for nn in n:
     result.add($nn)
 
+# todo: I think seqs already do this. So can use that + a few helpers
 type
   ElasticSeq[T] = object
     ## a seq that can grow and shrink
@@ -709,6 +728,7 @@ type
   Scanner[T: Rune|Node] = ref object
     ## A scanner is a common
     ## construct for reading data
+    raw: string
     s: seq[T]
     pos: int
 
@@ -717,6 +737,12 @@ proc newScanner[T](s: seq[T]): Scanner[T] =
 
 proc scan[T](s: seq[T]): Scanner[T] =
   newScanner(s)
+
+proc scan(raw: string): Scanner[Rune] =
+  Scanner[Rune](
+    raw: raw,
+    s: raw.toRunes,
+    pos: 0)
 
 iterator items[T](sc: Scanner[T]): T =
   ## the yielded item gets consumed
@@ -842,24 +868,27 @@ proc parseUnicodeLit(sc: Scanner[Rune], size: int): Node =
   for i in 0 ..< size:
     check(
       not sc.finished,
-      ("Invalid unicode literal near position $#. " &
-       "Expected $# hex digits, but found $#") %%
-      [$startPos, $size, $i])
+      ("Invalid unicode literal. " &
+       "Expected $# hex digits, but found $#") %% [$size, $i],
+      startPos,
+      sc.raw)
     check(
       sc.curr.int in {
         '0'.ord .. '9'.ord,
         'a'.ord .. 'z'.ord,
         'A'.ord .. 'Z'.ord},
-      ("Invalid unicode literal near position $#. " &
-       "Expected hex digit, but found $#") %%
-      [$startPos, $sc.curr])
+      ("Invalid unicode literal. " &
+       "Expected hex digit, but found $#") %% $sc.curr,
+      startPos,
+      sc.raw)
     rawCP[i] = sc.next().int.char
   var cp = 0
   discard parseHex(rawCp, cp)
   check(
     cp != -1 and cp <= int32.high,
-    ("Invalid unicode literal near position $#. " &
-     "$# value is too big.") %% [$startPos, rawCp])
+    "Invalid unicode literal. $# value is too big" %% rawCp,
+    startPos,
+    sc.raw)
   result = Rune(cp).toCharNode
 
 proc parseUnicodeLitX(sc: Scanner[Rune]): Node =
@@ -868,18 +897,21 @@ proc parseUnicodeLitX(sc: Scanner[Rune]): Node =
   let litEnd = sc.find("}".toRune)
   check(
     litEnd != -1,
-    ("Invalid unicode literal near position $#, " &
-     "missing `}`") %% $sc.pos)
+    "Invalid unicode literal. Expected `}`",
+    sc.pos,
+    sc.raw)
   check(
     litEnd <= 8,
-    ("Invalid unicode literal near position $#, " &
-     "expected at most 8 chars, found $#") %%
-    [$sc.pos, $litEnd])
+    ("Invalid unicode literal. " &
+     "Expected at most 8 chars, found $#") %% $litEnd,
+     sc.pos,
+     sc.raw)
   result = parseUnicodeLit(sc, litEnd)
   check(
     sc.peek == "}".toRune,
-    ("Invalid unicode literal, " &
-     "`}` expected at position $#") %% $(sc.pos + 1))
+    "Invalid unicode literal. Expected `}`",
+    sc.pos+1,
+    sc.raw)
   discard sc.next()
 
 proc parseOctalLit(sc: Scanner[Rune]): Node =
@@ -1447,7 +1479,7 @@ proc parse(expression: string): seq[Node] =
   ## into a ``Node`` expression
   result = newSeqOfCap[Node](expression.len)
   var vb = initElasticSeq[bool](64)
-  let sc = expression.toRunes.scan()
+  let sc = expression.scan()
   for _ in sc:
     if sc.skip(vb):
       continue
@@ -2598,6 +2630,18 @@ proc split*(s: string, sep: Regex): seq[string] =
   result = newSeqOfCap[string](s.len)
   for w in s.split(sep):
     result.add(w)
+
+#[]
+proc splitIncl(s: string, sep: Regex): seq[string] =
+  while last <= s.len:
+    first = last
+    while last <= s.len:
+      n = matchEndImpl(ds, s, sep, last)
+      if n > 0: break
+      s.runeIncAt(last)
+    yield substr(s, first, last - 1)
+    if n > 0: last = n
+]#
 
 proc startsWith*(s: string, pattern: Regex, start = 0): bool =
   ## return whether the string

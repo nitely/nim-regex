@@ -251,18 +251,28 @@ test "tnot_white_space_shorthand":
   check("zz".isMatch(re"[\z][\z]"))
   check(not "z".isMatch(re"[\z][\z]"))
   check(raisesMsg(r"[a-\w]") ==
-    "Invalid set range near position 5, " &
-    "range can't contain a character-class or assertion")
+    "Invalid set range. Range can't contain " &
+    "a character-class or assertion\n" &
+    "[a-\\w]\n" &
+    "   ^")
   check(not raises(r"[a-\b]"))
   check(raisesMsg(r"[d-c]") ==
-    "Invalid set range near position 4, " &
-    "start must be lesser than end")
+    "Invalid set range. " &
+    "Start must be lesser than end\n" &
+    "[d-c]\n" &
+    "   ^")
   check(raisesMsg(r"abc[]") ==
-    "Invalid set near position 4, missing close symbol")
+    "Invalid set. Expected `]`\n" &
+    "abc[]\n" &
+    "   ^")
   check(raisesMsg(r"[]abc") ==
-    "Invalid set near position 1, missing close symbol")
+    "Invalid set. Expected `]`\n" &
+    "[]abc\n" &
+    "^")
   check(raisesMsg(r"[abc") ==
-    "Invalid set near position 1, missing close symbol")
+    "Invalid set. Expected `]`\n" &
+    "[abc\n" &
+    "^")
   check(raises(r"[a"))
   check(raises(r"[a-"))
   check(raises(r"[-a"))
@@ -294,8 +304,9 @@ test "tnot_set":
     @[@["<asd123!@#>"]])
   check(not "a".isMatch(re"[^a]"))
   check(raisesMsg(r"[^]") ==
-    "Invalid set near position 1, " &
-    "missing close symbol")
+    "Invalid set. Expected `]`\n" &
+    "[^]\n" &
+    "^")
   check("^".isMatch(re"[\^]"))
   check("a".isMatch(re"[\^a]"))
   check(not "^".isMatch(re"[^^]"))
@@ -912,7 +923,7 @@ test "tliterals":
   check(raisesMsg(r"\x{61@}") ==
     "Invalid unicode literal. Expected hex digit, but found @\n" &
     "\\x{61@}\n" &
-    "^")
+    " ^")
   check("a".isMatch(re"\x61"))
   check("aa".isMatch(re"\x61a"))
   check("a".isMatch(re"\x61"))
@@ -922,11 +933,13 @@ test "tliterals":
   check("\u1ff".isMatch(re"\777"))
   check("888".isMatch(re"\888"))
   check(raisesMsg(r"\12") ==
-    "Invalid octal literal near position 1. " &
-    "Expected 3 octal digits, but found 2")
+    "Invalid octal literal. Expected 3 octal digits, but found 2\n" &
+    "\\12\n" &
+    "^")
   check(raisesMsg(r"\12@") ==
-    "Invalid octal literal near position 1. " &
-    "Expected octal digit, but found @")
+    "Invalid octal literal. Expected octal digit, but found @\n" &
+    "\\12@\n" &
+    "^")
 
 test "tchar_class":
   check("a".isMatch(re"\pL"))
@@ -939,19 +952,30 @@ test "tchar_class":
   check("+".isMatch(re"\pS"))
   check(" ".isMatch(re"\pZ"))
   check(raisesMsg(r"\pB") ==
-    "Invalid unicode name near position 2. Found B")
+    "Invalid unicode name. Found B\n" &
+    "\\pB\n" &
+    "^")
   check(raisesMsg(r"\p11") ==
-    "Invalid unicode name near position 2. Found 1")
+    "Invalid unicode name. Found 1\n" &
+    "\\p11\n" &
+    "^")
   check("a".isMatch(re"\p{L}"))
   check("ǅ".isMatch(re"\p{Lt}"))
   check(not "ǅ".isMatch(re"\P{Lt}"))
   check(not "a".isMatch(re"\p{Lt}"))
   check("a".isMatch(re"\P{Lt}"))
   check(raisesMsg(r"\p{Bb}") ==
-    "Invalid unicode name near position 2. Found Bb")
+    "Invalid unicode name. Found Bb\n" &
+    "\\p{Bb}\n" &
+    "^")
   check(raisesMsg(r"\p{11}") ==
-    "Invalid unicode name, expected char in range " &
-    "a-z, A-Z at position 4")
+    "Invalid unicode name. Expected chars in {'a'..'z', 'A'..'Z'}\n" &
+    "\\p{11}\n" &
+    "^")
+  check(raisesMsg(r"\p{11") ==
+    "Invalid unicode name. Expected `}`\n" &
+    "\\p{11\n" &
+    "^")
 
 test "tascii_set":
   check("d".isMatch(re"[[:alnum:]]"))
@@ -960,8 +984,10 @@ test "tascii_set":
   check("{".isMatch(re"[[:alnum:]{]"))
   check("-".isMatch(re"[[:alnum:]-z]"))
   check(raisesMsg(r"[z-[:alnum:]]") ==
-    "Invalid set range near position 4, " &
-    "start must be lesser than end")
+    "Invalid set range. " &
+    "Start must be lesser than end\n" &
+    "[z-[:alnum:]]\n" &
+    "   ^")
   check("a".isMatch(re"[[[[:alnum:]]"))
   check("[".isMatch(re"[[[:alnum:]]"))
   check(not ":".isMatch(re"[[:alnum:]]"))
@@ -973,12 +999,17 @@ test "tascii_set":
   check("5".isMatch(re"[[:alpha:][:digit:]]"))
   check("a".isMatch(re"[[:alpha:][:digit:]]"))
   check(raisesMsg(r"[[:abc:]]") ==
-    "Invalid ascii set near position 2. " &
-    "`abc` is not a valid name")
+    "Invalid ascii set. `abc` is not a valid name\n" &
+    "[[:abc:]]\n" &
+    " ^")
   check(raisesMsg(r"[[:alnum]]") ==
-    "Invalid ascii set near position 2, expected [:name:]")
+    "Invalid ascii set. Expected [:name:]\n" &
+    "[[:alnum]]\n" &
+    " ^")
   check(raisesMsg(r"[[:alnum:") ==
-    "Invalid ascii set near position 2, expected [:name:]")
+    "Invalid ascii set. Expected [:name:]\n" &
+    "[[:alnum:\n" &
+    " ^")
 
 test "treplace":
   check("a".replace(re"(a)", "m($1)") ==

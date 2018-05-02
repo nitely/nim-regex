@@ -187,18 +187,18 @@ proc check(cond: bool, msg: string, at: int, exp: string) =
   if not cond:
     # todo: overflow check
     let span = max(0, at-15) .. min(exp.len-1, at+15)
-    var pointer = span.a
+    var mark = at
     var expMsg = msg
     expMsg.add("\n")
     if span.a > 0:
       let cleft = "~$# chars~" %% $span.a
-      inc(pointer, cleft.len)
+      mark = cleft.len+15
       expMsg.add(cleft)
     expMsg.add(runeSubStr(exp, span.a, span.b+1))
     if span.b < exp.len-1:
       expMsg.add("~$# chars~" %% $span.b)
     expMsg.add("\n")
-    expMsg.add(align("^", pointer))
+    expMsg.add(align("^", mark))
     raise newException(RegexError, expMsg)
 
 const
@@ -863,7 +863,7 @@ proc toEscapedNode(r: Rune): Node =
     result = r.toEscapedSeqNode
 
 proc parseUnicodeLit(sc: Scanner[Rune], size: int): Node =
-  let startPos = sc.pos
+  let startPos = sc.pos-1
   var rawCP = newString(size)
   for i in 0 ..< size:
     check(
@@ -892,26 +892,23 @@ proc parseUnicodeLit(sc: Scanner[Rune], size: int): Node =
   result = Rune(cp).toCharNode
 
 proc parseUnicodeLitX(sc: Scanner[Rune]): Node =
+  let startPos = sc.pos-1
   assert sc.peek == "{".toRune
   discard sc.next()
   let litEnd = sc.find("}".toRune)
   check(
     litEnd != -1,
     "Invalid unicode literal. Expected `}`",
-    sc.pos,
+    startPos,
     sc.raw)
   check(
     litEnd <= 8,
     ("Invalid unicode literal. " &
      "Expected at most 8 chars, found $#") %% $litEnd,
-     sc.pos,
-     sc.raw)
-  result = parseUnicodeLit(sc, litEnd)
-  check(
-    sc.peek == "}".toRune,
-    "Invalid unicode literal. Expected `}`",
-    sc.pos+1,
+    startPos,
     sc.raw)
+  result = parseUnicodeLit(sc, litEnd)
+  assert sc.peek == "}".toRune
   discard sc.next()
 
 proc parseOctalLit(sc: Scanner[Rune]): Node =
@@ -920,41 +917,43 @@ proc parseOctalLit(sc: Scanner[Rune]): Node =
   for i in 0 ..< 3:
     check(
       not sc.finished,
-      ("Invalid octal literal near position $#. " &
-       "Expected 3 octal digits, but found $#") %%
-      [$startPos, $i])
+      ("Invalid octal literal. " &
+       "Expected 3 octal digits, but found $#") %% $i,
+      startPos,
+      sc.raw)
     check(
       sc.curr.int in {'0'.ord .. '7'.ord},
-      ("Invalid octal literal near position $#. " &
-       "Expected octal digit, but found $#") %%
-      [$startPos, $sc.curr])
+      ("Invalid octal literal. " &
+       "Expected octal digit, but found $#") %% $sc.curr,
+      startPos,
+      sc.raw)
     rawCP[i] = sc.next().int.char
   var cp = 0
   discard parseOct(rawCp, cp)
   result = Rune(cp).toCharNode
 
 proc parseUnicodeNameX(sc: Scanner[Rune]): Node =
-  let startPos = sc.pos
+  let startPos = sc.pos-1
   assert sc.peek == "{".toRune
   discard sc.next()
   let nameEnd = sc.find("}".toRune)
   check(
     nameEnd != -1,
-    ("Invalid unicode name near position $#, " &
-     "missing `}`") %% $sc.pos)
+    "Invalid unicode name. Expected `}`",
+    startPos,
+    sc.raw)
   var name = newString(nameEnd)
   for i in 0 ..< nameEnd:
     check(
       sc.curr.int in {
         'a'.ord .. 'z'.ord,
         'A'.ord .. 'Z'.ord},
-      ("Invalid unicode name, expected char in range " &
-       "a-z, A-Z at position $#" %% $(sc.pos + 1)))
+      "Invalid unicode name. " &
+      "Expected chars in {'a'..'z', 'A'..'Z'}",
+      startPos,
+      sc.raw)
     name[i] = sc.next().int.char
-  check(
-    sc.peek == "}".toRune,
-    ("Invalid unicode name, " &
-     "`}` expected at position $#") %% $(sc.pos + 1))
+  assert sc.peek == "}".toRune
   discard sc.next()
   check(
     name in [
@@ -963,15 +962,16 @@ proc parseUnicodeNameX(sc: Scanner[Rune]): Node =
       "Lm", "Lo", "Pc", "Pd", "Ps", "Pe", "Pi", "Pf", "Po",
       "Sm", "Sc", "Sk", "So", "C", "L", "M", "N",
       "Z", "P", "S"],
-    ("Invalid unicode name near position $#. " &
-     "Found $#") %% [$startPos, name])
+    "Invalid unicode name. Found $#" %% name,
+    startPos,
+    sc.raw)
   result = Node(
     kind: reUCC,
     cp: "¿".toRune,
     cc: name)
 
 proc parseUnicodeName(sc: Scanner[Rune]): Node =
-  let startPos = sc.pos
+  let startPos = sc.pos-1
   case sc.peek
   of "{".toRune:
     result = parseUnicodeNameX(sc)
@@ -980,8 +980,9 @@ proc parseUnicodeName(sc: Scanner[Rune]): Node =
       sc.peek in [
         "C".toRune, "L".toRune, "M".toRune, "N".toRune,
         "Z".toRune, "P".toRune, "S".toRune],
-      ("Invalid unicode name near position $#. " &
-       "Found $#") %% [$startPos, sc.peek.toUTF8])
+      "Invalid unicode name. Found $#" %% sc.peek.toUTF8,
+      startPos,
+      sc.raw)
     result = Node(
       kind: reUCC,
       cp: "¿".toRune,
@@ -1043,8 +1044,9 @@ proc parseAsciiSet(sc: Scanner[Rune]): Node =
     name.add(r.toUTF8)
   check(
     sc.peek == "]".toRune,
-    ("Invalid ascii set near position $#, " &
-     "expected [:name:]") %% $startPos)
+    "Invalid ascii set. Expected [:name:]",
+    startPos,
+    sc.raw)
   discard sc.next
   case name
   of "alpha":
@@ -1103,9 +1105,11 @@ proc parseAsciiSet(sc: Scanner[Rune]): Node =
       "a".toRune .. "f".toRune,
       "A".toRune .. "F".toRune])
   else:
-    raise newException(RegexError,
-      ("Invalid ascii set near position $#. " &
-       "`$#` is not a valid name") %% [$startPos, name])
+    check(
+      false,
+      "Invalid ascii set. `$#` is not a valid name" %% name,
+      startPos,
+      sc.raw)
 
 proc parseSet(sc: Scanner[Rune]): Node =
   ## parse a set atom (i.e ``[a-z]``) into a
@@ -1157,9 +1161,10 @@ proc parseSet(sc: Scanner[Rune]): Node =
         let nn = parseSetEscapedSeq(sc)
         check(
           nn.kind == reChar,
-          ("Invalid set range near position $#, " &
-           "range can't contain a character-class " &
-           "or assertion") %% $sc.pos)
+          "Invalid set range. Range can't contain " &
+          "a character-class or assertion",
+          sc.pos-1,
+          sc.raw)
         last = nn.cp
       else:
         assert(not sc.finished)
@@ -1167,8 +1172,10 @@ proc parseSet(sc: Scanner[Rune]): Node =
       let first = cps.pop()
       check(
         first <= last,
-        ("Invalid set range near position $#, " &
-         "start must be lesser than end") %% $sc.pos)
+        "Invalid set range. " &
+        "Start must be lesser than end",
+        sc.pos,
+        sc.raw)
       result.ranges.add(first .. last)
       if sc.peek == "-".toRune:
         cps.add(sc.next())
@@ -1184,8 +1191,9 @@ proc parseSet(sc: Scanner[Rune]): Node =
   result.cps.incl(cps.toSet)
   check(
     hasEnd,
-    ("Invalid set near position $#, " &
-     "missing close symbol") %% $startPos)
+    "Invalid set. Expected `]`",
+    startPos,
+    sc.raw)
 
 proc parseRepRange(sc: Scanner[Rune]): Node =
   ## parse a repetition range ``{n,m}``

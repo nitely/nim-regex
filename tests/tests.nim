@@ -572,11 +572,11 @@ test "tnamed_groups":
     @[0..0, 1..1])
 
   check(raisesMsg(r"abc(?Pabc)") ==
-    "Invalid group name. Expected `<`\n" &
+    "Invalid group name. Missing `<`\n" &
     "abc(?Pabc)\n" &
     "   ^")
   check(raisesMsg(r"abc(?P<abc") ==
-    "Invalid group name. Expected `>`\n" &
+    "Invalid group name. Missing `>`\n" &
     "abc(?P<abc\n" &
     "   ^")
   check(raisesMsg(r"a(?P<>abc)") ==
@@ -1183,3 +1183,39 @@ test "tlook_around":
   check(not "ab".isMatch(re"a(?=b)"))
   check(not "ab".isMatch(re"a(?=c)\w"))
   check("ab".matchWithCapt(re"(a(?=b))b") == @[@["a"]])
+
+test "tpretty_errors":
+  block:
+    var exp = ""
+    for _ in 0 ..< 30:
+      exp.add('x')
+    exp.add("(?Pabc")
+    check(raisesMsg(exp) ==
+      "Invalid group name. Missing `<`\n" &
+      "~16 chars~xxxxxxxxxxxxxx(?Pabc\n" &
+      "                        ^")
+  block:
+    var exp = "(?Pabc"
+    for _ in 0 ..< 30:
+      exp.add('x')
+    check(raisesMsg(exp) ==
+      "Invalid group name. Missing `<`\n" &
+      "(?Pabcxxxxxxxxxxxxxxxxxxxxxxxx~6 chars~\n" &
+      "^")
+  block:
+    var exp = ""
+    for _ in 0 ..< 30:
+      exp.add('x')
+    exp.add("(?Pabc")
+    for _ in 0 ..< 30:
+      exp.add('x')
+    check(raisesMsg(exp) ==
+      "Invalid group name. Missing `<`\n" &
+      "~16 chars~xxxxxxxxxxxxxx(?Pabcxxxxxxxxxx~20 chars~\n" &
+      "                        ^")
+  check(raisesMsg(r"""(?x)  # comment
+      (?Pabc  # comment
+      # comment""") ==
+    "Invalid group name. Missing `<`\n" &
+    "~8 chars~comment       (?Pabc  # commen~17 chars~\n" &
+    "                       ^")

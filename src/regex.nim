@@ -185,18 +185,18 @@ proc check(cond: bool, msg: string) =
 
 proc check(cond: bool, msg: string, at: int, exp: string) =
   if not cond:
-    # todo: overflow check
-    let span = max(0, at-15) .. min(exp.len-1, at+15)
+    # todo: overflow checks
+    let start = max(0, at-15)
     var mark = at
     var expMsg = msg
     expMsg.add("\n")
-    if span.a > 0:
-      let cleft = "~$# chars~" %% $span.a
+    if start > 0:
+      let cleft = "~$# chars~" %% $start
       mark = cleft.len+15
       expMsg.add(cleft)
-    expMsg.add(runeSubStr(exp, span.a, span.b+1))
-    if span.b < exp.len-1:
-      expMsg.add("~$# chars~" %% $span.b)
+    expMsg.add(runeSubStr(exp, start, 30).replace("\n", " "))
+    if start+30 < exp.len:
+      expMsg.add("~$# chars~" %% $(exp.len - start - 30))
     expMsg.add("\n")
     expMsg.add(align("^", mark))
     raise newException(RegexError, expMsg)
@@ -1285,7 +1285,7 @@ proc parseGroupTag(sc: Scanner[Rune]): Node =
     discard sc.next()
     prettycheck(
       sc.peek == "<".toRune,
-      "Invalid group name. Expected `<`")
+      "Invalid group name. Missing `<`")
     discard sc.next()  # Consume "<"
     var name = newStringOfCap(75)
     for r in sc:
@@ -1306,7 +1306,7 @@ proc parseGroupTag(sc: Scanner[Rune]): Node =
       "Invalid group name. Name can't be empty")
     prettycheck(
       sc.prev == ">".toRune,
-      "Invalid group name. Expected `>`")
+      "Invalid group name. Missing `>`")
     checkEmptyGroup()
     result = initGroupStart(name)
   of "i".toRune,

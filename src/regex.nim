@@ -195,7 +195,7 @@ proc check(cond: bool, msg: string, at: int, exp: string) =
       mark = cleft.len+15
       expMsg.add(cleft)
     const spaces = repeat(' ', "\n".len)
-    expMsg.add(runeSubStr(exp, start, 30).replace("\n", spaces))
+    expMsg.add(exp.replace("\n", spaces).runeSubStr(start, 30))
     if start+30 < exp.len:
       expMsg.add("~$# chars~" %% $(exp.len - start - 30))
     expMsg.add("\n")
@@ -1272,7 +1272,7 @@ proc parseGroupTag(sc: Scanner[Rune]): Node =
   ## if it's not special enough
   # A regular group
   let startPos = sc.pos
-  if sc.curr != "?".toRune:
+  if sc.peek != "?".toRune:
     checkEmptyGroup()
     result = initGroupStart()
     return
@@ -1363,7 +1363,7 @@ proc parseGroupTag(sc: Scanner[Rune]): Node =
   else:
     prettycheck(
       false,
-      "Invalid group. Unknown group type `$#`" %% $sc.curr)
+      "Invalid group. Unknown group type")
 
 proc subParse(sc: Scanner[Rune]): Node =
   let r = sc.prev

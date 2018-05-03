@@ -773,7 +773,7 @@ test "tflags":
     "Invalid group flag, found -q but " &
     "expected one of: -i, -m, -s, -U or -u")
   check(raisesMsg(r"abc(?q)") ==
-    "Invalid group. Unknown group type `q`\n" &
+    "Invalid group. Unknown group type\n" &
     "abc(?q)\n" &
     "   ^")
 

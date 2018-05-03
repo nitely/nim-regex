@@ -194,7 +194,8 @@ proc check(cond: bool, msg: string, at: int, exp: string) =
       let cleft = "~$# chars~" %% $start
       mark = cleft.len+15
       expMsg.add(cleft)
-    expMsg.add(runeSubStr(exp, start, 30).replace("\n", " "))
+    const spaces = align("", "\n".len)
+    expMsg.add(runeSubStr(exp, start, 30).replace("\n", spaces))
     if start+30 < exp.len:
       expMsg.add("~$# chars~" %% $(exp.len - start - 30))
     expMsg.add("\n")

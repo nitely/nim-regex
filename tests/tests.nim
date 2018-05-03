@@ -262,15 +262,15 @@ test "tnot_white_space_shorthand":
     "[d-c]\n" &
     "   ^")
   check(raisesMsg(r"abc[]") ==
-    "Invalid set. Expected `]`\n" &
+    "Invalid set. Missing `]`\n" &
     "abc[]\n" &
     "   ^")
   check(raisesMsg(r"[]abc") ==
-    "Invalid set. Expected `]`\n" &
+    "Invalid set. Missing `]`\n" &
     "[]abc\n" &
     "^")
   check(raisesMsg(r"[abc") ==
-    "Invalid set. Expected `]`\n" &
+    "Invalid set. Missing `]`\n" &
     "[abc\n" &
     "^")
   check(raises(r"[a"))
@@ -304,7 +304,7 @@ test "tnot_set":
     @[@["<asd123!@#>"]])
   check(not "a".isMatch(re"[^a]"))
   check(raisesMsg(r"[^]") ==
-    "Invalid set. Expected `]`\n" &
+    "Invalid set. Missing `]`\n" &
     "[^]\n" &
     "^")
   check("^".isMatch(re"[\^]"))
@@ -384,16 +384,18 @@ test "trepetition_range":
   check("a".matchWithCapt(re"(a{1,})") == @[@["a"]])
   check("aaa".matchWithCapt(re"(a{1,})") == @[@["aaa"]])
   check(raisesMsg(r"a{bad}") ==
-    "Invalid repetition range near " &
-    "position 3, can only contain [0-9]")
+    "Invalid repetition range. Range can only contain digits\n" &
+    "a{bad}\n" &
+    " ^")
   check(raisesMsg(r"a{1111111111}") ==
-    "Invalid repetition range near " &
-    "position 13, max value is 32767, " &
-    "but found: 1111111111, 1111111111")
+    "Invalid repetition range. Max value is 32767\n" &
+    "a{1111111111}\n" &
+    " ^")
   check(raisesMsg(r"a{0,101}") ==
-    "Invalid repetition range near " &
-    "position 8, can't have a range " &
-    "greater than 100 repetitions, but found: 101")
+    "Invalid repetition range. Expected 100 repetitions " &
+    "or less, but found: 101\n" &
+    "a{0,101}\n" &
+    " ^")
   check(not raises(r"a{1,101}"))
   check(raises(r"a{0,a}"))
   check(raises(r"a{a,1}"))
@@ -570,26 +572,33 @@ test "tnamed_groups":
     @[0..0, 1..1])
 
   check(raisesMsg(r"abc(?Pabc)") ==
-    "Invalid group name near position " &
-    "4, < opening symbol was expected")
+    "Invalid group name. Expected `<`\n" &
+    "abc(?Pabc)\n" &
+    "   ^")
   check(raisesMsg(r"abc(?P<abc") ==
-    "Invalid group name near position 4, " &
-    "> closing symbol was expected")
+    "Invalid group name. Expected `>`\n" &
+    "abc(?P<abc\n" &
+    "   ^")
   check(raisesMsg(r"a(?P<>abc)") ==
-    "Invalid group name near position 2, " &
-    "name can't be empty")
+    "Invalid group name. Name can't be empty\n" &
+    "a(?P<>abc)\n" &
+    " ^")
   check(raisesMsg(r"(a)b)") ==
     "Invalid capturing group. " &
     "Found too many closing symbols")
   check(raisesMsg(r"(b(a)") ==
     "Invalid capturing group. " &
     "Found too many opening symbols")
-  check(raisesMsg(r"()") ==
-    "Invalid group near position 1, " &
-    "empty group is not allowed")
+  check(raisesMsg(r"a()") ==
+    "Invalid group. Empty group is not allowed\n" &
+    "a()\n" &
+    " ^")
   check(raisesMsg(r"a(?P<asd)") ==
-    "Invalid group name near position 2. " &
-    "Expected: a-z, A-Z, 0-9, -, or _. But found `)`")
+    "Invalid group name. Expected char in " &
+    "{'a'..'z', 'A'..'Z', '0'..'9', '-', '_'}, " &
+    "but found `)`\n" &
+    "a(?P<asd)\n" &
+    " ^")
   check(not raises(r"(?P<abcdefghijklmnopqrstuvwxyz" &
     "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_>abc)"))
   check(not raises(r"(\b)"))
@@ -764,8 +773,9 @@ test "tflags":
     "Invalid group flag, found -q but " &
     "expected one of: -i, -m, -s, -U or -u")
   check(raisesMsg(r"abc(?q)") ==
-    "Invalid group near position 4, " &
-    "unknown group type (?q...)")
+    "Invalid group. Unknown group type `q`\n" &
+    "abc(?q)\n" &
+    "   ^")
 
 test "tor_op":
   check(raisesMsg(r"|") ==

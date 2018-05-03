@@ -201,6 +201,9 @@ proc check(cond: bool, msg: string, at: int, exp: string) =
     expMsg.add(align("^", mark))
     raise newException(RegexError, expMsg)
 
+template prettyCheck(cond: bool, msg: string) {.dirty.} =
+  check(cond, msg, startPos, sc.raw)
+
 const
   # This is used as start
   # and end of string. It should
@@ -656,7 +659,7 @@ proc `$`(n: Node): string =
   else:
     n.cp.toUTF8
 
-proc `$`(n: seq[Node]): string =
+proc `$`(n: seq[Node]): string {.used.} =
   result = newStringOfCap(n.len)
   for nn in n:
     result.add($nn)
@@ -866,29 +869,23 @@ proc parseUnicodeLit(sc: Scanner[Rune], size: int): Node =
   let startPos = sc.pos-1
   var rawCP = newString(size)
   for i in 0 ..< size:
-    check(
+    prettycheck(
       not sc.finished,
       ("Invalid unicode literal. " &
-       "Expected $# hex digits, but found $#") %% [$size, $i],
-      startPos,
-      sc.raw)
-    check(
+       "Expected $# hex digits, but found $#") %% [$size, $i])
+    prettycheck(
       sc.curr.int in {
         '0'.ord .. '9'.ord,
         'a'.ord .. 'z'.ord,
         'A'.ord .. 'Z'.ord},
       ("Invalid unicode literal. " &
-       "Expected hex digit, but found $#") %% $sc.curr,
-      startPos,
-      sc.raw)
+       "Expected hex digit, but found $#") %% $sc.curr)
     rawCP[i] = sc.next().int.char
   var cp = 0
   discard parseHex(rawCp, cp)
-  check(
+  prettycheck(
     cp != -1 and cp <= int32.high,
-    "Invalid unicode literal. $# value is too big" %% rawCp,
-    startPos,
-    sc.raw)
+    "Invalid unicode literal. $# value is too big" %% rawCp)
   result = Rune(cp).toCharNode
 
 proc parseUnicodeLitX(sc: Scanner[Rune]): Node =
@@ -896,17 +893,13 @@ proc parseUnicodeLitX(sc: Scanner[Rune]): Node =
   assert sc.peek == "{".toRune
   discard sc.next()
   let litEnd = sc.find("}".toRune)
-  check(
+  prettycheck(
     litEnd != -1,
-    "Invalid unicode literal. Expected `}`",
-    startPos,
-    sc.raw)
-  check(
+    "Invalid unicode literal. Expected `}`")
+  prettycheck(
     litEnd <= 8,
     ("Invalid unicode literal. " &
-     "Expected at most 8 chars, found $#") %% $litEnd,
-    startPos,
-    sc.raw)
+     "Expected at most 8 chars, found $#") %% $litEnd)
   result = parseUnicodeLit(sc, litEnd)
   assert sc.peek == "}".toRune
   discard sc.next()
@@ -915,18 +908,14 @@ proc parseOctalLit(sc: Scanner[Rune]): Node =
   let startPos = sc.pos
   var rawCP = newString(3)
   for i in 0 ..< 3:
-    check(
+    prettycheck(
       not sc.finished,
       ("Invalid octal literal. " &
-       "Expected 3 octal digits, but found $#") %% $i,
-      startPos,
-      sc.raw)
-    check(
+       "Expected 3 octal digits, but found $#") %% $i)
+    prettycheck(
       sc.curr.int in {'0'.ord .. '7'.ord},
       ("Invalid octal literal. " &
-       "Expected octal digit, but found $#") %% $sc.curr,
-      startPos,
-      sc.raw)
+       "Expected octal digit, but found $#") %% $sc.curr)
     rawCP[i] = sc.next().int.char
   var cp = 0
   discard parseOct(rawCp, cp)
@@ -937,34 +926,28 @@ proc parseUnicodeNameX(sc: Scanner[Rune]): Node =
   assert sc.peek == "{".toRune
   discard sc.next()
   let nameEnd = sc.find("}".toRune)
-  check(
+  prettycheck(
     nameEnd != -1,
-    "Invalid unicode name. Expected `}`",
-    startPos,
-    sc.raw)
+    "Invalid unicode name. Expected `}`")
   var name = newString(nameEnd)
   for i in 0 ..< nameEnd:
-    check(
+    prettycheck(
       sc.curr.int in {
         'a'.ord .. 'z'.ord,
         'A'.ord .. 'Z'.ord},
       "Invalid unicode name. " &
-      "Expected chars in {'a'..'z', 'A'..'Z'}",
-      startPos,
-      sc.raw)
+      "Expected chars in {'a'..'z', 'A'..'Z'}")
     name[i] = sc.next().int.char
   assert sc.peek == "}".toRune
   discard sc.next()
-  check(
+  prettycheck(
     name in [
       "Cn", "Lu", "Ll", "Lt", "Mn", "Mc", "Me", "Nd", "Nl",
       "No", "Zs", "Zl", "Zp", "Cc", "Cf", "Cs", "Co", "Cn",
       "Lm", "Lo", "Pc", "Pd", "Ps", "Pe", "Pi", "Pf", "Po",
       "Sm", "Sc", "Sk", "So", "C", "L", "M", "N",
       "Z", "P", "S"],
-    "Invalid unicode name. Found $#" %% name,
-    startPos,
-    sc.raw)
+    "Invalid unicode name. Found $#" %% name)
   result = Node(
     kind: reUCC,
     cp: "¿".toRune,
@@ -976,13 +959,11 @@ proc parseUnicodeName(sc: Scanner[Rune]): Node =
   of "{".toRune:
     result = parseUnicodeNameX(sc)
   else:
-    check(
+    prettycheck(
       sc.peek in [
         "C".toRune, "L".toRune, "M".toRune, "N".toRune,
         "Z".toRune, "P".toRune, "S".toRune],
-      "Invalid unicode name. Found $#" %% sc.peek.toUTF8,
-      startPos,
-      sc.raw)
+      "Invalid unicode name. Found $#" %% sc.peek.toUTF8)
     result = Node(
       kind: reUCC,
       cp: "¿".toRune,
@@ -1042,11 +1023,9 @@ proc parseAsciiSet(sc: Scanner[Rune]): Node =
     if r == ":".toRune:
       break
     name.add(r.toUTF8)
-  check(
+  prettycheck(
     sc.peek == "]".toRune,
-    "Invalid ascii set. Expected [:name:]",
-    startPos,
-    sc.raw)
+    "Invalid ascii set. Expected [:name:]")
   discard sc.next
   case name
   of "alpha":
@@ -1105,11 +1084,9 @@ proc parseAsciiSet(sc: Scanner[Rune]): Node =
       "a".toRune .. "f".toRune,
       "A".toRune .. "F".toRune])
   else:
-    check(
+    prettycheck(
       false,
-      "Invalid ascii set. `$#` is not a valid name" %% name,
-      startPos,
-      sc.raw)
+      "Invalid ascii set. `$#` is not a valid name" %% name)
 
 proc parseSet(sc: Scanner[Rune]): Node =
   ## parse a set atom (i.e ``[a-z]``) into a
@@ -1189,14 +1166,13 @@ proc parseSet(sc: Scanner[Rune]): Node =
       cps.add(cp)
   # todo: use ref and set to nil when empty
   result.cps.incl(cps.toSet)
-  check(
+  prettycheck(
     hasEnd,
-    "Invalid set. Expected `]`",
-    startPos,
-    sc.raw)
+    "Invalid set. Missing `]`")
 
 proc parseRepRange(sc: Scanner[Rune]): Node =
   ## parse a repetition range ``{n,m}``
+  let startPos = sc.pos
   var
     first, last: string
     curr = ""
@@ -1208,10 +1184,9 @@ proc parseRepRange(sc: Scanner[Rune]): Node =
       first = curr
       curr = ""
       continue
-    check(
+    prettycheck(
       cp.int in '0'.ord .. '9'.ord,
-      ("Invalid repetition range near position $#, " &
-       "can only contain [0-9]") %% $sc.pos)
+      "Invalid repetition range. Range can only contain digits")
     curr.add(char(cp.int))
   if first.isNil:  # {n}
     first = curr
@@ -1226,26 +1201,20 @@ proc parseRepRange(sc: Scanner[Rune]): Node =
     discard parseInt(first, firstNum)
     discard parseInt(last, lastNum)
   except OverflowError:
-    raise newException(RegexError,
-      ("Invalid repetition " &
-       "range near position $#, " &
-       "max value is $#, but found: $#, $#") %%
-      [$sc.pos, $int16.high, first, last])
-  check(
+    prettycheck(
+      false,
+      "Invalid repetition range. Max value is $#" %% $int16.high)
+  prettycheck(
     firstNum <= int16.high and
     lastNum <= int16.high,
-    ("Invalid repetition " &
-     "range near position $#, " &
-     "max value is $#, but found: $#, $#") %%
-    [$sc.pos, $int16.high, first, last])
+    "Invalid repetition range. Max value is $#" %% $int16.high)
   # for perf reasons. This becomes a?a?a?...
   # too many parallel states
-  check(
+  prettycheck(
     not (lastNum - firstNum > 100),
-    ("Invalid repetition range near position $#, " &
-     "can't have a range greater than 100 " &
-     "repetitions, but found: $#") %%
-     [$sc.pos, $(lastNum - firstNum)])
+    ("Invalid repetition range. " &
+     "Expected 100 repetitions or less, " &
+     "but found: $#") %% $(lastNum - firstNum))
   result = Node(
     kind: reRepRange,
     min: firstNum.int16,
@@ -1266,6 +1235,7 @@ proc toFlag(r: Rune): Flag =
   of "x".toRune:
     result = flagVerbose
   else:
+    # todo: return err and show a better error msg
     raise newException(RegexError,
       ("Invalid group flag, found $# " &
        "but expected one of: i, m, s, U or u") %% $r)
@@ -1285,15 +1255,15 @@ proc toNegFlag(r: Rune): Flag =
   of "x".toRune:
     result = flagNotVerbose
   else:
+    # todo: return err and show a better error msg
     raise newException(RegexError,
       ("Invalid group flag, found -$# " &
        "but expected one of: -i, -m, -s, -U or -u") %% $r)
 
-template checkEmptyGroup() =
-  check(
+template checkEmptyGroup() {.dirty.} =
+  prettycheck(
     peek(sc) != toRune(")"),
-    ("Invalid group near position $#, " &
-     "empty group is not allowed") %% $startPos)
+    "Invalid group. Empty group is not allowed")
 
 proc parseGroupTag(sc: Scanner[Rune]): Node =
   ## parse a special group (name, flags, non-captures).
@@ -1306,40 +1276,37 @@ proc parseGroupTag(sc: Scanner[Rune]): Node =
     result = initGroupStart()
     return
   discard sc.next()  # Consume "?"
-  case sc.curr
+  case sc.peek
   of ":".toRune:
     discard sc.next()
     checkEmptyGroup()
     result = initGroupStart(isCapturing = false)
   of "P".toRune:
     discard sc.next()
-    check(
-      sc.curr == "<".toRune,
-      ("Invalid group name near position $#, " &
-       "< opening symbol was expected") %% $startPos)
+    prettycheck(
+      sc.peek == "<".toRune,
+      "Invalid group name. Expected `<`")
     discard sc.next()  # Consume "<"
     var name = newStringOfCap(75)
     for r in sc:
       if r == ">".toRune:
         break
-      check(
+      prettycheck(
         r.int in {
           'a'.ord .. 'z'.ord,
           'A'.ord .. 'Z'.ord,
           '0'.ord .. '9'.ord,
           '-'.ord, '_'.ord},
-        ("Invalid group name near position $#. " &
-         "Expected: a-z, A-Z, 0-9, " &
-         "-, or _. But found `$#`") %% [$startPos, $r])
+        ("Invalid group name. Expected char in " &
+         "{'a'..'z', 'A'..'Z', '0'..'9', '-', '_'}, " &
+         "but found `$#`") %% $r)
       name.add(r.int.char)
-    check(
+    prettycheck(
       name.len > 0,
-      ("Invalid group name near position $#, " &
-       "name can't be empty") %% $startPos)
-    check(
+      "Invalid group name. Name can't be empty")
+    prettycheck(
       sc.prev == ">".toRune,
-      ("Invalid group name near position $#, " &
-       "> closing symbol was expected") %% $startPos)
+      "Invalid group name. Expected `>`")
     checkEmptyGroup()
     result = initGroupStart(name)
   of "i".toRune,
@@ -1376,27 +1343,26 @@ proc parseGroupTag(sc: Scanner[Rune]): Node =
     case sc.peek
     of "\\".toRune:
       let n = parseEscapedSeq(sc)
-      check(
+      prettycheck(
         n.kind == reChar,
         "Invalid lookahead. A " &
         "character was expected, but " &
         "found a special symbol")
       result = Node(kind: reLookahead, cp: n.cp)
     else:
-      check(
+      prettycheck(
         not sc.finished,
         "Invalid lookahead. A character " &
         "was expected, but found nothing (end of string)")
       result = Node(kind: reLookahead, cp: sc.next())
-    check(
+    prettycheck(
       sc.peek == ")".toRune,
       "Invalid lookahead, expected closing symbol")
     discard sc.next()
   else:
-    raise newException(RegexError,
-      ("Invalid group near position $#, " &
-       "unknown group type (?$#...)") %%
-      [$startPos, $sc.curr])
+    prettycheck(
+      false,
+      "Invalid group. Unknown group type `$#`" %% $sc.curr)
 
 proc subParse(sc: Scanner[Rune]): Node =
   let r = sc.prev

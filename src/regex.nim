@@ -183,19 +183,31 @@ proc check(cond: bool, msg: string) =
   if not cond:
     raise newException(RegexError, msg)
 
+proc isAsciiPrintable(s: string): bool =
+  result = true
+  for c in s.runes:
+    if c.int notin {' '.ord .. '~'.ord}:
+      return false
+
 proc check(cond: bool, msg: string, at: int, exp: string) =
   if not cond:
     # todo: overflow checks
-    let start = max(0, at-15)
+    const spaces = repeat(' ', "\n".len)
+    var exp = exp.replace("\n", spaces)
+    var start = max(0, at-15)
     var mark = at
     var expMsg = msg
     expMsg.add("\n")
-    if start > 0:
+    if not exp[start .. at-1].isAsciiPrintable:
+      start = at-1
+      let cleft = "~$# chars~" %% $start
+      mark = cleft.len+1
+      expMsg.add(cleft)
+    elif start > 0:
       let cleft = "~$# chars~" %% $start
       mark = cleft.len+15
       expMsg.add(cleft)
-    const spaces = repeat(' ', "\n".len)
-    expMsg.add(exp.replace("\n", spaces).runeSubStr(start, 30))
+    expMsg.add(exp.runeSubStr(start, 30))
     if start+30 < exp.len:
       expMsg.add("~$# chars~" %% $(exp.len - start - 30))
     expMsg.add("\n")
@@ -1395,11 +1407,10 @@ proc subParse(sc: Scanner[Rune]): Node =
   else:
     r.toCharNode
 
-proc skip(sc: Scanner[Rune], vb: ElasticSeq[bool]): bool =
+proc skipWhiteSpace(sc: Scanner[Rune], vb: ElasticSeq[bool]): bool =
   ## skip white-spaces and comments on verbose mode
-  # todo: consume
   result = false
-  if vb.len == 0 or not vb[vb.high]:
+  if vb.len == 0 or not vb[vb.len-1]:
     return
   result = case sc.prev
   of " ".toRune,
@@ -1456,8 +1467,7 @@ proc parse(expression: string): seq[Node] =
   var vb = initElasticSeq[bool](64)
   let sc = expression.scan()
   for _ in sc:
-    if sc.skip(vb):
-      continue
+    if sc.skipWhiteSpace(vb): continue
     result.add(sc.subParse())
     vb.verbosity(sc, result[^1])
 
@@ -1788,11 +1798,11 @@ proc hasPrecedence(a: NodeKind, b: NodeKind): bool =
   ## associativity. Binary operators
   ## such as: ``|`` (or) and ``~`` (joiner) have
   ## left-to-right associativity
-  result = (
+  result =
     (opsPA(b).associativity == asyRight and
       opsPA(b).precedence <= opsPA(a).precedence) or
     (opsPA(b).associativity == asyLeft and
-      opsPA(b).precedence < opsPA(a).precedence))
+      opsPA(b).precedence < opsPA(a).precedence)
 
 proc popGreaterThan(ops: var ElasticSeq[Node], op: Node): seq[Node] =
   assert op.kind in opKind
@@ -1891,7 +1901,7 @@ proc nfa(expression: seq[Node]): seq[Node] =
   var
     ends = newSeq[End](expression.len + 1)
     states = initElasticSeq[int16](64)
-  ends.fill(@[])
+  ends.fill(@[])  # todo: remove on nim >= 0.18.1
   if expression.len == 0:
     states.add(0)
   for nn in expression:

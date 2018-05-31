@@ -1219,3 +1219,21 @@ test "tpretty_errors":
     "Invalid group name. Missing `<`\n" &
     "~8 chars~comment       (?Pabc  # commen~17 chars~\n" &
     "                       ^")
+  check raisesMsg(r"aaa(?Pabc") ==
+    "Invalid group name. Missing `<`\n" &
+    "aaa(?Pabc\n" &
+    "   ^"
+  check raisesMsg(r"(?Pabc") ==
+    "Invalid group name. Missing `<`\n" &
+    "(?Pabc\n" &
+    "^"
+  # unicode chars may have a wider width,
+  # so better to just truncate them
+  check raisesMsg(r"弢(?Pabc") ==
+    "Invalid group name. Missing `<`\n" &
+    "~1 chars~(?Pabc\n" &
+    "         ^"
+  check raisesMsg(r"弢弢弢(?Pabc") ==
+    "Invalid group name. Missing `<`\n" &
+    "~3 chars~(?Pabc\n" &
+    "         ^"

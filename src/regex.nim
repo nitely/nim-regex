@@ -2023,6 +2023,14 @@ type
     si: int  # match start idx
     ei: int  # match end idx
 
+proc clear(m: var RegexMatch) =
+  if not m.captures.isNil:  # todo: remove check in Nim 0.18.1
+    m.captures.setLen(0)
+  if not m.groups.isNil:  # todo: remove check in Nim 0.18.1
+    m.groups.setLen(0)
+  m.namedGroups.clear()
+  m.boundaries = 0 .. -1
+
 iterator group*(m: RegexMatch, i: int): Slice[int] =
   ## return slices for a given group.
   ## Slices of start > end are empty
@@ -2167,7 +2175,10 @@ proc populateCaptures(
   # then calculate slices for each match
   # (a group can have multiple matches).
   # Note the given `capture` is in reverse order (leaf to root)
-  result.groups = newSeq[Slice[int]](gc)
+  if result.groups.isNil:  # todo: remove in Nim 0.18.1
+    result.groups = newSeq[Slice[int]](gc)
+  else:
+    result.groups.setLen(gc)
   var
     curr = cIdx
     ci = 0
@@ -2185,7 +2196,10 @@ proc populateCaptures(
     else:
       g.b = -1  # 0 .. -1
   assert ci mod 2 == 0
-  result.captures = newSeq[Slice[int]](ci div 2)
+  if result.captures.isNil:  # todo: remove in Nim 0.18.1
+    result.captures = newSeq[Slice[int]](ci div 2)
+  else:
+    result.captures.setLen(ci div 2)
   curr = cIdx
   while curr != 0:
     let
@@ -2335,8 +2349,7 @@ proc setRegexMatch(
   result = false
   for state in ds.currStates:
     if pattern.states[state.ni].kind == reEOE:
-      # todo: reset instead to avoid some reallocations
-      m = RegexMatch()
+      m.clear()
       m.boundaries = state.si .. state.ei - 1
       if pattern.groupsCount > 0:
         m.populateCaptures(ds.captured, state.ci, pattern.groupsCount)

@@ -1723,10 +1723,10 @@ proc expandRepRange(expression: seq[Node]): seq[Node] =
         inc i
         if ne.kind == reGroupStart:
           break
-      assert result[result.len - i].kind == reGroupStart
-      result.add(result[result.len - i .. ^1].expandOneRepRange(n))
+      assert result[result.len-i].kind == reGroupStart
+      result.add(result[result.len-i .. result.len-1].expandOneRepRange(n))
     of matchableKind:
-      result.add(@[result[^1]].expandOneRepRange(n))
+      result.add(result[result.len-1 .. result.len-1].expandOneRepRange(n))
     else:
       raise newException(RegexError, (
         "Invalid repetition range, either " &
@@ -2329,24 +2329,26 @@ proc stepFrom(
     result.step(pattern, state, ds, cp, nxt)
 
 proc setRegexMatch(
-    result: var Option[RegexMatch],
+    m: var RegexMatch,
     pattern: Regex,
-    ds: DataSets) {.inline.} =
+    ds: DataSets): bool {.inline.} =
+  result = false
   for state in ds.currStates:
     if pattern.states[state.ni].kind == reEOE:
-      var m = RegexMatch()
+      # todo: reset instead to avoid some reallocations
+      m = RegexMatch()
       m.boundaries = state.si .. state.ei - 1
       if pattern.groupsCount > 0:
         m.populateCaptures(ds.captured, state.ci, pattern.groupsCount)
         m.namedGroups = pattern.namedGroups
-      result = some(m)
-      return
+      return true
 
 proc matchImpl(
     ds: var DataSets,
     s: string,
     pattern: Regex,
-    start=0): Option[RegexMatch] =
+    m: var RegexMatch,
+    start=0): bool =
   ds.clear()
   let statesCount = pattern.states.high.int16
   for i, cp, nxt in s.peek(start):
@@ -2367,9 +2369,13 @@ proc matchImpl(
         n, pattern, ds, st.ci, st.si, i, cp, nxt)
     swap(ds.currStates, ds.nextStates)
     ds.nextStates.clear()
-  setRegexMatch(result, pattern, ds)
+  result = setRegexMatch(m, pattern, ds)
 
-proc match*(s: string, pattern: Regex, start=0): Option[RegexMatch] =
+proc match*(
+    s: string,
+    pattern: Regex,
+    m: var RegexMatch,
+    start=0): bool =
   ## return a match if the whole string
   ## matches the regular expression. This
   ## is similar to ``find(text, re"^regex$")``
@@ -2382,7 +2388,16 @@ proc match*(s: string, pattern: Regex, start=0): Option[RegexMatch] =
   var ds = initDataSets(
     pattern.states.len,
     pattern.groupsCount > 0)
-  result = matchImpl(ds, s, pattern, start)
+  result = matchImpl(ds, s, pattern, m, start)
+
+proc match*(
+    s: string,
+    pattern: Regex,
+    start=0): Option[RegexMatch] {.deprecated.} =
+  ## Deprecated, use ``match(string, Regex, var RegexMatch)`` instead
+  var m: RegexMatch
+  if match(s, pattern, m, start):
+    result = some(m)
 
 proc contains*(s: string, pattern: Regex): bool =
   ##  search for the pattern anywhere
@@ -2427,7 +2442,8 @@ proc findImpl(
     ds: var DataSets,
     s: string,
     pattern: Regex,
-    start = 0): Option[RegexMatch] =
+    m: var RegexMatch,
+    start = 0): bool =
   ## search through the string looking for the first
   ## location where there is a match
   ds.clear()
@@ -2460,9 +2476,13 @@ proc findImpl(
         n, pattern, ds, st.ci, st.si, i, cp, nxt)
     swap(ds.currStates, ds.nextStates)
     ds.nextStates.clear()
-  setRegexMatch(result, pattern, ds)
+  result = setRegexMatch(m, pattern, ds)
 
-proc find*(s: string, pattern: Regex, start = 0): Option[RegexMatch] =
+proc find*(
+    s: string,
+    pattern: Regex,
+    m: var RegexMatch,
+    start = 0): bool =
   ## search through the string looking for the first
   ## location where there is a match
   ##
@@ -2475,7 +2495,16 @@ proc find*(s: string, pattern: Regex, start = 0): Option[RegexMatch] =
   var ds = initDataSets(
     pattern.states.len,
     pattern.groupsCount > 0)
-  result = findImpl(ds, s, pattern, start)
+  result = findImpl(ds, s, pattern, m, start)
+
+proc find*(
+    s: string,
+    pattern: Regex,
+    start = 0): Option[RegexMatch] {.deprecated.} =
+  ## Deprecated, use ``find(string, Regex, var RegexMatch)`` instead
+  var m: RegexMatch
+  if find(s, pattern, m, start):
+    result = some(m)
 
 proc runeIncAt(s: string, n: var int) {.inline.} =
   ## increment ``n`` up to
@@ -2483,22 +2512,26 @@ proc runeIncAt(s: string, n: var int) {.inline.} =
   inc(n, runeLenAt(s, n))
 
 iterator findAllImpl(
-    ds: var DataSets,
     s: string,
     pattern: Regex,
     start = 0): RegexMatch {.inline.} =
-  var i = start
+  var
+    m: RegexMatch
+    ds = initDataSets(
+      pattern.states.len,
+      pattern.groupsCount > 0)
+    i = start
   while i < s.len:
-    let m = findImpl(ds, s, pattern, i)
-    if not isSome(m): break
-    let mm = m.get()
-    yield mm
-    let b = mm.boundaries
+    if not findImpl(ds, s, pattern, m, i): break
+    let b = m.boundaries
+    yield m
     if b.b == i or b.a > b.b: s.runeIncAt(i)
     else: i = b.b + 1
 
 iterator findAll*(
-    s: string, pattern: Regex, start = 0): RegexMatch {.inline.} =
+    s: string,
+    pattern: Regex,
+    start = 0): RegexMatch {.inline.} =
   ## search through the string and
   ## return each match. Empty matches
   ## (start > end) are included
@@ -2510,11 +2543,7 @@ iterator findAll*(
   ##     doAssert(m.boundaries == expected[i])
   ##     inc i
   ##
-  var
-    ds = initDataSets(
-      pattern.states.len,
-      pattern.groupsCount > 0)
-  for m in findAllImpl(ds, s, pattern, start):
+  for m in findAllImpl(s, pattern, start):
     yield m
 
 proc findAll*(s: string, pattern: Regex, start = 0): seq[RegexMatch] =
@@ -2649,12 +2678,11 @@ proc endsWith*(s: string, pattern: Regex): bool =
   ##
   result = false
   var
-    ds = initDataSets(
-      pattern.states.len,
-      pattern.groupsCount > 0)
+    m: RegexMatch
+    ds = initDataSets(pattern.states.len, false)
     i = 0
   while i < s.len:
-    result = isSome(matchImpl(ds, s, pattern, i))
+    result = matchImpl(ds, s, pattern, m, i)
     if result: return
     s.runeIncAt(i)
 
@@ -2720,10 +2748,7 @@ proc replace*(
   var
     i, j = 0
     capts = newSeq[string](pattern.groupsCount)
-    ds = initDataSets(
-      pattern.states.len,
-      pattern.groupsCount > 0)
-  for m in findAllImpl(ds, s, pattern):
+  for m in findAllImpl(s, pattern):
     result.addsubstr(s, i, m.boundaries.a - 1)
     flatCaptures(capts, m, s)
     if capts.len > 0:
@@ -2758,12 +2783,8 @@ proc replace*(
   ##   doAssert(text.replace(re"((\w)+\s*)", removeEvenWords) == expected)
   ##
   result = ""
-  var
-    i, j = 0
-    ds = initDataSets(
-      pattern.states.len,
-      pattern.groupsCount > 0)
-  for m in findAllImpl(ds, s, pattern):
+  var i, j = 0
+  for m in findAllImpl(s, pattern):
     result.addsubstr(s, i, m.boundaries.a - 1)
     result.add(by(m, s))
     i = m.boundaries.b + 1

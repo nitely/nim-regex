@@ -2395,7 +2395,7 @@ proc match*(
   ## but has better performance
   ##
   ## .. code-block:: nim
-  ##   var m: RegexMatch
+  ##   var m = RegexMatch()
   ##   doAssert "abcd".match(re"abcd", m)
   ##   doAssert(not "abcd".match(re"abc", m))
   ##
@@ -2409,7 +2409,7 @@ proc match*(
     pattern: Regex,
     start=0): Option[RegexMatch] {.deprecated.} =
   ## Deprecated, use ``match(string, Regex, var RegexMatch)`` instead
-  var m: RegexMatch
+  var m = RegexMatch()
   if match(s, pattern, m, start):
     result = some(m)
 
@@ -2501,7 +2501,7 @@ proc find*(
   ## location where there is a match
   ##
   ## .. code-block:: nim
-  ##   var m: RegexMatch
+  ##   var m = RegexMatch()
   ##   doAssert "abcd".find(re"bc", m)
   ##   doAssert(not "abcd".find(re"de", m))
   ##   doAssert "2222".find(re"(22)*", m) and
@@ -2517,7 +2517,7 @@ proc find*(
     pattern: Regex,
     start = 0): Option[RegexMatch] {.deprecated.} =
   ## Deprecated, use ``find(string, Regex, var RegexMatch)`` instead
-  var m: RegexMatch
+  var m = RegexMatch()
   if find(s, pattern, m, start):
     result = some(m)
 
@@ -2531,7 +2531,7 @@ iterator findAllImpl(
     pattern: Regex,
     start = 0): RegexMatch {.inline.} =
   var
-    m: RegexMatch
+    m = RegexMatch()
     ds = initDataSets(
       pattern.states.len,
       pattern.groupsCount > 0)
@@ -2693,7 +2693,7 @@ proc endsWith*(s: string, pattern: Regex): bool =
   ##
   result = false
   var
-    m: RegexMatch
+    m = RegexMatch()
     ds = initDataSets(pattern.states.len, false)
     i = 0
   while i < s.len:

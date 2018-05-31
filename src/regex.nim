@@ -2024,9 +2024,9 @@ type
     ei: int  # match end idx
 
 proc clear(m: var RegexMatch) =
-  if not m.captures.isNil:  # todo: remove check in Nim 0.18.1
+  if m.captures.len > 0:
     m.captures.setLen(0)
-  if not m.groups.isNil:  # todo: remove check in Nim 0.18.1
+  if m.groups.len > 0:
     m.groups.setLen(0)
   m.namedGroups.clear()
   m.boundaries = 0 .. -1
@@ -2395,8 +2395,9 @@ proc match*(
   ## but has better performance
   ##
   ## .. code-block:: nim
-  ##   doAssert("abcd".match(re"abcd").isSome)
-  ##   doAssert(not "abcd".match(re"abc").isSome)
+  ##   var m: RegexMatch
+  ##   doAssert "abcd".match(re"abcd", m)
+  ##   doAssert(not "abcd".match(re"abc", m))
   ##
   var ds = initDataSets(
     pattern.states.len,
@@ -2500,10 +2501,11 @@ proc find*(
   ## location where there is a match
   ##
   ## .. code-block:: nim
-  ##   doAssert("abcd".find(re"bc").isSome)
-  ##   doAssert(not "abcd".find(re"de").isSome)
-  ##   doAssert("2222".find(re"(22)*").get().group(0) ==
-  ##     @[0 .. 1, 2 .. 3])
+  ##   var m: RegexMatch
+  ##   doAssert "abcd".find(re"bc", m)
+  ##   doAssert(not "abcd".find(re"de", m))
+  ##   doAssert "2222".find(re"(22)*", m) and
+  ##     m.group(0) == @[0 .. 1, 2 .. 3]
   ##
   var ds = initDataSets(
     pattern.states.len,

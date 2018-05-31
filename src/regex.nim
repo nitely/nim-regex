@@ -198,7 +198,7 @@ proc check(cond: bool, msg: string, at: int, exp: string) =
     var mark = at
     var expMsg = msg
     expMsg.add("\n")
-    if not exp[start .. at-1].isAsciiPrintable:
+    if not exp.runeSubStr(start, at-1).isAsciiPrintable:
       start = at-1
       let cleft = "~$# chars~" %% $start
       mark = cleft.len+1

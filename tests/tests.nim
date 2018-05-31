@@ -1237,3 +1237,7 @@ test "tpretty_errors":
     "Invalid group name. Missing `<`\n" &
     "~3 chars~(?Pabc\n" &
     "         ^"
+  check raisesMsg(r"弢aaa(?Pabc") ==
+    "Invalid group name. Missing `<`\n" &
+    "~4 chars~(?Pabc\n" &
+    "         ^"

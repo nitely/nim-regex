@@ -13,6 +13,16 @@ Features:
 * Unicode level-1 support
 * Descriptive error messages
 
+## Install
+
+```
+nimble Install regex
+```
+
+# Compatibility
+
+Nim 0.17.2, 0.18.0
+
 ## Docs
 
 [Read the docs](https://nitely.github.io/nim-regex/)

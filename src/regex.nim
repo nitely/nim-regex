@@ -689,7 +689,7 @@ proc initElasticSeq[T](size = 16): ElasticSeq[T] =
   ElasticSeq[T](s: newSeq[T](size), pos: 0)
 
 proc isInitialized[T](ls: ElasticSeq[T]): bool =
-  not ls.s.isNil
+  not ls.s.isNil and ls.s.len > 0
 
 proc `[]`[T](ls: ElasticSeq[T], i: int): T =
   assert i < ls.pos
@@ -1188,6 +1188,7 @@ proc parseRepRange(sc: Scanner[Rune]): Node =
   let startPos = sc.pos
   var
     first, last: string
+    hasFirst = false
     curr = ""
   for cp in sc:
     if cp == "}".toRune:
@@ -1196,12 +1197,13 @@ proc parseRepRange(sc: Scanner[Rune]): Node =
     if cp == ",".toRune:
       first = curr
       curr = ""
+      hasFirst = true
       continue
     prettycheck(
       cp.int in '0'.ord .. '9'.ord,
       "Invalid repetition range. Range can only contain digits")
     curr.add(char(cp.int))
-  if first.isNil:  # {n}
+  if not hasFirst:  # {n}
     first = curr
   if first.len == 0:  # {,m} or {,}
     first.add('0')
@@ -1502,7 +1504,7 @@ proc fillGroups(expression: var seq[Node]): GroupsCapture =
       if n.isCapturing:
         n.idx = count
         inc count
-      if not n.name.isNil:
+      if not n.name.isNil and n.name.len > 0:
         assert n.isCapturing
         names[n.name] = n.idx
     of reGroupEnd:
@@ -1651,7 +1653,7 @@ proc applyFlags(expression: seq[Node]): seq[Node] =
     # Orphan flags are added to current group
     case n.kind
     of reGroupStart:
-      if n.flags.isNil:
+      if n.flags.isNil or n.flags.len == 0:
         flags.add(@[])
         result.add(n)
         continue
@@ -2175,7 +2177,7 @@ proc populateCaptures(
   # then calculate slices for each match
   # (a group can have multiple matches).
   # Note the given `capture` is in reverse order (leaf to root)
-  if result.groups.isNil:  # todo: remove in Nim 0.18.1
+  if result.groups.isNil or result.groups.len == 0:  # todo: remove in Nim 0.18.1
     result.groups = newSeq[Slice[int]](gc)
   else:
     result.groups.setLen(gc)
@@ -2196,7 +2198,7 @@ proc populateCaptures(
     else:
       g.b = -1  # 0 .. -1
   assert ci mod 2 == 0
-  if result.captures.isNil:  # todo: remove in Nim 0.18.1
+  if result.captures.isNil or result.captures.len == 0:  # todo: remove in Nim 0.18.1
     result.captures = newSeq[Slice[int]](ci div 2)
   else:
     result.captures.setLen(ci div 2)
@@ -2521,10 +2523,13 @@ proc find*(
   if find(s, pattern, m, start):
     result = some(m)
 
-proc runeIncAt(s: string, n: var int) {.inline.} =
+template runeIncAt(s: string, n: var int) =
   ## increment ``n`` up to
   ## next rune's index
-  inc(n, runeLenAt(s, n))
+  if n == s.len:
+    inc n
+  else:
+    inc(n, runeLenAt(s, n))
 
 iterator findAllImpl(
     s: string,

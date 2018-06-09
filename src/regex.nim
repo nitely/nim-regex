@@ -2400,7 +2400,7 @@ proc match*(
   ## but has better performance
   ##
   ## .. code-block:: nim
-  ##   var m = RegexMatch()
+  ##   var m: RegexMatch
   ##   doAssert "abcd".match(re"abcd", m)
   ##   doAssert(not "abcd".match(re"abc", m))
   ##
@@ -2506,7 +2506,7 @@ proc find*(
   ## location where there is a match
   ##
   ## .. code-block:: nim
-  ##   var m = RegexMatch()
+  ##   var m: RegexMatch
   ##   doAssert "abcd".find(re"bc", m)
   ##   doAssert(not "abcd".find(re"de", m))
   ##   doAssert "2222".find(re"(22)*", m) and

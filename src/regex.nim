@@ -311,7 +311,7 @@ type
     ranges: seq[Slice[Rune]]  # todo: interval tree
     shorthands: seq[Node]
     # reUCC, reNotUCC
-    cc: string
+    cc: UnicodeCategorySet
 
 proc toCharNode(r: Rune): Node =
   ## return a ``Node`` that is meant to be matched
@@ -484,12 +484,6 @@ proc swapCase(r: Rune): Rune =
   else:
     result = r
 
-proc cmpCharClass(r: Rune, cc: string): bool =
-  if cc.len == 1:
-    cc[0] == r.category()[0]
-  else:
-    cc == r.category()
-
 proc match(n: Node, r: Rune): bool =
   ## match for ``Node`` of matchable kind.
   ## Return whether the node matches
@@ -533,7 +527,7 @@ proc match(n: Node, r: Rune): bool =
   of reWhiteSpaceAscii:
     r.isWhiteSpaceAscii()
   of reUCC:
-    cmpCharClass(r, n.cc)
+    r.unicodeCategory() in n.cc
   of reNotAlphaNumAscii:
     not r.isAlphaNumAscii()
   of reNotDigitAscii:
@@ -541,7 +535,7 @@ proc match(n: Node, r: Rune): bool =
   of reNotWhiteSpaceAscii:
     not r.isWhiteSpaceAscii()
   of reNotUCC:
-    not cmpCharClass(r, n.cc)
+    r.unicodeCategory() notin n.cc
   of reAnyAscii:
     r.isAnyAscii()
   of reAnyNLAscii:
@@ -934,6 +928,15 @@ proc parseOctalLit(sc: Scanner[Rune]): Node =
   discard parseOct(rawCp, cp)
   result = Rune(cp).toCharNode
 
+proc parseCC(s: string): UnicodeCategorySet =
+  try:
+    result = s.categoryMap.UnicodeCategorySet
+  except ValueError:
+    try:
+      result = s.categorySetMap
+    except ValueError:
+      check(false, "Invalid unicode name?")
+
 proc parseUnicodeNameX(sc: Scanner[Rune]): Node =
   let startPos = sc.pos-1
   assert sc.peek == "{".toRune
@@ -964,7 +967,7 @@ proc parseUnicodeNameX(sc: Scanner[Rune]): Node =
   result = Node(
     kind: reUCC,
     cp: "¿".toRune,
-    cc: name)
+    cc: name.parseCC)
 
 proc parseUnicodeName(sc: Scanner[Rune]): Node =
   let startPos = sc.pos-1
@@ -980,7 +983,7 @@ proc parseUnicodeName(sc: Scanner[Rune]): Node =
     result = Node(
       kind: reUCC,
       cp: "¿".toRune,
-      cc: sc.next().toUTF8)
+      cc: sc.next().toUTF8.parseCC)
 
 proc parseEscapedSeq(sc: Scanner[Rune]): Node =
   ## Parse a escaped sequence

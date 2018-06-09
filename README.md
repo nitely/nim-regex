@@ -16,7 +16,7 @@ Features:
 ## Install
 
 ```
-nimble Install regex
+nimble install regex
 ```
 
 # Compatibility

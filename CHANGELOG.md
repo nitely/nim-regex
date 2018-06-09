@@ -6,6 +6,10 @@ v0.7.1
 v0.7.0
 ==================
 
+* New API taking `var RegexMatch` instead
+  of returning `Option[RegexMatch]`
+* Deprecate `match` and `find`
+  returning `Option[RegexMatch]`
 * Update to unicode 11
 
 v0.6.3

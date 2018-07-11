@@ -860,6 +860,10 @@ test "tfindall":
   check(findAllb("aΪⒶ弢aΪⒶ弢", re"Ⓐ") == @[3 .. 5, 13 .. 15])
   check(findAllb("aaa", re"a*") == @[0 .. 2])
 
+test "tfindandcaptureall":
+  check(findAndCaptureAll("abcabc", re"bc") == @["bc", "bc"])
+  check(findAndCaptureAll("a1b2c3a4b5c6", re"\d") == @["1", "2", "3", "4", "5", "6"])
+
 test "tstarts_with":
   check("abc".startsWith(re"ab"))
   check(not "abc".startsWith(re"bc"))

@@ -2585,6 +2585,20 @@ proc findAll*(s: string, pattern: Regex, start = 0): seq[RegexMatch] =
   for slc in findAll(s, pattern, start):
     result.add(slc)
 
+proc findAndCaptureAll*(s: string, pattern: Regex): seq[string] =
+  ## search through the string and
+  ## return a seq with captures.
+  ##
+  ## .. code-block:: nim
+  ##   let
+  ##     expected = @["1", "2", "3", "4", "5"]
+  ##     res = findAndCaptureAll("a1b2c3d4e5", re"\d")
+  ##   doAssert(res == expected)
+  ##
+  result = @[]
+  for m in s.findAll(pattern):
+    result.add(s[m.boundaries])
+
 proc matchEndImpl(
     ds: var DataSets,
     s: string,

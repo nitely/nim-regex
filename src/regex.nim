@@ -2596,6 +2596,7 @@ proc findAndCaptureAll*(s: string, pattern: Regex): seq[string] =
   ##   doAssert(res == expected)
   ##
   let ms = s.findAll(pattern)
+  result = @[]
   for m in ms:
     result.add(s[m.boundaries])
 

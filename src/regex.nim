@@ -2595,9 +2595,8 @@ proc findAndCaptureAll*(s: string, pattern: Regex): seq[string] =
   ##     res = findAndCaptureAll("a1b2c3d4e5", re"\d")
   ##   doAssert(res == expected)
   ##
-  let ms = s.findAll(pattern)
   result = @[]
-  for m in ms:
+  for m in s.findAll(pattern):
     result.add(s[m.boundaries])
 
 proc matchEndImpl(

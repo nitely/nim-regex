@@ -2585,6 +2585,11 @@ proc findAll*(s: string, pattern: Regex, start = 0): seq[RegexMatch] =
   for slc in findAll(s, pattern, start):
     result.add(slc)
 
+proc findAndCaptureAll*(s: string, pattern: Regex): seq[string] =
+  let ms = s.findAll(pattern)
+  for m in ms:
+    result.add(s[m.boundaries])
+
 proc matchEndImpl(
     ds: var DataSets,
     s: string,

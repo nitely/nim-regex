@@ -2586,6 +2586,15 @@ proc findAll*(s: string, pattern: Regex, start = 0): seq[RegexMatch] =
     result.add(slc)
 
 proc findAndCaptureAll*(s: string, pattern: Regex): seq[string] =
+  ## search through the string and
+  ## return a seq with captures.
+  ##
+  ## .. code-block:: nim
+  ##   let
+  ##     expected = @["1", "2", "3", "4", "5"]
+  ##     res = findAndCaptureAll("a1b2c3d4e5", re"\d")
+  ##   doAssert(res == expected)
+  ##
   let ms = s.findAll(pattern)
   for m in ms:
     result.add(s[m.boundaries])

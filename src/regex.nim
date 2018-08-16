@@ -351,8 +351,8 @@ proc initNotSetNode(): Node =
   initSetNodeImpl(result, reNotSet)
 
 proc initGroupStart(
-    name: string = nil,
-    flags: seq[Flag] = nil,
+    name: string = "",
+    flags: seq[Flag] = @[],
     isCapturing = true): Node =
   ## return a ``reGroupStart`` node
   Node(

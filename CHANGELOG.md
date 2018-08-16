@@ -1,6 +1,11 @@
 v0.7.1
 ==================
 
+* Fixes for devel (#17)
+
+v0.7.1
+==================
+
 * Update dependencies
 
 v0.7.0

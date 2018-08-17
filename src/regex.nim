@@ -682,9 +682,6 @@ type
 proc initElasticSeq[T](size = 16): ElasticSeq[T] =
   ElasticSeq[T](s: newSeq[T](size), pos: 0)
 
-proc isInitialized[T](ls: ElasticSeq[T]): bool =
-  not ls.s.isNil and ls.s.len > 0
-
 proc `[]`[T](ls: ElasticSeq[T], i: int): T =
   assert i < ls.pos
   ls.s[i]
@@ -1507,7 +1504,7 @@ proc fillGroups(expression: var seq[Node]): GroupsCapture =
       if n.isCapturing:
         n.idx = count
         inc count
-      if not n.name.isNil and n.name.len > 0:
+      if n.name.len > 0:
         assert n.isCapturing
         names[n.name] = n.idx
     of reGroupEnd:
@@ -1656,7 +1653,7 @@ proc applyFlags(expression: seq[Node]): seq[Node] =
     # Orphan flags are added to current group
     case n.kind
     of reGroupStart:
-      if n.flags.isNil or n.flags.len == 0:
+      if n.flags.len == 0:
         flags.add(@[])
         result.add(n)
         continue
@@ -2180,7 +2177,7 @@ proc populateCaptures(
   # then calculate slices for each match
   # (a group can have multiple matches).
   # Note the given `capture` is in reverse order (leaf to root)
-  if result.groups.isNil or result.groups.len == 0:  # todo: remove in Nim 0.18.1
+  if result.groups.len == 0:  # todo: remove in Nim 0.18.1
     result.groups = newSeq[Slice[int]](gc)
   else:
     result.groups.setLen(gc)
@@ -2201,7 +2198,7 @@ proc populateCaptures(
     else:
       g.b = -1  # 0 .. -1
   assert ci mod 2 == 0
-  if result.captures.isNil or result.captures.len == 0:  # todo: remove in Nim 0.18.1
+  if result.captures.len == 0:  # todo: remove in Nim 0.18.1
     result.captures = newSeq[Slice[int]](ci div 2)
   else:
     result.captures.setLen(ci div 2)
@@ -2268,7 +2265,7 @@ proc clear(ds: var DataSets) =
   ds.toVisit.clear()
   ds.currStates.clear()
   ds.nextStates.clear()
-  if ds.captured.isInitialized:
+  if ds.captured.len > 0:
     ds.captured.clear()
     ds.captured.add(Capture())
 
@@ -2306,7 +2303,7 @@ proc step(
         toVisitStep(ds.toVisit, n, s.ci, s.si, s.ei)
     of reGroupStart:
       if not (n.isCapturing and
-          ds.captured.isInitialized):
+          ds.captured.len > 0):
         toVisitStep(ds.toVisit, n, s.ci, s.si, s.ei)
         continue
       ds.captured.add(Capture(
@@ -2317,7 +2314,7 @@ proc step(
       toVisitStep(ds.toVisit, n, ds.captured.high, s.si, s.ei)
     of reGroupEnd:
       if not (n.isCapturing and
-          ds.captured.isInitialized):
+          ds.captured.len > 0):
         toVisitStep(ds.toVisit, n, s.ci, s.si, s.ei)
         continue
       ds.captured.add(Capture(
@@ -2607,7 +2604,7 @@ proc matchEndImpl(
   ## return end index of the longest match.
   ## Return ``-1`` when there is no match.
   ## Pattern is anchored to the start of the string
-  assert(not ds.captured.isInitialized)
+  assert ds.captured.len == 0
   ds.clear()
   result = -1
   let statesCount = pattern.states.high.int16

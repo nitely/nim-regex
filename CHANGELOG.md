@@ -1,4 +1,9 @@
-v0.7.1
+v0.7.3
+==================
+
+* Fix deprecation warnings on devel
+
+v0.7.2
 ==================
 
 * Fixes for devel (#17)

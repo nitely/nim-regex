@@ -845,6 +845,52 @@ test "tsplit":
       check(s == expected[i])
       inc i
 
+  check split("Words, words, words.", re"\W+") ==
+    @["Words", "words", "words", ""]
+  check split("0a3B9", re"[a-fA-F]+") ==
+    @["0", "3", "9"]
+  check split("1 2 3 4 5 6 ", re" ") ==
+    @["1", "2", "3", "4", "5", "6", ""]
+  check split("1  2  ", re" ") == @["1", "", "2", "", ""]
+  check split("1 2", re" ") == @["1", "2"]
+  check split("foo", re"foo") == @["", ""]
+  check split("", re"foo") == @[""]
+
+# XXX empty maches need fixing not just here, but in general
+test "tsplitIncl":
+  check "a,b".splitIncl(re"(,)") == @["a", ",", "b"]
+  check "12".splitIncl(re"(\d)") == @["", "1", "", "2", ""]
+  check splitIncl("...words, words...", re"(\W+)") ==
+    @["", "...", "words", ", ", "words", "...", ""]
+  check splitIncl("Words, words, words.", re"(\W+)") ==
+    @["Words", ", ", "words", ", ", "words", ".", ""]
+
+  # regular split stuff
+  check(splitIncl("a,b,c", re",") == @["a", "b", "c"])
+  check(
+    splitIncl("00232this02939is39an22example111", re"\d+") ==
+    @["", "this", "is", "an", "example", ""])
+  check(
+    splitIncl("AAA :   : BBB", re"\s*:\s*") == @["AAA", "", "BBB"])
+  check(splitIncl("", re",") == @[""])
+  check(splitIncl(",,", re",") == @["", "", ""])
+  # XXX fixme this should be @["a", "b", "c"] or @["abc"]
+  check(splitIncl("abc", re"") == @["a", "b", "c", ""])
+  check(
+    splitIncl(",a,Ϊ,Ⓐ,弢,", re",") ==
+    @["", "a", "Ϊ", "Ⓐ", "弢", ""])
+  check(splitIncl("弢", re"\xAF") == @["弢"])  # "弢" == "\xF0\xAF\xA2\x94"
+  check splitIncl("Words, words, words.", re"\W+") ==
+    @["Words", "words", "words", ""]
+  check splitIncl("0a3B9", re"[a-fA-F]+") ==
+    @["0", "3", "9"]
+  check splitIncl("1 2 3 4 5 6 ", re" ") ==
+    @["1", "2", "3", "4", "5", "6", ""]
+  check splitIncl("1  2  ", re" ") == @["1", "", "2", "", ""]
+  check splitIncl("1 2", re" ") == @["1", "2"]
+  check splitIncl("foo", re"foo") == @["", ""]
+  check splitIncl("", re"foo") == @[""]
+
 test "tfindall":
   check(findAllb("abcabc", re"bc") == @[1 .. 2, 4 .. 5])
   check(findAllb("aa", re"a") == @[0 .. 0, 1 .. 1])

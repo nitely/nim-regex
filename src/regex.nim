@@ -2679,17 +2679,37 @@ proc split*(s: string, sep: Regex): seq[string] =
   for w in s.split(sep):
     result.add(w)
 
-#[]
-proc splitIncl(s: string, sep: Regex): seq[string] =
+# This is the same as the split proc,
+# except it's based on find instead of matchEnd,
+# 'cause we need the captures an I'm not about to change
+# matchEnd implementation. Also, this *might* be faster,
+# but I need to profile it to prove it
+proc splitIncl*(s: string, sep: Regex): seq[string] =
+  var
+    m = RegexMatch()
+    ds = initDataSets(sep.states.len, true)
+    first = 0
+    last = 0
+    n = 0
   while last <= s.len:
     first = last
-    while last <= s.len:
-      n = matchEndImpl(ds, s, sep, last)
-      if n > 0: break
-      s.runeIncAt(last)
-    yield substr(s, first, last - 1)
-    if n > 0: last = n
-]#
+    m.reset()
+    if findImpl(ds, s, sep, m, last):
+      if m.boundaries.a > m.boundaries.b:
+        n = last+1
+        last = n
+      else:
+        n = m.boundaries.b+1
+        last = m.boundaries.a
+    else:
+      n = s.len+1
+      last = n
+    result.add(substr(s, first, last-1))
+    for g in 0 ..< m.groupsCount:
+      for sl in m.group(g):
+        result.add(substr(s, sl.a, sl.b))
+    if n > 0:
+      last = n
 
 proc startsWith*(s: string, pattern: Regex, start = 0): bool =
   ## return whether the string

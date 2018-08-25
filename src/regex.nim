@@ -2691,6 +2691,7 @@ proc splitIncl*(s: string, sep: Regex): seq[string] =
   ##   doAssert splitIncl("a,b", re"(,)") ==
   ##     @["a", ",", "b"]
   ##
+  result = @[]
   var
     m = RegexMatch()
     ds = initDataSets(sep.states.len, true)

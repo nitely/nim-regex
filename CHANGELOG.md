@@ -1,3 +1,9 @@
+v0.7.4
+==================
+
+* Add `splitIncl`, similar to `split` but
+  includes captured groups
+
 v0.7.3
 ==================
 

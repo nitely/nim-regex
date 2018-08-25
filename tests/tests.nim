@@ -860,6 +860,8 @@ test "tsplit":
 test "tsplitIncl":
   check "a,b".splitIncl(re"(,)") == @["a", ",", "b"]
   check "12".splitIncl(re"(\d)") == @["", "1", "", "2", ""]
+  check splitIncl("aΪⒶ弢", re"(\w)") ==
+    @["", "a", "", "Ϊ", "", "Ⓐ", "", "弢", ""]
   check splitIncl("...words, words...", re"(\W+)") ==
     @["", "...", "words", ", ", "words", "...", ""]
   check splitIncl("Words, words, words.", re"(\W+)") ==

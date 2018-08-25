@@ -2696,7 +2696,8 @@ proc splitIncl*(s: string, sep: Regex): seq[string] =
     m.reset()
     if findImpl(ds, s, sep, m, last):
       if m.boundaries.a > m.boundaries.b:
-        n = last+1
+        n = last
+        s.runeIncAt(n)
         last = n
       else:
         n = m.boundaries.b+1
@@ -2708,8 +2709,7 @@ proc splitIncl*(s: string, sep: Regex): seq[string] =
     for g in 0 ..< m.groupsCount:
       for sl in m.group(g):
         result.add(substr(s, sl.a, sl.b))
-    if n > 0:
-      last = n
+    last = n
 
 proc startsWith*(s: string, pattern: Regex, start = 0): bool =
   ## return whether the string

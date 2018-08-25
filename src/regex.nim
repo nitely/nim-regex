@@ -2685,6 +2685,12 @@ proc split*(s: string, sep: Regex): seq[string] =
 # matchEnd implementation. Also, this *might* be faster,
 # but I need to profile it to prove it
 proc splitIncl*(s: string, sep: Regex): seq[string] =
+  ## return not matched substrings, including captured groups
+  ##
+  ## .. code-block:: nim
+  ##   doAssert splitIncl("a,b", re"(,)") ==
+  ##     @["a", ",", "b"]
+  ##
   var
     m = RegexMatch()
     ds = initDataSets(sep.states.len, true)

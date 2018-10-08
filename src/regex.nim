@@ -153,14 +153,11 @@ import algorithm
 import strutils
 import sets
 import tables
-import options
 import parseutils
 
 import unicodedb/properties
 import unicodedb/types
 import unicodeplus except isUpper, isLower
-
-export Option, isSome, get
 
 type
   RegexError* = object of ValueError
@@ -2044,7 +2041,7 @@ iterator group*(m: RegexMatch, i: int): Slice[int] =
   ##     expected = ["a", "b", "c"]
   ##     text = "abc"
   ##   var m: RegexMatch
-  ##   doAssert text.match(m, re"(\w)+")
+  ##   doAssert text.match(re"(\w)+", m)
   ##   var i = 0
   ##   for bounds in m.group(0):
   ##     doAssert(expected[i] == text[bounds])
@@ -2065,8 +2062,8 @@ iterator group*(m: RegexMatch, s: string): Slice[int] =
   ##   let
   ##     expected = ["a", "b", "c"]
   ##     text = "abc"
-  ##   var m = RegexMatch
-  ##   doAssert text.match(m, re"(?P<foo>\w)+")
+  ##   var m: RegexMatch
+  ##   doAssert text.match(re"(?P<foo>\w)+", m)
   ##   var i = 0
   ##   for bounds in m.group("foo"):
   ##     doAssert(expected[i] == text[bounds])
@@ -2086,11 +2083,11 @@ proc groupsCount*(m: RegexMatch): int =
   ## .. code-block:: nim
   ##   block:
   ##     var m: RegexMatch
-  ##     doAssert "ab".match(m, re"(a)(b)")
+  ##     doAssert "ab".match(re"(a)(b)", m)
   ##     doAssert m.groupsCount == 2
   ##   block:
   ##     var m: RegexMatch
-  ##     doAssert "ab".match(m, re"((ab))")
+  ##     doAssert "ab".match(re"((ab))", m)
   ##     doAssert m.groupsCount == 2
   ##
   m.groups.len
@@ -2408,15 +2405,6 @@ proc match*(
     pattern.groupsCount > 0)
   result = matchImpl(ds, s, pattern, m, start)
 
-proc match*(
-    s: string,
-    pattern: Regex,
-    start=0): Option[RegexMatch] {.deprecated.} =
-  ## Deprecated, use ``match(string, Regex, var RegexMatch)`` instead
-  var m = RegexMatch()
-  if match(s, pattern, m, start):
-    result = some(m)
-
 proc contains*(s: string, pattern: Regex): bool =
   ##  search for the pattern anywhere
   ##  in the string. It returns as soon
@@ -2515,15 +2503,6 @@ proc find*(
     pattern.states.len,
     pattern.groupsCount > 0)
   result = findImpl(ds, s, pattern, m, start)
-
-proc find*(
-    s: string,
-    pattern: Regex,
-    start = 0): Option[RegexMatch] {.deprecated.} =
-  ## Deprecated, use ``find(string, Regex, var RegexMatch)`` instead
-  var m = RegexMatch()
-  if find(s, pattern, m, start):
-    result = some(m)
 
 template runeIncAt(s: string, n: var int) =
   ## increment ``n`` up to

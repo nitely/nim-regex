@@ -1,3 +1,12 @@
+v0.8.0
+==================
+
+* Drop Nim 0.17 support
+* Add Nim 0.19 support
+* Update dependencies
+* Remove deprecated `match` and `find`
+  returning `Option[RegexMatch]`
+
 v0.7.4
 ==================
 

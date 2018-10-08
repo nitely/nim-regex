@@ -482,12 +482,16 @@ test "tgreediness":
   check(
     "aaa".matchWithCapt(re"(a){1,}?(a){1,}?(a)?") ==
     @[@["a"], @["a"], @["a"]])
-  check(
-    "aaaa".match(re"(a*?)(a*?)(a*)").toStrCaptures("aaaa") ==
-    @[@[""], @[""], @["aaaa"]])
-  check(
-    "aaaa".match(re"(a*)(a*?)(a*?)").toStrCaptures("aaaa") ==
-    @[@["aaaa"], @[""], @[""]])
+  block:
+    var m: RegexMatch
+    check match("aaaa", re"(a*?)(a*?)(a*)", m)
+    check m.toStrCaptures("aaaa") ==
+      @[@[""], @[""], @["aaaa"]]
+  block:
+    var m: RegexMatch
+    check match("aaaa", re"(a*)(a*?)(a*?)", m)
+    check m.toStrCaptures("aaaa") ==
+      @[@["aaaa"], @[""], @[""]]
 
 test "tassertions":
   check(
@@ -522,21 +526,30 @@ test "tdot_any_matcher":
   check(not "\L".isMatch(re".*"))
 
 test "tgroup":
-  check("foobar".match(re"(\w*)").get().group(0) == @[0..5])
-  check(
-    "foobar".match(re"(?P<foo>\w*)").get().group(0) == @[0..5])
-  check(
-    "ab".match(re"(a)(b)").get().group(0) == @[0..0])
-  check(
-    "ab".match(re"(a)(b)").get().group(1) == @[1..1])
-  check(
-    "ab".match(re"(a)(b)").toStrCaptures("ab") ==
-    @[@["a"], @["b"]])
+  block:
+    var m: RegexMatch
+    check "foobar".match(re"(\w*)", m)
+    check m.group(0) == @[0..5]
+  block:
+    var m: RegexMatch
+    check "foobar".match(re"(?P<foo>\w*)", m)
+    check m.group(0) == @[0..5]
+  block:
+    var m: RegexMatch
+    check "ab".match(re"(a)(b)", m)
+    check m.group(0) == @[0..0]
+    check m.group(1) == @[1..1]
+  block:
+    var m: RegexMatch
+    check match("ab", re"(a)(b)", m)
+    check m.toStrCaptures("ab") ==
+      @[@["a"], @["b"]]
   block:
     let
       expected = ["a", "b", "c"]
       text = "abc"
-      m = text.match(re"(?P<foo>\w)+").get()
+    var m: RegexMatch
+    check text.match(re"(?P<foo>\w)+", m)
     var i = 0
     for bounds in m.group("foo"):
       check(expected[i] == text[bounds])
@@ -545,31 +558,32 @@ test "tgroup":
     let
       expected = ["a", "b", "c"]
       text = "abc"
-      m = text.match(re"(\w)+").get()
+    var m: RegexMatch
+    check text.match(re"(\w)+", m)
     var i = 0
     for bounds in m.group(0):
       check(expected[i] == text[bounds])
       inc i
 
 test "tnamed_groups":
-  check(
-    "foobar".match(re"(?P<foo>\w*)").get().group("foo") ==
-    @[0..5])
-  check(
-    "foobar".match(re"(?P<foo>(?P<bar>\w*))").get().group("foo") ==
-    @[0..5])
-  check(
-    "foobar".match(re"(?P<foo>(?P<bar>\w*))").get().group("bar") ==
-    @[0..5])
-  check(
-    "aab".match(re"(?P<foo>(?P<bar>a)*b)").get().group("foo") ==
-    @[0..2])
-  check(
-    "aab".match(re"(?P<foo>(?P<bar>a)*b)").get().group("bar") ==
-    @[0..0, 1..1])
-  check(
-    "aab".match(re"((?P<bar>a)*b)").get().group("bar") ==
-    @[0..0, 1..1])
+  block:
+    var m: RegexMatch
+    check "foobar".match(re"(?P<foo>\w*)", m)
+    check m.group("foo") == @[0..5]
+  block:
+    var m: RegexMatch
+    check "foobar".match(re"(?P<foo>(?P<bar>\w*))", m)
+    check m.group("foo") == @[0..5]
+    check m.group("bar") == @[0..5]
+  block:
+    var m: RegexMatch
+    check "aab".match(re"(?P<foo>(?P<bar>a)*b)", m)
+    check m.group("foo") == @[0..2]
+    check m.group("bar") == @[0..0, 1..1]
+  block:
+    var m: RegexMatch
+    check "aab".match(re"((?P<bar>a)*b)", m)
+    check m.group("bar") == @[0..0, 1..1]
 
   check(raisesMsg(r"abc(?Pabc)") ==
     "Invalid group name. Missing `<`\n" &
@@ -800,21 +814,52 @@ test "tescaped_sequences":
   #check("|".isMatch(re"[a|b]"))  # ????
 
 test "tfind":
-  check("abcd".find(re"bc").isSome)
-  check(not "abcd".find(re"ac").isSome)
-  check("a".find(re"").isSome)
-  check("abcd".find(re"^abcd$").isSome)
+  block:
+    var m: RegexMatch
+    check "abcd".find(re"bc", m)
+  block:
+    var m: RegexMatch
+    check(not "abcd".find(re"ac", m))
+  block:
+    var m: RegexMatch
+    check "a".find(re"", m)
+  block:
+    var m: RegexMatch
+    check "abcd".find(re"^abcd$", m)
   check("2222".findWithCapt(re"(22)*") ==
     @[@["22", "22"]])
-  check("2222".find(re"(22)*").get().group(0) ==
-    @[0 .. 1, 2 .. 3])
-  check("abcd".find(re"(ab)").get().group(0) == @[0 .. 1])
-  check("abcd".find(re"(bc)").get().group(0) == @[1 .. 2])
-  check("abcd".find(re"(cd)").get().group(0) == @[2 .. 3])
-  check("abcd".find(re"bc").get().boundaries == 1 .. 2)
-  check("aΪⒶ弢".find(re"Ϊ").get().boundaries == 1 .. 2)
-  check("aΪⒶ弢".find(re"Ⓐ").get().boundaries == 3 .. 5)
-  check("aΪⒶ弢".find(re"弢").get().boundaries == 6 .. 9)
+  block:
+    var m: RegexMatch
+    check "2222".find(re"(22)*", m)
+    check m.group(0) == @[0 .. 1, 2 .. 3]
+  block:
+    var m: RegexMatch
+    check "abcd".find(re"(ab)", m)
+    check m.group(0) == @[0 .. 1]
+  block:
+    var m: RegexMatch
+    check "abcd".find(re"(bc)", m)
+    check m.group(0) == @[1 .. 2]
+  block:
+    var m: RegexMatch
+    check "abcd".find(re"(cd)", m)
+    check m.group(0) == @[2 .. 3]
+  block:
+    var m: RegexMatch
+    check "abcd".find(re"bc", m)
+    check m.boundaries == 1 .. 2
+  block:
+    var m: RegexMatch
+    check "aΪⒶ弢".find(re"Ϊ", m)
+    check m.boundaries == 1 .. 2
+  block:
+    var m: RegexMatch
+    check "aΪⒶ弢".find(re"Ⓐ", m)
+    check m.boundaries == 3 .. 5
+  block:
+    var m: RegexMatch
+    check "aΪⒶ弢".find(re"弢", m)
+    check m.boundaries == 6 .. 9
 
 test "tcontains":
   check(re"bc" in "abcd")
@@ -1139,17 +1184,28 @@ test "tcompiletime":
     doAssert("a".isMatch(re"(?-u)\w"))
 
 test "tmisc":
-  check("abc".match(re"[^^]+").get().boundaries == 0 .. 2)
+  block:
+    var m: RegexMatch
+    check "abc".match(re"[^^]+", m)
+    check m.boundaries == 0 .. 2
   check(not "^".isMatch(re"[^^]+"))
-  check("kpd".match(re"[^al-obc]+").get().boundaries == 0 .. 2)
+  block:
+    var m: RegexMatch
+    check "kpd".match(re"[^al-obc]+", m)
+    check m.boundaries == 0 .. 2
   check(not "abc".isMatch(re"[^al-obc]+"))
-  check("almocb".match(re"[al-obc]+").get().boundaries == 0 .. 5)
+  block:
+    var m: RegexMatch
+    check "almocb".match(re"[al-obc]+", m)
+    check m.boundaries == 0 .. 5
   check(not "defzx".isMatch(re"[al-obc]+"))
 
   # From http://www.regular-expressions.info/examples.html
   # Grabbing HTML Tags
-  check("one<TAG>two</TAG>three".find(
-    re"<TAG\b[^>]*>(.*?)</TAG>").get().boundaries == 3 .. 16)
+  block:
+    var m: RegexMatch
+    check "one<TAG>two</TAG>three".find(re"<TAG\b[^>]*>(.*?)</TAG>", m)
+    check m.boundaries == 3 .. 16
   check("one<TAG>two</TAG>three".findWithCapt(
     re"<TAG\b[^>]*>(.*?)</TAG>") == @[@["two"]])
   # IP Addresses
@@ -1169,9 +1225,10 @@ test "tmisc":
       @[@["127"], @["0"], @["0"], @["1"]])
     check(not "127.0.0.999".isMatch(ip))
   # Floating Point Numbers
-  check(
-    "3.14".find(re"^[-+]?[0-9]*\.?[0-9]+$").get().boundaries ==
-    0 .. 3)
+  block:
+    var m: RegexMatch
+    check "3.14".find(re"^[-+]?[0-9]*\.?[0-9]+$", m)
+    check m.boundaries == 0 .. 3
   check(
     "1.602e-19".findWithCapt(
       re"^[-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?$") == @[@["e-19"]])
@@ -1185,9 +1242,9 @@ test "tmisc":
     [a-zA-Z]{2,4}
     \b
     """
-    check(
-      "john@server.department.company.com".find(email).get().boundaries ==
-      0 .. 33)
+    var m: RegexMatch
+    check "john@server.department.company.com".find(email, m)
+    check m.boundaries == 0 .. 33
     check(not "john@aol...com".isMatch(email))
   block:
     const email = re"""(?x)
@@ -1220,17 +1277,28 @@ test "tmisc":
     check(not "word1 1 2 3 4 5 6 7 word".isMatch(nope))
 
   # Unicode
-  check("①②③".find(re"①②③").get().boundaries ==
-    0 ..< "①②③".len)
-  check("①②③④⑤".find(re"①②③").get().boundaries ==
-    0 ..< "①②③".len)
-  check("①②③".find(re"①(②)③").get().boundaries ==
-    0 ..< "①②③".len)
+  block:
+    var m: RegexMatch
+    check "①②③".find(re"①②③", m)
+    check m.boundaries == 0 ..< "①②③".len
+  block:
+    var m: RegexMatch
+    check "①②③④⑤".find(re"①②③", m)
+    check m.boundaries == 0 ..< "①②③".len
+  block:
+    var m: RegexMatch
+    check "①②③".find(re"①(②)③", m)
+    check m.boundaries == 0 ..< "①②③".len
   check("①②③".findWithCapt(re"①(②)③") == @[@["②"]])
-  check("①②③".find(re"[①②③]*").get().boundaries ==
-    0 ..< "①②③".len)
-  check("①②③".find(re"[^④⑤]*").get().boundaries ==
-    0 ..< "①②③".len)
+  block:
+    var m: RegexMatch
+    check "①②③".find(re"[①②③]*", m)
+    check m.boundaries == 0 ..< "①②③".len
+  #
+  block:
+    var m: RegexMatch
+    check "①②③".find(re"[^④⑤]*", m)
+    check m.boundaries == 0 ..< "①②③".len
 
 test "tlook_around":
   check("ab".isMatch(re"a(?=b)\w"))
@@ -1295,3 +1363,29 @@ test "tpretty_errors":
     "Invalid group name. Missing `<`\n" &
     "~4 chars~(?Pabc\n" &
     "         ^"
+
+test "treuse_regex_match":
+  block:
+    var m: RegexMatch
+    check "2222".find(re"(22)*", m)
+    check m.group(0) == @[0 .. 1, 2 .. 3]
+
+    check "abcd".find(re"(ab)", m)
+    check m.group(0) == @[0 .. 1]
+
+    check "abcd".find(re"(bc)", m)
+    check m.group(0) == @[1 .. 2]
+
+    check "abcd".find(re"(cd)", m)
+    check m.group(0) == @[2 .. 3]
+
+  block:
+    var m: RegexMatch
+    check "foobar".match(re"(?P<foo>(?P<bar>\w*))", m)
+    check m.group("foo") == @[0..5]
+    check m.group("bar") == @[0..5]
+
+    check "foobar".match(re"(?P<foo>\w*)", m)
+    check m.group("foo") == @[0..5]
+    expect(ValueError):
+      discard m.group("bar")

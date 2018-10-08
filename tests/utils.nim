@@ -1,27 +1,28 @@
 import regex
 
 proc isMatch*(s: string, pattern: Regex): bool =
-  s.match(pattern).isSome
+  var m: RegexMatch
+  result = match(s, pattern, m)
 
-proc toStrCaptures*(
-    m: Option[RegexMatch],
-    s: string): seq[seq[string]] =
-  assert m.isSome
-  let mm = m.get()
-  result = newSeq[seq[string]](mm.groupsCount)
+proc toStrCaptures*(m: RegexMatch, s: string): seq[seq[string]] =
+  result = newSeq[seq[string]](m.groupsCount)
   var j = 0
-  for i in 0 ..< mm.groupsCount:
-    result[i] = newSeq[string](mm.group(i).len)
+  for i in 0 ..< m.groupsCount:
+    result[i] = newSeq[string](m.group(i).len)
     j = 0
-    for cbounds in mm.group(i):
+    for cbounds in m.group(i):
       result[i][j] = s[cbounds]
       inc j
 
 proc matchWithCapt*(s: string, pattern: Regex): seq[seq[string]] =
-  s.match(pattern).toStrCaptures(s)
+  var m: RegexMatch
+  doAssert match(s, pattern, m)
+  result = m.toStrCaptures(s)
 
 proc findWithCapt*(s: string, pattern: Regex): seq[seq[string]] =
-  s.find(pattern).toStrCaptures(s)
+  var m: RegexMatch
+  doAssert find(s, pattern, m)
+  result = m.toStrCaptures(s)
 
 proc findAllb*(s: string, pattern: Regex): seq[Slice[int]] =
   result = newSeqOfCap[Slice[int]](s.len)

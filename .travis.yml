@@ -1,8 +1,8 @@
 services:
   - docker
 env:
-  - NIM=0.17.2
   - NIM=0.18.0-alpine
+  - NIM=0.19.0-alpine
 before_install:
   - docker pull nimlang/nim:$NIM
 script:

@@ -2043,7 +2043,8 @@ iterator group*(m: RegexMatch, i: int): Slice[int] =
   ##   let
   ##     expected = ["a", "b", "c"]
   ##     text = "abc"
-  ##     m = text.match(re"(\w)+").get()
+  ##   var m: RegexMatch
+  ##   doAssert text.match(m, re"(\w)+")
   ##   var i = 0
   ##   for bounds in m.group(0):
   ##     doAssert(expected[i] == text[bounds])
@@ -2064,7 +2065,8 @@ iterator group*(m: RegexMatch, s: string): Slice[int] =
   ##   let
   ##     expected = ["a", "b", "c"]
   ##     text = "abc"
-  ##     m = text.match(re"(?P<foo>\w)+").get()
+  ##   var m = RegexMatch
+  ##   doAssert text.match(m, re"(?P<foo>\w)+")
   ##   var i = 0
   ##   for bounds in m.group("foo"):
   ##     doAssert(expected[i] == text[bounds])
@@ -2082,8 +2084,14 @@ proc groupsCount*(m: RegexMatch): int =
   ## return the number of capturing groups
   ##
   ## .. code-block:: nim
-  ##   doAssert("ab".match(re"(a)(b)").get().groupsCount == 2)
-  ##   doAssert("ab".match(re"((ab))").get().groupsCount == 2)
+  ##   block:
+  ##     var m: RegexMatch
+  ##     doAssert "ab".match(m, re"(a)(b)")
+  ##     doAssert m.groupsCount == 2
+  ##   block:
+  ##     var m: RegexMatch
+  ##     doAssert "ab".match(m, re"((ab))")
+  ##     doAssert m.groupsCount == 2
   ##
   m.groups.len
 
@@ -2177,10 +2185,7 @@ proc populateCaptures(
   # then calculate slices for each match
   # (a group can have multiple matches).
   # Note the given `capture` is in reverse order (leaf to root)
-  if result.groups.len == 0:  # todo: remove in Nim 0.18.1
-    result.groups = newSeq[Slice[int]](gc)
-  else:
-    result.groups.setLen(gc)
+  result.groups.setLen(gc)
   var
     curr = cIdx
     ci = 0
@@ -2198,10 +2203,7 @@ proc populateCaptures(
     else:
       g.b = -1  # 0 .. -1
   assert ci mod 2 == 0
-  if result.captures.len == 0:  # todo: remove in Nim 0.18.1
-    result.captures = newSeq[Slice[int]](ci div 2)
-  else:
-    result.captures.setLen(ci div 2)
+  result.captures.setLen(ci div 2)
   curr = cIdx
   while curr != 0:
     let
@@ -2558,9 +2560,12 @@ iterator findAll*(
   ##
   ## .. code-block:: nim
   ##   var i = 0
-  ##   let expected = [1 .. 2, 4 .. 5]
-  ##   for m in findAll("abcabc", re"bc"):
-  ##     doAssert(m.boundaries == expected[i])
+  ##   let
+  ##     expected = [1 .. 2, 4 .. 5]
+  ##     text = "abcabc"
+  ##   for m in findAll(text, re"bc"):
+  ##     doAssert text[m.boundaries] == "bc"
+  ##     doAssert m.boundaries == expected[i]
   ##     inc i
   ##
   for m in findAllImpl(s, pattern, start):
@@ -2570,14 +2575,6 @@ proc findAll*(s: string, pattern: Regex, start = 0): seq[RegexMatch] =
   ## search through the string and
   ## return each match. Empty matches
   ## (start > end) are included
-  ##
-  ## .. code-block:: nim
-  ##   let
-  ##     expected = [1 .. 2, 4 .. 5]
-  ##     ms = findAll("abcabc", re"bc")
-  ##   for i, m in ms:
-  ##     doAssert(m.boundaries == expected[i])
-  ##
   result = newSeqOfCap[RegexMatch](s.len)
   for slc in findAll(s, pattern, start):
     result.add(slc)

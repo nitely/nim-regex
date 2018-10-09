@@ -2831,6 +2831,7 @@ proc replace*(
 
 proc toPattern*(s: string): Regex {.raises: [RegexError].} =
   ## Parse and compile a regular expression.
+  ## Deprecated: use directly `re` instead which works both at RT and CT.
   ##
   ## .. code-block:: nim
   ##   # compiled at run-time
@@ -2849,14 +2850,17 @@ proc toPattern*(s: string): Regex {.raises: [RegexError].} =
     namedGroups: names)
 
 when defined(forceRegexAtRuntime):
-  template re*(s: string): Regex =
+  proc re*(s: string): Regex {.inline.} =
     toPattern(s)
 else:
-  template re*(s: string): Regex =
-    ## Parse and compile a regular
-    ## expression at compile-time
+  proc re*(s: static string): Regex {.inline.} =
+    ## Parse and compile a regular expression at compile-time
     const pattern = toPattern(s)
     pattern
+
+  proc re*(s: string): Regex {.inline.} =
+    ## Parse and compile a regular expression at run-time
+    toPattern(s)
 
 when isMainModule:
   proc toAtoms(s: string): string =
@@ -2920,3 +2924,10 @@ when isMainModule:
   doAssert(r"[[:word:]]".toAtoms == "[[_0-9a-zA-Z]]")
   doAssert(r"[[:xdigit:]]".toAtoms == "[[0-9a-fA-F]]")
   doAssert(r"[[:alpha:][:digit:]]".toAtoms == "[[a-zA-Z][0-9]]")
+
+  # https://github.com/nitely/nim-regex/issues/24
+  block:
+    const a1 = re"foo"
+    const a2 = re("foo")
+    let pattern = "foo"
+    let a3 = re(pattern)

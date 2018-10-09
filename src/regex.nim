@@ -2850,15 +2850,15 @@ proc toPattern*(s: string): Regex {.raises: [RegexError].} =
     namedGroups: names)
 
 when defined(forceRegexAtRuntime):
-  template re*(s: string): Regex =
+  proc re*(s: string): Regex =
     toPattern(s)
 else:
-  template re*(s: static string): Regex =
+  proc re*(s: static string): Regex =
     ## Parse and compile a regular expression at compile-time
     const pattern = toPattern(s)
     pattern
 
-  template re*(s: string): Regex =
+  proc re*(s: string): Regex =
     ## Parse and compile a regular expression at run-time
     toPattern(s)
 

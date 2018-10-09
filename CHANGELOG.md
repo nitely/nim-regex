@@ -1,3 +1,11 @@
+v0.9.0
+==================
+
+* Drop Nim 0.18 support
+* Improved `re` API to support compile-time
+  or run-time compilation depending on input
+  (thanks to @timotheecour)
+
 v0.8.0
 ==================
 

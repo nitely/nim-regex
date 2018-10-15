@@ -208,7 +208,7 @@ proc check(cond: bool, msg: string, at: int, exp: string) =
     if start+30 < exp.len:
       expMsg.add("~$# chars~" %% $(exp.len - start - 30))
     expMsg.add("\n")
-    expMsg.add(align("^", mark))
+    expMsg.add(strutils.align("^", mark))
     raise newException(RegexError, expMsg)
 
 template prettyCheck(cond: bool, msg: string) {.dirty.} =

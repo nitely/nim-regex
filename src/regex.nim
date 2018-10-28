@@ -2853,7 +2853,7 @@ when defined(forceRegexAtRuntime):
   proc re*(s: string): Regex {.inline.} =
     toPattern(s)
 else:
-  proc re*(s: static string): Regex {.inline.} =
+  proc re*(s: static[string]): Regex {.inline.} =
     ## Parse and compile a regular expression at compile-time
     const pattern = toPattern(s)
     pattern

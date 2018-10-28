@@ -2182,7 +2182,10 @@ proc populateCaptures(
   # then calculate slices for each match
   # (a group can have multiple matches).
   # Note the given `capture` is in reverse order (leaf to root)
-  result.groups.setLen(gc)
+  if result.groups.len == 0:  # todo: remove in Nim 0.18.1
+    result.groups = newSeq[Slice[int]](gc)
+  else:
+    result.groups.setLen(gc)
   var
     curr = cIdx
     ci = 0
@@ -2200,7 +2203,10 @@ proc populateCaptures(
     else:
       g.b = -1  # 0 .. -1
   assert ci mod 2 == 0
-  result.captures.setLen(ci div 2)
+  if result.captures.len == 0:  # todo: remove in Nim 0.18.1
+    result.captures = newSeq[Slice[int]](ci div 2)
+  else:
+    result.captures.setLen(ci div 2)
   curr = cIdx
   while curr != 0:
     let
@@ -2853,7 +2859,7 @@ when defined(forceRegexAtRuntime):
   proc re*(s: string): Regex {.inline.} =
     toPattern(s)
 else:
-  proc re*(s: static string): Regex {.inline.} =
+  proc re*(s: static[string]): Regex {.inline.} =
     ## Parse and compile a regular expression at compile-time
     const pattern = toPattern(s)
     pattern

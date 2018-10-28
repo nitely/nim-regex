@@ -1,4 +1,9 @@
-v0.9.0
+v0.10.0 (unreleased)
+==================
+
+* Add Nim 0.18 support back
+
+v0.9.0 (unreleased)
 ==================
 
 * Drop Nim 0.18 support

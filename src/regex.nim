@@ -2183,7 +2183,6 @@ proc populateCaptures(
   # (a group can have multiple matches).
   # Note the given `capture` is in reverse order (leaf to root)
   if result.groups.len == 0:  # todo: remove in Nim 0.18.1
-    result.groups.setLen(gc)
     result.groups = newSeq[Slice[int]](gc)
   else:
     result.groups.setLen(gc)
@@ -2205,7 +2204,6 @@ proc populateCaptures(
       g.b = -1  # 0 .. -1
   assert ci mod 2 == 0
   if result.captures.len == 0:  # todo: remove in Nim 0.18.1
-    result.captures.setLen(ci div 2)
     result.captures = newSeq[Slice[int]](ci div 2)
   else:
     result.captures.setLen(ci div 2)

@@ -1209,10 +1209,14 @@ proc parseRepRange(sc: Scanner[Rune]): Node =
   var
     firstNum: int
     lastNum: int
+  when (NimMajor, NimMinor, NimPatch) < (0, 19, 9):
+    type MyError = ref OverflowError
+  else:
+    type MyError = ref ValueError
   try:
     discard parseInt(first, firstNum)
     discard parseInt(last, lastNum)
-  except OverflowError:
+  except MyError:
     prettycheck(
       false,
       "Invalid repetition range. Max value is $#" %% $int16.high)

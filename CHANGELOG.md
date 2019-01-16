@@ -1,4 +1,9 @@
-v0.10.0 (unreleased)
+v0.10.1
+==================
+
+* Fix for Nim devel (PR #34)
+
+v0.10.0
 ==================
 
 * Add Nim 0.18 support back

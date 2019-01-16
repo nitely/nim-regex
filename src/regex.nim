@@ -1212,7 +1212,7 @@ proc parseRepRange(sc: Scanner[Rune]): Node =
   try:
     discard parseInt(first, firstNum)
     discard parseInt(last, lastNum)
-  except OverflowError:
+  except ValueError:
     prettycheck(
       false,
       "Invalid repetition range. Max value is $#" %% $int16.high)

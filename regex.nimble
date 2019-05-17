@@ -1,6 +1,6 @@
 # Package
 
-version = "0.10.1"
+version = "0.11.0"
 author = "Esteban Castro Borsani (@nitely)"
 description = "Linear time regex matching"
 license = "MIT"
@@ -8,8 +8,8 @@ srcDir = "src"
 skipDirs = @["tests"]
 
 requires "nim >= 0.18.0"
-requires "unicodedb >= 0.6.0 & < 0.7"
-requires "unicodeplus >= 0.4.0 & < 0.5"
+requires "unicodedb >= 0.7.0"
+requires "unicodeplus >= 0.5.0"
 
 task test, "Test":
   exec "nim c -r src/regex.nim"

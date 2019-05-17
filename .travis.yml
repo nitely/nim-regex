@@ -3,6 +3,7 @@ services:
 env:
   - NIM=0.18.0
   - NIM=0.19.0
+  - NIM=0.19.6
 before_install:
   - docker pull nimlang/nim:$NIM
 script:

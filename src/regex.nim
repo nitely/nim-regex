@@ -686,7 +686,7 @@ proc `[]`[T](ls: ElasticSeq[T], i: int): T =
 
 proc `[]`[T](ls: var ElasticSeq[T], i: int): var T =
   assert i < ls.pos
-  ls.s[i]
+  result = ls.s[i]
 
 proc `[]=`[T](ls: var ElasticSeq[T], i: int, x: T) =
   assert i < ls.pos
@@ -2118,7 +2118,7 @@ proc stringify(pattern: Regex, nIdx: int16, visited: var set[int16]): string =
 proc `$`(pattern: Regex): string {.used.} =
   ## NFA to string representation.
   ## For debugging purposes
-  var visited: set[int16] = {}
+  var visited: set[int16]
   result = pattern.stringify(pattern.states.high.int16, visited)
 
 type

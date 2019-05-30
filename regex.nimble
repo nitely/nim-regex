@@ -15,6 +15,11 @@ task test, "Test":
   exec "nim c -r src/regex.nim"
   exec "nim c -r tests/tests.nim"
   exec "nim c -r -d:forceRegexAtRuntime tests/tests.nim"
+  #exec "nim js -r src/regex.nim"
+  # These two fail with Node.js OOM error
+  # https://github.com/nitely/nim-regex/issues/38
+  #exec "nim js -r tests/tests.nim"
+  #exec "nim js -r -d:forceRegexAtRuntime tests/tests.nim"
 
 task docs, "Docs":
   exec "nim doc2 -o:./docs/index.html ./src/regex.nim"

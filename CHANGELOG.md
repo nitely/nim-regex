@@ -1,3 +1,9 @@
+v0.11.1
+==================
+
+* Fix `\w` not matching `_` on ASCII mode
+* Fixes to support the JS backend
+
 v0.11
 ==================
 

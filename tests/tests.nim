@@ -714,7 +714,7 @@ test "tflags":
   check("Ǝ".isMatch(re"\w"))
   check("Ǝ".isMatch(re"(?u)\w"))
   check(not "Ǝ".isMatch(re"(?-u)\w"))
-  check("abczABCZ0129".isMatch(re"(?-u)\w*"))
+  check("abczABCZ0129_".isMatch(re"(?-u)\w*"))
   check(not "\t".isMatch(re"(?-u)\w"))
   # todo: test every ascii kind
   check("Ǝ".isMatch(re"(?u)[\w]"))

@@ -263,7 +263,7 @@ type
     reEnd,  # \z
     reWordBoundary,  # \b
     reNotWordBoundary,  # \B
-    reAlphaNum,  # \w
+    reWord,  # \w
     reDigit,  # \d
     reWhiteSpace,  # \s
     reUCC,  # \pN or \p{Nn}
@@ -275,7 +275,7 @@ type
     reAnyNL,  # . new-line
     reWordBoundaryAscii,  # \b ascii only
     reNotWordBoundaryAscii,  # \B ascii only
-    reAlphaNumAscii,  # \w ascii only
+    reWordAscii,  # \w ascii only
     reDigitAscii,  # \d ascii only
     reWhiteSpaceAscii,  # \s ascii only
     reNotAlphaNumAscii,  # \W ascii only
@@ -367,16 +367,17 @@ proc isEmpty(n: Node): bool =
     n.ranges.len == 0 and
     n.shorthands.len == 0)
 
-proc isAlphaNum(r: Rune): bool {.inline.} =
+proc isWord(r: Rune): bool {.inline.} =
   utmWord in unicodeTypes(r)
 
-proc isAlphaNumAscii(r: Rune): bool {.inline.} =
+proc isWordAscii(r: Rune): bool {.inline.} =
   ## return ``true`` if the given
   ## rune is in ``[A-Za-z0-9]`` range
   case r.int
   of 'A'.ord .. 'Z'.ord,
       'a'.ord .. 'z'.ord,
-      '0'.ord .. '9'.ord:
+      '0'.ord .. '9'.ord,
+      '_'.ord:
     true
   else:
     false
@@ -391,12 +392,12 @@ template isWordBoundaryImpl(r, nxt, alnumProc): bool =
 proc isWordBoundary(r: Rune, nxt: Rune): bool {.inline.} =
   ## check if current match
   ## is a boundary (i.e the end of a word)
-  isWordBoundaryImpl(r, nxt, isAlphaNum)
+  isWordBoundaryImpl(r, nxt, isWord)
 
 proc isWordBoundaryAscii(r: Rune, nxt: Rune): bool {.inline.} =
   ## check if current match
   ## is a boundary. Match ascii only
-  isWordBoundaryImpl(r, nxt, isAlphaNumAscii)
+  isWordBoundaryImpl(r, nxt, isWordAscii)
 
 proc match(n: Node, r: Rune, nxt: Rune): bool =
   ## match for ``Node`` of assertion kind.
@@ -489,10 +490,10 @@ proc match(n: Node, r: Rune): bool =
   case n.kind
   of reEOE:
     false
-  of reAlphaNum:
-    r.isAlphaNum()
+  of reWord:
+    r.isWord()
   of reNotAlphaNum:
-    not r.isAlphaNum()
+    not r.isWord()
   of reDigit:
     r.isDecimal()
   of reNotDigit:
@@ -517,8 +518,8 @@ proc match(n: Node, r: Rune): bool =
     true
   of reCharCI:
     r == n.cp or r == n.cp.swapCase()
-  of reAlphaNumAscii:
-    r.isAlphaNumAscii()
+  of reWordAscii:
+    r.isWordAscii()
   of reDigitAscii:
     r.isDigitAscii()
   of reWhiteSpaceAscii:
@@ -526,7 +527,7 @@ proc match(n: Node, r: Rune): bool =
   of reUCC:
     r.unicodeCategory() in n.cc
   of reNotAlphaNumAscii:
-    not r.isAlphaNumAscii()
+    not r.isWordAscii()
   of reNotDigitAscii:
     not r.isDigitAscii()
   of reNotWhiteSpaceAscii:
@@ -565,7 +566,7 @@ const
     reNotLookahead,
     reNotLookbehind}
   shorthandKind = {
-    reAlphaNum,
+    reWord,
     reDigit,
     reWhiteSpace,
     reUCC,
@@ -573,7 +574,7 @@ const
     reNotDigit,
     reNotWhiteSpace,
     reNotUCC,
-    reAlphaNumAscii,
+    reWordAscii,
     reDigitAscii,
     reWhiteSpaceAscii,
     reNotAlphaNumAscii,
@@ -582,7 +583,7 @@ const
   matchableKind = {
     reChar,
     reCharCI,
-    reAlphaNum,
+    reWord,
     reDigit,
     reWhiteSpace,
     reUCC,
@@ -594,7 +595,7 @@ const
     reAnyNL,
     reSet,
     reNotSet,
-    reAlphaNumAscii,
+    reWordAscii,
     reDigitAscii,
     reWhiteSpaceAscii,
     reNotAlphaNumAscii,
@@ -808,7 +809,7 @@ proc toShorthandNode(r: Rune): Node =
   ## else a ``CharNode`` is returned
   case r
   of "w".toRune:
-    Node(kind: reAlphaNum, cp: r)
+    Node(kind: reWord, cp: r)
   of "d".toRune:
     Node(kind: reDigit, cp: r)
   of "s".toRune:
@@ -1536,8 +1537,8 @@ proc toAsciiKind(k: NodeKind): NodeKind =
     reWordBoundaryAscii
   of reNotWordBoundary:
     reNotWordBoundaryAscii
-  of reAlphaNum:
-    reAlphaNumAscii
+  of reWord:
+    reWordAscii
   of reDigit:
     reDigitAscii
   of reWhiteSpace:

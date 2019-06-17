@@ -768,7 +768,7 @@ test "tflags":
     \d +  # the integral part
     \.    # the decimal point
     \d *  # some fractional digits"""))
-  check(re"""(?x)    # verbose mode
+  doAssert(re"""(?x)    # verbose mode
     ^                   # beginning of string
     M{0,4}              # thousands - 0 to 4 M's
     (CM|CD|D?C{0,3})    # hundreds - 900 (CM), 400 (CD), 0-300 (0 to 3 C's),
@@ -862,11 +862,11 @@ test "tfind":
     check m.boundaries == 6 .. 9
 
 test "tcontains":
-  check(re"bc" in "abcd")
-  check(re"bd" notin "abcd")
-  check(re"(23)+" in "2323")
-  check(re"(23)+" in "23232")
-  check(re"^(23)+$" notin "23232")
+  doAssert(re"bc" in "abcd")
+  doAssert(re"bd" notin "abcd")
+  doAssert(re"(23)+" in "2323")
+  doAssert(re"(23)+" in "23232")
+  doAssert(re"^(23)+$" notin "23232")
 
 test "tsplit":
   check(split("a,b,c", re",") == @["a", "b", "c"])

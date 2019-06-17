@@ -2860,6 +2860,17 @@ proc toPattern*(s: string): Regex {.raises: [RegexError].} =
     groupsCount: gc.count,
     namedGroups: names)
 
+proc isInitialized*(re: Regex): bool =
+  ## Check whether the regex has been initialized
+  ##
+  ## .. code-block:: nim
+  ##   var re: Regex
+  ##   assert(not re.isInitialized)
+  ##   re = re"foo"
+  ##   assert re.isInitialized
+  ##
+  re.states.len > 0
+
 when defined(forceRegexAtRuntime):
   proc re*(s: string): Regex {.inline.} =
     toPattern(s)

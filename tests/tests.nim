@@ -1389,3 +1389,10 @@ test "treuse_regex_match":
     check m.group("foo") == @[0..5]
     expect(ValueError):
       discard m.group("bar")
+
+test "tisInitialized":
+  block:
+    var re: Regex
+    assert(not re.isInitialized)
+    re = re"foo"
+    assert re.isInitialized

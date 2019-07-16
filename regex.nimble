@@ -4,7 +4,7 @@ version = "0.11.2"
 author = "Esteban Castro Borsani (@nitely)"
 description = "Linear time regex matching"
 license = "MIT"
-srcDir = "src"
+srcdir = "src"
 skipDirs = @["tests"]
 
 requires "nim >= 0.18.0"

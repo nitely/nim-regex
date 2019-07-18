@@ -283,7 +283,7 @@ type
     reNotWhiteSpaceAscii,  # \S ascii only
     reAnyAscii,  # . ascii only
     reAnyNLAscii,  # . new-line ascii only
-    reSet,  # [abc]
+    reInSet,  # [abc]
     reNotSet,  # [^abc]
     reLookahead,  # (?=...)
     reLookbehind,  # (?<=...)
@@ -303,7 +303,7 @@ type
     flags: seq[Flag]
     # reRepRange
     min, max: int16
-    # reSet, reNotSet
+    # reInSet, reNotSet
     cps: HashSet[Rune]
     ranges: seq[Slice[Rune]]  # todo: interval tree
     shorthands: seq[Node]
@@ -329,7 +329,7 @@ proc initEOENode(): Node =
 
 template initSetNodeImpl(result: var Node, k: NodeKind) =
   ## base node
-  assert k in {reSet, reNotSet}
+  assert k in {reInSet, reNotSet}
   result = Node(
     kind: k,
     cp: "¿".toRune,
@@ -340,7 +340,7 @@ template initSetNodeImpl(result: var Node, k: NodeKind) =
 proc initSetNode(): Node =
   ## return a set ``Node``,
   ## parsed from an expression such as ``[a-z]``
-  initSetNodeImpl(result, reSet)
+  initSetNodeImpl(result, reInSet)
 
 proc initNotSetNode(): Node =
   ## return a negated set ``Node``,
@@ -361,7 +361,7 @@ proc initGroupStart(
 
 proc isEmpty(n: Node): bool =
   ## check if a set ``Node`` is empty
-  assert n.kind in {reSet, reNotSet}
+  assert n.kind in {reInSet, reNotSet}
   result = (
     n.cps.len == 0 and
     n.ranges.len == 0 and
@@ -502,7 +502,7 @@ proc match(n: Node, r: Rune): bool =
     r.isWhiteSpace()
   of reNotWhiteSpace:
     not r.isWhiteSpace()
-  of reSet, reNotSet:
+  of reInSet, reNotSet:
     var matches = (
       r in n.cps or
       r in n.ranges)
@@ -510,7 +510,7 @@ proc match(n: Node, r: Rune): bool =
       for nn in n.shorthands:
         matches = nn.match(r)
         if matches: break
-    ((matches and n.kind == reSet) or
+    ((matches and n.kind == reInSet) or
      (not matches and n.kind == reNotSet))
   of reAny:
     r != lineBreakRune
@@ -593,7 +593,7 @@ const
     reNotUCC,
     reAny,
     reAnyNL,
-    reSet,
+    reInSet,
     reNotSet,
     reWordAscii,
     reDigitAscii,
@@ -638,7 +638,7 @@ proc `$`(n: Node): string =
     "\\B"
   of shorthandKind:
     '\\' & n.cp.toUTF8
-  of reSet, reNotSet:
+  of reInSet, reNotSet:
     var str = ""
     str.add('[')
     if n.kind == reNotSet:
@@ -871,11 +871,11 @@ proc parseUnicodeLit(sc: Scanner[Rune], size: int): Node =
   let startPos = sc.pos-1
   var rawCP = newString(size)
   for i in 0 ..< size:
-    prettycheck(
+    prettyCheck(
       not sc.finished,
       ("Invalid unicode literal. " &
        "Expected $# hex digits, but found $#") %% [$size, $i])
-    prettycheck(
+    prettyCheck(
       sc.curr.int in {
         '0'.ord .. '9'.ord,
         'a'.ord .. 'z'.ord,
@@ -884,10 +884,10 @@ proc parseUnicodeLit(sc: Scanner[Rune], size: int): Node =
        "Expected hex digit, but found $#") %% $sc.curr)
     rawCP[i] = sc.next().int.char
   var cp = 0
-  discard parseHex(rawCp, cp)
-  prettycheck(
+  discard parseHex(rawCP, cp)
+  prettyCheck(
     cp != -1 and cp <= int32.high,
-    "Invalid unicode literal. $# value is too big" %% rawCp)
+    "Invalid unicode literal. $# value is too big" %% rawCP)
   result = Rune(cp).toCharNode
 
 proc parseUnicodeLitX(sc: Scanner[Rune]): Node =
@@ -895,10 +895,10 @@ proc parseUnicodeLitX(sc: Scanner[Rune]): Node =
   assert sc.peek == "{".toRune
   discard sc.next()
   let litEnd = sc.find("}".toRune)
-  prettycheck(
+  prettyCheck(
     litEnd != -1,
     "Invalid unicode literal. Expected `}`")
-  prettycheck(
+  prettyCheck(
     litEnd <= 8,
     ("Invalid unicode literal. " &
      "Expected at most 8 chars, found $#") %% $litEnd)
@@ -910,17 +910,17 @@ proc parseOctalLit(sc: Scanner[Rune]): Node =
   let startPos = sc.pos
   var rawCP = newString(3)
   for i in 0 ..< 3:
-    prettycheck(
+    prettyCheck(
       not sc.finished,
       ("Invalid octal literal. " &
        "Expected 3 octal digits, but found $#") %% $i)
-    prettycheck(
+    prettyCheck(
       sc.curr.int in {'0'.ord .. '7'.ord},
       ("Invalid octal literal. " &
        "Expected octal digit, but found $#") %% $sc.curr)
     rawCP[i] = sc.next().int.char
   var cp = 0
-  discard parseOct(rawCp, cp)
+  discard parseOct(rawCP, cp)
   result = Rune(cp).toCharNode
 
 proc parseCC(s: string): UnicodeCategorySet =
@@ -937,12 +937,12 @@ proc parseUnicodeNameX(sc: Scanner[Rune]): Node =
   assert sc.peek == "{".toRune
   discard sc.next()
   let nameEnd = sc.find("}".toRune)
-  prettycheck(
+  prettyCheck(
     nameEnd != -1,
     "Invalid unicode name. Expected `}`")
   var name = newString(nameEnd)
   for i in 0 ..< nameEnd:
-    prettycheck(
+    prettyCheck(
       sc.curr.int in {
         'a'.ord .. 'z'.ord,
         'A'.ord .. 'Z'.ord},
@@ -951,7 +951,7 @@ proc parseUnicodeNameX(sc: Scanner[Rune]): Node =
     name[i] = sc.next().int.char
   assert sc.peek == "}".toRune
   discard sc.next()
-  prettycheck(
+  prettyCheck(
     name in [
       "Cn", "Lu", "Ll", "Lt", "Mn", "Mc", "Me", "Nd", "Nl",
       "No", "Zs", "Zl", "Zp", "Cc", "Cf", "Cs", "Co", "Cn",
@@ -970,7 +970,7 @@ proc parseUnicodeName(sc: Scanner[Rune]): Node =
   of "{".toRune:
     result = parseUnicodeNameX(sc)
   else:
-    prettycheck(
+    prettyCheck(
       sc.peek in [
         "C".toRune, "L".toRune, "M".toRune, "N".toRune,
         "Z".toRune, "P".toRune, "S".toRune],
@@ -1034,7 +1034,7 @@ proc parseAsciiSet(sc: Scanner[Rune]): Node =
     if r == ":".toRune:
       break
     name.add(r.toUTF8)
-  prettycheck(
+  prettyCheck(
     sc.peek == "]".toRune,
     "Invalid ascii set. Expected [:name:]")
   discard sc.next
@@ -1095,13 +1095,13 @@ proc parseAsciiSet(sc: Scanner[Rune]): Node =
       "a".toRune .. "f".toRune,
       "A".toRune .. "F".toRune])
   else:
-    prettycheck(
+    prettyCheck(
       false,
       "Invalid ascii set. `$#` is not a valid name" %% name)
 
 proc parseSet(sc: Scanner[Rune]): Node =
   ## parse a set atom (i.e ``[a-z]``) into a
-  ## ``Node`` of ``reSet`` or ``reNotSet`` kind.
+  ## ``Node`` of ``reInSet`` or ``reNotSet`` kind.
   ## This proc is PCRE compatible and
   ## handles a ton of edge cases
   let startPos = sc.pos
@@ -1177,7 +1177,7 @@ proc parseSet(sc: Scanner[Rune]): Node =
       cps.add(cp)
   # todo: use ref and set to nil when empty
   result.cps.incl(cps.toSet)
-  prettycheck(
+  prettyCheck(
     hasEnd,
     "Invalid set. Missing `]`")
 
@@ -1197,7 +1197,7 @@ proc parseRepRange(sc: Scanner[Rune]): Node =
       curr = ""
       hasFirst = true
       continue
-    prettycheck(
+    prettyCheck(
       cp.int in '0'.ord .. '9'.ord,
       "Invalid repetition range. Range can only contain digits")
     curr.add(char(cp.int))
@@ -1218,16 +1218,16 @@ proc parseRepRange(sc: Scanner[Rune]): Node =
     discard parseInt(first, firstNum)
     discard parseInt(last, lastNum)
   except MyError:
-    prettycheck(
+    prettyCheck(
       false,
       "Invalid repetition range. Max value is $#" %% $int16.high)
-  prettycheck(
+  prettyCheck(
     firstNum <= int16.high and
     lastNum <= int16.high,
     "Invalid repetition range. Max value is $#" %% $int16.high)
   # for perf reasons. This becomes a?a?a?...
   # too many parallel states
-  prettycheck(
+  prettyCheck(
     not (lastNum - firstNum > 100),
     ("Invalid repetition range. " &
      "Expected 100 repetitions or less, " &
@@ -1278,7 +1278,7 @@ proc toNegFlag(r: Rune): Flag =
        "but expected one of: -i, -m, -s, -U or -u") %% $r)
 
 template checkEmptyGroup() {.dirty.} =
-  prettycheck(
+  prettyCheck(
     peek(sc) != toRune(")"),
     "Invalid group. Empty group is not allowed")
 
@@ -1300,7 +1300,7 @@ proc parseGroupTag(sc: Scanner[Rune]): Node =
     result = initGroupStart(isCapturing = false)
   of "P".toRune:
     discard sc.next()
-    prettycheck(
+    prettyCheck(
       sc.peek == "<".toRune,
       "Invalid group name. Missing `<`")
     discard sc.next()  # Consume "<"
@@ -1308,7 +1308,7 @@ proc parseGroupTag(sc: Scanner[Rune]): Node =
     for r in sc:
       if r == ">".toRune:
         break
-      prettycheck(
+      prettyCheck(
         r.int in {
           'a'.ord .. 'z'.ord,
           'A'.ord .. 'Z'.ord,
@@ -1318,10 +1318,10 @@ proc parseGroupTag(sc: Scanner[Rune]): Node =
          "{'a'..'z', 'A'..'Z', '0'..'9', '-', '_'}, " &
          "but found `$#`") %% $r)
       name.add(r.int.char)
-    prettycheck(
+    prettyCheck(
       name.len > 0,
       "Invalid group name. Name can't be empty")
-    prettycheck(
+    prettyCheck(
       sc.prev == ">".toRune,
       "Invalid group name. Missing `>`")
     checkEmptyGroup()
@@ -1360,24 +1360,24 @@ proc parseGroupTag(sc: Scanner[Rune]): Node =
     case sc.peek
     of "\\".toRune:
       let n = parseEscapedSeq(sc)
-      prettycheck(
+      prettyCheck(
         n.kind == reChar,
         "Invalid lookahead. A " &
         "character was expected, but " &
         "found a special symbol")
       result = Node(kind: reLookahead, cp: n.cp)
     else:
-      prettycheck(
+      prettyCheck(
         not sc.finished,
         "Invalid lookahead. A character " &
         "was expected, but found nothing (end of string)")
       result = Node(kind: reLookahead, cp: sc.next())
-    prettycheck(
+    prettyCheck(
       sc.peek == ")".toRune,
       "Invalid lookahead, expected closing symbol")
     discard sc.next()
   else:
-    prettycheck(
+    prettyCheck(
       false,
       "Invalid group. Unknown group type")
 
@@ -1612,8 +1612,8 @@ proc applyFlag(n: var Node, f: Flag) =
     if n.kind == reChar and n.cp != n.cp.swapCase():
       n.kind = reCharCI
     # todo: apply recursevely to
-    #       shorthands of reSet/reNotSet (i.e: [:ascii:])
-    if n.kind in {reSet, reNotSet}:
+    #       shorthands of reInSet/reNotSet (i.e: [:ascii:])
+    if n.kind in {reInSet, reNotSet}:
       var cps = initSet[Rune]()
       cps.incl(n.cps)
       for cp in cps:
@@ -1631,7 +1631,7 @@ proc applyFlag(n: var Node, f: Flag) =
       n.isGreedy = not n.isGreedy
   of flagNotUnicode:
     n.kind = n.kind.toAsciiKind()
-    if n.kind in {reSet, reNotSet}:
+    if n.kind in {reInSet, reNotSet}:
       for nn in n.shorthands.mitems:
         nn.kind = nn.kind.toAsciiKind()
   else:

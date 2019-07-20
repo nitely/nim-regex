@@ -15,7 +15,8 @@ task test, "Test":
   exec "nim c -r src/regex.nim"
   exec "nim c -r tests/tests.nim"
   exec "nim c -r -d:forceRegexAtRuntime tests/tests.nim"
-  exec "nim c -d:runTestAtCT tests/tests.nim"
+  when (NimMajor, NimMinor, NimPatch) >= (0, 20, 0):
+    exec "nim c -d:runTestAtCT tests/tests.nim"
   #exec "nim js -r src/regex.nim"
   # These two fail with Node.js OOM error
   # https://github.com/nitely/nim-regex/issues/38

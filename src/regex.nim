@@ -183,7 +183,10 @@ proc check(cond: bool, msg: string) =
 proc isAsciiPrintable(s: string): bool =
   result = true
   for c in s.runes:
-    if c.int notin {' '.ord .. '~'.ord}:
+    case c.int
+    of ' '.ord .. '~'.ord:
+      discard
+    else:
       return false
 
 proc check(cond: bool, msg: string, at: int, exp: string) =

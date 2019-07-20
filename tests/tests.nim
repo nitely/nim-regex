@@ -3,6 +3,20 @@ import unittest
 import regex
 import utils
 
+when defined(runTestAtCT):
+  template test(desc: string, body: untyped): untyped =
+    static:
+      echo "[CT] " & desc
+      block:
+        body
+
+  template check(conditions: bool) =
+    doAssert(conditions)
+
+  template expect(exception: typedesc, body: untyped): untyped =
+    doAssertRaises(exception):
+      body
+
 test "tfull_match":
   check("".isMatch(re""))
   check("a".isMatch(re"a"))

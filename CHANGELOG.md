@@ -1,3 +1,9 @@
+v0.12
+==================
+
+* Support matching at compile-time; issue #4
+  (thanks to @timotheecour)
+
 v0.11.2
 ==================
 

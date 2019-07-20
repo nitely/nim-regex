@@ -12,6 +12,7 @@ Features:
 * Captures all group repetitions (not just the last one)
 * Unicode level-1 support
 * Descriptive error messages
+* Supports matching at compile-time (Nim +0.20)
 
 ## Install
 

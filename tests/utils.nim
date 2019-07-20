@@ -39,5 +39,5 @@ proc raises*(pattern: string): bool =
 proc raisesMsg*(pattern: string): string =
   try:
     discard pattern.toPattern()
-  except RegexError as e:
-    result = e.msg
+  except RegexError:
+    result = getCurrentExceptionMsg()

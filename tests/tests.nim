@@ -1437,12 +1437,6 @@ test "capturingGroupsNames":
     let text = "hello world her"
     var m: RegexMatch
     doAssert text.match(re"(?P<greet>hello) (?P<who>world) (?P<who>her)", m)
-    doAssert m.groupsCount == 3
-
-    for group in @["greet", "who"]:
-      doAssert m.groupNames.contains(group)
-
-    doAssert text.match(re"(?P<greet>hello) (?P<who>world) (?P<who>her)", m)
     doAssert m.groupCapture("greet", text) == "hello"
     doAssert m.groupCapture("who", text) == "her"
 

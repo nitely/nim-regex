@@ -2107,13 +2107,11 @@ proc groupNames*(m: RegexMatch): seq[string] =
   ##
   ## .. code-block:: nim
   ##   block:
-  ##     let text = "hello world"
+  ##     let text = "hello world her"
   ##     var m: RegexMatch
-  ##     doAssert text.match(re"(?P<greet>hello) (?P<who>world)", m)
-  ##     doAssert m.groupCapture("greet", text) == "hello"
-  ##     doAssert m.groupCapture("who", text) == "world"
-
-  result = newSeq[string]()
+  ##     doAssert text.match(re"(?P<greet>hello) (?P<who>world) (?P<who>her)", m)
+  ##     for group in @["greet", "who"]:
+  ##       doAssert m.groupNames.contains(group)
   result = toSeq(m.namedGroups.keys)
 
 
@@ -2122,15 +2120,8 @@ proc groupCapture*(m: RegexMatch, groupName: string, text: string): string =
   ##
   ## .. code-block:: nim
   ##   block:
-  ##  
   ##     let text = "hello world her"
   ##     var m: RegexMatch
-  ##     doAssert text.match(re"(?P<greet>hello) (?P<who>world) (?P<who>her)", m)
-  ##     doAssert m.groupsCount == 3
-  ##  
-  ##     for group in @["greet", "who"]:
-  ##       doAssert m.groupNames.contains(group)
-  ##  
   ##     doAssert text.match(re"(?P<greet>hello) (?P<who>world) (?P<who>her)", m)
   ##     doAssert m.groupCapture("greet", text) == "hello"
   ##     doAssert m.groupCapture("who", text) == "her"

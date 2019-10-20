@@ -337,7 +337,7 @@ template initSetNodeImpl(result: var Node, k: NodeKind) =
   result = Node(
     kind: k,
     cp: "¿".toRune,
-    cps: initHashSet[Rune](),
+    cps: initSet[Rune](),
     ranges: @[],
     shorthands: @[])
 

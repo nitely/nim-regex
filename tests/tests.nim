@@ -1415,3 +1415,21 @@ test "tisInitialized":
     assert(not re.isInitialized)
     re = re"foo"
     assert re.isInitialized
+
+test "capturingGroupsNames":
+  block:
+    let text = "hello world"
+    var m: RegexMatch
+    doAssert text.match(re"(?P<greet>hello) (?P<who>world)", m)
+    doAssert m.groupsCount == 2
+    for name in @["greet", "who"]:
+      doAssert m.groupsNames.contains(name)
+
+  block:
+    let text = "hello world"
+    var m: RegexMatch
+    doAssert text.match(re"(?P<greet>hello) (?P<who>world)", m)
+    doAssert m.groupsByName("greet", text) == @["hello"]
+    doAssert m.groupsByName("who", text) == @["world"]
+    doAssert m.groupByName("greet", text) == "hello"
+    doAssert m.groupByName("who", text) == "world"

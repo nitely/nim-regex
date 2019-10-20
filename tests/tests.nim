@@ -1429,21 +1429,50 @@ test "capturingGroupsNames":
     let text = "hello world"
     var m: RegexMatch
     doAssert text.match(re"(?P<greet>hello) (?P<who>world)", m)
-    doAssert m.groupCapture("greet", text) == "hello"
-    doAssert m.groupCapture("who", text) == "world"
+    doAssert m.group("greet", text) == @["hello"]
+    doAssert m.group("who", text) == @["world"]
+    
+  block:
+    let text = "hello world foo bar"
+    var m: RegexMatch
+    doAssert text.match(re"(?P<greet>hello) (?:(?P<who>[^\s]+)\s?)+", m)
+    doAssert m.group("greet", text) == @["hello"]
+    let whoGroups = m.group("who", text)
+    for w in @["foo", "bar", "world"]:
+      doAssert whoGroups.contains(w)
+
 
   block:
+    let text = "hello world"
+    var m: RegexMatch
+    doAssert text.match(re"(?P<greet>hello) (?P<who>world)", m)
+    doAssert m.groupFirstCapture("greet", text) == "hello"
+    doAssert m.groupFirstCapture("who", text) == "world"
 
+  ## First capture
+  block:
     let text = "hello world her"
     var m: RegexMatch
     doAssert text.match(re"(?P<greet>hello) (?P<who>world) (?P<who>her)", m)
-    doAssert m.groupCapture("greet", text) == "hello"
-    doAssert m.groupCapture("who", text) == "her"
+    doAssert m.groupFirstCapture("greet", text) == "hello"
 
   block:
     let text = "hello world foo bar"
     var m: RegexMatch
     doAssert text.match(re"(?P<greet>hello) (?:(?P<who>[^\s]+)\s?)+", m)
     # "who" captures @["world", "foo", "bar"]
-    doAssert m.groupCapture("who", text) == "world"
+    doAssert m.groupFirstCapture("who", text) == "world"
 
+  ## Last capture
+  block:
+    let text = "hello world her"
+    var m: RegexMatch
+    doAssert text.match(re"(?P<greet>hello) (?P<who>world) (?P<who>her)", m)
+    doAssert m.groupLastCapture("who", text) == "her"
+
+  block:
+    let text = "hello world foo bar"
+    var m: RegexMatch
+    doAssert text.match(re"(?P<greet>hello) (?:(?P<who>[^\s]+)\s?)+", m)
+    # "who" captures @["world", "foo", "bar"]
+    doAssert m.groupLastCapture("who", text) == "bar"

@@ -2102,7 +2102,7 @@ proc groupsCount*(m: RegexMatch): int =
   m.groups.len
 
 
-proc groupsNames*(m: RegexMatch): seq[string] =
+proc groupNames*(m: RegexMatch): seq[string] =
   ## return the names of capturing groups
   ##
   ## .. code-block:: nim
@@ -2110,13 +2110,16 @@ proc groupsNames*(m: RegexMatch): seq[string] =
   ##     var m: RegexMatch
   ##     doAssert "hello world".match("(?P<greet>hello) (?P<who>world)", m)
   ##     doAssert m.groupsCount == 2
+  ##     let groupNames = m.groupNames
+  ##     for name in @["who", "greet"]:
+  ##       doAssert groupNames.contains(name)
+
+  result = newSeq[string]()
+  result = toSeq(m.namedGroups.keys)
 
 
-  toSeq(m.namedGroups.keys)
-
-
-proc groupsByName*(m: RegexMatch, name: string, originalText: string): seq[string] =
-  ## return capturing groups by name
+proc groups*(m: RegexMatch, groupName: string, originalText: string): seq[string] =
+  ## Return all captures for a given capturing group
   ##
   ## .. code-block:: nim
   ##   block:
@@ -2124,26 +2127,40 @@ proc groupsByName*(m: RegexMatch, name: string, originalText: string): seq[strin
   ##     doAssert "hello world".match("(?P<greet>hello) (?P<who>world)", m)
   ##     doAssert m.groupByName("greet") == @["hello"]
   ##     doAssert m.groupByName("who") == @["world"]
-  
-  for bounds in m.group(name):
+  result = newSeq[string]()
+  for bounds in m.group(groupName):
     result.add(originalText[bounds])
 
 
-proc groupByName*(m: RegexMatch, name: string, originalText: string): string =
-  ## return capturing groups by name
+proc groupFirstCapture*(m: RegexMatch, groupName: string, originalText: string): string =
+  ##  Return first capture for a given capturing group
   ##
   ## .. code-block:: nim
   ##   block:
   ##     var m: RegexMatch
-  ##     doAssert "hello world".match("(?P<greet>hello) (?P<who>world)", m)
+  ##     doAssert "hello world her".match("(?P<greet>hello) (?P<who>world) (?P<who>her", m)
   ##     doAssert m.groupByName("greet") == "hello"
   ##     doAssert m.groupByName("who") == "world"
   
-  for bounds in m.group(name):
-    result.add(originalText[bounds])
-    # first one only.
+  for bounds in m.group(groupName):
+    result = originalText[bounds]
+    echo "result firstCapture: " & groupName & " in text : " & originalText & result
     return
 
+proc groupLastCapture*(m: RegexMatch, groupName: string, originalText: string): string =
+  ##  Return first capture for a given capturing group
+  ##
+  ## .. code-block:: nim
+  ##   block:
+  ##     var m: RegexMatch
+  ##     doAssert "hello world her".match("(?P<greet>hello) (?P<who>world) (?P<who>her", m)
+  ##     doAssert m.groupByName("greet") == "hello"
+  ##     doAssert m.groupByName("who") == "her"
+  
+  let boundsSeq = m.group(groupName).toSeq
+  echo "BOUNDS SEQ: " & $boundsSeq
+  result = originalText[boundsSeq[boundsSeq.len-1]]
+  echo "result lastCapture: " & groupName & " in text : " & originalText & result
 
 
 proc stringify(pattern: Regex, nIdx: int16, visited: var set[int16]): string =

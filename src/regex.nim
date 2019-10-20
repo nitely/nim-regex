@@ -154,6 +154,7 @@ import strutils
 import sets
 import tables
 import parseutils
+import sequtils
 
 import unicodedb/properties
 import unicodedb/types
@@ -336,7 +337,7 @@ template initSetNodeImpl(result: var Node, k: NodeKind) =
   result = Node(
     kind: k,
     cp: "¿".toRune,
-    cps: initSet[Rune](),
+    cps: initHashSet[Rune](),
     ranges: @[],
     shorthands: @[])
 
@@ -2099,6 +2100,51 @@ proc groupsCount*(m: RegexMatch): int =
   ##     doAssert m.groupsCount == 2
   ##
   m.groups.len
+
+
+proc groupsNames*(m: RegexMatch): seq[string] =
+  ## return the names of capturing groups
+  ##
+  ## .. code-block:: nim
+  ##   block:
+  ##     var m: RegexMatch
+  ##     doAssert "hello world".match("(?P<greet>hello) (?P<who>world)", m)
+  ##     doAssert m.groupsCount == 2
+
+
+  toSeq(m.namedGroups.keys)
+
+
+proc groupsByName*(m: RegexMatch, name: string, originalText: string): seq[string] =
+  ## return capturing groups by name
+  ##
+  ## .. code-block:: nim
+  ##   block:
+  ##     var m: RegexMatch
+  ##     doAssert "hello world".match("(?P<greet>hello) (?P<who>world)", m)
+  ##     doAssert m.groupByName("greet") == @["hello"]
+  ##     doAssert m.groupByName("who") == @["world"]
+  
+  for bounds in m.group(name):
+    result.add(originalText[bounds])
+
+
+proc groupByName*(m: RegexMatch, name: string, originalText: string): string =
+  ## return capturing groups by name
+  ##
+  ## .. code-block:: nim
+  ##   block:
+  ##     var m: RegexMatch
+  ##     doAssert "hello world".match("(?P<greet>hello) (?P<who>world)", m)
+  ##     doAssert m.groupByName("greet") == "hello"
+  ##     doAssert m.groupByName("who") == "world"
+  
+  for bounds in m.group(name):
+    result.add(originalText[bounds])
+    # first one only.
+    return
+
+
 
 proc stringify(pattern: Regex, nIdx: int16, visited: var set[int16]): string =
   ## NFA to string representation.

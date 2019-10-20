@@ -2125,7 +2125,12 @@ proc groupCapture*(m: RegexMatch, groupName: string, text: string): string =
   ##     doAssert text.match(re"(?P<greet>hello) (?P<who>world) (?P<who>her)", m)
   ##     doAssert m.groupCapture("greet", text) == "hello"
   ##     doAssert m.groupCapture("who", text) == "her"
-
+  ##   block:
+  ##     let text = "hello world foo bar"
+  ##     var m: RegexMatch
+  ##     doAssert text.match(re"(?P<greet>hello) (?:(?P<who>[^\s]+)\s?)+", m)
+  ##     # "who" captures @["world", "foo", "bar"]
+  ##     doAssert m.groupCapture("who", text) == "world"
   
   for bounds in m.group(groupName):
     result = text[bounds]

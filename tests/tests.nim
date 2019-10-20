@@ -1440,4 +1440,10 @@ test "capturingGroupsNames":
     doAssert m.groupCapture("greet", text) == "hello"
     doAssert m.groupCapture("who", text) == "her"
 
+  block:
+    let text = "hello world foo bar"
+    var m: RegexMatch
+    doAssert text.match(re"(?P<greet>hello) (?:(?P<who>[^\s]+)\s?)+", m)
+    # "who" captures @["world", "foo", "bar"]
+    doAssert m.groupCapture("who", text) == "world"
 

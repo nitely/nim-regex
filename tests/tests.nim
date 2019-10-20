@@ -1429,20 +1429,8 @@ test "capturingGroupsNames":
     let text = "hello world"
     var m: RegexMatch
     doAssert text.match(re"(?P<greet>hello) (?P<who>world)", m)
-    doAssert m.groups("greet", text) == @["hello"]
-    doAssert m.groups("who", text) == @["world"]
-    doAssert m.groupFirstCapture("greet", text) == "hello"
-    doAssert m.groupFirstCapture("who", text) == "world"
-
-  block:
-    let text = "hello world"
-    var m: RegexMatch
-    doAssert text.match(re"(?P<greet>hello) (?P<who>world)", m)
-    doAssert m.groups("greet", text) == @["hello"]
-    doAssert m.groups("who", text) == @["world"]
-    doAssert m.groupLastCapture("greet", text) == "hello"
-    doAssert m.groupLastCapture("who", text) == "world"
-
+    doAssert m.groupCapture("greet", text) == "hello"
+    doAssert m.groupCapture("who", text) == "world"
 
   block:
 
@@ -1450,16 +1438,12 @@ test "capturingGroupsNames":
     var m: RegexMatch
     doAssert text.match(re"(?P<greet>hello) (?P<who>world) (?P<who>her)", m)
     doAssert m.groupsCount == 3
-    doAssert m.groups("greet", text) == @["hello"]
 
     for group in @["greet", "who"]:
       doAssert m.groupNames.contains(group)
 
     doAssert text.match(re"(?P<greet>hello) (?P<who>world) (?P<who>her)", m)
-    doAssert m.groupFirstCapture("greet", text) == "hello"
-    doAssert m.groupFirstCapture("who", text) == "world"
-
-    doAssert m.groupLastCapture("greet", text) == "hello"
-    doAssert m.groupLastCapture("who", text) == "her"
+    doAssert m.groupCapture("greet", text) == "hello"
+    doAssert m.groupCapture("who", text) == "her"
 
 

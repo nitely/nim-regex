@@ -154,6 +154,7 @@ import strutils
 import sets
 import tables
 import parseutils
+import sequtils
 
 import unicodedb/properties
 import unicodedb/types
@@ -2099,6 +2100,98 @@ proc groupsCount*(m: RegexMatch): int =
   ##     doAssert m.groupsCount == 2
   ##
   m.groups.len
+
+
+proc groupNames*(m: RegexMatch): seq[string] =
+  ## return the names of capturing groups
+  ##
+  ## .. code-block:: nim
+  ##   block:
+  ##     let text = "hello world her"
+  ##     var m: RegexMatch
+  ##     doAssert text.match(re"(?P<greet>hello) (?P<who>world) (?P<who>her)", m)
+  ##     for group in @["greet", "who"]:
+  ##       doAssert m.groupNames.contains(group)
+  result = toSeq(m.namedGroups.keys)
+
+proc group*(m: RegexMatch, groupName: string, text:string): seq[string] = 
+  ## return seq of captured text by group `groupName`
+  ##
+  ## .. code-block:: nim
+  ##   block:
+  ##     let text = "hello world"
+  ##     var m: RegexMatch
+  ##     doAssert text.match(re"(?P<greet>hello) (?P<who>world)", m)
+  ##     doAssert m.group("greet", text) == @["hello"]
+  ##     doAssert m.group("who", text) == @["world"]
+  ##   block:
+  ##     let text = "hello world foo bar"
+  ##     var m: RegexMatch
+  ##     doAssert text.match(re"(?P<greet>hello) (?:(?P<who>[^\s]+)\s?)+", m)
+  ##     doAssert m.group("greet", text) == @["hello"]
+  ##     let whoGroups = m.group("who", text)
+  ##     for w in @["foo", "bar", "world"]:
+  ##       doAssert whoGroups.contains(w)
+  result = newSeq[string]()
+  for bounds in m.group(groupName):
+    result.add text[bounds]
+
+proc groupFirstCapture*(m: RegexMatch, groupName: string, text: string): string =
+  ##  Return fist capture for a given capturing group
+  ##
+  ## .. code-block:: nim
+  ##   block:
+  ##     let text = "hello world her"
+  ##     var m: RegexMatch
+  ##     doAssert text.match(re"(?P<greet>hello) (?P<who>world) (?P<who>her)", m)
+  ##     doAssert m.groupFirstCapture("greet", text) == "hello"
+  ##   block:
+  ##     let text = "hello world foo bar"
+  ##     var m: RegexMatch
+  ##     doAssert text.match(re"(?P<greet>hello) (?:(?P<who>[^\s]+)\s?)+", m)
+  ##     # "who" captures @["world", "foo", "bar"]
+  ##     doAssert m.groupFirstCapture("who", text) == "world"
+  ##   block:
+  ##     let text = "hello"
+  ##     var m: RegexMatch
+  ##     doAssert text.match(re"(?P<greet>hello)\s?(?P<who>world)?", m)
+  ##     doAssert m.groupFirstCapture("greet", text) == "hello"
+  ##     doAssert m.groupFirstCapture("who", text) == ""
+
+  let captures = m.group(groupName, text)
+  if captures.len > 0:
+    return captures[0]
+  else:
+    return "" 
+
+proc groupLastCapture*(m: RegexMatch, groupName: string, text: string): string =
+  ##  Return last capture for a given capturing group
+  ##
+  ## .. code-block:: nim
+  ##   block:
+  ##     let text = "hello world her"
+  ##     var m: RegexMatch
+  ##     doAssert text.match(re"(?P<greet>hello) (?P<who>world) (?P<who>her)", m)
+  ##     doAssert m.groupLastCapture("who", text) == "her"
+  ##   block:
+  ##     let text = "hello world foo bar"
+  ##     var m: RegexMatch
+  ##     doAssert text.match(re"(?P<greet>hello) (?:(?P<who>[^\s]+)\s?)+", m)
+  ##     # "who" captures @["world", "foo", "bar"]
+  ##     doAssert m.groupLastCapture("who", text) == "bar"
+  ##   block:
+  ##     let text = "hello"
+  ##     var m: RegexMatch
+  ##     doAssert text.match(re"(?P<greet>hello)\s?(?P<who>world)?", m)
+  ##     doAssert m.groupLastCapture("greet", text) == "hello"
+  ##     doAssert m.groupLastCapture("who", text) == ""
+
+  let captures = m.group(groupName, text)
+  if captures.len > 0:
+    return captures[captures.len-1]
+  else:
+    return "" 
+
 
 proc stringify(pattern: Regex, nIdx: int16, visited: var set[int16]): string =
   ## NFA to string representation.

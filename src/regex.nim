@@ -2137,7 +2137,7 @@ proc group*(m: RegexMatch, groupName: string, text:string): seq[string] =
     result.add text[bounds]
 
 proc groupFirstCapture*(m: RegexMatch, groupName: string, text: string): string =
-  ##  Return last capture for a given capturing group
+  ##  Return fist capture for a given capturing group
   ##
   ## .. code-block:: nim
   ##   block:
@@ -2151,8 +2151,18 @@ proc groupFirstCapture*(m: RegexMatch, groupName: string, text: string): string 
   ##     doAssert text.match(re"(?P<greet>hello) (?:(?P<who>[^\s]+)\s?)+", m)
   ##     # "who" captures @["world", "foo", "bar"]
   ##     doAssert m.groupFirstCapture("who", text) == "world"
-  
-  m.group(groupName, text)[0]
+  ##   block:
+  ##     let text = "hello"
+  ##     var m: RegexMatch
+  ##     doAssert text.match(re"(?P<greet>hello)\s?(?P<who>world)?", m)
+  ##     doAssert m.groupFirstCapture("greet", text) == "hello"
+  ##     doAssert m.groupFirstCapture("who", text) == ""
+
+  let captures = m.group(groupName, text)
+  if captures.len > 0:
+    return captures[0]
+  else:
+    return "" 
 
 proc groupLastCapture*(m: RegexMatch, groupName: string, text: string): string =
   ##  Return last capture for a given capturing group
@@ -2169,9 +2179,18 @@ proc groupLastCapture*(m: RegexMatch, groupName: string, text: string): string =
   ##     doAssert text.match(re"(?P<greet>hello) (?:(?P<who>[^\s]+)\s?)+", m)
   ##     # "who" captures @["world", "foo", "bar"]
   ##     doAssert m.groupLastCapture("who", text) == "bar"
+  ##   block:
+  ##     let text = "hello"
+  ##     var m: RegexMatch
+  ##     doAssert text.match(re"(?P<greet>hello)\s?(?P<who>world)?", m)
+  ##     doAssert m.groupLastCapture("greet", text) == "hello"
+  ##     doAssert m.groupLastCapture("who", text) == ""
 
-  let groups = m.group(groupName, text)
-  result = groups[groups.len-1]
+  let captures = m.group(groupName, text)
+  if captures.len > 0:
+    return captures[captures.len-1]
+  else:
+    return "" 
 
 
 proc stringify(pattern: Regex, nIdx: int16, visited: var set[int16]): string =

@@ -1462,6 +1462,13 @@ test "capturingGroupsNames":
     doAssert text.match(re"(?P<greet>hello) (?:(?P<who>[^\s]+)\s?)+", m)
     # "who" captures @["world", "foo", "bar"]
     doAssert m.groupFirstCapture("who", text) == "world"
+  
+  block:
+    let text = "hello"
+    var m: RegexMatch
+    doAssert text.match(re"(?P<greet>hello)\s?(?P<who>world)?", m)
+    doAssert m.groupFirstCapture("greet", text) == "hello"
+    doAssert m.groupFirstCapture("who", text) == ""
 
   ## Last capture
   block:
@@ -1476,3 +1483,10 @@ test "capturingGroupsNames":
     doAssert text.match(re"(?P<greet>hello) (?:(?P<who>[^\s]+)\s?)+", m)
     # "who" captures @["world", "foo", "bar"]
     doAssert m.groupLastCapture("who", text) == "bar"
+
+  block:
+    let text = "hello"
+    var m: RegexMatch
+    doAssert text.match(re"(?P<greet>hello)\s?(?P<who>world)?", m)
+    doAssert m.groupLastCapture("greet", text) == "hello"
+    doAssert m.groupLastCapture("who", text) == ""

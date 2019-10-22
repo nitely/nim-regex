@@ -1724,12 +1724,13 @@ proc expandRepRange(expression: seq[Node]): seq[Node] =
       result.len > 0,
       "Invalid repeition range, " &
       "nothing to repeat")
-    case result[^1].kind
+    let lastNode = result[^1]
+    case lastNode.kind
     of reGroupEnd:
       i = 0
       for ne in result.reversed:
         inc i
-        if ne.kind == reGroupStart:
+        if ne.kind == reGroupStart and ne.idx == lastNode.idx:
           break
       assert result[result.len-i].kind == reGroupStart
       result.add(result[result.len-i .. result.len-1].expandOneRepRange(n))
@@ -2982,11 +2983,15 @@ else:
 
 when isMainModule:
   proc toAtoms(s: string): string =
-    s.parse.greediness.applyFlags.expandRepRange.joinAtoms.`$`
+    var ns = s.parse
+    discard ns.fillGroups()
+    result = ns.greediness.applyFlags.expandRepRange.joinAtoms.`$`
 
   proc toNfaStr(s: string): string =
+    var ns = s.parse
+    discard ns.fillGroups()
     let pattern = Regex(
-      states: s.parse.greediness.applyFlags.expandRepRange.joinAtoms.rpn.nfa)
+      states: ns.greediness.applyFlags.expandRepRange.joinAtoms.rpn.nfa)
     result = $pattern
 
   doAssert(toAtoms(r"a(b|c)*d") == r"a~(b|c)*~d")
@@ -3009,6 +3014,7 @@ when isMainModule:
   doAssert(toAtoms(r"(a*|b*)*") != toAtoms(r"(a|b)*"))
   doAssert(toAtoms(r"(a*b*)*") != toAtoms(r"(a|b)*"))
   doAssert(toAtoms(r"(a*|b*)") != toAtoms(r"(a|b)*"))
+  doAssert(toAtoms(r"(a(b)){2}") == r"(a~(b))~(a~(b))")
 
   # trepetition_range_expand
   doAssert(r"a{0}".toNfaStr == r"a".toNfaStr)
@@ -3024,6 +3030,7 @@ when isMainModule:
   doAssert(r"a{,10}".toNfaStr == r"a?a?a?a?a?a?a?a?a?a?".toNfaStr)
   doAssert(r"a{0,10}".toNfaStr == r"a?a?a?a?a?a?a?a?a?a?".toNfaStr)
   doAssert(r"a{,}".toNfaStr == r"a*".toNfaStr)
+  doAssert r"(a(b)){2}".toNfaStr == r"(a(b))(a(b))".toNfaStr
 
   # tascii_set
   doAssert(r"[[:alnum:]]".toAtoms == "[[0-9a-zA-Z]]")

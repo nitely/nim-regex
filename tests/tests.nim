@@ -397,6 +397,9 @@ test "trepetition_range":
   check(not "".isMatch(re"(a{1,})"))
   check("a".matchWithCapt(re"(a{1,})") == @[@["a"]])
   check("aaa".matchWithCapt(re"(a{1,})") == @[@["aaa"]])
+  check(
+    "abab".matchWithCapt(re"(a(b)){2}") ==
+    @[@["ab", "ab"], @["b", "b"]])
   check(raisesMsg(r"a{bad}") ==
     "Invalid repetition range. Range can only contain digits\n" &
     "a{bad}\n" &

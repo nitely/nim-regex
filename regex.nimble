@@ -7,7 +7,7 @@ license = "MIT"
 srcdir = "src"
 skipDirs = @["tests"]
 
-requires "nim >= 0.18.0"
+requires "nim >= 0.19.0"
 requires "unicodedb >= 0.7.2"
 requires "unicodeplus >= 0.5.0"
 

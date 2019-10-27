@@ -1,3 +1,13 @@
+v0.13
+==================
+
+* Add `groupFirstCapture`, `groupLastCapture`, and
+  `group(1): seq[string]` (thaks to @xmonader)
+* Add Nim 1.0.0 to CI
+* Drop Nim 0.18 support
+* Fix nested captures with repetition range; issue #46
+* Fix Nim `sets` warnings
+
 v0.12
 ==================
 

@@ -711,6 +711,12 @@ iterator items[T](sc: Scanner[T]): T =
     inc sc.pos
     yield sc.s[sc.pos - 1]
 
+iterator mitems[T](sc: var Scanner[T]): var T =
+  ## the yielded item gets consumed
+  while sc.pos <= sc.s.high:
+    inc sc.pos
+    yield sc.s[sc.pos - 1]
+
 proc finished[T](sc: Scanner[T]): bool =
   sc.pos > sc.s.high
 
@@ -1194,19 +1200,19 @@ proc parseRepRange(sc: Scanner[Rune]): Node =
     max: lastNum.int16)
 
 proc toFlag(r: Rune): Flag =
-  case r
+  result = case r
   of "i".toRune:
-    result = flagCaseInsensitive
+    flagCaseInsensitive
   of "m".toRune:
-    result = flagMultiLine
+    flagMultiLine
   of "s".toRune:
-    result = flagAnyMatchNewLine
+    flagAnyMatchNewLine
   of "U".toRune:
-    result = flagUnGreedy
+    flagUnGreedy
   of "u".toRune:
-    result = flagUnicode
+    flagUnicode
   of "x".toRune:
-    result = flagVerbose
+    flagVerbose
   else:
     # todo: return err and show a better error msg
     raise newException(RegexError,
@@ -1214,19 +1220,19 @@ proc toFlag(r: Rune): Flag =
        "but expected one of: i, m, s, U or u") %% $r)
 
 proc toNegFlag(r: Rune): Flag =
-  case r
+  result = case r
   of "i".toRune:
-    result = flagNotCaseInsensitive
+    flagNotCaseInsensitive
   of "m".toRune:
-    result = flagNotMultiLine
+    flagNotMultiLine
   of "s".toRune:
-    result = flagNotAnyMatchNewLine
+    flagNotAnyMatchNewLine
   of "U".toRune:
-    result = flagNotUnGreedy
+    flagNotUnGreedy
   of "u".toRune:
-    result = flagNotUnicode
+    flagNotUnicode
   of "x".toRune:
-    result = flagNotVerbose
+    flagNotVerbose
   else:
     # todo: return err and show a better error msg
     raise newException(RegexError,
@@ -1435,9 +1441,8 @@ proc parse(expression: string): seq[Node] =
 proc greediness(expression: seq[Node]): seq[Node] =
   ## apply greediness to an expression
   result = newSeqOfCap[Node](expression.len)
-  let sc = expression.scan()
-  for nn in sc:
-    var n = nn
+  var sc = expression.scan()
+  for n in sc.mitems():
     if (n.kind in repetitionKind or
         n.kind == reZeroOrOne) and
         sc.peek.kind == reZeroOrOne:
@@ -1605,9 +1610,8 @@ proc applyFlags(expression: seq[Node]): seq[Node] =
   ## apply flags to each group
   result = newSeqOfCap[Node](expression.len)
   var flags = newSeq[seq[Flag]]()
-  let sc = expression.scan()
-  for nn in sc:
-    var n = nn
+  var sc = expression.scan()
+  for n in sc.mitems():
     # (?flags)
     # Orphan flags are added to current group
     case n.kind
@@ -1853,7 +1857,7 @@ proc update(
   elif outB > 0:
     ends[ni].add(ends[outB])
 
-proc nfa(expression: seq[Node]): seq[Node] =
+proc nfa(expression: var seq[Node]): seq[Node] =
   ## A stack machine to convert a
   ## expression (in RPN) to an NFA, linearly.
   # The e-transitions are kept,
@@ -1863,15 +1867,13 @@ proc nfa(expression: seq[Node]): seq[Node] =
   var
     ends = newSeq[End](expression.len + 1)
     states = newSeq[int16]()
-  ends.fill(@[])  # todo: remove on nim >= 0.18.1
   if expression.len == 0:
     states.add(0)
-  for nn in expression:
+  for n in expression.mitems():
     check(
       result.high < int16.high,
       ("The expression is too long, " &
        "limit is ~$#") %% $int16.high)
-    var n = nn
     let ni = int16(result.high + 1)
     case n.kind
     of matchableKind, assertionKind:
@@ -2238,10 +2240,7 @@ proc populateCaptures(
   # then calculate slices for each match
   # (a group can have multiple matches).
   # Note the given `capture` is in reverse order (leaf to root)
-  if result.groups.len == 0:  # todo: remove in Nim 0.18.1
-    result.groups = newSeq[Slice[int]](gc)
-  else:
-    result.groups.setLen(gc)
+  result.groups.setLen(gc)
   var
     curr = cIdx
     ci = 0
@@ -2259,10 +2258,7 @@ proc populateCaptures(
     else:
       g.b = -1  # 0 .. -1
   assert ci mod 2 == 0
-  if result.captures.len == 0:  # todo: remove in Nim 0.18.1
-    result.captures = newSeq[Slice[int]](ci div 2)
-  else:
-    result.captures.setLen(ci div 2)
+  result.captures.setLen(ci div 2)
   curr = cIdx
   while curr != 0:
     let
@@ -2270,9 +2266,9 @@ proc populateCaptures(
       g = result.groups[c.idx]
     case c.kind
     of captEnd:
-      result.captures[g.a - 1].b = c.cpIdx
+      result.captures[g.a-1].b = c.cpIdx
     of captStart:
-      result.captures[g.a - 1].a = c.cpIdx
+      result.captures[g.a-1].a = c.cpIdx
       dec result.groups[c.idx].a
     curr = c.prev
 
@@ -2920,8 +2916,9 @@ proc toPattern*(s: string): Regex {.raises: [RegexError].} =
   var names: Table[string, int16]
   if gc.names.len > 0:
     names = gc.names
+  var exp = ns.greediness.applyFlags.expandRepRange.joinAtoms.rpn
   result = Regex(
-    states: ns.greediness.applyFlags.expandRepRange.joinAtoms.rpn.nfa,
+    states: exp.nfa,
     groupsCount: gc.count,
     namedGroups: names)
 
@@ -2958,8 +2955,8 @@ when isMainModule:
   proc toNfaStr(s: string): string =
     var ns = s.parse
     discard ns.fillGroups()
-    let pattern = Regex(
-      states: ns.greediness.applyFlags.expandRepRange.joinAtoms.rpn.nfa)
+    var exp = ns.greediness.applyFlags.expandRepRange.joinAtoms.rpn
+    let pattern = Regex(states: exp.nfa)
     result = $pattern
 
   doAssert(toAtoms(r"a(b|c)*d") == r"a~(b|c)*~d")

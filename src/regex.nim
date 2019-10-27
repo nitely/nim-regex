@@ -1453,13 +1453,13 @@ proc greediness(expression: seq[Node]): seq[Node] =
 type
   GroupsCapture = tuple
     count: int16
-    names: Table[string, int16]
+    names: OrderedTable[string, int16]
 
 proc fillGroups(expression: var seq[Node]): GroupsCapture =
   ## populate group indices, names and capturing mark
   var
     groups = newSeq[int]()
-    names = initTable[string, int16]()
+    names = initOrderedTable[string, int16]()
     count = 0'i16
   for i, n in expression.mpairs:
     case n.kind
@@ -1964,12 +1964,12 @@ type
     ## a compiled regular expression
     states: seq[Node]
     groupsCount: int16
-    namedGroups: Table[string, int16]
+    namedGroups: OrderedTable[string, int16]
   RegexMatch* = object
     ## result from matching operations
     captures: seq[Slice[int]]
     groups: seq[Slice[int]]
-    namedGroups: Table[string, int16]
+    namedGroups: OrderedTable[string, int16]
     boundaries*: Slice[int]
   CaptureKind = enum
     captStart
@@ -2000,18 +2000,15 @@ iterator group*(m: RegexMatch, i: int): Slice[int] =
   ## Slices of start > end are empty
   ## matches (i.e.: ``re"(\d?)"``)
   ## and they are included same as in PCRE.
-  ##
-  ## .. code-block:: nim
-  ##   let
-  ##     expected = ["a", "b", "c"]
-  ##     text = "abc"
-  ##   var m: RegexMatch
-  ##   doAssert text.match(re"(\w)+", m)
-  ##   var i = 0
-  ##   for bounds in m.group(0):
-  ##     doAssert(expected[i] == text[bounds])
-  ##     inc i
-  ##
+  runnableExamples:
+    let text = "abc"
+    var m: RegexMatch
+    doAssert text.match(re"(\w)+", m)
+    var captures = newSeq[string]()
+    for bounds in m.group(0):
+      captures.add(text[bounds])
+    doAssert captures == @["a", "b", "c"]
+
   for idx in m.groups[i]:
     yield m.captures[idx]
 
@@ -2022,18 +2019,15 @@ proc group*(m: RegexMatch, i: int): seq[Slice[int]] =
 
 iterator group*(m: RegexMatch, s: string): Slice[int] =
   ## return slices for a given named group
-  ##
-  ## .. code-block:: nim
-  ##   let
-  ##     expected = ["a", "b", "c"]
-  ##     text = "abc"
-  ##   var m: RegexMatch
-  ##   doAssert text.match(re"(?P<foo>\w)+", m)
-  ##   var i = 0
-  ##   for bounds in m.group("foo"):
-  ##     doAssert(expected[i] == text[bounds])
-  ##     inc i
-  ##
+  runnableExamples:
+    let text = "abc"
+    var m: RegexMatch
+    doAssert text.match(re"(?P<foo>\w)+", m)
+    var captures = newSeq[string]()
+    for bounds in m.group("foo"):
+      captures.add(text[bounds])
+    doAssert captures == @["a", "b", "c"]
+
   for bounds in m.group(m.namedGroups[s]):
     yield bounds
 
@@ -2044,75 +2038,44 @@ proc group*(m: RegexMatch, s: string): seq[Slice[int]] =
 
 proc groupsCount*(m: RegexMatch): int =
   ## return the number of capturing groups
-  ##
-  ## .. code-block:: nim
-  ##   block:
-  ##     var m: RegexMatch
-  ##     doAssert "ab".match(re"(a)(b)", m)
-  ##     doAssert m.groupsCount == 2
-  ##   block:
-  ##     var m: RegexMatch
-  ##     doAssert "ab".match(re"((ab))", m)
-  ##     doAssert m.groupsCount == 2
-  ##
+  runnableExamples:
+    var m: RegexMatch
+    doAssert "ab".match(re"(a)(b)", m)
+    doAssert m.groupsCount == 2
+
   m.groups.len
 
-
 proc groupNames*(m: RegexMatch): seq[string] =
-  ## return the names of capturing groups
-  ##
-  ## .. code-block:: nim
-  ##   block:
-  ##     let text = "hello world her"
-  ##     var m: RegexMatch
-  ##     doAssert text.match(re"(?P<greet>hello) (?P<who>world) (?P<who>her)", m)
-  ##     for group in @["greet", "who"]:
-  ##       doAssert m.groupNames.contains(group)
+  ## return the names of capturing groups.
+  runnableExamples:
+    let text = "hello world"
+    var m: RegexMatch
+    doAssert text.match(re"(?P<greet>hello) (?P<who>world)", m)
+    doAssert m.groupNames() == @["greet", "who"]
+
   result = toSeq(m.namedGroups.keys)
 
 proc group*(m: RegexMatch, groupName: string, text:string): seq[string] = 
   ## return seq of captured text by group `groupName`
-  ##
-  ## .. code-block:: nim
-  ##   block:
-  ##     let text = "hello world"
-  ##     var m: RegexMatch
-  ##     doAssert text.match(re"(?P<greet>hello) (?P<who>world)", m)
-  ##     doAssert m.group("greet", text) == @["hello"]
-  ##     doAssert m.group("who", text) == @["world"]
-  ##   block:
-  ##     let text = "hello world foo bar"
-  ##     var m: RegexMatch
-  ##     doAssert text.match(re"(?P<greet>hello) (?:(?P<who>[^\s]+)\s?)+", m)
-  ##     doAssert m.group("greet", text) == @["hello"]
-  ##     let whoGroups = m.group("who", text)
-  ##     for w in @["foo", "bar", "world"]:
-  ##       doAssert whoGroups.contains(w)
+  runnableExamples:
+    let text = "hello beautiful world"
+    var m: RegexMatch
+    doAssert text.match(re"(?P<greet>hello) (?:(?P<who>[^\s]+)\s?)+", m)
+    doAssert m.group("greet", text) == @["hello"]
+    doAssert m.group("who", text) == @["beautiful", "world"]
+
   result = newSeq[string]()
   for bounds in m.group(groupName):
     result.add text[bounds]
 
 proc groupFirstCapture*(m: RegexMatch, groupName: string, text: string): string =
   ##  Return fist capture for a given capturing group
-  ##
-  ## .. code-block:: nim
-  ##   block:
-  ##     let text = "hello world her"
-  ##     var m: RegexMatch
-  ##     doAssert text.match(re"(?P<greet>hello) (?P<who>world) (?P<who>her)", m)
-  ##     doAssert m.groupFirstCapture("greet", text) == "hello"
-  ##   block:
-  ##     let text = "hello world foo bar"
-  ##     var m: RegexMatch
-  ##     doAssert text.match(re"(?P<greet>hello) (?:(?P<who>[^\s]+)\s?)+", m)
-  ##     # "who" captures @["world", "foo", "bar"]
-  ##     doAssert m.groupFirstCapture("who", text) == "world"
-  ##   block:
-  ##     let text = "hello"
-  ##     var m: RegexMatch
-  ##     doAssert text.match(re"(?P<greet>hello)\s?(?P<who>world)?", m)
-  ##     doAssert m.groupFirstCapture("greet", text) == "hello"
-  ##     doAssert m.groupFirstCapture("who", text) == ""
+  runnableExamples:
+    let text = "hello beautiful world"
+    var m: RegexMatch
+    doAssert text.match(re"(?P<greet>hello) (?:(?P<who>[^\s]+)\s?)+", m)
+    doAssert m.groupFirstCapture("greet", text) == "hello"
+    doAssert m.groupFirstCapture("who", text) == "beautiful"
 
   let captures = m.group(groupName, text)
   if captures.len > 0:
@@ -2122,32 +2085,18 @@ proc groupFirstCapture*(m: RegexMatch, groupName: string, text: string): string 
 
 proc groupLastCapture*(m: RegexMatch, groupName: string, text: string): string =
   ##  Return last capture for a given capturing group
-  ##
-  ## .. code-block:: nim
-  ##   block:
-  ##     let text = "hello world her"
-  ##     var m: RegexMatch
-  ##     doAssert text.match(re"(?P<greet>hello) (?P<who>world) (?P<who>her)", m)
-  ##     doAssert m.groupLastCapture("who", text) == "her"
-  ##   block:
-  ##     let text = "hello world foo bar"
-  ##     var m: RegexMatch
-  ##     doAssert text.match(re"(?P<greet>hello) (?:(?P<who>[^\s]+)\s?)+", m)
-  ##     # "who" captures @["world", "foo", "bar"]
-  ##     doAssert m.groupLastCapture("who", text) == "bar"
-  ##   block:
-  ##     let text = "hello"
-  ##     var m: RegexMatch
-  ##     doAssert text.match(re"(?P<greet>hello)\s?(?P<who>world)?", m)
-  ##     doAssert m.groupLastCapture("greet", text) == "hello"
-  ##     doAssert m.groupLastCapture("who", text) == ""
+  runnableExamples:
+    let text = "hello beautiful world"
+    var m: RegexMatch
+    doAssert text.match(re"(?P<greet>hello) (?:(?P<who>[^\s]+)\s?)+", m)
+    doAssert m.groupLastCapture("greet", text) == "hello"
+    doAssert m.groupLastCapture("who", text) == "world"
 
   let captures = m.group(groupName, text)
   if captures.len > 0:
     return captures[captures.len-1]
   else:
     return "" 
-
 
 proc stringify(pattern: Regex, nIdx: int16, visited: var set[int16]): string =
   ## NFA to string representation.
@@ -2459,12 +2408,11 @@ proc match*(
   ## matches the regular expression. This
   ## is similar to ``find(text, re"^regex$")``
   ## but has better performance
-  ##
-  ## .. code-block:: nim
-  ##   var m: RegexMatch
-  ##   doAssert "abcd".match(re"abcd", m)
-  ##   doAssert(not "abcd".match(re"abc", m))
-  ##
+  runnableExamples:
+    var m: RegexMatch
+    doAssert "abcd".match(re"abcd", m)
+    doAssert(not "abcd".match(re"abc", m))
+
   var ds = initDataSets(
     pattern.states.len,
     pattern.groupsCount > 0)
@@ -2477,12 +2425,11 @@ proc contains*(s: string, pattern: Regex): bool =
   ##  expression has repetitions. Use
   ##  ``re"^regex$"`` to match the whole
   ##  string instead of searching
-  ##
-  ## .. code-block:: nim
-  ##   doAssert(re"bc" in "abcd")
-  ##   doAssert(re"(23)+" in "23232")
-  ##   doAssert(re"^(23)+$" notin "23232")
-  ##
+  runnableExamples:
+    doAssert(re"bc" in "abcd")
+    doAssert(re"(23)+" in "23232")
+    doAssert(re"^(23)+$" notin "23232")
+
   var ds = initDataSets(
     pattern.states.len, false)
   let statesCount = pattern.states.high.int16
@@ -2558,14 +2505,14 @@ proc find*(
 ): bool =
   ## search through the string looking for the first
   ## location where there is a match
-  ##
-  ## .. code-block:: nim
-  ##   var m: RegexMatch
-  ##   doAssert "abcd".find(re"bc", m)
-  ##   doAssert(not "abcd".find(re"de", m))
-  ##   doAssert "2222".find(re"(22)*", m) and
-  ##     m.group(0) == @[0 .. 1, 2 .. 3]
-  ##
+  runnableExamples:
+    var m: RegexMatch
+    doAssert "abcd".find(re"bc", m)
+    doAssert(not "abcd".find(re"de", m))
+    doAssert(
+      "2222".find(re"(22)*", m) and
+      m.group(0) == @[0 .. 1, 2 .. 3])
+
   var ds = initDataSets(
     pattern.states.len,
     pattern.groupsCount > 0)
@@ -2605,17 +2552,16 @@ iterator findAll*(
   ## search through the string and
   ## return each match. Empty matches
   ## (start > end) are included
-  ##
-  ## .. code-block:: nim
-  ##   var i = 0
-  ##   let
-  ##     expected = [1 .. 2, 4 .. 5]
-  ##     text = "abcabc"
-  ##   for m in findAll(text, re"bc"):
-  ##     doAssert text[m.boundaries] == "bc"
-  ##     doAssert m.boundaries == expected[i]
-  ##     inc i
-  ##
+  runnableExamples:
+    var
+      expected = [1 .. 2, 4 .. 5]
+      text = "abcabc"
+      i = 0
+    for m in findAll(text, re"bc"):
+      doAssert text[m.boundaries] == "bc"
+      doAssert m.boundaries == expected[i]
+      inc i
+
   for m in findAllImpl(s, pattern, start):
     yield m
 
@@ -2630,13 +2576,12 @@ proc findAll*(s: string, pattern: Regex, start = 0): seq[RegexMatch] =
 proc findAndCaptureAll*(s: string, pattern: Regex): seq[string] =
   ## search through the string and
   ## return a seq with captures.
-  ##
-  ## .. code-block:: nim
-  ##   let
-  ##     expected = @["1", "2", "3", "4", "5"]
-  ##     res = findAndCaptureAll("a1b2c3d4e5", re"\d")
-  ##   doAssert(res == expected)
-  ##
+  runnableExamples:
+    let
+      captured = findAndCaptureAll("a1b2c3d4e5", re"\d")
+      expected = @["1", "2", "3", "4", "5"]
+    doAssert captured == expected
+
   result = @[]
   for m in s.findAll(pattern):
     result.add(s[m.boundaries])
@@ -2691,14 +2636,14 @@ proc matchEnd(s: string, pattern: Regex, start = 0): int =
 
 iterator split*(s: string, sep: Regex): string {.inline.} =
   ## return not matched substrings
-  ##
-  ## .. code-block:: nim
-  ##   var i = 0
-  ##   let expected = ["", "a", "Ϊ", "Ⓐ", "弢", ""]
-  ##   for s in split("11a22Ϊ33Ⓐ44弢55", re"\d+"):
-  ##     doAssert(s == expected[i])
-  ##     inc i
-  ##
+  runnableExamples:
+    var
+      expected = ["", "a", "Ϊ", "Ⓐ", "弢", ""]
+      i = 0
+    for s in split("11a22Ϊ33Ⓐ44弢55", re"\d+"):
+      doAssert(s == expected[i])
+      inc i
+
   var
     ds = initDataSets(sep.states.len, false)
     first = 0
@@ -2716,11 +2661,12 @@ iterator split*(s: string, sep: Regex): string {.inline.} =
 
 proc split*(s: string, sep: Regex): seq[string] =
   ## return not matched substrings
-  ##
-  ## .. code-block:: nim
-  ##   doAssert(split("11a22Ϊ33Ⓐ44弢55", re"\d+") ==
-  ##     @["", "a", "Ϊ", "Ⓐ", "弢", ""])
-  ##
+  runnableExamples:
+    let
+      parts = split("11a22Ϊ33Ⓐ44弢55", re"\d+")
+      expected = @["", "a", "Ϊ", "Ⓐ", "弢", ""]
+    doAssert parts == expected
+
   result = newSeqOfCap[string](s.len)
   for w in s.split(sep):
     result.add(w)
@@ -2732,11 +2678,12 @@ proc split*(s: string, sep: Regex): seq[string] =
 # but I need to profile it to prove it
 proc splitIncl*(s: string, sep: Regex): seq[string] =
   ## return not matched substrings, including captured groups
-  ##
-  ## .. code-block:: nim
-  ##   doAssert splitIncl("a,b", re"(,)") ==
-  ##     @["a", ",", "b"]
-  ##
+  runnableExamples:
+    let
+      parts = splitIncl("a,b", re"(,)")
+      expected = @["a", ",", "b"]
+    doAssert parts == expected
+
   result = @[]
   var
     m = RegexMatch()
@@ -2767,22 +2714,20 @@ proc splitIncl*(s: string, sep: Regex): seq[string] =
 proc startsWith*(s: string, pattern: Regex, start = 0): bool =
   ## return whether the string
   ## starts with the pattern or not
-  ##
-  ## .. code-block:: nim
-  ##   doAssert("abc".startsWith(re"\w"))
-  ##   doAssert(not "abc".startsWith(re"\d"))
-  ##
+  runnableExamples:
+    doAssert "abc".startsWith(re"\w")
+    doAssert(not "abc".startsWith(re"\d"))
+
   # todo: shortest match (matchEnd matches longest match), for perf
   matchEnd(s, pattern, start) != -1
 
 proc endsWith*(s: string, pattern: Regex): bool =
   ## return whether the string
   ## ends with the pattern or not
-  ##
-  ## .. code-block:: nim
-  ##   doAssert("abc".endsWith(re"\w"))
-  ##   doAssert(not "abc".endsWith(re"\d"))
-  ##
+  runnableExamples:
+    doAssert "abc".endsWith(re"\w")
+    doAssert(not "abc".endsWith(re"\d"))
+
   result = false
   var
     m = RegexMatch()
@@ -2844,14 +2789,15 @@ proc replace*(
   ## If ``limit`` is given, at most ``limit``
   ## replacements are done. ``limit`` of 0
   ## means there is no limit
-  ##
-  ## .. code-block:: nim
-  ##   doAssert("aaa".replace(re"a", "b", 1) == "baa")
-  ##   doAssert("abc".replace(re"(a(b)c)", "m($1) m($2)") ==
-  ##     "m(abc) m(b)")
-  ##   doAssert("Nim is awesome!".replace(re"(\w\B)", "$1_") ==
-  ##     "N_i_m i_s a_w_e_s_o_m_e!")
-  ##
+  runnableExamples:
+    doAssert "aaa".replace(re"a", "b", 1) == "baa"
+    doAssert(
+      "abc".replace(re"(a(b)c)", "m($1) m($2)") ==
+      "m(abc) m(b)")
+    doAssert(
+      "Nim is awesome!".replace(re"(\w\B)", "$1_") ==
+      "N_i_m i_s a_w_e_s_o_m_e!")
+
   result = ""
   var
     i, j = 0
@@ -2879,18 +2825,17 @@ proc replace*(
   ## If ``limit`` is given, at most ``limit``
   ## replacements are done. ``limit`` of 0
   ## means there is no limit
-  ##
-  ## .. code-block:: nim
-  ##   proc removeEvenWords(m: RegexMatch, s: string): string =
-  ##     result = ""
-  ##     if m.group(1).len mod 2 != 0:
-  ##       result = s[m.group(0)[0]]
-  ##
-  ##   let
-  ##     text = "Es macht Spaß, alle geraden Wörter zu entfernen!"
-  ##     expected = "macht , geraden entfernen!"
-  ##   doAssert(text.replace(re"((\w)+\s*)", removeEvenWords) == expected)
-  ##
+  runnableExamples:
+    proc removeEvenWords(m: RegexMatch, s: string): string =
+      result = ""
+      if m.group(1).len mod 2 != 0:
+        result = s[m.group(0)[0]]
+    
+    let
+      text = "Es macht Spaß, alle geraden Wörter zu entfernen!"
+      expected = "macht , geraden entfernen!"
+    doAssert text.replace(re"((\w)+\s*)", removeEvenWords) == expected
+
   result = ""
   var i, j = 0
   for m in findAllImpl(s, pattern):
@@ -2904,16 +2849,15 @@ proc replace*(
 proc toPattern*(s: string): Regex {.raises: [RegexError].} =
   ## Parse and compile a regular expression.
   ## Deprecated: use directly `re` instead which works both at RT and CT.
-  ##
-  ## .. code-block:: nim
-  ##   # compiled at run-time
-  ##   let patternA = toPattern(r"aa?")
-  ##   # compiled at compile-time
-  ##   const patternB = toPattern(r"aa?")
-  ##
+  runnableExamples:
+    # compiled at run-time
+    let patternRt = toPattern(r"aa?")
+    # compiled at compile-time
+    const patternCt = toPattern(r"aa?")
+
   var ns = s.parse
   let gc = ns.fillGroups()
-  var names: Table[string, int16]
+  var names: OrderedTable[string, int16]
   if gc.names.len > 0:
     names = gc.names
   var exp = ns.greediness.applyFlags.expandRepRange.joinAtoms.rpn
@@ -2924,13 +2868,12 @@ proc toPattern*(s: string): Regex {.raises: [RegexError].} =
 
 proc isInitialized*(re: Regex): bool =
   ## Check whether the regex has been initialized
-  ##
-  ## .. code-block:: nim
-  ##   var re: Regex
-  ##   assert(not re.isInitialized)
-  ##   re = re"foo"
-  ##   assert re.isInitialized
-  ##
+  runnableExamples:
+    var re: Regex
+    doAssert(not re.isInitialized)
+    re = re"foo"
+    doAssert re.isInitialized
+
   re.states.len > 0
 
 when defined(forceRegexAtRuntime):

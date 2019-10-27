@@ -160,13 +160,24 @@ import unicodedb/properties
 import unicodedb/types
 import unicodeplus except isUpper, isLower
 
+const
+  nimVersion = (major: NimMajor, minor: NimMinor, patch: NimPatch)
+
+when nimVersion < (0, 20, 0):
+  proc initHashSet[T](): HashSet[T] =
+    result = initSet[T]()
+  proc toHashSet[T](keys: openArray[T]): HashSet[T] =
+    result = toSet[T](keys)
+
 type
   RegexError* = object of ValueError
   ## raised when the pattern
   ## is not a valid regex
 
-proc `%%`(formatstr: string, a: openArray[string]): string
-    {.noSideEffect, raises: [].} =
+proc `%%`(
+  formatstr: string,
+  a: openArray[string]
+): string {.noSideEffect, raises: [].} =
   ## same as ``"$#" % ["foo"]`` but
   ## returns empty string on error
   try:
@@ -337,7 +348,7 @@ template initSetNodeImpl(result: var Node, k: NodeKind) =
   result = Node(
     kind: k,
     cp: "¿".toRune,
-    cps: initSet[Rune](),
+    cps: initHashSet[Rune](),
     ranges: @[],
     shorthands: @[])
 
@@ -352,9 +363,10 @@ proc initNotSetNode(): Node =
   initSetNodeImpl(result, reNotSet)
 
 proc initGroupStart(
-    name: string = "",
-    flags: seq[Flag] = @[],
-    isCapturing = true): Node =
+  name: string = "",
+  flags: seq[Flag] = @[],
+  isCapturing = true
+): Node =
   ## return a ``reGroupStart`` node
   Node(
     kind: reGroupStart,
@@ -672,66 +684,6 @@ proc `$`(n: seq[Node]): string {.used.} =
   result = newStringOfCap(n.len)
   for nn in n:
     result.add($nn)
-
-# todo: I think seqs already do this. So can use that + a few helpers
-type
-  ElasticSeq[T] = object
-    ## a seq that can grow and shrink
-    ## avoiding excessive allocations
-    s: seq[T]
-    pos: int
-
-proc initElasticSeq[T](size = 16): ElasticSeq[T] =
-  ElasticSeq[T](s: newSeq[T](size), pos: 0)
-
-proc `[]`[T](ls: ElasticSeq[T], i: int): T =
-  assert i < ls.pos
-  ls.s[i]
-
-proc `[]`[T](ls: var ElasticSeq[T], i: int): var T =
-  assert i < ls.pos
-  result = ls.s[i]
-
-proc `[]=`[T](ls: var ElasticSeq[T], i: int, x: T) =
-  assert i < ls.pos
-  ls.s[i] = x
-
-#[
-# todo: fixme supported in nim >= 0.18
-proc `[]`[T](ls: ElasticSeq[T], i: BackwardsIndex): T =
-  `[]`(ls, ls.len - int(i))
-
-proc `[]`[T](ls: var ElasticSeq[T], i: BackwardsIndex): T =
-  `[]`(ls, ls.len - int(i))
-
-proc `[]=`[T](ls: var ElasticSeq[T], i: BackwardsIndex, x: T) =
-  ls.s[ls.len - int(i)] = x
-]#
-
-proc len[T](ls: ElasticSeq[T]): int =
-  ls.pos
-
-proc high[T](ls: ElasticSeq[T]): int =
-  ls.pos - 1
-
-proc clear[T](ls: var ElasticSeq[T]) =
-  ls.pos = 0
-
-proc add[T](ls: var ElasticSeq[T], x: T) =
-  if ls.pos > ls.s.high:
-    ls.s.setLen(ls.s.len * 2)
-  ls.s[ls.pos] = x
-  inc ls.pos
-
-proc pop[T](ls: var ElasticSeq[T]): T =
-  dec ls.pos
-  ls.s[ls.pos]
-
-iterator items[T](ls: ElasticSeq[T]): T {.inline.} =
-  var i = 0
-  while i < ls.pos:
-    yield ls.s[i]
-    inc i
 
 type
   Scanner[T: Rune|Node] = ref object
@@ -1056,7 +1008,7 @@ proc parseAsciiSet(sc: Scanner[Rune]): Node =
     result.ranges.add(
       "\x00".toRune .. "\x7F".toRune)
   of "blank":
-    result.cps.incl(toSet([
+    result.cps.incl(toHashSet([
       "\t".toRune, " ".toRune]))
   of "cntrl":
     result.ranges.add(
@@ -1081,7 +1033,7 @@ proc parseAsciiSet(sc: Scanner[Rune]): Node =
       "[".toRune .. "`".toRune,
       "{".toRune .. "~".toRune])
   of "space":
-    result.cps.incl(toSet([
+    result.cps.incl(toHashSet([
       "\t".toRune, "\L".toRune, "\v".toRune,
       "\f".toRune, "\r".toRune, " ".toRune]))
   of "upper":
@@ -1180,7 +1132,7 @@ proc parseSet(sc: Scanner[Rune]): Node =
     else:
       cps.add(cp)
   # todo: use ref and set to nil when empty
-  result.cps.incl(cps.toSet)
+  result.cps.incl(cps.toHashSet)
   prettyCheck(
     hasEnd,
     "Invalid set. Missing `]`")
@@ -1415,7 +1367,7 @@ proc subParse(sc: Scanner[Rune]): Node =
   else:
     r.toCharNode
 
-proc skipWhiteSpace(sc: Scanner[Rune], vb: ElasticSeq[bool]): bool =
+proc skipWhiteSpace(sc: Scanner[Rune], vb: seq[bool]): bool =
   ## skip white-spaces and comments on verbose mode
   result = false
   if vb.len == 0 or not vb[vb.len-1]:
@@ -1437,9 +1389,10 @@ proc skipWhiteSpace(sc: Scanner[Rune], vb: ElasticSeq[bool]): bool =
     false
 
 proc verbosity(
-    vb: var ElasticSeq[bool],
-    sc: Scanner[Rune],
-    n: Node) =
+  vb: var seq[bool],
+  sc: Scanner[Rune],
+  n: Node
+) =
   ## update verbose mode on current group
   case n.kind:
   of reGroupStart:
@@ -1472,7 +1425,7 @@ proc parse(expression: string): seq[Node] =
   ## convert a ``string`` regex expression
   ## into a ``Node`` expression
   result = newSeqOfCap[Node](expression.len)
-  var vb = initElasticSeq[bool](64)
+  var vb = newSeq[bool]()
   let sc = expression.scan()
   for _ in sc:
     if sc.skipWhiteSpace(vb): continue
@@ -1500,7 +1453,7 @@ type
 proc fillGroups(expression: var seq[Node]): GroupsCapture =
   ## populate group indices, names and capturing mark
   var
-    groups = initElasticSeq[int](64)
+    groups = newSeq[int]()
     names = initTable[string, int16]()
     count = 0'i16
   for i, n in expression.mpairs:
@@ -1589,7 +1542,7 @@ proc toggle(f: Flag): Flag =
   of flagNotVerbose:
     flagVerbose
 
-proc squash(flags: ElasticSeq[seq[Flag]]): array[Flag, bool] =
+proc squash(flags: seq[seq[Flag]]): array[Flag, bool] =
   ## Nested groups may contain flags,
   ## this will set/unset those flags
   ## in order. It should be done each time
@@ -1618,7 +1571,7 @@ proc applyFlag(n: var Node, f: Flag) =
     # todo: apply recursevely to
     #       shorthands of reInSet/reNotSet (i.e: [:ascii:])
     if n.kind in {reInSet, reNotSet}:
-      var cps = initSet[Rune]()
+      var cps = initHashSet[Rune]()
       cps.incl(n.cps)
       for cp in cps:
         let cpsc = cp.swapCase()
@@ -1651,7 +1604,7 @@ proc applyFlag(n: var Node, f: Flag) =
 proc applyFlags(expression: seq[Node]): seq[Node] =
   ## apply flags to each group
   result = newSeqOfCap[Node](expression.len)
-  var flags = initElasticSeq[seq[Flag]](64)
+  var flags = newSeq[seq[Flag]]()
   let sc = expression.scan()
   for nn in sc:
     var n = nn
@@ -1813,7 +1766,7 @@ proc hasPrecedence(a: NodeKind, b: NodeKind): bool =
     (opsPA(b).associativity == asyLeft and
       opsPA(b).precedence < opsPA(a).precedence)
 
-proc popGreaterThan(ops: var ElasticSeq[Node], op: Node): seq[Node] =
+proc popGreaterThan(ops: var seq[Node], op: Node): seq[Node] =
   assert op.kind in opKind
   result = newSeqOfCap[Node](ops.len)
   while (ops.len > 0 and
@@ -1821,7 +1774,7 @@ proc popGreaterThan(ops: var ElasticSeq[Node], op: Node): seq[Node] =
       ops[ops.len - 1].kind.hasPrecedence(op.kind)):
     result.add(ops.pop())
 
-proc popUntilGroupStart(ops: var ElasticSeq[Node]): seq[Node] =
+proc popUntilGroupStart(ops: var seq[Node]): seq[Node] =
   result = newSeqOfCap[Node](ops.len)
   while true:
     let op = ops.pop()
@@ -1839,7 +1792,7 @@ proc rpn(expression: seq[Node]): seq[Node] =
   ## Suffix notation removes nesting and so it can
   ## be parsed in a linear way instead of recursively
   result = newSeqOfCap[Node](expression.len)
-  var ops = initElasticSeq[Node](64)
+  var ops = newSeq[Node]()
   for n in expression:
     case n.kind
     of matchableKind, assertionKind:
@@ -1909,7 +1862,7 @@ proc nfa(expression: seq[Node]): seq[Node] =
   result.add(initEOENode())
   var
     ends = newSeq[End](expression.len + 1)
-    states = initElasticSeq[int16](64)
+    states = newSeq[int16]()
   ends.fill(@[])  # todo: remove on nim >= 0.18.1
   if expression.len == 0:
     states.add(0)
@@ -2248,12 +2201,12 @@ proc contains(bss: var BitSet, x: int): bool =
 
 type
   States = object
-    states: ElasticSeq[State]
+    states: seq[State]
     ids: BitSet
 
 proc initStates(size: int): States =
   result = States(
-    states: initElasticSeq[State](),
+    states: newSeq[State](),
     ids: initBitSet(size))
 
 proc `[]`(ss: States, i: int): State =
@@ -2263,7 +2216,7 @@ proc len(ss: States): int =
   ss.states.len
 
 proc clear(ss: var States) =
-  ss.states.clear()
+  ss.states.setLen(0)
   ss.ids.clear()
 
 proc add(ss: var States, s: State) =
@@ -2276,10 +2229,11 @@ iterator items(ss: States): State {.inline.} =
     yield s
 
 proc populateCaptures(
-    result: var RegexMatch,
-    captured: ElasticSeq[Capture],
-    cIdx: int,
-    gc: int) =
+  result: var RegexMatch,
+  captured: seq[Capture],
+  cIdx: int,
+  gc: int
+) =
   # calculate slices for every group,
   # then calculate slices for each match
   # (a group can have multiple matches).
@@ -2347,53 +2301,56 @@ iterator peek(s: string, start = 0): (int, Rune, Rune) {.inline.} =
 type
   DataSets = tuple
     visited: BitSet
-    toVisit: ElasticSeq[State]
-    captured: ElasticSeq[Capture]
+    toVisit: seq[State]
+    captured: seq[Capture]
     currStates: States
     nextStates: States
 
 proc initDataSets(
-    size: int, withCaptures = false): DataSets =
-  var captured: ElasticSeq[Capture]
+  size: int, withCaptures = false
+): DataSets =
+  var captured: seq[Capture]
   result = (
     visited: initBitSet(size),
-    toVisit: initElasticSeq[State](),
+    toVisit: newSeq[State](),
     captured: captured,
     currStates: initStates(size),
     nextStates: initStates(size))
   if withCaptures:
-    result.captured = initElasticSeq[Capture]()
+    result.captured = newSeq[Capture]()
     result.captured.add(Capture())
 
 proc clear(ds: var DataSets) =
   ## lear all data sets. This is
   ## pretty much a perf free op
   ds.visited.clear()
-  ds.toVisit.clear()
+  ds.toVisit.setLen(0)
   ds.currStates.clear()
   ds.nextStates.clear()
   if ds.captured.len > 0:
-    ds.captured.clear()
+    ds.captured.setLen(0)
     ds.captured.add(Capture())
 
 proc toVisitStep(
-    result: var ElasticSeq[State],
-    n: Node,
-    ci: int,
-    si: int,
-    ei: int) {.inline.} =
+  result: var seq[State],
+  n: Node,
+  ci: int,
+  si: int,
+  ei: int
+) {.inline.} =
   if n.outB != -1:
     result.add((ni: n.outB, ci: ci, si: si, ei: ei))
   if n.outA != -1:
     result.add((ni: n.outA, ci: ci, si: si, ei: ei))
 
 proc step(
-    result: var States,
-    pattern: Regex,
-    state: State,
-    ds: var DataSets,
-    cp: Rune,
-    nxt: Rune) =
+  result: var States,
+  pattern: Regex,
+  state: State,
+  ds: var DataSets,
+  cp: Rune,
+  nxt: Rune
+) =
   assert ds.toVisit.len == 0
   ds.toVisit.add(state)
   while ds.toVisit.len > 0:
@@ -2434,15 +2391,16 @@ proc step(
       toVisitStep(ds.toVisit, n, s.ci, s.si, s.ei)
 
 proc stepFrom(
-    result: var States,
-    n: Node,
-    pattern: Regex,
-    ds: var DataSets,
-    ci: int,
-    si: int,
-    ei: int,
-    cp: Rune,
-    nxt: Rune) {.inline.} =
+  result: var States,
+  n: Node,
+  pattern: Regex,
+  ds: var DataSets,
+  ci: int,
+  si: int,
+  ei: int,
+  cp: Rune,
+  nxt: Rune
+) {.inline.} =
   ## go to next states
   if n.outA != -1:
     let state = (ni: n.outA, ci: ci, si: si, ei: ei)
@@ -2452,9 +2410,10 @@ proc stepFrom(
     result.step(pattern, state, ds, cp, nxt)
 
 proc setRegexMatch(
-    m: var RegexMatch,
-    pattern: Regex,
-    ds: DataSets): bool {.inline.} =
+  m: var RegexMatch,
+  pattern: Regex,
+  ds: DataSets
+): bool {.inline.} =
   result = false
   for state in ds.currStates:
     if pattern.states[state.ni].kind == reEOE:
@@ -2466,11 +2425,12 @@ proc setRegexMatch(
       return true
 
 proc matchImpl(
-    ds: var DataSets,
-    s: string,
-    pattern: Regex,
-    m: var RegexMatch,
-    start=0): bool =
+  ds: var DataSets,
+  s: string,
+  pattern: Regex,
+  m: var RegexMatch,
+  start = 0
+): bool =
   ds.clear()
   let statesCount = pattern.states.high.int16
   for i, cp, nxt in s.peek(start):
@@ -2494,10 +2454,11 @@ proc matchImpl(
   result = setRegexMatch(m, pattern, ds)
 
 proc match*(
-    s: string,
-    pattern: Regex,
-    m: var RegexMatch,
-    start=0): bool =
+  s: string,
+  pattern: Regex,
+  m: var RegexMatch,
+  start = 0
+): bool =
   ## return a match if the whole string
   ## matches the regular expression. This
   ## is similar to ``find(text, re"^regex$")``
@@ -2553,11 +2514,12 @@ proc contains*(s: string, pattern: Regex): bool =
       return
 
 proc findImpl(
-    ds: var DataSets,
-    s: string,
-    pattern: Regex,
-    m: var RegexMatch,
-    start = 0): bool =
+  ds: var DataSets,
+  s: string,
+  pattern: Regex,
+  m: var RegexMatch,
+  start = 0
+): bool =
   ## search through the string looking for the first
   ## location where there is a match
   ds.clear()
@@ -2593,10 +2555,11 @@ proc findImpl(
   result = setRegexMatch(m, pattern, ds)
 
 proc find*(
-    s: string,
-    pattern: Regex,
-    m: var RegexMatch,
-    start = 0): bool =
+  s: string,
+  pattern: Regex,
+  m: var RegexMatch,
+  start = 0
+): bool =
   ## search through the string looking for the first
   ## location where there is a match
   ##
@@ -2621,9 +2584,10 @@ template runeIncAt(s: string, n: var int) =
     inc(n, runeLenAt(s, n))
 
 iterator findAllImpl(
-    s: string,
-    pattern: Regex,
-    start = 0): RegexMatch {.inline.} =
+  s: string,
+  pattern: Regex,
+  start = 0
+): RegexMatch {.inline.} =
   var
     m = RegexMatch()
     ds = initDataSets(
@@ -2638,9 +2602,10 @@ iterator findAllImpl(
     else: i = b.b + 1
 
 iterator findAll*(
-    s: string,
-    pattern: Regex,
-    start = 0): RegexMatch {.inline.} =
+  s: string,
+  pattern: Regex,
+  start = 0
+): RegexMatch {.inline.} =
   ## search through the string and
   ## return each match. Empty matches
   ## (start > end) are included
@@ -2681,10 +2646,11 @@ proc findAndCaptureAll*(s: string, pattern: Regex): seq[string] =
     result.add(s[m.boundaries])
 
 proc matchEndImpl(
-    ds: var DataSets,
-    s: string,
-    pattern: Regex,
-    start = 0): int =
+  ds: var DataSets,
+  s: string,
+  pattern: Regex,
+  start = 0
+): int =
   ## return end index of the longest match.
   ## Return ``-1`` when there is no match.
   ## Pattern is anchored to the start of the string
@@ -2867,10 +2833,11 @@ proc addsubstr(result: var string, s: string, first: int) =
   addsubstr(result, s, first, s.high)
 
 proc replace*(
-    s: string,
-    pattern: Regex,
-    by: string,
-    limit = 0): string =
+  s: string,
+  pattern: Regex,
+  by: string,
+  limit = 0
+): string =
   ## Replace matched substrings.
   ##
   ## Matched groups can be accessed with ``$N``
@@ -2906,10 +2873,11 @@ proc replace*(
   result.addsubstr(s, i)
 
 proc replace*(
-    s: string,
-    pattern: Regex,
-    by: proc (m: RegexMatch, s: string): string,
-    limit = 0): string =
+  s: string,
+  pattern: Regex,
+  by: proc (m: RegexMatch, s: string): string,
+  limit = 0
+): string =
   ## Replace matched substrings.
   ##
   ## If ``limit`` is given, at most ``limit``

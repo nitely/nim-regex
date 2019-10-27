@@ -23,5 +23,8 @@ task test, "Test":
   #exec "nim js -r tests/tests.nim"
   #exec "nim js -r -d:forceRegexAtRuntime tests/tests.nim"
 
+  # Test runnable examples
+  exec "nim doc -o:./docs/ugh/ugh.html ./src/regex.nim"
+
 task docs, "Docs":
-  exec "nim doc2 -o:./docs/index.html ./src/regex.nim"
+  exec "nim doc -o:./docs/index.html ./src/regex.nim"

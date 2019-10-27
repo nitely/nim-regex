@@ -160,6 +160,15 @@ import unicodedb/properties
 import unicodedb/types
 import unicodeplus except isUpper, isLower
 
+const
+  nimVersion = (major: NimMajor, minor: NimMinor, patch: NimPatch)
+
+when nimVersion < (0, 20, 0):
+  proc initHashSet[T](): HashSet[T] =
+    result = initSet[T]()
+  proc toHashSet[T](keys: openArray[T]): HashSet[T] =
+    result = toSet[T](keys)
+
 type
   RegexError* = object of ValueError
   ## raised when the pattern

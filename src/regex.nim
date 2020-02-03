@@ -1673,6 +1673,7 @@ proc expandRepRange(expression: seq[Node]): seq[Node] =
   ## expand every repetition range
   result = newSeqOfCap[Node](expression.len)
   var i: int
+  var gi: int
   for n in expression:
     if n.kind != reRepRange:
       result.add(n)
@@ -1681,14 +1682,20 @@ proc expandRepRange(expression: seq[Node]): seq[Node] =
       result.len > 0,
       "Invalid repeition range, " &
       "nothing to repeat")
-    let lastNode = result[^1]
-    case lastNode.kind
+    case result[^1].kind
     of reGroupEnd:
       i = 0
+      gi = 0
       for ne in result.reversed:
         inc i
-        if ne.kind == reGroupStart and ne.idx == lastNode.idx:
+        if ne.kind == reGroupEnd:
+          inc gi
+        if ne.kind == reGroupStart:
+          dec gi
+        if gi == 0:
           break
+        doAssert gi >= 0
+      doAssert gi == 0
       assert result[result.len-i].kind == reGroupStart
       result.add(result[result.len-i .. result.len-1].expandOneRepRange(n))
     of matchableKind:

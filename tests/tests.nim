@@ -358,6 +358,8 @@ test "trepetition_range":
   check("aaaaaaaaaa".isMatch(re"a{0,}"))
   check("".isMatch(re"a{0,}"))
   check(not "a".isMatch(re"a{2,}"))
+  check("abcabcabc".isMatch(re"(?:(?:abc)){3}"))
+  check("abcabcabc".isMatch(re"((abc)){3}"))
   check(raises(r"a*{,}"))
   check(raises(r"a*{0}"))
   check(raises(r"a*{1}"))

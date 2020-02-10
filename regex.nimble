@@ -4,7 +4,10 @@ version = "0.13.0"
 author = "Esteban Castro Borsani (@nitely)"
 description = "Linear time regex matching"
 license = "MIT"
-srcDir = "src"
+when (NimMajor, NimMinor) >= (1, 1):
+  srcDir = "src"
+else:
+  srcdir = "src"
 skipDirs = @["tests"]
 
 requires "nim >= 0.19.0"

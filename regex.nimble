@@ -29,4 +29,4 @@ task test, "Test":
   exec "nim doc -o:./docs/ugh/ugh.html ./src/regex.nim"
 
 task docs, "Docs":
-  exec "nim doc -o:./docs/index.html ./src/regex.nim"
+  exec "nim doc --project -o:./docs ./src/regex.nim"

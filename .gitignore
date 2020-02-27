@@ -1,5 +1,4 @@
 nimcache/
-src/regex
 src/regex.js
 tests/tests
 tests/tests.js

@@ -1,3 +1,9 @@
+v0.13.1
+==================
+
+* Fix nested non-capturing group repetition #46
+* Remove stylecheck config #55
+
 v0.13
 ==================
 

@@ -211,12 +211,3 @@ const
   groupKind* = {
     reGroupStart,
     reGroupEnd}
-  matchTransitionKind* = {
-    reWhiteSpace,
-    reUCC,
-    reNotAlphaNum,
-    reNotDigit,
-    reNotWhiteSpace,
-    reNotUCC,
-    reInSet,
-    reNotSet}

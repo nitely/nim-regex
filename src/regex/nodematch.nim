@@ -40,7 +40,7 @@ func isWordBoundaryAscii(r: Rune, nxt: Rune): bool {.inline.} =
   ## is a boundary. Match ascii only
   isWordBoundaryImpl(r, nxt, isWordAscii)
 
-func match*(n: Node, r: Rune, nxt: Rune): bool =
+func match*(n: Node, r: Rune, nxt: Rune): bool {.inline.} =
   ## match for ``Node`` of assertion kind.
   ## Return whether the node matches
   ## the current characters or not
@@ -75,7 +75,7 @@ func match*(n: Node, r: Rune, nxt: Rune): bool =
     assert false
     false
 
-func contains(sr: seq[Slice[Rune]], r: Rune): bool =
+func contains(sr: seq[Slice[Rune]], r: Rune): bool {.inline.} =
   result = false
   for sl in sr:
     result = r in sl
@@ -120,14 +120,15 @@ func swapCase*(r: Rune): Rune =
   else:
     result = r
 
-func match*(n: Node, r: Rune): bool =
+func match*(n: Node, r: Rune): bool {.inline.} =
   ## match for ``Node`` of matchable kind.
   ## Return whether the node matches
   ## the current character or not
-  assert r != invalidRune
+  if r == invalidRune:
+    return n.kind == reEOE
   case n.kind
   of reEOE:
-    false
+    r == invalidRune
   of reWord:
     r.isWord()
   of reNotAlphaNum:

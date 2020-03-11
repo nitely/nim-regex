@@ -6,9 +6,7 @@ import pkg/regex/common
 import pkg/regex/parser
 import pkg/regex/exptransformation
 import pkg/regex/nfa
-import pkg/regex/dfa
-import pkg/regex/dfamatch
-import pkg/regex/dfamacro
+import pkg/regex/nfamatch
 
 export
   Regex,
@@ -19,15 +17,12 @@ export
 template reImpl(s, flags: untyped): Regex =
   var groups: GroupsCapture
   var transitions: Transitions
-  var alphabet: seq[AlphabetSym]
-  let dfa = s
+  let nfa = s
     .parse
     .transformExp(groups)
     .nfa(transitions)
-    .dfa(alphabet)
-    .minimize(alphabet)
   Regex(
-    dfa: dfa,
+    nfa: nfa,
     transitions: transitions,
     groupsCount: groups.count,
     namedGroups: groups.names,
@@ -38,13 +33,6 @@ func re*(
   flags: set[RegexFlag] = {}
 ): Regex {.inline.} =
   reImpl(s, flags)
-
-when not defined(forceRegexAtRuntime):
-  func re*(
-    s: static string,
-    flags: static set[RegexFlag] = {}
-  ): static Regex {.inline.} =
-    reImpl(s, flags)
 
 iterator group*(m: RegexMatch, i: int): Slice[int] =
   ## return slices for a given group.
@@ -161,43 +149,6 @@ func groupLastCapture*(
   else:
     return "" 
 
-func isInitialized*(re: Regex): bool {.inline.} =
-  ## Check whether the regex has been initialized
-  runnableExamples:
-    var re: Regex
-    doAssert not re.isInitialized
-    re = re"foo"
-    doAssert re.isInitialized
-
-  re.dfa.table.len > 0
-
-when not defined(forceRegexAtRuntime):
-  func match*(
-    s: string,
-    pattern: static Regex,
-    m: var RegexMatch,
-    start = 0
-  ): bool {.inline.} =
-    ## return a match if the whole string
-    ## matches the regular expression. This
-    ## is similar to ``find(text, re"^regex$", m)``,
-    ## but has better performance
-    runnableExamples:
-      var m: RegexMatch
-      doAssert "abcd".match(re"abcd", m)
-      doAssert not "abcd".match(re"abc", m)
-
-    const f: MatchFlags = {}
-    result = matchImpl(s, pattern, m, f, start)
-
-  func match*(s: string, pattern: static Regex): bool {.inline.} =
-    runnableExamples:
-      doAssert "abcd".match(re"abcd")
-      doAssert not "abcd".match(re"abc")
-
-    var m: RegexMatch
-    result = matchImpl(s, pattern, m, {mfNoCaptures})
-
 func match*(
   s: string,
   pattern: Regex,
@@ -210,41 +161,6 @@ func match*(
 func match*(s: string, pattern: Regex): bool {.inline.} =
   var m: RegexMatch
   result = matchImpl(s, pattern, m, {mfNoCaptures})
-
-func contains*(s: string, pattern: Regex): bool {.inline.} =
-  ## search for the pattern anywhere
-  ## in the string. It returns as soon
-  ## as there is a match, even when the
-  ## expression has repetitions
-  runnableExamples:
-    doAssert re"bc" in "abcd"
-    doAssert re"(23)+" in "23232"
-    doAssert re"^(23)+$" notin "23232"
-
-  result = false
-  var m: RegexMatch
-  var i = 0
-  var c: Rune
-  while i < len(s):
-    result = matchImpl(s, pattern, m, {mfShortestMatch, mfNoCaptures}, i)
-    if result:
-      break
-    fastRuneAt(s, i, c, true)
-
-func find*(
-  s: string,
-  pattern: Regex,
-  m: var RegexMatch,
-  start = 0
-): bool {.inline.} =
-  result = false
-  var i = start
-  var c: Rune
-  while i < len(s):
-    result = matchImpl(s, pattern, m, {mfLongestMatch}, i)
-    if result:
-      break
-    fastRuneAt(s, i, c, true)
 
 when isMainModule:
   var m: RegexMatch
@@ -335,25 +251,6 @@ when isMainModule:
   doAssert not match("abc", re"b")
   doAssert not match("abc", re"c")
 
-  doAssert re"bc" in "abcd"
-  doAssert re"(23)+" in "23232"
-  doAssert re"^(23)+$" notin "23232"
-  doAssert re"\w" in "弢"
-  doAssert re(r"\w", {reAscii}) notin "弢"
-  doAssert re(r"\w", {reAscii}) in "a"
-
-  doAssert "abcd".find(re"bc", m)
-  doAssert not "abcd".find(re"de", m)
-  doAssert "%ab%".find(re(r"\w{2}", {reAscii}), m)
-  doAssert "%弢弢%".find(re"\w{2}", m)
-  doAssert not "%弢弢%".find(re(r"\w{2}", {reAscii}), m)
-  doAssert(
-    "2222".find(re"(22)*", m) and
-    m.group(0) == @[0 .. 1, 2 .. 3])
-  doAssert(
-    "11222211".find(re"(22)+", m) and
-    m.group(0) == @[2 .. 3, 4 .. 5])
-  
   doAssert match("650-253-0001", re"[0-9]+-[0-9]+-[0-9]+", m)
   doAssert not match("abc-253-0001", re"[0-9]+-[0-9]+-[0-9]+", m)
   doAssert not match("650-253", re"[0-9]+-[0-9]+-[0-9]+", m)
@@ -364,51 +261,3 @@ when isMainModule:
 
   doAssert match("abcabcabc", re"(?:(?:abc)){3}")
   doAssert match("abcabcabc", re"((abc)){3}")
-
-  block:
-    # unminimized == 7
-    const re1 = re"(11)*+(111)*"
-    doAssert re1.dfa.table.len == 4
-    doAssert match("", re1)
-    doAssert match("11", re1)
-    doAssert match("111", re1)
-    doAssert match("11111", re1)
-    doAssert match("1111111", re1)
-    doAssert match("1111111111", re1)
-    doAssert not match("1", re1)
-  block:
-    # unminimized == 9
-    const re1 = re"(11)+(111)*"
-    doAssert re1.dfa.table.len == 6
-    doAssert not match("", re1)
-    doAssert match("11", re1)
-    doAssert not match("111", re1)
-    doAssert match("11111", re1)
-  block:
-    # unminimized == 7
-    const re1 = re"(aabb)(ab)*"
-    doAssert re1.dfa.table.len == 6
-    doAssert match("aabb", re1)
-    doAssert match("aabbab", re1)
-    doAssert match("aabbabab", re1)
-    doAssert not match("ab", re1)
-    doAssert not match("aabbaba", re1)
-  block:
-    # unminimized == 4
-    const re1 = re"0(10)*"
-    doAssert re1.dfa.table.len == 3
-    doAssert match("0", re1)
-    doAssert match("010", re1)
-    doAssert not match("", re1)
-    doAssert not match("0101", re1)
-    doAssert not match("0100", re1)
-    doAssert not match("00", re1)
-    doAssert not match("000", re1)
-  block:
-    const re1 = re"(11)*|(111)*"
-    doAssert match("", re1)
-    doAssert match("11", re1)
-    doAssert match("111", re1)
-    doAssert match("1111", re1)
-    doAssert match("111111", re1)
-    doAssert not match("1", re1)

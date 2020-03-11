@@ -8,6 +8,7 @@ func check(cond: bool, msg: string) =
     raise newException(RegexError, msg)
 
 type
+  Nfa* = seq[Node]
   End = seq[int16]
     ## store all the last
     ## states of a given state.
@@ -48,7 +49,7 @@ func update(
 
 const eoe = 0'i16
 
-func eNfa(expression: seq[Node]): seq[Node] =
+func eNfa(expression: seq[Node]): Nfa =
   ## Thompson's construction
   result = newSeqOfCap[Node](expression.len + 2)
   result.add(initEOENode())
@@ -156,25 +157,14 @@ func isTransitionZ(n: Node): bool {.inline.} =
   result = case n.kind
     of groupKind:
       n.isCapturing
-    of reInSet:
-      # XXX always false in ascii mode
-      var isZ = false
-      for s in n.shorthands:
-        isZ = s.kind notin {reAny, reAnyNl, reDigit, reWord}
-        if isZ:
-          break
-      isZ
     of assertionKind:
-      true
-    of matchTransitionKind - {reInSet}:
-      # XXX false in ascii mode
       true
     else:
       false
 
 func teClosure(
   result: var TeClosure,
-  nfa: seq[Node],
+  nfa: Nfa,
   state: int16,
   visited: var set[int16],
   zTransitions: Zclosure
@@ -193,7 +183,7 @@ func teClosure(
 
 func teClosure(
   result: var TeClosure,
-  nfa: seq[Node],
+  nfa: Nfa,
   state: int16
 ) =
   var visited: set[int16]
@@ -205,14 +195,13 @@ type
   TransitionsAll* = seq[seq[int16]]
   ZclosureStates* = seq[seq[Node]]
   Transitions* = object
-    all*: TransitionsAll
     allZ*: TransitionsAll
     z*: ZclosureStates
 
 func eRemoval(
-  eNfa: seq[Node],
+  eNfa: Nfa,
   transitions: var Transitions
-): seq[Node] =
+): Nfa =
   ## Remove e-transitions and return
   ## remaining state transtions and
   ## submatches, and zero matches.
@@ -220,7 +209,6 @@ func eRemoval(
   ## which may help matching performance
   #echo eNfa
   var eNfa = eNfa
-  transitions.all.setLen(eNfa.len)
   transitions.allZ.setLen(eNfa.len)
   var statesMap = newSeq[int16](eNfa.len)
   for i in 0 .. statesMap.len-1:
@@ -247,7 +235,6 @@ func eRemoval(
         inc statePos
       assert statesMap[qa] > -1
       assert statesMap[qb] > -1
-      transitions.all[statesMap[qa]].add(statesMap[qb])
       transitions.allZ[statesMap[qa]].add(-1'i16)
       zc.setLen(0)
       for z in zclosure:
@@ -258,17 +245,12 @@ func eRemoval(
       if qb notin qu:
         qu.incl(qb)
         qw.addFirst(qb)
-  transitions.all.setLen(statePos)
   transitions.allZ.setLen(statePos)
   result = newSeq[Node](statePos)
   for en, nn in statesMap.pairs:
     if nn == -1:
       continue
-    result[nn] = if isTransitionZ(eNfa[en]):
-      doAssert eNfa[en].kind in matchableKind
-      Node(kind: reAnyNl, cp: "#".toRune)
-    else:
-      eNfa[en]
+    result[nn] = eNfa[en]
     result[nn].next.setLen(0)
     for en2 in eNfa[en].next:
       doAssert statesMap[en2] > -1
@@ -277,5 +259,5 @@ func eRemoval(
 func nfa*(
   exp: seq[Node],
   transitions: var Transitions
-): seq[Node] =
+): Nfa =
   result = exp.eNfa.eRemoval(transitions)

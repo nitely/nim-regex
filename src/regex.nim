@@ -116,7 +116,7 @@ func groupFirstCapture*(
   groupName: string,
   text: string
 ): string =
-  ##  Return fist capture for a given capturing group
+  ## return first capture for a given capturing group
   runnableExamples:
     let text = "hello beautiful world"
     var m: RegexMatch
@@ -135,7 +135,7 @@ func groupLastCapture*(
   groupName: string,
   text: string
 ): string =
-  ##  Return last capture for a given capturing group
+  ## return last capture for a given capturing group
   runnableExamples:
     let text = "hello beautiful world"
     var m: RegexMatch
@@ -161,6 +161,49 @@ func match*(
 func match*(s: string, pattern: Regex): bool {.inline.} =
   var m: RegexMatch
   result = matchImpl(s, pattern, m, {mfNoCaptures})
+
+func contains*(s: string, pattern: Regex): bool {.inline.} =
+  ## search for the pattern anywhere
+  ## in the string. It returns as soon
+  ## as there is a match, even when the
+  ## expression has repetitions
+  result = false
+  var m: RegexMatch
+  var i = 0
+  var c: Rune
+  while i < len(s):
+    result = matchImpl(s, pattern, m, {mfShortestMatch, mfNoCaptures}, i)
+    if result:
+      break
+    fastRuneAt(s, i, c, true)
+
+func find*(
+  s: string,
+  pattern: Regex,
+  m: var RegexMatch,
+  start = 0
+): bool {.inline.} =
+  result = false
+  var i = start
+  var c: Rune
+  while i < len(s):
+    result = matchImpl(s, pattern, m, {mfShortestMatch, mfNoCaptures}, i)
+    if result:
+      result = matchImpl(s, pattern, m, {mfLongestMatch}, i)
+      doAssert result
+      break
+    fastRuneAt(s, i, c, true)
+
+func find*(s: string, pattern: Regex, start = 0): bool {.inline.} =
+  result = false
+  var i = start
+  var c: Rune
+  var m: RegexMatch
+  while i < len(s):
+    result = matchImpl(s, pattern, m, {mfLongestMatch, mfNoCaptures}, i)
+    if result:
+      break
+    fastRuneAt(s, i, c, true)
 
 when isMainModule:
   var m: RegexMatch
@@ -261,3 +304,17 @@ when isMainModule:
 
   doAssert match("abcabcabc", re"(?:(?:abc)){3}")
   doAssert match("abcabcabc", re"((abc)){3}")
+
+  doAssert re"bc" in "abcd"
+  doAssert re"(23)+" in "23232"
+  doAssert re"^(23)+$" notin "23232"
+
+  doAssert "abcd".find(re"bc")
+  doAssert not "abcd".find(re"de")
+  doAssert "%弢弢%".find(re"\w{2}")
+  doAssert(
+    "2222".find(re"(22)*", m) and
+    m.group(0) == @[0 .. 1, 2 .. 3])
+  doAssert(
+    "11222211".find(re"(22)+", m) and
+    m.group(0) == @[2 .. 3, 4 .. 5])

@@ -124,7 +124,7 @@ func match*(n: Node, r: Rune): bool {.inline.} =
   ## match for ``Node`` of matchable kind.
   ## Return whether the node matches
   ## the current character or not
-  if r == invalidRune:
+  if r.int < 0:
     return n.kind == reEOE
   case n.kind
   of reEOE:

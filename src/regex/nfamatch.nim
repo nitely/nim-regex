@@ -104,6 +104,7 @@ type
     mfShortestMatch
     mfLongestMatch
     mfNoCaptures
+    mfFindMatch
   MatchFlags* = set[MatchFlag]
   RegexMatch* = object
     ## result from matching operations
@@ -151,7 +152,7 @@ func submatch(
           discard
       if matched:
         smB.add((nt, captx))
-  swap(smA, smB)
+  swap smA, smB
 
 func clear*(m: var RegexMatch) {.inline.} =
   if m.captures.len > 0:
@@ -159,6 +160,36 @@ func clear*(m: var RegexMatch) {.inline.} =
   if m.namedGroups.len > 0:
     m.namedGroups.clear()
   m.boundaries = 0 .. -1
+
+template shortestMatch: untyped {.dirty.} =
+  submatch(smA, smB, capts, regex, iPrev, cPrev, -2'i32)
+  if smA.len > 0:
+    return true
+  swap smA, smB
+
+template longestMatchInit: untyped {.dirty.} =
+  var
+    matchedLong = false
+    captLong = -1'i32
+    iPrevLong = start
+
+template longestMatchEnter: untyped {.dirty.} =
+  submatch(smA, smB, capts, regex, iPrev, cPrev, -2'i32)
+  if smA.len > 0:
+    matchedLong = true
+    captLong = smA[0][1]
+    iPrevLong = iPrev
+  swap smA, smB
+
+template longestMatchExit: untyped {.dirty.} =
+  if not matchedLong:
+    return false
+  assert smA.len == 0
+  constructSubmatches(m.captures, capts, captLong, regex.groupsCount)
+  if regex.namedGroups.len > 0:
+    m.namedGroups = regex.namedGroups
+  m.boundaries = start .. iPrevLong-1
+  return true
 
 func matchImpl*(
   text: string,
@@ -176,6 +207,8 @@ func matchImpl*(
     cPrev = -1'i32
     i = start
     iPrev = start
+  when mfLongestMatch in flags:
+    longestMatchInit()
   smA = newSubmatches()
   smB = newSubmatches()
   smA.add((0'i16, -1'i32))
@@ -183,13 +216,24 @@ func matchImpl*(
     fastRuneAt(text, i, c, true)
     #c = Rune(text[i])
     #inc i
+    when mfShortestMatch in flags:
+      shortestMatch()
+    when mfLongestMatch in flags:
+      longestMatchEnter()
     submatch(smA, smB, capts, regex, iPrev, cPrev, c.int32)
     if smA.len == 0:
+      when mfLongestMatch in flags:
+        longestMatchExit()
       return false
     iPrev = i
     cPrev = c.int32
+    #when mfFindMatch in flags:
+      # XXX needs to store start
+    #  smA.add((0'i16, -1'i32))
   submatch(smA, smB, capts, regex, iPrev, cPrev, -1'i32)
   if smA.len == 0:
+    when mfLongestMatch in flags:
+      longestMatchExit()
     return false
   constructSubmatches(m.captures, capts, smA[0][1], regex.groupsCount)
   if regex.namedGroups.len > 0:

@@ -147,7 +147,7 @@ func groupLastCapture*(
   if captures.len > 0:
     return captures[captures.len-1]
   else:
-    return "" 
+    return ""
 
 func match*(
   s: string,
@@ -194,16 +194,31 @@ func find*(
       break
     fastRuneAt(s, i, c, true)
 
-func find*(s: string, pattern: Regex, start = 0): bool {.inline.} =
-  result = false
+iterator findAll*(
+  s: string,
+  pattern: Regex,
+  start = 0
+): RegexMatch {.inline.} =
   var i = start
   var c: Rune
   var m: RegexMatch
   while i < len(s):
-    result = matchImpl(s, pattern, m, {mfLongestMatch, mfNoCaptures}, i)
-    if result:
-      break
-    fastRuneAt(s, i, c, true)
+    if find(s, pattern, m, i):
+      if i < m.boundaries.b+1:
+        i = m.boundaries.b+1
+      else:
+        fastRuneAt(s, i, c, true)
+      yield m
+    else:
+      fastRuneAt(s, i, c, true)
+
+func findAll*(
+  s: string,
+  pattern: Regex,
+  start = 0
+): seq[RegexMatch] {.inline.} =
+  for m in findAll(s, pattern, start):
+    result.add(m)
 
 when isMainModule:
   var m: RegexMatch
@@ -287,7 +302,9 @@ when isMainModule:
     m.captures == @[@[0 .. -1], @[0 .. 3]]
   doAssert match("aaaa", re"(a)*(a)", m) and
     m.captures == @[@[0 .. 0, 1 .. 1, 2 .. 2], @[3 .. 3]]
-  
+  doAssert match("aa", re"\baa\b", m) and
+    m.boundaries == 0 .. 1
+
   doAssert match("abc", re"abc")
   doAssert not match("abc", re"abd")
   doAssert not match("abc", re"ab")
@@ -309,12 +326,31 @@ when isMainModule:
   doAssert re"(23)+" in "23232"
   doAssert re"^(23)+$" notin "23232"
 
-  doAssert "abcd".find(re"bc")
-  doAssert not "abcd".find(re"de")
-  doAssert "%弢弢%".find(re"\w{2}")
+  doAssert "abcd".find(re"bc", m)
+  doAssert not "abcd".find(re"de", m)
+  doAssert "%弢弢%".find(re"\w{2}", m)
   doAssert(
     "2222".find(re"(22)*", m) and
     m.group(0) == @[0 .. 1, 2 .. 3])
   doAssert(
     "11222211".find(re"(22)+", m) and
     m.group(0) == @[2 .. 3, 4 .. 5])
+  
+  func findAllBounds(s: string, reg: Regex): seq[Slice[int]] =
+    result = map(findAll(s, reg), func (m: RegexMatch): Slice[int] =
+      m.boundaries)
+
+  doAssert findAllBounds("abcabc", re"bc") == @[1 .. 2, 4 .. 5]
+  doAssert findAllBounds("aa", re"a") == @[0 .. 0, 1 .. 1]
+  doAssert findAllBounds("a", re"a") == @[0 .. 0]
+  doAssert findAllBounds("a", re"b") == newSeq[Slice[int]]()
+  doAssert findAllBounds("", re"b") == newSeq[Slice[int]]()
+  doAssert findAllBounds("a", re"") == @[0 .. -1]
+  doAssert findAllBounds("ab", re"") == @[0 .. -1, 1 .. 0]
+  doAssert findAllBounds("a", re"\b") == @[0 .. -1]
+  doAssert findAllBounds("ab", re"\b") == @[0 .. -1, 1 .. 0]
+  doAssert findAllBounds("aΪⒶ弢", re"Ϊ") == @[1 .. 2]
+  doAssert findAllBounds("aΪⒶ弢", re"Ⓐ") == @[3 .. 5]
+  doAssert findAllBounds("aΪⒶ弢", re"弢") == @[6 .. 9]
+  doAssert findAllBounds("aΪⒶ弢aΪⒶ弢", re"Ⓐ") == @[3 .. 5, 13 .. 15]
+  doAssert findAllBounds("aaa", re"a*") == @[0 .. 2]

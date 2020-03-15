@@ -203,7 +203,7 @@ func matchImpl*(
     smA: Submatches
     smB: Submatches
     capts: Capts
-    c: Rune
+    c = Rune(-1)
     cPrev = -1'i32
     i = start
     iPrev = start

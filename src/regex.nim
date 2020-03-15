@@ -1,6 +1,7 @@
 import std/tables
 import std/sequtils
 import std/unicode
+from std/strutils import addf
 
 import pkg/regex/common
 import pkg/regex/parser
@@ -270,6 +271,115 @@ func splitIncl*(s: string, sep: Regex): seq[string] =
       assert last < m.boundaries.b+1
       last = m.boundaries.b+1
 
+func startsWith*(s: string, pattern: Regex, start = 0): bool =
+  ## return whether the string
+  ## starts with the pattern or not
+  var m: RegexMatch
+  result = matchImpl(s, pattern, m, {mfShortestMatch, mfNoCaptures}, start)
+
+func endsWith*(s: string, pattern: Regex): bool =
+  ## return whether the string
+  ## ends with the pattern or not
+  result = false
+  var
+    m: RegexMatch
+    i = 0
+  while i < s.len:
+    result = matchImpl(s, pattern, m, {mfNoCaptures}, i)
+    if result: return
+    s.runeIncAt(i)
+
+func flatCaptures(result: var seq[string], m: RegexMatch, s: string) =
+  ## Concat capture repetitions
+  var
+    i, n = 0
+    ss: string
+  for g in 0 ..< m.groupsCount:
+    n = 0
+    for sl in m.group(g):
+      if sl.a <= sl.b:
+        n.inc(sl.b - sl.a + 1)
+    ss = newString(n)
+    i = 0
+    for sl in m.group(g):
+      for c in sl:
+        ss[i] = s[c]
+        inc i
+    assert i == n
+    result[g] = ss
+
+func addsubstr(result: var string, s: string, first, last: int) =
+  let
+    first = max(first, 0)
+    last = min(last, s.high)
+  if first > last: return
+  let n = result.len
+  result.setLen(result.len + (last - first) + 1)
+  # XXX copyMem
+  var j = 0
+  for i in first .. last:
+    result[n + j] = s[i]
+    inc j
+
+func addsubstr(result: var string, s: string, first: int) {.inline.} =
+  addsubstr(result, s, first, s.high)
+
+proc replace*(
+  s: string,
+  pattern: Regex,
+  by: string,
+  limit = 0
+): string =
+  ## Replace matched substrings.
+  ##
+  ## Matched groups can be accessed with ``$N``
+  ## notation, where ``N`` is the group's index,
+  ## starting at 1 (1-indexed). ``$$`` means
+  ## literal ``$``.
+  ##
+  ## If ``limit`` is given, at most ``limit``
+  ## replacements are done. ``limit`` of 0
+  ## means there is no limit
+  result = ""
+  var
+    i, j = 0
+    capts = newSeq[string](pattern.groupsCount)
+  echo "called"
+  for m in findAll(s, pattern):
+    echo "what"
+    result.addsubstr(s, i, m.boundaries.a - 1)
+    flatCaptures(capts, m, s)
+    echo capts
+    if capts.len > 0:
+      result.addf(by, capts)
+    else:
+      result.add(by)
+    i = m.boundaries.b + 1
+    inc j
+    if limit > 0 and j == limit: break
+  result.addsubstr(s, i)
+
+func replace*(
+  s: string,
+  pattern: Regex,
+  by: proc (m: RegexMatch, s: string): string,
+  limit = 0
+): string =
+  ## Replace matched substrings.
+  ##
+  ## If ``limit`` is given, at most ``limit``
+  ## replacements are done. ``limit`` of 0
+  ## means there is no limit
+  result = ""
+  var i, j = 0
+  for m in findAll(s, pattern):
+    result.addsubstr(s, i, m.boundaries.a - 1)
+    result.add(by(m, s))
+    i = m.boundaries.b + 1
+    inc j
+    if limit > 0 and j == limit: break
+  result.addsubstr(s, i)
+
 when isMainModule:
   var m: RegexMatch
 
@@ -385,8 +495,10 @@ when isMainModule:
     m.group(0) == @[2 .. 3, 4 .. 5]
 
   func findAllBounds(s: string, reg: Regex): seq[Slice[int]] =
-    result = map(findAll(s, reg), func (m: RegexMatch): Slice[int] =
-      m.boundaries)
+    result = map(
+      findAll(s, reg),
+      func (m: RegexMatch): Slice[int] =
+        m.boundaries)
 
   doAssert findAllBounds("abcabc", re"bc") == @[1 .. 2, 4 .. 5]
   doAssert findAllBounds("aa", re"a") == @[0 .. 0, 1 .. 1]
@@ -423,6 +535,7 @@ when isMainModule:
   doAssert split("1 2", re" ") == @["1", "2"]
   doAssert split("foo", re"foo") == @["", ""]
   doAssert split("", re"foo") == @[""]
+  doAssert split("12", re"\B") == @["", "1", "", "2", ""]
 
   doAssert "a,b".splitIncl(re"(,)") == @["a", ",", "b"]
   doAssert "12".splitIncl(re"(\d)") == @["", "1", "", "2", ""]
@@ -456,3 +569,82 @@ when isMainModule:
   doAssert splitIncl("1 2", re" ") == @["1", "2"]
   doAssert splitIncl("foo", re"foo") == @["", ""]
   doAssert splitIncl("", re"foo") == @[""]
+
+  doAssert "abc".startsWith(re"ab")
+  doAssert not "abc".startsWith(re"bc")
+  doAssert startsWith("弢ⒶΪ", re"弢Ⓐ")
+  doAssert startsWith("弢", re("\xF0\xAF\xA2\x94"))
+  doAssert not startsWith("弢", re("\xF0\xAF\xA2"))
+  doAssert "abc".startsWith(re"\w")
+  doAssert not "abc".startsWith(re"\d")
+  doAssert "abc".startsWith(re"(a|b)")
+  doAssert "bc".startsWith(re"(a|b)")
+  doAssert not "c".startsWith(re"(a|b)")
+
+  doAssert "abc".endsWith(re"bc")
+  doAssert not "abc".endsWith(re"ab")
+  doAssert endsWith("弢ⒶΪ", re"ⒶΪ")
+  doAssert endsWith("弢", re("\xF0\xAF\xA2\x94"))
+  doAssert not endsWith("弢", re("\xAF\xA2\x94"))
+  doAssert "abc".endsWith(re"(b|c)")
+  doAssert "ab".endsWith(re"(b|c)")
+  doAssert not "a".endsWith(re"(b|c)")
+
+  #[
+  doAssert "a".replace(re"(a)", "m($1)") ==
+    "m(a)"
+  doAssert "a".replace(re"(a)", "m($1) m($1)") ==
+    "m(a) m(a)"
+  doAssert "aaa".replace(re"(a*)", "m($1)") ==
+    "m(aaa)"
+  doAssert "abc".replace(re"(a(b)c)", "m($1) m($2)") ==
+    "m(abc) m(b)"
+  doAssert "abc".replace(re"(a(b))(c)", "m($1) m($2) m($3)") ==
+    "m(ab) m(b) m(c)"
+  doAssert "abcabc".replace(re"(abc)*", "m($1)") ==
+    "m(abcabc)"
+  doAssert "abcabc".replace(re"(abc)", "m($1)") ==
+    "m(abc)m(abc)"
+  doAssert "abcabc".replace(re"(abc)", "m($1)") ==
+    "m(abc)m(abc)"
+  doAssert "abcab".replace(re"(abc)", "m($1)") ==
+    "m(abc)ab"
+  doAssert "abcabc".replace(re"((abc)*)", "m($1) m($2)") ==
+    "m(abcabc) m(abcabc)"
+  doAssert "abcabc".replace(re"((a)bc)*", "m($1) m($2)") ==
+    "m(abcabc) m(aa)"
+  doAssert "abc".replace(re"(b)", "m($1)") == "am(b)c"
+  doAssert "abc".replace(re"d", "m($1)") == "abc"
+  doAssert "abc".replace(re"(d)", "m($1)") == "abc"
+  doAssert "aaa".replace(re"a", "b") == "bbb"
+  doAssert "aaa".replace(re"a", "b", 1) == "baa"
+  ]#
+  echo "Nim is awesome!".replace(re"(\w\B)", "$1_")
+  doAssert "Nim is awesome!".replace(re"(\w\B)", "$1_") ==
+    "N_i_m i_s a_w_e_s_o_m_e!"
+  #[
+  block:
+    proc by(m: RegexMatch, s: string): string =
+      result = "m("
+      for g in 0 ..< m.groupsCount:
+        for sl in m.group(g):
+          result.add(s[sl])
+          result.add(',')
+      result.add(')')
+
+    doAssert "abc".replace(re"(b)", by) == "am(b,)c"
+    doAssert "aaa".replace(re"(a*)", by) == "m(aaa,)"
+    doAssert "aaa".replace(re"(a)*", by) == "m(a,a,a,)"
+
+  block:
+    proc removeEvenWords(m: RegexMatch, s: string): string =
+      if m.group(1).len mod 2 != 0:
+        result = s[m.group(0)[0]]
+      else:
+        result = ""
+
+    let
+      text = "Es macht Spaß, alle geraden Wörter zu entfernen!"
+      expected = "macht , geraden entfernen!"
+    doAssert text.replace(re"((\w)+\s*)", removeEvenWords) == expected
+  ]#

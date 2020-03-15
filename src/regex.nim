@@ -162,7 +162,7 @@ func match*(s: string, pattern: Regex): bool {.inline.} =
   var m: RegexMatch
   result = matchImpl(s, pattern, m, {mfNoCaptures})
 
-func contains*(s: string, pattern: Regex): bool {.inline.} =
+func contains*(s: string, pattern: Regex): bool =
   ## search for the pattern anywhere
   ## in the string. It returns as soon
   ## as there is a match, even when the
@@ -182,7 +182,7 @@ func find*(
   pattern: Regex,
   m: var RegexMatch,
   start = 0
-): bool {.inline.} =
+): bool =
   result = false
   var i = start
   var c: Rune
@@ -216,9 +216,59 @@ func findAll*(
   s: string,
   pattern: Regex,
   start = 0
-): seq[RegexMatch] {.inline.} =
+): seq[RegexMatch] =
   for m in findAll(s, pattern, start):
     result.add(m)
+
+template runeIncAt(s: string, n: var int) =
+  ## increment ``n`` up to
+  ## next rune's index
+  if n >= s.len:
+    inc n
+  else:
+    inc(n, runeLenAt(s, n))
+
+iterator split*(s: string, sep: Regex): string {.inline.} =
+  ## return not matched substrings
+  var
+    first = 0
+    last = 0
+    m: RegexMatch
+  while last <= s.len:
+    first = last
+    while last <= s.len:
+      discard matchImpl(s, sep, m, {mfLongestMatch, mfNoCaptures}, last)
+      if m.boundaries.a <= m.boundaries.b:
+        break
+      s.runeIncAt last
+    yield substr(s, first, last-1)
+    if m.boundaries.a <= m.boundaries.b:
+      assert last < m.boundaries.b+1
+      last = m.boundaries.b+1
+
+func split*(s: string, sep: Regex): seq[string] =
+  for w in split(s, sep):
+    result.add w
+
+func splitIncl*(s: string, sep: Regex): seq[string] =
+  var
+    first = 0
+    last = 0
+    m: RegexMatch
+  while last <= s.len:
+    first = last
+    while last <= s.len:
+      discard matchImpl(s, sep, m, {mfLongestMatch, mfNoCaptures}, last)
+      if m.boundaries.a <= m.boundaries.b:
+        break
+      s.runeIncAt last
+    result.add substr(s, first, last-1)
+    for g in 0 ..< m.groupsCount:
+      for sl in m.group(g):
+        result.add substr(s, sl.a, sl.b)
+    if m.boundaries.a <= m.boundaries.b:
+      assert last < m.boundaries.b+1
+      last = m.boundaries.b+1
 
 when isMainModule:
   var m: RegexMatch
@@ -329,13 +379,11 @@ when isMainModule:
   doAssert "abcd".find(re"bc", m)
   doAssert not "abcd".find(re"de", m)
   doAssert "%弢弢%".find(re"\w{2}", m)
-  doAssert(
-    "2222".find(re"(22)*", m) and
-    m.group(0) == @[0 .. 1, 2 .. 3])
-  doAssert(
-    "11222211".find(re"(22)+", m) and
-    m.group(0) == @[2 .. 3, 4 .. 5])
-  
+  doAssert "2222".find(re"(22)*", m) and
+    m.group(0) == @[0 .. 1, 2 .. 3]
+  doAssert "11222211".find(re"(22)+", m) and
+    m.group(0) == @[2 .. 3, 4 .. 5]
+
   func findAllBounds(s: string, reg: Regex): seq[Slice[int]] =
     result = map(findAll(s, reg), func (m: RegexMatch): Slice[int] =
       m.boundaries)
@@ -354,3 +402,57 @@ when isMainModule:
   doAssert findAllBounds("aΪⒶ弢", re"弢") == @[6 .. 9]
   doAssert findAllBounds("aΪⒶ弢aΪⒶ弢", re"Ⓐ") == @[3 .. 5, 13 .. 15]
   doAssert findAllBounds("aaa", re"a*") == @[0 .. 2]
+
+  doAssert split("a,b,c", re",") == @["a", "b", "c"]
+  doAssert split("00232this02939is39an22example111", re"\d+") ==
+    @["", "this", "is", "an", "example", ""]
+  doAssert split("AAA :   : BBB", re"\s*:\s*") == @["AAA", "", "BBB"]
+  doAssert split("", re",") == @[""]
+  doAssert split(",,", re",") == @["", "", ""]
+  doAssert split("abc", re"") == @["abc"]
+  doAssert split(",a,Ϊ,Ⓐ,弢,", re",") ==
+    @["", "a", "Ϊ", "Ⓐ", "弢", ""]
+  doAssert split("弢", re"\xAF") == @["弢"]  # "弢" == "\xF0\xAF\xA2\x94"
+  doAssert split("Words, words, words.", re"\W+") ==
+    @["Words", "words", "words", ""]
+  doAssert split("0a3B9", re"[a-fA-F]+") ==
+    @["0", "3", "9"]
+  doAssert split("1 2 3 4 5 6 ", re" ") ==
+    @["1", "2", "3", "4", "5", "6", ""]
+  doAssert split("1  2  ", re" ") == @["1", "", "2", "", ""]
+  doAssert split("1 2", re" ") == @["1", "2"]
+  doAssert split("foo", re"foo") == @["", ""]
+  doAssert split("", re"foo") == @[""]
+
+  doAssert "a,b".splitIncl(re"(,)") == @["a", ",", "b"]
+  doAssert "12".splitIncl(re"(\d)") == @["", "1", "", "2", ""]
+  doAssert splitIncl("aΪⒶ弢", re"(\w)") ==
+    @["", "a", "", "Ϊ", "", "Ⓐ", "", "弢", ""]
+  doAssert splitIncl("aΪⒶ弢", re"") == @["aΪⒶ弢"]
+  doAssert splitIncl("...words, words...", re"(\W+)") ==
+    @["", "...", "words", ", ", "words", "...", ""]
+  doAssert splitIncl("Words, words, words.", re"(\W+)") ==
+    @["Words", ", ", "words", ", ", "words", ".", ""]
+
+  # regular split stuff
+  doAssert splitIncl("a,b,c", re",") == @["a", "b", "c"]
+  doAssert splitIncl("00232this02939is39an22example111", re"\d+") ==
+    @["", "this", "is", "an", "example", ""]
+  doAssert splitIncl("AAA :   : BBB", re"\s*:\s*") ==
+    @["AAA", "", "BBB"]
+  doAssert splitIncl("", re",") == @[""]
+  doAssert splitIncl(",,", re",") == @["", "", ""]
+  doAssert splitIncl("abc", re"") == @["abc"]
+  doAssert splitIncl(",a,Ϊ,Ⓐ,弢,", re",") ==
+    @["", "a", "Ϊ", "Ⓐ", "弢", ""]
+  doAssert splitIncl("弢", re"\xAF") == @["弢"]  # "弢" == "\xF0\xAF\xA2\x94"
+  doAssert splitIncl("Words, words, words.", re"\W+") ==
+    @["Words", "words", "words", ""]
+  doAssert splitIncl("0a3B9", re"[a-fA-F]+") ==
+    @["0", "3", "9"]
+  doAssert splitIncl("1 2 3 4 5 6 ", re" ") ==
+    @["1", "2", "3", "4", "5", "6", ""]
+  doAssert splitIncl("1  2  ", re" ") == @["1", "", "2", "", ""]
+  doAssert splitIncl("1 2", re" ") == @["1", "2"]
+  doAssert splitIncl("foo", re"foo") == @["", ""]
+  doAssert splitIncl("", re"foo") == @[""]

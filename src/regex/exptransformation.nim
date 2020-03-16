@@ -407,7 +407,7 @@ func rpn(expression: seq[Node]): seq[Node] =
   for i in 1 .. ops.len:
     result.add(ops[ops.len - i])
 
-func transformExp*(
+func toAtoms*(
   exp: seq[Node],
   groups: var GroupsCapture
 ): seq[Node] {.inline.} =
@@ -417,4 +417,11 @@ func transformExp*(
     .applyFlags
     .expandRepRange
     .joinAtoms
+
+func transformExp*(
+  exp: seq[Node],
+  groups: var GroupsCapture
+): seq[Node] {.inline.} =
+  result = exp
+    .toAtoms(groups)
     .rpn

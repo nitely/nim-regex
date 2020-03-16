@@ -1,5 +1,6 @@
 import unicode
 import sets
+from algorithm import sorted
 
 import unicodedb/properties
 
@@ -211,3 +212,61 @@ const
   groupKind* = {
     reGroupStart,
     reGroupEnd}
+
+func toString*(n: Node): string =
+  ## return the string representation
+  ## of a `Node`. The string is always
+  ## equivalent to the original
+  ## expression but not necessarily equal
+  # Note this is not complete. Just
+  # what's needed for debugging so far
+  case n.kind
+  of reZeroOrMore,
+      reOneOrMore,
+      reZeroOrOne:
+    if n.isGreedy:
+      n.cp.toUTF8 & "?"
+    else:
+      n.cp.toUTF8
+  of reRepRange:
+    "#"  # Invalid
+  of reStart:
+    "\\A"
+  of reEnd:
+    "\\z"
+  of reWordBoundary:
+    "\\b"
+  of reNotWordBoundary:
+    "\\B"
+  of shorthandKind:
+    '\\' & n.cp.toUTF8
+  of reInSet, reNotSet:
+    var str = ""
+    str.add('[')
+    if n.kind == reNotSet:
+      str.add('^')
+    var
+      cps = newSeq[Rune](n.cps.len)
+      i = 0
+    for cp in n.cps:
+      cps[i] = cp
+      inc i
+    for cp in cps.sorted(cmp):
+      str.add(cp.toUTF8)
+    for sl in n.ranges:
+      str.add(sl.a.toUTF8 & '-' & sl.b.toUTF8)
+    for nn in n.shorthands:
+      str.add(nn.toString)
+    str.add(']')
+    str
+  of reSkip:
+    "SKIP"
+  of reEOE:
+    "EOE"
+  else:
+    n.cp.toUTF8
+
+func toString*(n: seq[Node]): string =
+  result = newStringOfCap(n.len)
+  for nn in n:
+    result.add(nn.toString)

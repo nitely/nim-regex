@@ -3,6 +3,7 @@ import std/sequtils
 import std/unicode
 from std/strutils import addf
 
+import pkg/regex/nodetype
 import pkg/regex/common
 import pkg/regex/parser
 import pkg/regex/exptransformation
@@ -34,6 +35,13 @@ func re*(
   flags: set[RegexFlag] = {}
 ): Regex {.inline.} =
   reImpl(s, flags)
+
+when not defined(forceRegexAtRuntime):
+  func re*(
+    s: static string,
+    flags: static set[RegexFlag] = {}
+  ): static Regex {.inline.} =
+    reImpl(s, flags)
 
 iterator group*(m: RegexMatch, i: int): Slice[int] =
   ## return slices for a given group.
@@ -221,6 +229,18 @@ func findAll*(
   for m in findAll(s, pattern, start):
     result.add(m)
 
+func findAndCaptureAll*(s: string, pattern: Regex): seq[string] =
+  ## search through the string and
+  ## return a seq with captures.
+  runnableExamples:
+    let
+      captured = findAndCaptureAll("a1b2c3d4e5", re"\d")
+      expected = @["1", "2", "3", "4", "5"]
+    doAssert captured == expected
+
+  for m in s.findAll(pattern):
+    result.add(s[m.boundaries])
+
 template runeIncAt(s: string, n: var int) =
   ## increment ``n`` up to
   ## next rune's index
@@ -289,6 +309,7 @@ func endsWith*(s: string, pattern: Regex): bool =
     if result: return
     s.runeIncAt(i)
 
+# XXX reset each result[i] ?
 func flatCaptures(
   result: var seq[string],
   m: RegexMatch,
@@ -378,269 +399,105 @@ func replace*(
     if limit > 0 and j == limit: break
   result.addsubstr(s, i)
 
+proc isInitialized*(re: Regex): bool =
+  ## Check whether the regex has been initialized
+  runnableExamples:
+    var re: Regex
+    doAssert(not re.isInitialized)
+    re = re"foo"
+    doAssert re.isInitialized
+
+  re.nfa.len > 0
+
+proc toString(
+  pattern: Regex,
+  nIdx: int16,
+  visited: var set[int16]
+): string {.used.} =
+  ## NFA to string representation.
+  ## For debugging purposes
+  # XXX zero-match transitions are missing
+  if nIdx in visited:
+    result = "[...]"
+    return
+  visited.incl(nIdx)
+  let n = pattern.nfa[nIdx]
+  result = "["
+  result.add($n)
+  for nn in n.next:
+    result.add(", ")
+    result.add(pattern.toString(nn, visited))
+  result.add("]")
+
+proc toString(pattern: Regex): string {.used.} =
+  ## NFA to string representation.
+  ## For debugging purposes
+  var visited: set[int16]
+  result = pattern.toString(0, visited)
+
 when isMainModule:
-  var m: RegexMatch
+  func toAtoms(s: string): string =
+    var groups: GroupsCapture
+    let atoms = s
+      .parse
+      .toAtoms(groups)
+    result = atoms.toString
 
-  doAssert match("abc", re(r"abc", {reAscii}), m)
-  doAssert match("abc", re"abc", m)
-  doAssert match("ab", re"a(b|c)", m)
-  doAssert match("ac", re"a(b|c)", m)
-  doAssert not match("ad", re"a(b|c)", m)
-  doAssert match("ab", re"(ab)*", m)
-  doAssert match("abab", re"(ab)*", m)
-  doAssert not match("ababc", re"(ab)*", m)
-  doAssert not match("a", re"(ab)*", m)
-  doAssert match("ab", re"(ab)+", m)
-  doAssert match("abab", re"(ab)+", m)
-  doAssert not match("ababc", re"(ab)+", m)
-  doAssert not match("a", re"(ab)+", m)
-  doAssert match("aa", re"\b\b\baa\b\b\b", m)
-  doAssert not match("cac", re"c\ba\bc", m)
-  doAssert match("abc", re"[abc]+", m)
-  doAssert match("abc", re"[\w]+", m)
-  doAssert match("弢弢弢", re"[\w]+", m)
-  doAssert not match("abc", re"[\d]+", m)
-  doAssert match("123", re"[\d]+", m)
-  doAssert match("abc$%&", re".+", m)
-  doAssert not match("abc$%&\L", re"(.+)", m)
-  doAssert not match("abc$%&\L", re".+", m)
-  doAssert not match("弢", re"\W", m)
-  doAssert match("$%&", re"\W+", m)
-  doAssert match("abc123", re"[^\W]+", m)
+  func toNfaStr(s: string): string =
+    result = re(s).toString
 
-  doAssert match("aabcd", re"(aa)bcd", m) and
-    m.captures == @[@[0 .. 1]]
-  doAssert match("aabc", re"(aa)(bc)", m) and
-    m.captures == @[@[0 .. 1], @[2 .. 3]]
-  doAssert match("ab", re"a(b|c)", m) and
-    m.captures == @[@[1 .. 1]]
-  doAssert match("ab", re"(ab)*", m) and
-    m.captures == @[@[0 .. 1]]
-  doAssert match("abab", re"(ab)*", m) and
-    m.captures == @[@[0 .. 1, 2 .. 3]]
-  doAssert match("ab", re"((a))b", m) and
-    m.captures == @[@[0 .. 0], @[0 .. 0]]
-  doAssert match("c", re"((ab)*)c", m) and
-    m.captures == @[@[0 .. -1], @[]]
-  doAssert match("aab", re"((a)*b)", m) and
-    m.captures == @[@[0 .. 2], @[0 .. 0, 1 .. 1]]
-  doAssert match("abbbbcccc", re"a(b|c)*", m) and
-    m.captures == @[@[1 .. 1, 2 .. 2, 3 .. 3, 4 .. 4, 5 .. 5, 6 .. 6, 7 .. 7, 8 .. 8]]
-  doAssert match("ab", re"(a*)(b*)", m) and
-    m.captures == @[@[0 .. 0], @[1 .. 1]]
-  doAssert match("ab", re"(a)*(b)*", m) and
-    m.captures == @[@[0 .. 0], @[1 .. 1]]
-  doAssert match("ab", re"(a)*b*", m) and
-    m.captures == @[@[0 .. 0]]
-  doAssert match("abbb", re"((a(b)*)*(b)*)", m) and
-    m.captures == @[@[0 .. 3], @[0 .. 3], @[1 .. 1, 2 .. 2, 3 .. 3], @[]]
-  doAssert match("aa", re"(a)+", m) and
-    m.captures == @[@[0 .. 0, 1 .. 1]]
-  doAssert match("abab", re"(ab)+", m) and
-    m.captures == @[@[0 .. 1, 2 .. 3]]
-  doAssert match("a", re"(a)?", m) and
-    m.captures == @[@[0 .. 0]]
-  doAssert match("ab", re"(ab)?", m) and
-    m.captures == @[@[0 .. 1]]
-  doAssert match("aaabbbaaa", re"(a*|b*)*", m) and
-    m.captures == @[@[0 .. 2, 3 .. 5, 6 .. 8]]
-  doAssert match("abab", re"(a(b))*", m) and
-    m.captures == @[@[0 .. 1, 2 .. 3], @[1 .. 1, 3 .. 3]]
-  doAssert match("aaanasdnasd", re"((a)*n?(asd)*)*", m) and
-    m.captures == @[@[0 .. 6, 7 .. 10], @[0 .. 0, 1 .. 1, 2 .. 2], @[4 .. 6, 8 .. 10]]
-  doAssert match("aaanasdnasd", re"((a)*n?(asd))*", m) and
-    m.captures == @[@[0 .. 6, 7 .. 10], @[0 .. 0, 1 .. 1, 2 .. 2], @[4 .. 6, 8 .. 10]]
-  doAssert match("abd", re"((ab)c)|((ab)d)", m) and
-    m.captures == @[@[], @[], @[0 .. 2], @[0 .. 1]]
-  doAssert match("aaa", re"(a*)", m) and
-    m.captures == @[@[0 .. 2]]
-  doAssert match("aaaa", re"(a*)(a*)", m) and
-    m.captures == @[@[0 .. 3], @[4 .. 3]]
-  doAssert match("aaaa", re"(a*?)(a*?)", m) and
-    m.captures == @[@[0 .. -1], @[0 .. 3]]
-  doAssert match("aaaa", re"(a)*(a)", m) and
-    m.captures == @[@[0 .. 0, 1 .. 1, 2 .. 2], @[3 .. 3]]
-  doAssert match("aa", re"\baa\b", m) and
-    m.boundaries == 0 .. 1
+  doAssert toAtoms(r"a(b|c)*d") == r"a~(b|c)*~d"
+  doAssert toAtoms(r"abc") == r"a~b~c"
+  doAssert toAtoms(r"(abc|def)") == r"(a~b~c|d~e~f)"
+  doAssert toAtoms(r"(abc|def)*xyz") == r"(a~b~c|d~e~f)*~x~y~z"
+  doAssert toAtoms(r"a*b") == r"a*~b"
+  doAssert toAtoms(r"(a)b") == r"(a)~b"
+  doAssert toAtoms(r"(a)(b)") == r"(a)~(b)"
+  doAssert toAtoms(r"\y") == r"y"
+  doAssert toAtoms(r"a\*b") == r"a~*~b"
+  doAssert toAtoms(r"\(a\)") == r"(~a~)"
+  doAssert toAtoms(r"\w") == r"\w"
+  doAssert toAtoms(r"\d") == r"\d"
+  doAssert toAtoms(r"[a-z]") == r"[a-z]"
+  doAssert toAtoms(r"[aa-zz]") == r"[aza-z]"
+  doAssert toAtoms(r"[aa\-zz]") == r"[-az]"
+  doAssert toAtoms(r"[^a]") == r"[^a]"
+  doAssert toAtoms(r"(a*)*") != toAtoms(r"a*")
+  doAssert toAtoms(r"(a*|b*)*") != toAtoms(r"(a|b)*")
+  doAssert toAtoms(r"(a*b*)*") != toAtoms(r"(a|b)*")
+  doAssert toAtoms(r"(a*|b*)") != toAtoms(r"(a|b)*")
+  doAssert toAtoms(r"(a(b)){2}") == r"(a~(b))~(a~(b))"
 
-  doAssert match("abc", re"abc")
-  doAssert not match("abc", re"abd")
-  doAssert not match("abc", re"ab")
-  doAssert not match("abc", re"b")
-  doAssert not match("abc", re"c")
+  # trepetition_range_expand
+  doAssert r"a{0}".toNfaStr == r"a".toNfaStr
+  doAssert r"a{0}b".toNfaStr == r"ab".toNfaStr
+  doAssert r"a{1}".toNfaStr == r"a".toNfaStr
+  doAssert r"a{10}".toNfaStr == r"aaaaaaaaaa".toNfaStr
+  doAssert r"a{1,}".toNfaStr == r"aa*".toNfaStr
+  doAssert r"a{10,}".toNfaStr == r"aaaaaaaaaaa*".toNfaStr
+  doAssert r"a{10,10}".toNfaStr == r"aaaaaaaaaa".toNfaStr
+  doAssert r"a{0,0}".toNfaStr == r"a".toNfaStr
+  doAssert r"a{1,2}".toNfaStr == r"aa?".toNfaStr
+  doAssert r"a{2,4}".toNfaStr == r"aaa?a?".toNfaStr
+  doAssert r"a{,10}".toNfaStr == r"a?a?a?a?a?a?a?a?a?a?".toNfaStr
+  doAssert r"a{0,10}".toNfaStr == r"a?a?a?a?a?a?a?a?a?a?".toNfaStr
+  doAssert r"a{,}".toNfaStr == r"a*".toNfaStr
+  doAssert r"(a(b)){2}".toNfaStr == r"(a(b))(a(b))".toNfaStr
 
-  doAssert match("650-253-0001", re"[0-9]+-[0-9]+-[0-9]+", m)
-  doAssert not match("abc-253-0001", re"[0-9]+-[0-9]+-[0-9]+", m)
-  doAssert not match("650-253", re"[0-9]+-[0-9]+-[0-9]+", m)
-  doAssert not match("650-253-0001-abc", re"[0-9]+-[0-9]+-[0-9]+", m)
-  doAssert match("650-253-0001", re"[0-9]+..*", m)
-  doAssert not match("abc-253-0001", re"[0-9]+..*", m)
-  doAssert not match("6", re"[0-9]+..*", m)
-
-  doAssert match("abcabcabc", re"(?:(?:abc)){3}")
-  doAssert match("abcabcabc", re"((abc)){3}")
-
-  doAssert re"bc" in "abcd"
-  doAssert re"(23)+" in "23232"
-  doAssert re"^(23)+$" notin "23232"
-
-  doAssert "abcd".find(re"bc", m)
-  doAssert not "abcd".find(re"de", m)
-  doAssert "%弢弢%".find(re"\w{2}", m)
-  doAssert "2222".find(re"(22)*", m) and
-    m.group(0) == @[0 .. 1, 2 .. 3]
-  doAssert "11222211".find(re"(22)+", m) and
-    m.group(0) == @[2 .. 3, 4 .. 5]
-
-  func findAllBounds(s: string, reg: Regex): seq[Slice[int]] =
-    result = map(
-      findAll(s, reg),
-      func (m: RegexMatch): Slice[int] =
-        m.boundaries)
-
-  doAssert findAllBounds("abcabc", re"bc") == @[1 .. 2, 4 .. 5]
-  doAssert findAllBounds("aa", re"a") == @[0 .. 0, 1 .. 1]
-  doAssert findAllBounds("a", re"a") == @[0 .. 0]
-  doAssert findAllBounds("a", re"b") == newSeq[Slice[int]]()
-  doAssert findAllBounds("", re"b") == newSeq[Slice[int]]()
-  doAssert findAllBounds("a", re"") == @[0 .. -1]
-  doAssert findAllBounds("ab", re"") == @[0 .. -1, 1 .. 0]
-  doAssert findAllBounds("a", re"\b") == @[0 .. -1]
-  doAssert findAllBounds("ab", re"\b") == @[0 .. -1, 1 .. 0]
-  doAssert findAllBounds("aΪⒶ弢", re"Ϊ") == @[1 .. 2]
-  doAssert findAllBounds("aΪⒶ弢", re"Ⓐ") == @[3 .. 5]
-  doAssert findAllBounds("aΪⒶ弢", re"弢") == @[6 .. 9]
-  doAssert findAllBounds("aΪⒶ弢aΪⒶ弢", re"Ⓐ") == @[3 .. 5, 13 .. 15]
-  doAssert findAllBounds("aaa", re"a*") == @[0 .. 2]
-
-  doAssert split("a,b,c", re",") == @["a", "b", "c"]
-  doAssert split("00232this02939is39an22example111", re"\d+") ==
-    @["", "this", "is", "an", "example", ""]
-  doAssert split("AAA :   : BBB", re"\s*:\s*") == @["AAA", "", "BBB"]
-  doAssert split("", re",") == @[""]
-  doAssert split(",,", re",") == @["", "", ""]
-  doAssert split("abc", re"") == @["abc"]
-  doAssert split(",a,Ϊ,Ⓐ,弢,", re",") ==
-    @["", "a", "Ϊ", "Ⓐ", "弢", ""]
-  doAssert split("弢", re"\xAF") == @["弢"]  # "弢" == "\xF0\xAF\xA2\x94"
-  doAssert split("Words, words, words.", re"\W+") ==
-    @["Words", "words", "words", ""]
-  doAssert split("0a3B9", re"[a-fA-F]+") ==
-    @["0", "3", "9"]
-  doAssert split("1 2 3 4 5 6 ", re" ") ==
-    @["1", "2", "3", "4", "5", "6", ""]
-  doAssert split("1  2  ", re" ") == @["1", "", "2", "", ""]
-  doAssert split("1 2", re" ") == @["1", "2"]
-  doAssert split("foo", re"foo") == @["", ""]
-  doAssert split("", re"foo") == @[""]
-
-  doAssert "a,b".splitIncl(re"(,)") == @["a", ",", "b"]
-  doAssert "12".splitIncl(re"(\d)") == @["", "1", "", "2", ""]
-  doAssert splitIncl("aΪⒶ弢", re"(\w)") ==
-    @["", "a", "", "Ϊ", "", "Ⓐ", "", "弢", ""]
-  doAssert splitIncl("aΪⒶ弢", re"") == @["aΪⒶ弢"]
-  doAssert splitIncl("...words, words...", re"(\W+)") ==
-    @["", "...", "words", ", ", "words", "...", ""]
-  doAssert splitIncl("Words, words, words.", re"(\W+)") ==
-    @["Words", ", ", "words", ", ", "words", ".", ""]
-
-  # regular split stuff
-  doAssert splitIncl("a,b,c", re",") == @["a", "b", "c"]
-  doAssert splitIncl("00232this02939is39an22example111", re"\d+") ==
-    @["", "this", "is", "an", "example", ""]
-  doAssert splitIncl("AAA :   : BBB", re"\s*:\s*") ==
-    @["AAA", "", "BBB"]
-  doAssert splitIncl("", re",") == @[""]
-  doAssert splitIncl(",,", re",") == @["", "", ""]
-  doAssert splitIncl("abc", re"") == @["abc"]
-  doAssert splitIncl(",a,Ϊ,Ⓐ,弢,", re",") ==
-    @["", "a", "Ϊ", "Ⓐ", "弢", ""]
-  doAssert splitIncl("弢", re"\xAF") == @["弢"]  # "弢" == "\xF0\xAF\xA2\x94"
-  doAssert splitIncl("Words, words, words.", re"\W+") ==
-    @["Words", "words", "words", ""]
-  doAssert splitIncl("0a3B9", re"[a-fA-F]+") ==
-    @["0", "3", "9"]
-  doAssert splitIncl("1 2 3 4 5 6 ", re" ") ==
-    @["1", "2", "3", "4", "5", "6", ""]
-  doAssert splitIncl("1  2  ", re" ") == @["1", "", "2", "", ""]
-  doAssert splitIncl("1 2", re" ") == @["1", "2"]
-  doAssert splitIncl("foo", re"foo") == @["", ""]
-  doAssert splitIncl("", re"foo") == @[""]
-
-  doAssert "abc".startsWith(re"ab")
-  doAssert not "abc".startsWith(re"bc")
-  doAssert startsWith("弢ⒶΪ", re"弢Ⓐ")
-  doAssert startsWith("弢", re("\xF0\xAF\xA2\x94"))
-  doAssert not startsWith("弢", re("\xF0\xAF\xA2"))
-  doAssert "abc".startsWith(re"\w")
-  doAssert not "abc".startsWith(re"\d")
-  doAssert "abc".startsWith(re"(a|b)")
-  doAssert "bc".startsWith(re"(a|b)")
-  doAssert not "c".startsWith(re"(a|b)")
-
-  doAssert "abc".endsWith(re"bc")
-  doAssert not "abc".endsWith(re"ab")
-  doAssert endsWith("弢ⒶΪ", re"ⒶΪ")
-  doAssert endsWith("弢", re("\xF0\xAF\xA2\x94"))
-  doAssert not endsWith("弢", re("\xAF\xA2\x94"))
-  doAssert "abc".endsWith(re"(b|c)")
-  doAssert "ab".endsWith(re"(b|c)")
-  doAssert not "a".endsWith(re"(b|c)")
-
-  doAssert "a".replace(re"(a)", "m($1)") ==
-    "m(a)"
-  doAssert "a".replace(re"(a)", "m($1) m($1)") ==
-    "m(a) m(a)"
-  doAssert "aaa".replace(re"(a*)", "m($1)") ==
-    "m(aaa)"
-  doAssert "abc".replace(re"(a(b)c)", "m($1) m($2)") ==
-    "m(abc) m(b)"
-  doAssert "abc".replace(re"(a(b))(c)", "m($1) m($2) m($3)") ==
-    "m(ab) m(b) m(c)"
-  doAssert "abcabc".replace(re"(abc)*", "m($1)") ==
-    "m(abcabc)"
-  doAssert "abcabc".replace(re"(abc)", "m($1)") ==
-    "m(abc)m(abc)"
-  doAssert "abcabc".replace(re"(abc)", "m($1)") ==
-    "m(abc)m(abc)"
-  doAssert "abcab".replace(re"(abc)", "m($1)") ==
-    "m(abc)ab"
-  doAssert "abcabc".replace(re"((abc)*)", "m($1) m($2)") ==
-    "m(abcabc) m(abcabc)"
-  doAssert "abcabc".replace(re"((a)bc)*", "m($1) m($2)") ==
-    "m(abcabc) m(aa)"
-  doAssert "abc".replace(re"(b)", "m($1)") == "am(b)c"
-  doAssert "abc".replace(re"d", "m($1)") == "abc"
-  doAssert "abc".replace(re"(d)", "m($1)") == "abc"
-  doAssert "aaa".replace(re"a", "b") == "bbb"
-  doAssert "aaa".replace(re"a", "b", 1) == "baa"
-  doAssert "Nim is awesome!".replace(re"(\w\B)", "$1_") ==
-    "N_i_m i_s a_w_e_s_o_m_e!"
-
-  doAssert "12".split(re"\w\b") == @["1", ""]
-  doAssert "12".split(re"\w\B") == @["", "2"]
-
-  block:
-    proc by(m: RegexMatch, s: string): string =
-      result = "m("
-      for g in 0 ..< m.groupsCount:
-        for sl in m.group(g):
-          result.add(s[sl])
-          result.add(',')
-      result.add(')')
-
-    doAssert "abc".replace(re"(b)", by) == "am(b,)c"
-    doAssert "aaa".replace(re"(a*)", by) == "m(aaa,)"
-    doAssert "aaa".replace(re"(a)*", by) == "m(a,a,a,)"
-
-  block:
-    proc removeEvenWords(m: RegexMatch, s: string): string =
-      if m.group(1).len mod 2 != 0:
-        result = s[m.group(0)[0]]
-      else:
-        result = ""
-
-    let
-      text = "Es macht Spaß, alle geraden Wörter zu entfernen!"
-      expected = "macht , geraden entfernen!"
-    doAssert text.replace(re"((\w)+\s*)", removeEvenWords) == expected
+  # tascii_set
+  doAssert r"[[:alnum:]]".toAtoms == "[[0-9a-zA-Z]]"
+  doAssert r"[[:^alnum:]]".toAtoms == "[[^0-9a-zA-Z]]"
+  doAssert r"[[:alpha:]]".toAtoms == "[[a-zA-Z]]"
+  doAssert r"[[:ascii:]]".toAtoms == "[[\x00-\x7F]]"
+  doAssert r"[[:blank:]]".toAtoms == "[[\t ]]"
+  doAssert r"[[:cntrl:]]".toAtoms == "[[\x7F\x00-\x1F]]"
+  doAssert r"[[:digit:]]".toAtoms == "[[0-9]]"
+  doAssert r"[[:graph:]]".toAtoms == "[[!-~]]"
+  doAssert r"[[:lower:]]".toAtoms == "[[a-z]]"
+  doAssert r"[[:print:]]".toAtoms == "[[ -~]]"
+  doAssert r"[[:punct:]]".toAtoms == "[[!-/:-@[-`{-~]]"
+  doAssert r"[[:space:]]".toAtoms == "[[\t\n\v\f\r ]]"
+  doAssert r"[[:upper:]]".toAtoms == "[[A-Z]]"
+  doAssert r"[[:word:]]".toAtoms == "[[_0-9a-zA-Z]]"
+  doAssert r"[[:xdigit:]]".toAtoms == "[[0-9a-fA-F]]"
+  doAssert r"[[:alpha:][:digit:]]".toAtoms == "[[a-zA-Z][0-9]]"

@@ -289,24 +289,25 @@ func endsWith*(s: string, pattern: Regex): bool =
     if result: return
     s.runeIncAt(i)
 
-func flatCaptures(result: var seq[string], m: RegexMatch, s: string) =
+func flatCaptures(
+  result: var seq[string],
+  m: RegexMatch,
+  s: string
+) {.inline.} =
   ## Concat capture repetitions
-  var
-    i, n = 0
-    ss: string
+  var i, n = 0
   for g in 0 ..< m.groupsCount:
     n = 0
     for sl in m.group(g):
       if sl.a <= sl.b:
-        n.inc(sl.b - sl.a + 1)
-    ss = newString(n)
+        n += sl.b - sl.a + 1
     i = 0
+    result[g].setLen(n)
     for sl in m.group(g):
       for c in sl:
-        ss[i] = s[c]
+        result[g][i] = s[c]
         inc i
     assert i == n
-    result[g] = ss
 
 func addsubstr(result: var string, s: string, first, last: int) =
   let
@@ -314,7 +315,7 @@ func addsubstr(result: var string, s: string, first, last: int) =
     last = min(last, s.high)
   if first > last: return
   let n = result.len
-  result.setLen(result.len + (last - first) + 1)
+  result.setLen(result.len + last - first + 1)
   # XXX copyMem
   var j = 0
   for i in first .. last:

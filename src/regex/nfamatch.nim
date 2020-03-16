@@ -117,7 +117,7 @@ func submatch(
   capts: var Capts,
   regex: Regex,
   i: int,
-  cPrev, c: int32
+  cPrev, c, c2: int32
 ) {.inline.} =
   template t: untyped {.dirty.} = regex.transitions
   template nfa: untyped {.dirty.} = regex.nfa
@@ -128,7 +128,7 @@ func submatch(
     for nti, nt in nfa[n].next.pairs:
       if smB.hasState(nt):
         continue
-      if not match(nfa[nt], c.Rune):
+      if not match(nfa[nt], c2.Rune):
         continue
       if t.allZ[n][nti] == -1'i16:
         smB.add((nt, capt))
@@ -162,7 +162,7 @@ func clear*(m: var RegexMatch) {.inline.} =
   m.boundaries = 0 .. -1
 
 template shortestMatch: untyped {.dirty.} =
-  submatch(smA, smB, capts, regex, iPrev, cPrev, -2'i32)
+  submatch(smA, smB, capts, regex, iPrev, cPrev, c.int32, -1'i32)
   if smA.len > 0:
     return true
   swap smA, smB
@@ -174,7 +174,7 @@ template longestMatchInit: untyped {.dirty.} =
     iPrevLong = start
 
 template longestMatchEnter: untyped {.dirty.} =
-  submatch(smA, smB, capts, regex, iPrev, cPrev, -2'i32)
+  submatch(smA, smB, capts, regex, iPrev, cPrev, c.int32, -1'i32)
   if smA.len > 0:
     matchedLong = true
     captLong = smA[0][1]
@@ -220,7 +220,7 @@ func matchImpl*(
       shortestMatch()
     when mfLongestMatch in flags:
       longestMatchEnter()
-    submatch(smA, smB, capts, regex, iPrev, cPrev, c.int32)
+    submatch(smA, smB, capts, regex, iPrev, cPrev, c.int32, c.int32)
     if smA.len == 0:
       when mfLongestMatch in flags:
         longestMatchExit()
@@ -230,7 +230,7 @@ func matchImpl*(
     #when mfFindMatch in flags:
       # XXX needs to store start
     #  smA.add((0'i16, -1'i32))
-  submatch(smA, smB, capts, regex, iPrev, cPrev, -1'i32)
+  submatch(smA, smB, capts, regex, iPrev, cPrev, -1'i32, -1'i32)
   if smA.len == 0:
     when mfLongestMatch in flags:
       longestMatchExit()

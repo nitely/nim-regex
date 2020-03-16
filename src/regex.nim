@@ -324,7 +324,7 @@ func addsubstr(result: var string, s: string, first, last: int) =
 func addsubstr(result: var string, s: string, first: int) {.inline.} =
   addsubstr(result, s, first, s.high)
 
-proc replace*(
+func replace*(
   s: string,
   pattern: Regex,
   by: string,
@@ -344,12 +344,9 @@ proc replace*(
   var
     i, j = 0
     capts = newSeq[string](pattern.groupsCount)
-  echo "called"
   for m in findAll(s, pattern):
-    echo "what"
     result.addsubstr(s, i, m.boundaries.a - 1)
     flatCaptures(capts, m, s)
-    echo capts
     if capts.len > 0:
       result.addf(by, capts)
     else:
@@ -535,7 +532,6 @@ when isMainModule:
   doAssert split("1 2", re" ") == @["1", "2"]
   doAssert split("foo", re"foo") == @["", ""]
   doAssert split("", re"foo") == @[""]
-  doAssert split("12", re"\B") == @["", "1", "", "2", ""]
 
   doAssert "a,b".splitIncl(re"(,)") == @["a", ",", "b"]
   doAssert "12".splitIncl(re"(\d)") == @["", "1", "", "2", ""]
@@ -590,7 +586,6 @@ when isMainModule:
   doAssert "ab".endsWith(re"(b|c)")
   doAssert not "a".endsWith(re"(b|c)")
 
-  #[
   doAssert "a".replace(re"(a)", "m($1)") ==
     "m(a)"
   doAssert "a".replace(re"(a)", "m($1) m($1)") ==
@@ -618,11 +613,12 @@ when isMainModule:
   doAssert "abc".replace(re"(d)", "m($1)") == "abc"
   doAssert "aaa".replace(re"a", "b") == "bbb"
   doAssert "aaa".replace(re"a", "b", 1) == "baa"
-  ]#
-  echo "Nim is awesome!".replace(re"(\w\B)", "$1_")
   doAssert "Nim is awesome!".replace(re"(\w\B)", "$1_") ==
     "N_i_m i_s a_w_e_s_o_m_e!"
-  #[
+
+  doAssert "12".split(re"\w\b") == @["1", ""]
+  doAssert "12".split(re"\w\B") == @["", "2"]
+
   block:
     proc by(m: RegexMatch, s: string): string =
       result = "m("
@@ -647,4 +643,3 @@ when isMainModule:
       text = "Es macht Spaß, alle geraden Wörter zu entfernen!"
       expected = "macht , geraden entfernen!"
     doAssert text.replace(re"((\w)+\s*)", removeEvenWords) == expected
-  ]#

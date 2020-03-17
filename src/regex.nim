@@ -500,3 +500,121 @@ when isMainModule:
   doAssert r"[[:word:]]".toAtoms == "[[_0-9a-zA-Z]]"
   doAssert r"[[:xdigit:]]".toAtoms == "[[0-9a-fA-F]]"
   doAssert r"[[:alpha:][:digit:]]".toAtoms == "[[a-zA-Z][0-9]]"
+
+  var m: RegexMatch
+
+  #doAssert match("abc", re(r"abc", {reAscii}), m)
+  doAssert match("abc", re"abc", m)
+  doAssert match("ab", re"a(b|c)", m)
+  doAssert match("ac", re"a(b|c)", m)
+  doAssert(not match("ad", re"a(b|c)", m))
+  doAssert match("ab", re"(ab)*", m)
+  doAssert match("abab", re"(ab)*", m)
+  doAssert(not match("ababc", re"(ab)*", m))
+  doAssert(not match("a", re"(ab)*", m))
+  doAssert match("ab", re"(ab)+", m)
+  doAssert match("abab", re"(ab)+", m)
+  doAssert(not match("ababc", re"(ab)+", m))
+  doAssert(not match("a", re"(ab)+", m))
+  doAssert match("aa", re"\b\b\baa\b\b\b", m)
+  doAssert(not match("cac", re"c\ba\bc", m))
+  doAssert match("abc", re"[abc]+", m)
+  doAssert match("abc", re"[\w]+", m)
+  doAssert match("弢弢弢", re"[\w]+", m)
+  doAssert(not match("abc", re"[\d]+", m))
+  doAssert match("123", re"[\d]+", m)
+  doAssert match("abc$%&", re".+", m)
+  doAssert(not match("abc$%&\L", re"(.+)", m))
+  doAssert(not match("abc$%&\L", re".+", m))
+  doAssert(not match("弢", re"\W", m))
+  doAssert match("$%&", re"\W+", m)
+  doAssert match("abc123", re"[^\W]+", m)
+
+  doAssert match("aabcd", re"(aa)bcd", m) and
+    m.captures == @[@[0 .. 1]]
+  doAssert match("aabc", re"(aa)(bc)", m) and
+    m.captures == @[@[0 .. 1], @[2 .. 3]]
+  doAssert match("ab", re"a(b|c)", m) and
+    m.captures == @[@[1 .. 1]]
+  doAssert match("ab", re"(ab)*", m) and
+    m.captures == @[@[0 .. 1]]
+  doAssert match("abab", re"(ab)*", m) and
+    m.captures == @[@[0 .. 1, 2 .. 3]]
+  doAssert match("ab", re"((a))b", m) and
+    m.captures == @[@[0 .. 0], @[0 .. 0]]
+  doAssert match("c", re"((ab)*)c", m) and
+    m.captures == @[@[0 .. -1], @[]]
+  doAssert match("aab", re"((a)*b)", m) and
+    m.captures == @[@[0 .. 2], @[0 .. 0, 1 .. 1]]
+  doAssert match("abbbbcccc", re"a(b|c)*", m) and
+    m.captures == @[@[1 .. 1, 2 .. 2, 3 .. 3, 4 .. 4, 5 .. 5, 6 .. 6, 7 .. 7, 8 .. 8]]
+  doAssert match("ab", re"(a*)(b*)", m) and
+    m.captures == @[@[0 .. 0], @[1 .. 1]]
+  doAssert match("ab", re"(a)*(b)*", m) and
+    m.captures == @[@[0 .. 0], @[1 .. 1]]
+  doAssert match("ab", re"(a)*b*", m) and
+    m.captures == @[@[0 .. 0]]
+  doAssert match("abbb", re"((a(b)*)*(b)*)", m) and
+    m.captures == @[@[0 .. 3], @[0 .. 3], @[1 .. 1, 2 .. 2, 3 .. 3], @[]]
+  doAssert match("aa", re"(a)+", m) and
+    m.captures == @[@[0 .. 0, 1 .. 1]]
+  doAssert match("abab", re"(ab)+", m) and
+    m.captures == @[@[0 .. 1, 2 .. 3]]
+  doAssert match("a", re"(a)?", m) and
+    m.captures == @[@[0 .. 0]]
+  doAssert match("ab", re"(ab)?", m) and
+    m.captures == @[@[0 .. 1]]
+  doAssert match("aaabbbaaa", re"(a*|b*)*", m) and
+    m.captures == @[@[0 .. 2, 3 .. 5, 6 .. 8]]
+  doAssert match("abab", re"(a(b))*", m) and
+    m.captures == @[@[0 .. 1, 2 .. 3], @[1 .. 1, 3 .. 3]]
+  doAssert match("aaanasdnasd", re"((a)*n?(asd)*)*", m) and
+    m.captures == @[@[0 .. 6, 7 .. 10], @[0 .. 0, 1 .. 1, 2 .. 2], @[4 .. 6, 8 .. 10]]
+  doAssert match("aaanasdnasd", re"((a)*n?(asd))*", m) and
+    m.captures == @[@[0 .. 6, 7 .. 10], @[0 .. 0, 1 .. 1, 2 .. 2], @[4 .. 6, 8 .. 10]]
+  doAssert match("abd", re"((ab)c)|((ab)d)", m) and
+    m.captures == @[@[], @[], @[0 .. 2], @[0 .. 1]]
+  doAssert match("aaa", re"(a*)", m) and
+    m.captures == @[@[0 .. 2]]
+  doAssert match("aaaa", re"(a*)(a*)", m) and
+    m.captures == @[@[0 .. 3], @[4 .. 3]]
+  doAssert match("aaaa", re"(a*?)(a*?)", m) and
+    m.captures == @[@[0 .. -1], @[0 .. 3]]
+  doAssert match("aaaa", re"(a)*(a)", m) and
+    m.captures == @[@[0 .. 0, 1 .. 1, 2 .. 2], @[3 .. 3]]
+  
+  doAssert match("abc", re"abc")
+  doAssert(not match("abc", re"abd"))
+  doAssert(not match("abc", re"ab"))
+  doAssert(not match("abc", re"b"))
+  doAssert(not match("abc", re"c"))
+
+  doAssert re"bc" in "abcd"
+  doAssert re"(23)+" in "23232"
+  doAssert re"^(23)+$" notin "23232"
+  doAssert re"\w" in "弢"
+  #doAssert re(r"\w", {reAscii}) notin "弢"
+  #doAssert re(r"\w", {reAscii}) in "a"
+
+  doAssert "abcd".find(re"bc", m)
+  doAssert(not "abcd".find(re"de", m))
+  #doAssert "%ab%".find(re(r"\w{2}", {reAscii}), m)
+  doAssert "%弢弢%".find(re"\w{2}", m)
+  #doAssert(not "%弢弢%".find(re(r"\w{2}", {reAscii}), m)
+  doAssert(
+    "2222".find(re"(22)*", m) and
+    m.group(0) == @[0 .. 1, 2 .. 3])
+  doAssert(
+    "11222211".find(re"(22)+", m) and
+    m.group(0) == @[2 .. 3, 4 .. 5])
+  
+  doAssert match("650-253-0001", re"[0-9]+-[0-9]+-[0-9]+", m)
+  doAssert(not match("abc-253-0001", re"[0-9]+-[0-9]+-[0-9]+", m))
+  doAssert(not match("650-253", re"[0-9]+-[0-9]+-[0-9]+", m))
+  doAssert(not match("650-253-0001-abc", re"[0-9]+-[0-9]+-[0-9]+", m))
+  doAssert match("650-253-0001", re"[0-9]+..*", m)
+  doAssert(not match("abc-253-0001", re"[0-9]+..*", m))
+  doAssert(not match("6", re"[0-9]+..*", m))
+
+  doAssert match("abcabcabc", re"(?:(?:abc)){3}")
+  doAssert match("abcabcabc", re"((abc)){3}")

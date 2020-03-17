@@ -13,8 +13,9 @@ requires "unicodeplus >= 0.5.0"
 
 task test, "Test":
   exec "nim c -r -o:bin/regex src/regex.nim"
-  exec "nim c -r tests/tests.nim"
-  exec "nim c -r -d:forceRegexAtRuntime tests/tests.nim"
+  when (NimMajor, NimMinor, NimPatch) >= (0, 19, 6):
+    exec "nim c -r tests/tests.nim"
+    exec "nim c -r -d:forceRegexAtRuntime tests/tests.nim"
   when (NimMajor, NimMinor) > (1, 0):
     exec "nim c -d:runTestAtCT tests/tests.nim"
   # js target should work in older versions, but

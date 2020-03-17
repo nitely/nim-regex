@@ -22,7 +22,7 @@ template reImpl(s, flags: untyped): Regex =
   let nfa = s
     .parse
     .transformExp(groups)
-    .nfa(transitions)
+    .nfa2(transitions)
   Regex(
     nfa: nfa,
     transitions: transitions,
@@ -39,8 +39,8 @@ func re*(
 when not defined(forceRegexAtRuntime):
   func re*(
     s: static string,
-    flags: static set[RegexFlag] = {}
-  ): static Regex {.inline.} =
+    flags: static[set[RegexFlag]] = {}
+  ): static[Regex] {.inline.} =
     reImpl(s, flags)
 
 iterator group*(m: RegexMatch, i: int): Slice[int] =
@@ -107,7 +107,7 @@ func group*(
   m: RegexMatch,
   groupName: string,
   text: string
-): seq[string] = 
+): seq[string] =
   ## return seq of captured text by group `groupName`
   runnableExamples:
     let text = "hello beautiful world"
@@ -264,7 +264,7 @@ iterator split*(s: string, sep: Regex): string {.inline.} =
       s.runeIncAt last
     yield substr(s, first, last-1)
     if m.boundaries.a <= m.boundaries.b:
-      assert last < m.boundaries.b+1
+      doAssert last < m.boundaries.b+1
       last = m.boundaries.b+1
 
 func split*(s: string, sep: Regex): seq[string] =
@@ -288,7 +288,7 @@ func splitIncl*(s: string, sep: Regex): seq[string] =
       for sl in m.group(g):
         result.add substr(s, sl.a, sl.b)
     if m.boundaries.a <= m.boundaries.b:
-      assert last < m.boundaries.b+1
+      doAssert last < m.boundaries.b+1
       last = m.boundaries.b+1
 
 func startsWith*(s: string, pattern: Regex, start = 0): bool =
@@ -309,7 +309,6 @@ func endsWith*(s: string, pattern: Regex): bool =
     if result: return
     s.runeIncAt(i)
 
-# XXX reset each result[i] ?
 func flatCaptures(
   result: var seq[string],
   m: RegexMatch,
@@ -399,7 +398,7 @@ func replace*(
     if limit > 0 and j == limit: break
   result.addsubstr(s, i)
 
-proc isInitialized*(re: Regex): bool =
+proc isInitialized*(re: Regex): bool {.inline.} =
   ## Check whether the regex has been initialized
   runnableExamples:
     var re: Regex

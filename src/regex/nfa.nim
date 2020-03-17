@@ -256,7 +256,8 @@ func eRemoval(
       doAssert statesMap[en2] > -1
       result[nn].next.add(statesMap[en2])
 
-func nfa*(
+# XXX rename to nfa when Nim v0.19 is dropped
+func nfa2*(
   exp: seq[Node],
   transitions: var Transitions
 ): Nfa =

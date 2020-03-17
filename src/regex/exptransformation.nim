@@ -161,7 +161,7 @@ func applyFlag(n: var Node, f: Flag) =
     # todo: apply recursevely to
     #       shorthands of reInSet/reNotSet (i.e: [:ascii:])
     if n.kind in {reInSet, reNotSet}:
-      var cps = initHashSet[Rune]()
+      var cps = initHashSet[Rune](2)
       cps.incl(n.cps)
       for cp in cps:
         let cpsc = cp.swapCase()

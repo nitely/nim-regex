@@ -15,7 +15,7 @@ task test, "Test":
   exec "nim c -r -o:bin/regex src/regex.nim"
   exec "nim c -r tests/tests.nim"
   exec "nim c -r -d:forceRegexAtRuntime tests/tests.nim"
-  when (NimMajor, NimMinor) >= (0, 20):
+  when (NimMajor, NimMinor, NimPatch) >= (0, 20, 2):
     exec "nim c -d:runTestAtCT tests/tests.nim"
   # js target should work in older versions, but
   # the docker image for CI has it since Nim 1.0.4,

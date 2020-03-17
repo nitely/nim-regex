@@ -1,7 +1,6 @@
 services:
   - docker
 env:
-  - NIM=0.19.0
   - NIM=0.19.6
   - NIM=0.20.0
   - NIM=0.20.2

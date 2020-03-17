@@ -1176,144 +1176,146 @@ test "treplace":
       expected = "macht , geraden entfernen!"
     check text.replace(re"((\w)+\s*)", removeEvenWords) == expected
 
-test "tmisc":
-  block:
-    var m: RegexMatch
-    check "abc".match(re"[^^]+", m)
-    check m.boundaries == 0 .. 2
-  check(not "^".isMatch(re"[^^]+"))
-  block:
-    var m: RegexMatch
-    check "kpd".match(re"[^al-obc]+", m)
-    check m.boundaries == 0 .. 2
-  check(not "abc".isMatch(re"[^al-obc]+"))
-  block:
-    var m: RegexMatch
-    check "almocb".match(re"[al-obc]+", m)
-    check m.boundaries == 0 .. 5
-  check(not "defzx".isMatch(re"[al-obc]+"))
+# VM registry error on Nim < 1.1 (devel)
+when not defined(runTestAtCT) or (NimMajor, NimMinor) > (1, 0):
+  test "tmisc":
+    block:
+      var m: RegexMatch
+      check "abc".match(re"[^^]+", m)
+      check m.boundaries == 0 .. 2
+    check(not "^".isMatch(re"[^^]+"))
+    block:
+      var m: RegexMatch
+      check "kpd".match(re"[^al-obc]+", m)
+      check m.boundaries == 0 .. 2
+    check(not "abc".isMatch(re"[^al-obc]+"))
+    block:
+      var m: RegexMatch
+      check "almocb".match(re"[al-obc]+", m)
+      check m.boundaries == 0 .. 5
+    check(not "defzx".isMatch(re"[al-obc]+"))
 
-  # From http://www.regular-expressions.info/examples.html
-  # Grabbing HTML Tags
-  block:
-    var m: RegexMatch
-    check "one<TAG>two</TAG>three".find(re"<TAG\b[^>]*>(.*?)</TAG>", m)
-    check m.boundaries == 3 .. 16
-  check("one<TAG>two</TAG>three".findWithCapt(
-    re"<TAG\b[^>]*>(.*?)</TAG>") == @[@["two"]])
-  # IP Addresses
-  block:
-    const ip = re"""(?x)
-    \b
-    (25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)
-    \.
-    (25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)
-    \.
-    (25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)
-    \.
-    (25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)
-    \b
-    """
-    check "127.0.0.1".findWithCapt(ip) ==
-      @[@["127"], @["0"], @["0"], @["1"]]
-    check(not "127.0.0.999".isMatch(ip))
-  # Floating Point Numbers
-  block:
-    var m: RegexMatch
-    check "3.14".find(re"^[-+]?[0-9]*\.?[0-9]+$", m)
-    check m.boundaries == 0 .. 3
-  check "1.602e-19".findWithCapt(
-    re"^[-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?$") == @[@["e-19"]]
-  # E-mail Addresses
-  block:
-    const email = re"""(?x)
-    \b
-    [a-zA-Z0-9._%+-]+
-    @
-    (?:[a-zA-Z0-9-]+\.)+
-    [a-zA-Z]{2,4}
-    \b
-    """
-    var m: RegexMatch
-    check "john@server.department.company.com".find(email, m)
-    check m.boundaries == 0 .. 33
-    check(not "john@aol...com".isMatch(email))
-  block:
-    const email = re"""(?x)
-    [a-z0-9!#$%&'*+/=?^_`{|}~-]+
-    (?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*
-    @
-    (?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+
-    [a-z0-9](?:[a-z0-9-]*[a-z0-9])?
-    """
-    check "john@server.department.company.com".isMatch(email)
-    check(not "john@aol...com".isMatch(email))
-  block:
-    const email = re"""(?x)
-    (?:[a-z0-9!#$%&'*+/=?^_`{|}~-]+
-    (?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*|"
-    (?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21\x23-\x5b\x5d-\x7f]|
-    \\[\x01-\x09\x0b\x0c\x0e-\x7f])*"
-    )@
-    (?:
-    (?:[a-z0-9]
-    (?:[a-z0-9-]*[a-z0-9])?\.
-    )+[a-z0-9]
-    (?:[a-z0-9-]*[a-z0-9])?|\[
-    (?:
-    (?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.
-    ){3}
-    (?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?|[a-z0-9-]*[a-z0-9]:
-    (?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21-\x5a\x53-\x7f]|
-    \\[\x01-\x09\x0b\x0c\x0e-\x7f])+
-    )\]
-    )
-    """
-    check "john@server.department.company.com".isMatch(email)
-    check(not "john@aol...com".isMatch(email))
-  # Date Validation
-  block:
-    const date = re"""(?x)
-    ^((?:19|20)\d\d)[- /.]
-     (0[1-9]|1[012])[- /.]
-     (0[1-9]|[12][0-9]|3[01])$
-    """
-    check "1999-01-01".findWithCapt(date) ==
-      @[@["1999"], @["01"], @["01"]]
-    check "1999/01-01".findWithCapt(date) ==
-      @[@["1999"], @["01"], @["01"]]
-    check(not "1999-13-33".isMatch(date))
-  # Near operator emulation
-  block:
-    const nope = re"\bword1\W+(?:\w+\W+){1,6}?word2\b"
-    check(not "word1 word2".isMatch(nope))
-    check "word1 1 word2".isMatch(nope)
-    check "word1 1 2 3 4 5 6 word2".isMatch(nope)
-    check(not "word1 1 2 3 4 5 6 7 word".isMatch(nope))
+    # From http://www.regular-expressions.info/examples.html
+    # Grabbing HTML Tags
+    block:
+      var m: RegexMatch
+      check "one<TAG>two</TAG>three".find(re"<TAG\b[^>]*>(.*?)</TAG>", m)
+      check m.boundaries == 3 .. 16
+    check("one<TAG>two</TAG>three".findWithCapt(
+      re"<TAG\b[^>]*>(.*?)</TAG>") == @[@["two"]])
+    # IP Addresses
+    block:
+      const ip = re"""(?x)
+      \b
+      (25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)
+      \.
+      (25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)
+      \.
+      (25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)
+      \.
+      (25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)
+      \b
+      """
+      check "127.0.0.1".findWithCapt(ip) ==
+        @[@["127"], @["0"], @["0"], @["1"]]
+      check(not "127.0.0.999".isMatch(ip))
+    # Floating Point Numbers
+    block:
+      var m: RegexMatch
+      check "3.14".find(re"^[-+]?[0-9]*\.?[0-9]+$", m)
+      check m.boundaries == 0 .. 3
+    check "1.602e-19".findWithCapt(
+      re"^[-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?$") == @[@["e-19"]]
+    # E-mail Addresses
+    block:
+      const email = re"""(?x)
+      \b
+      [a-zA-Z0-9._%+-]+
+      @
+      (?:[a-zA-Z0-9-]+\.)+
+      [a-zA-Z]{2,4}
+      \b
+      """
+      var m: RegexMatch
+      check "john@server.department.company.com".find(email, m)
+      check m.boundaries == 0 .. 33
+      check(not "john@aol...com".isMatch(email))
+    block:
+      const email = re"""(?x)
+      [a-z0-9!#$%&'*+/=?^_`{|}~-]+
+      (?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*
+      @
+      (?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+
+      [a-z0-9](?:[a-z0-9-]*[a-z0-9])?
+      """
+      check "john@server.department.company.com".isMatch(email)
+      check(not "john@aol...com".isMatch(email))
+    block:
+      const email = re"""(?x)
+      (?:[a-z0-9!#$%&'*+/=?^_`{|}~-]+
+      (?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*|"
+      (?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21\x23-\x5b\x5d-\x7f]|
+      \\[\x01-\x09\x0b\x0c\x0e-\x7f])*"
+      )@
+      (?:
+      (?:[a-z0-9]
+      (?:[a-z0-9-]*[a-z0-9])?\.
+      )+[a-z0-9]
+      (?:[a-z0-9-]*[a-z0-9])?|\[
+      (?:
+      (?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.
+      ){3}
+      (?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?|[a-z0-9-]*[a-z0-9]:
+      (?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21-\x5a\x53-\x7f]|
+      \\[\x01-\x09\x0b\x0c\x0e-\x7f])+
+      )\]
+      )
+      """
+      check "john@server.department.company.com".isMatch(email)
+      check(not "john@aol...com".isMatch(email))
+    # Date Validation
+    block:
+      const date = re"""(?x)
+      ^((?:19|20)\d\d)[- /.]
+      (0[1-9]|1[012])[- /.]
+      (0[1-9]|[12][0-9]|3[01])$
+      """
+      check "1999-01-01".findWithCapt(date) ==
+        @[@["1999"], @["01"], @["01"]]
+      check "1999/01-01".findWithCapt(date) ==
+        @[@["1999"], @["01"], @["01"]]
+      check(not "1999-13-33".isMatch(date))
+    # Near operator emulation
+    block:
+      const nope = re"\bword1\W+(?:\w+\W+){1,6}?word2\b"
+      check(not "word1 word2".isMatch(nope))
+      check "word1 1 word2".isMatch(nope)
+      check "word1 1 2 3 4 5 6 word2".isMatch(nope)
+      check(not "word1 1 2 3 4 5 6 7 word".isMatch(nope))
 
-  # Unicode
-  block:
-    var m: RegexMatch
-    check "①②③".find(re"①②③", m)
-    check m.boundaries == 0 ..< "①②③".len
-  block:
-    var m: RegexMatch
-    check "①②③④⑤".find(re"①②③", m)
-    check m.boundaries == 0 ..< "①②③".len
-  block:
-    var m: RegexMatch
-    check "①②③".find(re"①(②)③", m)
-    check m.boundaries == 0 ..< "①②③".len
-  check "①②③".findWithCapt(re"①(②)③") == @[@["②"]]
-  block:
-    var m: RegexMatch
-    check "①②③".find(re"[①②③]*", m)
-    check m.boundaries == 0 ..< "①②③".len
-  #
-  block:
-    var m: RegexMatch
-    check "①②③".find(re"[^④⑤]*", m)
-    check m.boundaries == 0 ..< "①②③".len
+    # Unicode
+    block:
+      var m: RegexMatch
+      check "①②③".find(re"①②③", m)
+      check m.boundaries == 0 ..< "①②③".len
+    block:
+      var m: RegexMatch
+      check "①②③④⑤".find(re"①②③", m)
+      check m.boundaries == 0 ..< "①②③".len
+    block:
+      var m: RegexMatch
+      check "①②③".find(re"①(②)③", m)
+      check m.boundaries == 0 ..< "①②③".len
+    check "①②③".findWithCapt(re"①(②)③") == @[@["②"]]
+    block:
+      var m: RegexMatch
+      check "①②③".find(re"[①②③]*", m)
+      check m.boundaries == 0 ..< "①②③".len
+    #
+    block:
+      var m: RegexMatch
+      check "①②③".find(re"[^④⑤]*", m)
+      check m.boundaries == 0 ..< "①②③".len
 
 test "tlook_around":
   check "ab".isMatch(re"a(?=b)\w")

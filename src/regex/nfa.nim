@@ -219,7 +219,7 @@ func eRemoval(
   inc statePos
   var closure: TeClosure
   var zc: seq[Node]
-  var qw = initDeque[int16]()
+  var qw = initDeque[int16](2)
   qw.addFirst(start)
   var qu: set[int16]
   qu.incl(start)

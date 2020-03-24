@@ -171,6 +171,13 @@ func match*(s: string, pattern: Regex): bool {.inline.} =
   var m: RegexMatch
   result = matchImpl(s, pattern, m, {mfNoCaptures})
 
+func match2(
+  s: string,
+  pattern: Regex,
+  m: var RegexMatch
+): bool {.inline, used.} =
+  result = fastMatchImpl(s, pattern, m)
+
 func contains*(s: string, pattern: Regex): bool =
   ## search for the pattern anywhere
   ## in the string. It returns as soon
@@ -502,6 +509,10 @@ when isMainModule:
   doAssert r"[[:alpha:][:digit:]]".toAtoms == "[[a-zA-Z][0-9]]"
 
   var m: RegexMatch
+
+  doAssert fastMatchImpl("abc", re"abc", m)
+  doAssert not fastMatchImpl("ab", re"abc", m)
+  doAssert fastMatchImpl("abcd", re"\w+b\w+", m)
 
   #doAssert match("abc", re(r"abc", {reAscii}), m)
   doAssert match("abc", re"abc", m)

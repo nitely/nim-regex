@@ -1,26 +1,22 @@
 ## NFA matcher for non-static regexes
 
 import unicode
-import sets
 import tables
-import deques
 import algorithm
-
-import unicodeplus except isUpper, isLower
 
 import nodematch
 import nodetype
 import nfa
 
 type
-  CaptNode* = object
-    parent*: int
-    bound*: int
-    idx*: int
-  Capts* = seq[CaptNode]
+  CaptNode = object
+    parent: int
+    bound: int
+    idx: int
+  Capts = seq[CaptNode]
   Captures* = seq[seq[Slice[int]]]
 
-func constructSubmatches*(
+func constructSubmatches(
   captures: var Captures,
   capts: Capts,
   capt, size: int
@@ -48,7 +44,7 @@ func constructSubmatches*(
 type
   NodeIdx = int16
   CaptIdx = int32
-  Submatches* = ref object
+  Submatches = ref object
     ## Parallel states would be a better name
     sx: seq[(NodeIdx, CaptIdx)]
     # use custom len because setLen(0) is slower,
@@ -56,16 +52,16 @@ type
     si: int
     ss: set[int16]
 
-func newSubmatches*(): Submatches {.inline.} =
+func newSubmatches(): Submatches {.inline.} =
   result = new Submatches
   result.sx = newSeq[(NodeIdx, CaptIdx)](8)
   result.si = 0
 
-func `[]`*(sm: Submatches, i: int): (NodeIdx, CaptIdx) {.inline.} =
+func `[]`(sm: Submatches, i: int): (NodeIdx, CaptIdx) {.inline.} =
   assert i < sm.si
   sm.sx[i]
 
-func add*(sm: var Submatches, item: (NodeIdx, CaptIdx)) {.inline.} =
+func add(sm: var Submatches, item: (NodeIdx, CaptIdx)) {.inline.} =
   assert item[0] notin sm.ss
   assert sm.si <= sm.sx.len
   if (sm.si == sm.sx.len).unlikely:
@@ -74,19 +70,19 @@ func add*(sm: var Submatches, item: (NodeIdx, CaptIdx)) {.inline.} =
   sm.si += 1 
   sm.ss.incl(item[0])
 
-func len*(sm: Submatches): int {.inline.} =
+func len(sm: Submatches): int {.inline.} =
   sm.si
 
-func hasState*(sm: Submatches, n: int16): bool {.inline.} =
+func hasState(sm: Submatches, n: int16): bool {.inline.} =
   n in sm.ss
 
-func clear*(sm: var Submatches) {.inline.} =
+func clear(sm: var Submatches) {.inline.} =
   for i in 0 .. sm.len-1:
     assert sm.sx[i][0] in sm.ss
     sm.ss.excl sm.sx[i][0]
   sm.si = 0
 
-iterator items*(sm: Submatches): (NodeIdx, CaptIdx) {.inline.} =
+iterator items(sm: Submatches): (NodeIdx, CaptIdx) {.inline.} =
   for i in 0 .. sm.len-1:
     yield sm.sx[i]
 
@@ -154,7 +150,7 @@ func submatch(
         smB.add((nt, captx))
   swap smA, smB
 
-func clear*(m: var RegexMatch) {.inline.} =
+func clear(m: var RegexMatch) {.inline.} =
   if m.captures.len > 0:
     m.captures.setLen(0)
   if m.namedGroups.len > 0:

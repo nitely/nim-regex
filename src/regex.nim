@@ -9,6 +9,7 @@ import pkg/regex/parser
 import pkg/regex/exptransformation
 import pkg/regex/nfa
 import pkg/regex/nfamatch
+import pkg/regex/nfamacro
 
 export
   Regex,
@@ -177,6 +178,13 @@ func match2(
   m: var RegexMatch
 ): bool {.inline, used.} =
   result = fastMatchImpl(s, pattern, m)
+
+func match3*(
+  s: string,
+  pattern: static Regex,
+  m: var RegexMatch
+): bool {.inline, used.} =
+  result = matchImpl(s, pattern, m)
 
 func contains*(s: string, pattern: Regex): bool =
   ## search for the pattern anywhere
@@ -514,6 +522,12 @@ when isMainModule:
   doAssert not fastMatchImpl("ab", re"abc", m)
   doAssert fastMatchImpl("abcd", re"\w+b\w+", m)
 
+  doAssert match3("abc", re"abc", m)
+  doAssert not match3("ab", re"abc", m)
+  doAssert match3("abcd", re"\w+b\w+", m)
+
+  #[
+
   #doAssert match("abc", re(r"abc", {reAscii}), m)
   doAssert match("abc", re"abc", m)
   doAssert match("ab", re"a(b|c)", m)
@@ -629,3 +643,4 @@ when isMainModule:
 
   doAssert match("abcabcabc", re"(?:(?:abc)){3}")
   doAssert match("abcabcabc", re"((abc)){3}")
+  ]#

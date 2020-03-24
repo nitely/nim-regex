@@ -28,42 +28,42 @@ type
 type
   NodeIdx = int16
   CaptIdx = int32
+  # ref makes this marginally faster,
+  # the swap improvement makes up for
+  # the indirection
   Submatches = ref object
     ## Parallel states would be a better name
     sx: seq[(NodeIdx, CaptIdx)]
-    # use custom len because setLen(0) is slower,
-    # and {.noInit.} makes no difference
-    si: int
-    ss: set[int16]
+    si: int16
+    # This used to be a set[int16] but it was slower
+    ss: seq[int16]
 
-func newSubmatches(): Submatches {.inline.} =
+func newSubmatches(size: int): Submatches {.inline.} =
   result = new Submatches
   result.sx = newSeq[(NodeIdx, CaptIdx)](8)
+  result.ss = newSeq[int16](size)
   result.si = 0
 
 func `[]`(sm: Submatches, i: int): (NodeIdx, CaptIdx) {.inline.} =
   assert i < sm.si
   sm.sx[i]
 
+func hasState(sm: Submatches, n: int16): bool {.inline.} =
+  sm.ss[n] < sm.si and sm.sx[sm.ss[n]][0] == n
+
 func add(sm: var Submatches, item: (NodeIdx, CaptIdx)) {.inline.} =
-  assert item[0] notin sm.ss
+  assert not sm.hasState(item[0])
   assert sm.si <= sm.sx.len
   if (sm.si == sm.sx.len).unlikely:
     sm.sx.setLen(sm.sx.len * 2)
   sm.sx[sm.si] = item
-  sm.si += 1 
-  sm.ss.incl(item[0])
+  sm.ss[item[0]] = sm.si
+  sm.si += 1'i16
 
 func len(sm: Submatches): int {.inline.} =
   sm.si
 
-func hasState(sm: Submatches, n: int16): bool {.inline.} =
-  n in sm.ss
-
 func clear(sm: var Submatches) {.inline.} =
-  for i in 0 .. sm.len-1:
-    assert sm.sx[i][0] in sm.ss
-    sm.ss.excl sm.sx[i][0]
   sm.si = 0
 
 iterator items(sm: Submatches): (NodeIdx, CaptIdx) {.inline.} =
@@ -106,9 +106,9 @@ func genSetMatch(c: NimNode, n: Node): NimNode =
   result = newStmtList()
   var terms: seq[NimNode]
   if n.ranges.len > 0:
-    for i in 0 .. n.ranges.len-1:
-      let a = newLit n.ranges[i].a.int32
-      let b = newLit n.ranges[i].b.int32
+    for bound in n.ranges:
+      let a = newLit bound.a.int32
+      let b = newLit bound.b.int32
       terms.add quote do:
         (`a` <= `c` and `c` <= `b`)
   if n.cps.len > 0:
@@ -213,8 +213,8 @@ func matchImpl*(
     cPrev = -1'i32
     i = start
     iPrev = start
-  smA = newSubmatches()
-  smB = newSubmatches()
+  smA = newSubmatches(regex.nfa.len)
+  smB = newSubmatches(regex.nfa.len)
   smA.add((0'i16, -1'i32))
   while i < len(text):
     #fastRuneAt(text, i, c, true)

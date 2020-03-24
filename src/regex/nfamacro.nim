@@ -3,11 +3,13 @@
 import macros
 import unicode
 import tables
-import algorithm
+import sets
+
+import unicodedb/properties
+import unicodedb/types
 
 import nodematch
 import nodetype
-import nfa
 from nfamatch import 
   RegexFlag,
   Regex,
@@ -68,6 +70,70 @@ iterator items(sm: Submatches): (NodeIdx, CaptIdx) {.inline.} =
   for i in 0 .. sm.len-1:
     yield sm.sx[i]
 
+func genWordMatch(c: NimNode): NimNode =
+  result = newStmtList()
+  result.add quote do:
+    case `c`
+    of -1.int32:
+      false
+    of 'a'.ord .. 'z'.ord,
+        'A'.ord .. 'Z'.ord,
+        '0'.ord .. '9'.ord,
+        '_'.ord:
+      true
+    else:
+      contains(unicodeTypes(`c`.Rune), utmWord)
+
+func genMatch(c: NimNode, n: Node): NimNode =
+  let cpLit = newLit n.cp.int32
+  let eoeLit = newLit -1.int32
+  result = case n.kind
+    of reChar:
+      quote do: `c` == `cpLit`
+    of reWord:
+      genWordMatch(c)
+    of reAny:
+      quote do: `c` != `eoeLit`
+    of reEoe:
+      quote do: `c` == `eoeLit`
+    # XXX add the remaining matchers
+    else:
+      doAssert false
+      quote do: false
+
+func genSetMatch(c: NimNode, n: Node): NimNode =
+  assert n.kind == reInSet
+  result = newStmtList()
+  var terms: seq[NimNode]
+  if n.ranges.len > 0:
+    for i in 0 .. n.ranges.len-1:
+      let a = newLit n.ranges[i].a.int32
+      let b = newLit n.ranges[i].b.int32
+      terms.add quote do:
+        (`a` <= `c` and `c` <= `b`)
+  if n.cps.len > 0:
+    var caseStmt: seq[NimNode]
+    caseStmt.add c
+    for cp in n.cps:
+      caseStmt.add newTree(nnkOfBranch,
+        newLit cp.int32,
+        quote do: true)
+    caseStmt.add newTree(nnkElse,
+      quote do: false)
+    let caseStmtTerm = newTree(nnkCaseStmt, caseStmt)
+    terms.add quote do:
+      `caseStmtTerm`
+  if n.shorthands.len > 0:
+    for nn in n.shorthands:
+      terms.add genMatch(c, nn)
+  assert terms.len > 0
+  var matchStmt = terms[0]
+  for i in 1 .. terms.len-1:
+    let term = terms[i]
+    matchStmt = quote do:
+      `matchStmt` or `term`
+  result.add matchStmt
+
 macro genSubmatch(
   n, capt, smB, c: typed,
   regex: static Regex
@@ -95,40 +161,25 @@ macro genSubmatch(
     var branchBodyN: seq[NimNode]
     for nti, nt in regex.nfa[i].next.pairs:
       let ntLit = newLit nt
-      var matchBody: seq[NimNode]
-      case regex.nfa[nt].kind
-        of reChar:
-          let cpLit = newLit regex.nfa[nt].cp.int32
-          matchBody.add(quote do:
-            if `c` == `cpLit`:
-              add(`smB`, (`ntLit`, `capt`)))
-        of reWord:
-          # XXX fixme
-          let trueLit = newLit true
-          matchBody.add(quote do:
-            if `trueLit`:
-              add(`smB`, (`ntLit`, `capt`)))
-        of reEoe:
-          let cpLit = newLit -1.int32
-          matchBody.add(quote do:
-            if `c` == `cpLit`:
-              add(`smB`, (`ntLit`, `capt`)))
-        # XXX add the rest of matchers
+      let matchCond = case regex.nfa[nt].kind
+        of reInSet:
+          genSetMatch(c, regex.nfa[nt])
         else:
-          doAssert false
-      let matchBodyStmt = newStmtList matchBody
-      branchBodyN.add(quote do:
+          genMatch(c, regex.nfa[nt])
+      branchBodyN.add quote do:
         if not hasState(`smB`, `ntLit`):
-          `matchBodyStmt`)
+          if `matchCond`:
+            add(`smB`, (`ntLit`, `capt`))
     doAssert branchBodyN.len > 0
-    caseStmtN.add(newTree(nnkOfBranch,
+    caseStmtN.add newTree(nnkOfBranch,
       newLit i.int16,
       newStmtList(
-        branchBodyN)))
-  caseStmtN.add(newTree(nnkElse,
-    newStmtList(
-      newTree(nnkDiscardStmt, newEmptyNode()))))
-  result.add(newTree(nnkCaseStmt, caseStmtN))
+        branchBodyN))
+  caseStmtN.add newTree(nnkElse,
+    quote do:
+      doAssert false
+      discard)
+  result.add newTree(nnkCaseStmt, caseStmtN)
   when defined(reDumpMacro):
     echo "==== genSubmatch ===="
     echo repr(result)
@@ -139,24 +190,6 @@ template submatch(
   smB.clear()
   for n, capt in smA.items:
     genSubmatch(n, capt, smB, c, regex)
-  swap smA, smB
-
-func submatch2(
-  smA, smB: var Submatches,
-  regex: static Regex,
-  c: int32
-) {.inline.} =
-  template t: untyped {.dirty.} = regex.transitions
-  template nfa: untyped {.dirty.} = regex.nfa
-  smB.clear()
-  for n, capt in smA.items:
-    for nti, nt in nfa[n].next.pairs:
-      if smB.hasState(nt):
-        continue
-      # XXX do not use match for charKind in macro
-      if not match(nfa[nt], c.Rune):
-        continue
-      smB.add((nt, capt))
   swap smA, smB
 
 func clear(m: var RegexMatch) {.inline.} =
@@ -184,7 +217,9 @@ func matchImpl*(
   smB = newSubmatches()
   smA.add((0'i16, -1'i32))
   while i < len(text):
-    fastRuneAt(text, i, c, true)
+    #fastRuneAt(text, i, c, true)
+    c = text[i].Rune
+    i += 1
     submatch(smA, smB, regex, c.int32)
     if smA.len == 0:
       return false

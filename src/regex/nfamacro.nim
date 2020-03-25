@@ -8,7 +8,6 @@ import sets
 import unicodedb/properties
 import unicodedb/types
 
-import nodematch
 import nodetype
 from nfamatch import 
   RegexFlag,
@@ -41,7 +40,7 @@ type
 func newSubmatches(size: int): Submatches {.inline.} =
   result = new Submatches
   result.sx = newSeq[(NodeIdx, CaptIdx)](8)
-  result.ss = newSeq[int16](size)
+  result.ss = newSeqUninitialized[int16](size)
   result.si = 0
 
 func `[]`(sm: Submatches, i: int): (NodeIdx, CaptIdx) {.inline.} =
@@ -73,16 +72,11 @@ iterator items(sm: Submatches): (NodeIdx, CaptIdx) {.inline.} =
 func genWordMatch(c: NimNode): NimNode =
   result = newStmtList()
   result.add quote do:
-    case `c`
-    of -1.int32:
-      false
-    of 'a'.ord .. 'z'.ord,
-        'A'.ord .. 'Z'.ord,
-        '0'.ord .. '9'.ord,
-        '_'.ord:
-      true
-    else:
-      contains(unicodeTypes(`c`.Rune), utmWord)
+    ('a'.ord <= `c` and `c` <= 'z'.ord) or
+    ('A'.ord <= `c` and `c` <= 'Z'.ord) or
+    ('0'.ord <= `c` and `c` <= '9'.ord) or
+    (`c` == '_'.ord) or
+    (`c` > 128'i32 and contains(unicodeTypes(`c`.Rune), utmWord))
 
 func genMatch(c: NimNode, n: Node): NimNode =
   let cpLit = newLit n.cp.int32

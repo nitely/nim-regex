@@ -12,7 +12,7 @@ type
   CaptNode = object
     parent: int
     bound: int
-    idx: int
+    idx: int16
   Capts = seq[CaptNode]
   Captures* = seq[seq[Slice[int]]]
 
@@ -228,117 +228,5 @@ func matchImpl*(
   constructSubmatches(m.captures, capts, smA[0][1], regex.groupsCount)
   if regex.namedGroups.len > 0:
     m.namedGroups = regex.namedGroups
-  m.boundaries = start .. iPrev-1
-  return true
-
-type
-  PState = ref object
-    ## Binary tree of DFA states
-    s: seq[int16]
-    next: seq[(int32, PState)]  # XXX use binary tree or a table
-    left: PState
-    right: PState
-
-func newPState(s: seq[int16]): PState {.inline.} =
-  result = new PState
-  result.s = s
-
-func `[]`(ps: PState, c: int32): PState {.inline.} =
-  for i in 0 .. ps.next.len-1:
-    if c == ps.next[i][0]:
-      return ps.next[i][1]
-
-func `<`(a, b: seq[int16]): bool {.inline.} =
-  let ln = min(a.len, b.len)
-  var i = 0
-  while i < ln:
-    if b[i] < a[i]:
-      return false
-    i += 1
-  return a.len < b.len
-
-func getOrAdd(ps: PState, s: var seq[int16]): PState {.inline.} =
-  assert not ps.isNil
-  s.sort()
-  var ps = ps
-  var ps2 = ps
-  var i = 1
-  while not ps.isNil:
-    i = cmp(ps.s, s)
-    if i < 0:
-      ps2 = ps
-      ps = ps.left
-    elif i > 0:
-      ps2 = ps
-      ps = ps.right
-    else:
-      return ps
-  result = newPState(s)
-  if i < 0:
-    ps2.left = result
-  else:
-    assert i > 0
-    ps2.right = result
-
-func nextStates(
-  smA, smB: var seq[int16],
-  smC: var set[int16],
-  regex: Regex,
-  i: int,
-  c: int32
-) {.inline.} =
-  template nfa: untyped {.dirty.} = regex.nfa
-  for n in smA:
-    for nt in nfa[n].next:
-      if nt in smC:
-        continue
-      if not match(nfa[nt], c.Rune):
-        continue
-      smB.add nt
-      smC.incl nt
-  for n in smB:
-    smC.excl n
-  swap smA, smB
-  smB.setLen(0)
-
-# benchmarks show this is as slow as matchImpl for
-# short text, and 5x faster for long enough texts
-# XXX constructs an unbounded DFA, do not use this for now
-func fastMatchImpl*(
-  text: string,
-  regex: Regex,
-  m: var RegexMatch,
-  start = 0
-): bool {.inline.} =
-  m.clear()
-  var
-    smA, smB: seq[int16]
-    smC: set[int16]
-    c = Rune(-1)
-    i = start
-    iPrev = start
-  smA.add 0'i16
-  let t = newPState(smA)
-  var q = t
-  while i < len(text):
-    fastRuneAt(text, i, c, true)
-    let qn = q[c.int32]
-    if not qn.isNil:
-      q = qn
-    else:
-      smA.setLen(0)
-      smA.add q.s
-      nextStates(smA, smB, smC, regex, iPrev, c.int32)
-      if smA.len == 0:
-        return false
-      let q2 = getOrAdd(t, smA)
-      q.next.add (c.int32, q2)
-      q = q2
-    iPrev = i
-  smA.setLen(0)
-  smA.add q.s
-  nextStates(smA, smB, smC, regex, iPrev, -1'i32)
-  if smA.len == 0:
-    return false
   m.boundaries = start .. iPrev-1
   return true

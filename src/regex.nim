@@ -172,13 +172,6 @@ func match*(s: string, pattern: Regex): bool {.inline.} =
   var m: RegexMatch
   result = matchImpl(s, pattern, m, {mfNoCaptures})
 
-func match2(
-  s: string,
-  pattern: Regex,
-  m: var RegexMatch
-): bool {.inline, used.} =
-  result = fastMatchImpl(s, pattern, m)
-
 func match3*(
   s: string,
   pattern: static Regex,
@@ -518,10 +511,6 @@ when isMainModule:
 
   var m: RegexMatch
 
-  doAssert fastMatchImpl("abc", re"abc", m)
-  doAssert not fastMatchImpl("ab", re"abc", m)
-  doAssert fastMatchImpl("abcd", re"\w+b\w+", m)
-
   doAssert match3("abc", re"abc", m)
   doAssert not match3("ab", re"abc", m)
   doAssert match3("abcd", re"\w+b\w+", m)
@@ -534,6 +523,14 @@ when isMainModule:
   doAssert match3("aa", re"a[abc]", m)
   doAssert match3("ac", re"a[abc]", m)
   doAssert not match3("ad", re"a[abc]", m)
+  doAssert match3("aabcd", re"(aa)bcd", m) and
+    m.captures == @[@[0 .. 1]]
+  doAssert match3("aabc", re"(aa)(bc)", m) and
+    m.captures == @[@[0 .. 1], @[2 .. 3]]
+  doAssert match3("ab", re"a(b|c)", m) and
+    m.captures == @[@[1 .. 1]]
+  doAssert match3("ab", re"(ab)*", m) and
+    m.captures == @[@[0 .. 1]]
 
   #[
 

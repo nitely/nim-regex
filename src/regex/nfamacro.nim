@@ -40,6 +40,9 @@ func newSubmatches(size: int): Submatches {.inline.} =
   result.ss = newSeq[int16](size)
   result.si = 0
 
+when defined(release):
+  {.push checks: off.}
+
 func `[]`(sm: Submatches, i: int): (NodeIdx, CaptIdx) {.inline.} =
   assert i < sm.si
   sm.sx[i]
@@ -65,6 +68,9 @@ func clear(sm: var Submatches) {.inline.} =
 iterator items(sm: Submatches): (NodeIdx, CaptIdx) {.inline.} =
   for i in 0 .. sm.len-1:
     yield sm.sx[i]
+
+when defined(release):
+  {.pop.}
 
 # todo: can not use unicodeplus due to
 # https://github.com/nim-lang/Nim/issues/7059
@@ -247,17 +253,16 @@ macro genSubmatch(
       let ntLit = newLit nt
       let matchCond = case regex.nfa[nt].kind
         of reEoe:
-          let eoeLit = newLit -1.int32
-          quote do: `c` == `eoeLit`
+          quote do: `c` == -1'i32
         of reInSet:
           let m = genSetMatch(c, regex.nfa[nt])
-          quote do: `c` >= 0.int32 and (`m`)
+          quote do: `c` >= 0'i32 and (`m`)
         of reNotSet:
           let m = genSetMatch(c, regex.nfa[nt])
-          quote do: `c` >= 0.int32 and not (`m`)
+          quote do: `c` >= 0'i32 and not (`m`)
         else:
           let m = genMatch(c, regex.nfa[nt])
-          quote do: `c` >= 0.int32 and (`m`)
+          quote do: `c` >= 0'i32 and (`m`)
       branchBodyN.add quote do:
         if not hasState(`smB`, `ntLit`):
           if `matchCond`:

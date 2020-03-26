@@ -7,6 +7,7 @@ import pkg/regex/nodetype
 import pkg/regex/common
 import pkg/regex/parser
 import pkg/regex/exptransformation
+import pkg/regex/nfatype
 import pkg/regex/nfa
 import pkg/regex/nfamatch
 import pkg/regex/nfamacro

@@ -4,99 +4,12 @@ import macros
 import unicode
 import tables
 import sets
-import algorithm
 
 import unicodedb/properties
 import unicodedb/types
 
 import nodetype
-from nfamatch import 
-  RegexFlag,
-  Regex,
-  MatchFlag,
-  MatchFlags,
-  RegexMatch
-
-type
-  CaptNode = object
-    parent: int
-    bound: int
-    idx: int16
-  Capts = seq[CaptNode]
-  Captures* = seq[seq[Slice[int]]]
-
-type
-  NodeIdx = int16
-  CaptIdx = int32
-  Submatches = ref object
-    ## Parallel states would be a better name.
-    ## This is a sparse set
-    sx: seq[(NodeIdx, CaptIdx)]
-    ss: seq[int16]
-    si: int16
-
-func newSubmatches(size: int): Submatches {.inline.} =
-  result = new Submatches
-  result.sx = newSeq[(NodeIdx, CaptIdx)](8)
-  result.ss = newSeq[int16](size)
-  result.si = 0
-
-when defined(release):
-  {.push checks: off.}
-
-func `[]`(sm: Submatches, i: int): (NodeIdx, CaptIdx) {.inline.} =
-  assert i < sm.si
-  sm.sx[i]
-
-func hasState(sm: Submatches, n: int16): bool {.inline.} =
-  sm.ss[n] < sm.si and sm.sx[sm.ss[n]][0] == n
-
-func add(sm: var Submatches, item: (NodeIdx, CaptIdx)) {.inline.} =
-  assert not sm.hasState(item[0])
-  assert sm.si <= sm.sx.len
-  if (sm.si == sm.sx.len).unlikely:
-    sm.sx.setLen(sm.sx.len * 2)
-  sm.sx[sm.si] = item
-  sm.ss[item[0]] = sm.si
-  sm.si += 1'i16
-
-func len(sm: Submatches): int {.inline.} =
-  sm.si
-
-func clear(sm: var Submatches) {.inline.} =
-  sm.si = 0
-
-iterator items(sm: Submatches): (NodeIdx, CaptIdx) {.inline.} =
-  for i in 0 .. sm.len-1:
-    yield sm.sx[i]
-
-when defined(release):
-  {.pop.}
-
-func constructSubmatches(
-  captures: var Captures,
-  capts: Capts,
-  capt, size: int
-) {.inline.} =
-  template currGroup: untyped = captures[capts[capt].idx]
-  captures.setLen(size)
-  for i in 0 .. captures.len-1:
-    captures[i].setLen(0)
-  if capts.len == 0:
-    return
-  var capt = capt
-  while capt != -1:
-    if currGroup.len == 0:
-      currGroup.add(-2 .. -2)
-    if currGroup[^1].a != -2:
-      currGroup.add(-2 .. -2)
-    if currGroup[^1].b == -2:
-      currGroup[^1].b = capts[capt].bound-1
-    else:
-      currGroup[^1].a = capts[capt].bound
-    capt = capts[capt].parent
-  for c in captures.mitems:
-    c.reverse()
+import nfatype
 
 # todo: can not use unicodeplus due to
 # https://github.com/nim-lang/Nim/issues/7059
@@ -217,7 +130,6 @@ func genMatch(c: NimNode, n: Node): NimNode =
 
 func genSetMatch(c: NimNode, n: Node): NimNode =
   assert n.kind == reInSet
-  result = newStmtList()
   var terms: seq[NimNode]
   if n.ranges.len > 0:
     for bound in n.ranges:
@@ -242,13 +154,12 @@ func genSetMatch(c: NimNode, n: Node): NimNode =
       terms.add genMatch(c, nn)
   assert terms.len > 0
   let term = terms[0]
-  var matchStmt = quote do:
+  result = quote do:
     (`term`)
   for i in 1 .. terms.len-1:
     let term = terms[i]
-    matchStmt = quote do:
-      `matchStmt` or (`term`)
-  result.add matchStmt
+    result = quote do:
+      `result` or (`term`)
 
 func genMatchedBody(
   smB, ntLit, capt, matched, captx,
@@ -421,13 +332,6 @@ template submatchEoe(
       n, capt, smB, c, matched, captx,
       capts, charIdx, cPrev, regex)
   swap smA, smB
-
-func clear(m: var RegexMatch) {.inline.} =
-  if m.captures.len > 0:
-    m.captures.setLen(0)
-  if m.namedGroups.len > 0:
-    m.namedGroups.clear()
-  m.boundaries = 0 .. -1
 
 func matchImpl*(
   text: string,

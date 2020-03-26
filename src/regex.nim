@@ -529,6 +529,7 @@ when isMainModule:
   doAssert not match3("a1", re"a[a-zA-Z]", m)
   var dummyTextNums = """650-253-0001"""
   doAssert match3(dummyTextNums, re"[0-9]+-[0-9]+-[0-9]+", m)
+  doAssert not match3(dummyTextNums, re"[0-9]+-[0-9]+-[a-z]+", m)
   doAssert match3("ab", re"a[abc]", m)
   doAssert match3("aa", re"a[abc]", m)
   doAssert match3("ac", re"a[abc]", m)

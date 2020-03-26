@@ -111,14 +111,10 @@ func isAnyAscii(r: Rune): bool {.inline.} =
 # todo: can not use unicodeplus due to
 # https://github.com/nim-lang/Nim/issues/7059
 func swapCase*(r: Rune): Rune =
-  # Note a character can be
-  # non-lower and non-upper
-  if r.isUpper():
-    result = r.toLower()
-  elif r.isLower():
-    result = r.toUpper()
-  else:
-    result = r
+  result = r.toLower()
+  if result != r:
+    return
+  result = r.toUpper()
 
 func match*(n: Node, r: Rune): bool {.inline.} =
   ## match for ``Node`` of matchable kind.

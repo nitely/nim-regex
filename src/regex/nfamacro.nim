@@ -264,14 +264,14 @@ macro genSubmatch(
           let m = genMatch(c, regex.nfa[nt])
           quote do: `c` >= 0'i32 and (`m`)
       branchBodyN.add quote do:
-        if not hasState(`smB`, `ntLit`):
-          if `matchCond`:
-            add(`smB`, (`ntLit`, `capt`))
+        if not hasState(`smB`, `ntLit`) and (`matchCond`):
+          add(`smB`, (`ntLit`, `capt`))
     doAssert branchBodyN.len > 0
     caseStmtN.add newTree(nnkOfBranch,
       newLit i.int16,
       newStmtList(
         branchBodyN))
+  doAssert caseStmtN.len > 1
   caseStmtN.add newTree(nnkElse,
     quote do:
       doAssert false
@@ -287,6 +287,55 @@ template submatch(
   smB.clear()
   for n, capt in smA.items:
     genSubmatch(n, capt, smB, c, regex)
+  swap smA, smB
+
+macro genSubmatchEoe(
+  n, capt, smB, c: typed,
+  regex: static Regex
+): untyped =
+  #[
+    case n
+    of 0:
+      if not smB.hasState(1):
+        if c == -1:
+          smB.add((1, capt))
+    of 1:
+      ...
+    else:
+      discard
+  ]#
+  result = newStmtList()
+  var caseStmtN: seq[NimNode]
+  caseStmtN.add n
+  for i in 0 .. regex.nfa.len-1:
+    if regex.nfa[i].next.len == 0:  # end state
+      continue
+    var branchBodyN: seq[NimNode]
+    for nti, nt in regex.nfa[i].next.pairs:
+      if regex.nfa[nt].kind == reEoe:
+        let ntLit = newLit nt
+        branchBodyN.add quote do:
+          if `c` == -1'i32 and not hasState(`smB`, `ntLit`):
+            add(`smB`, (`ntLit`, `capt`))
+    if branchBodyN.len > 0:
+      caseStmtN.add newTree(nnkOfBranch,
+        newLit i.int16,
+        newStmtList(
+          branchBodyN))
+  doAssert caseStmtN.len > 1
+  caseStmtN.add newTree(nnkElse,
+    quote do: discard)
+  result.add newTree(nnkCaseStmt, caseStmtN)
+  when defined(reDumpMacro):
+    echo "==== genSubmatchEoe ===="
+    echo repr(result)
+
+template submatchEoe(
+  smA, smB, regex, c: untyped
+): untyped =
+  smB.clear()
+  for n, capt in smA.items:
+    genSubmatchEoe(n, capt, smB, c, regex)
   swap smA, smB
 
 func clear(m: var RegexMatch) {.inline.} =
@@ -322,8 +371,7 @@ func matchImpl*(
       return false
     iPrev = i
     cPrev = c.int32
-  # XXX gen for EOE only (smaller code)
-  submatch(smA, smB, regex, -1'i32)
+  submatchEoe(smA, smB, regex, -1'i32)
   if smA.len == 0:
     return false
   m.boundaries = start .. iPrev-1

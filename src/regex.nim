@@ -173,12 +173,18 @@ func match*(s: string, pattern: Regex): bool {.inline.} =
   var m: RegexMatch
   result = matchImpl(s, pattern, m, {mfNoCaptures})
 
-func match3*(
+func match*(
   s: string,
   pattern: static Regex,
-  m: var RegexMatch
-): bool {.inline, used.} =
-  result = matchImpl(s, pattern, m)
+  m: var RegexMatch,
+  start = 0
+): bool {.inline.} =
+  const f: MatchFlags = {}
+  result = matchImpl(s, pattern, m, f, start)
+
+func match*(s: string, pattern: static Regex): bool {.inline.} =
+  var m: RegexMatch
+  result = matchImpl(s, pattern, m, {mfNoCaptures})
 
 func contains*(s: string, pattern: Regex): bool =
   ## search for the pattern anywhere
@@ -512,29 +518,6 @@ when isMainModule:
 
   var m: RegexMatch
 
-  doAssert match3("abc", re"abc", m)
-  doAssert not match3("ab", re"abc", m)
-  doAssert match3("abcd", re"\w+b\w+", m)
-  doAssert match3("ab", re"a[a-zA-Z]", m)
-  doAssert not match3("a1", re"a[a-zA-Z]", m)
-  var dummyTextNums = """650-253-0001"""
-  doAssert match3(dummyTextNums, re"[0-9]+-[0-9]+-[0-9]+", m)
-  doAssert not match3(dummyTextNums, re"[0-9]+-[0-9]+-[a-z]+", m)
-  doAssert match3("ab", re"a[abc]", m)
-  doAssert match3("aa", re"a[abc]", m)
-  doAssert match3("ac", re"a[abc]", m)
-  doAssert not match3("ad", re"a[abc]", m)
-  doAssert match3("aabcd", re"(aa)bcd", m) and
-    m.captures == @[@[0 .. 1]]
-  doAssert match3("aabc", re"(aa)(bc)", m) and
-    m.captures == @[@[0 .. 1], @[2 .. 3]]
-  doAssert match3("ab", re"a(b|c)", m) and
-    m.captures == @[@[1 .. 1]]
-  doAssert match3("ab", re"(ab)*", m) and
-    m.captures == @[@[0 .. 1]]
-
-  #[
-
   #doAssert match("abc", re(r"abc", {reAscii}), m)
   doAssert match("abc", re"abc", m)
   doAssert match("ab", re"a(b|c)", m)
@@ -650,4 +633,3 @@ when isMainModule:
 
   doAssert match("abcabcabc", re"(?:(?:abc)){3}")
   doAssert match("abcabcabc", re"((abc)){3}")
-  ]#

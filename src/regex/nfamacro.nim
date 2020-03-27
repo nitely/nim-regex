@@ -35,7 +35,7 @@ func genWordMatch(c: NimNode): NimNode =
     ('0'.ord <= `c` and `c` <= '9'.ord) or
     (`c` == '_'.ord) or
     (`c` > 128'i32 and contains(
-      unicodeTypes(`c`.Rune), utmWord))
+      unicodeTypes(Rune(`c`)), utmWord))
 
 func genDigitAsciiMatch(c: NimNode): NimNode =
   result = newStmtList()
@@ -47,7 +47,7 @@ func genDigitMatch(c: NimNode): NimNode =
   result.add quote do:
     ('0'.ord <= `c` and `c` <= '9'.ord) or
     (`c` > 128'i32 and contains(
-      unicodeTypes(`c`.Rune), utmDecimal))
+      unicodeTypes(Rune(`c`)), utmDecimal))
 
 func genWhiteSpaceAsciiMatch(c: NimNode): NimNode =
   result = newStmtList()
@@ -68,7 +68,7 @@ func genWhiteSpaceMatch(c: NimNode): NimNode =
       true
     else:
       `c` > 128'i32 and contains(
-        unicodeTypes(`c`.Rune), utmWhiteSpace)
+        unicodeTypes(Rune(`c`)), utmWhiteSpace)
 
 func genMatch(c: NimNode, n: Node): NimNode =
   let cpLit = newLit n.cp.int32
@@ -117,19 +117,21 @@ func genMatch(c: NimNode, n: Node): NimNode =
       let whiteSpaceMatch = genWhiteSpaceAsciiMatch(c)
       quote do: not (`whiteSpaceMatch`)
     of reUCC:
-      let cc = n.cc  # XXX newLit
+      let cc = newLit n.cc.int32
       quote do: contains(
-        cc, unicodeCategory(`c`.Rune))
+        UnicodeCategorySet(`cc`),
+        unicodeCategory(Rune(`c`)))
     of reNotUCC:
-      let cc = n.cc  # XXX newLit
+      let cc = newLit n.cc.int32
       quote do: not contains(
-        cc, unicodeCategory(`c`.Rune))
+        UnicodeCategorySet(`cc`),
+        unicodeCategory(Rune(`c`)))
     else:
-      doAssert false
+      doAssert false, $n.kind
       quote do: false
 
 func genSetMatch(c: NimNode, n: Node): NimNode =
-  assert n.kind == reInSet
+  assert n.kind in {reInSet, reNotSet}
   var terms: seq[NimNode]
   if n.ranges.len > 0:
     for bound in n.ranges:
@@ -151,7 +153,14 @@ func genSetMatch(c: NimNode, n: Node): NimNode =
       `caseStmtTerm`
   if n.shorthands.len > 0:
     for nn in n.shorthands:
-      terms.add genMatch(c, nn)
+      terms.add case nn.kind:
+      of reInSet:
+        genSetMatch(c, nn)
+      of reNotSet:
+        let setMatch = genSetMatch(c, nn)
+        quote do: not `setMatch`
+      else:
+        genMatch(c, nn)
   assert terms.len > 0
   let term = terms[0]
   result = quote do:
@@ -160,6 +169,53 @@ func genSetMatch(c: NimNode, n: Node): NimNode =
     let term = terms[i]
     result = quote do:
       `result` or (`term`)
+
+func genWordBoundary(cA, cB: NimNode): NimNode =
+  let wordMatchA = genWordMatch(cA)
+  let wordMatchB = genWordMatch(cB)
+  result = quote do:
+    (`cA` != -1'i32 and `wordMatchA`) xor
+      (`cB` != -1'i32 and `wordMatchB`)
+
+func genWordBoundaryAscii(cA, cB: NimNode): NimNode =
+  let wordMatchA = genWordAsciiMatch(cA)
+  let wordMatchB = genWordAsciiMatch(cB)
+  result = quote do:
+    (`cA` != -1'i32 and `wordMatchA`) xor
+      (`cB` != -1'i32 and `wordMatchB`)
+
+func genMatch(n: Node, cA, cB: NimNode): NimNode =
+  let cpLit = newLit n.cp.int32
+  case n.kind
+  of reStart, reStartSym:
+    quote do: `cA` == -1'i32
+  of reEnd, reEndSym:
+    quote do: `cB` == -1'i32
+  of reStartSymML:
+    quote do: `cA` == -1'i32 or `cA` == '\L'.ord
+  of reEndSymML:
+    quote do: `cB` == -1'i32 or `cB` == '\L'.ord
+  of reWordBoundary:
+    genWordBoundary(cA, cB)
+  of reNotWordBoundary:
+    let wordBoundary = genWordBoundary(cA, cB)
+    quote do: not `wordBoundary`
+  of reWordBoundaryAscii:
+    genWordBoundaryAscii(cA, cB)
+  of reNotWordBoundaryAscii:
+    let wordBoundary = genWordBoundaryAscii(cA, cB)
+    quote do: not `wordBoundary`
+  of reLookahead:
+    quote do: `cpLit` == `cB`
+  of reNotLookahead:
+    quote do: `cpLit` != `cB`
+  of reLookbehind:
+    quote do: `cpLit` == `cA`
+  of reNotLookbehind:
+    quote do: `cpLit` != `cA`
+  else:
+    doAssert false
+    quote do: false
 
 func genMatchedBody(
   smB, ntLit, capt, matched, captx,
@@ -187,9 +243,9 @@ func genMatchedBody(
     of assertionKind:
       # https://github.com/nim-lang/Nim/issues/13266
       #let zLit = newLit z
+      let matchCond = genMatch(`z`, `cPrev`, `c`)
       matchedBody.add quote do:
-        `matched` = `matched` and match(
-          `z`, Rune(`cPrev`), Rune(`c`))
+        `matched` = `matched` and `matchCond`
     else:
       doAssert false
   matchedBody.add quote do:
@@ -273,7 +329,7 @@ template submatch(
   swap smA, smB
 
 macro genSubmatchEoe(
-  n, capt, smB, c, matched, captx,
+  n, capt, smB, c, c2, matched, captx,
   capts, charIdx, cPrev: typed,
   regex: static Regex
 ): untyped =
@@ -305,7 +361,7 @@ macro genSubmatchEoe(
           capts, charIdx, cPrev, c,
           i, nti, regex)
         branchBodyN.add quote do:
-          if `c` == -1'i32 and not hasState(`smB`, `ntLit`):
+          if `c2` == -1'i32 and not hasState(`smB`, `ntLit`):
             `matchedBodyStmt`
     if branchBodyN.len > 0:
       caseStmtN.add newTree(nnkOfBranch,
@@ -321,7 +377,7 @@ macro genSubmatchEoe(
     echo repr(result)
 
 template submatchEoe(
-  smA, smB, regex, c,
+  smA, smB, regex, c, c2,
   capts, charIdx, cPrev: untyped
 ): untyped =
   smB.clear()
@@ -329,14 +385,46 @@ template submatchEoe(
   var matched = true
   for n, capt in smA.items:
     genSubmatchEoe(
-      n, capt, smB, c, matched, captx,
+      n, capt, smB, c, c2, matched, captx,
       capts, charIdx, cPrev, regex)
   swap smA, smB
+
+template shortestMatch: untyped {.dirty.} =
+  submatchEoe(smA, smB, regex, c.int32, -1'i32, capts, iPrev, cPrev)
+  if smA.len > 0:
+    return true
+  swap smA, smB
+
+template longestMatchInit: untyped {.dirty.} =
+  var
+    matchedLong = false
+    captLong = -1'i32
+    iPrevLong = start
+
+template longestMatchEnter: untyped {.dirty.} =
+  submatchEoe(smA, smB, regex, c.int32, -1'i32, capts, iPrev, cPrev)
+  if smA.len > 0:
+    matchedLong = true
+    captLong = smA[0][1]
+    iPrevLong = iPrev
+  swap smA, smB
+
+template longestMatchExit: untyped {.dirty.} =
+  if not matchedLong:
+    return false
+  assert smA.len == 0
+  when groupsCount > 0:
+    constructSubmatches(m.captures, capts, captLong, groupsCount)
+  when namedGroups.len > 0:
+    m.namedGroups = namedGroups
+  m.boundaries = start .. iPrevLong-1
+  return true
 
 func matchImpl*(
   text: string,
   regex: static Regex,
   m: var RegexMatch,
+  flags: static MatchFlags,
   start = 0
 ): bool {.inline.} =
   # workaround Nim/issues/13252
@@ -350,20 +438,30 @@ func matchImpl*(
     cPrev = -1'i32
     i = start
     iPrev = start
+  when mfLongestMatch in flags:
+    longestMatchInit()
   smA = newSubmatches(regex.nfa.len)
   smB = newSubmatches(regex.nfa.len)
   smA.add((0'i16, -1'i32))
   while i < len(text):
-    #fastRuneAt(text, i, c, true)
-    c = text[i].Rune
-    i += 1
+    fastRuneAt(text, i, c, true)
+    #c = text[i].Rune
+    #i += 1
+    when mfShortestMatch in flags:
+      shortestMatch()
+    when mfLongestMatch in flags:
+      longestMatchEnter()
     submatch(smA, smB, regex, c.int32, capts, iPrev, cPrev)
     if smA.len == 0:
+      when mfLongestMatch in flags:
+        longestMatchExit()
       return false
     iPrev = i
     cPrev = c.int32
-  submatchEoe(smA, smB, regex, -1'i32, capts, iPrev, cPrev)
+  submatchEoe(smA, smB, regex, -1'i32, -1'i32, capts, iPrev, cPrev)
   if smA.len == 0:
+    when mfLongestMatch in flags:
+      longestMatchExit()
     return false
   when groupsCount > 0:
     constructSubmatches(m.captures, capts, smA[0][1], groupsCount)

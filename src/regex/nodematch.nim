@@ -24,11 +24,8 @@ func isWordAscii(r: Rune): bool {.inline.} =
     false
 
 template isWordBoundaryImpl(r, nxt, isWordProc): bool =
-  let
-    isWord = r.int > -1 and isWordProc(r)
-    isNxtWord = nxt.int > -1 and isWordProc(nxt)
-  ((isWord and not isNxtWord) or
-   (not isWord and isNxtWord))
+  ((r.int > -1 and isWordProc(r)) xor
+    (nxt.int > -1 and isWordProc(nxt)))
 
 func isWordBoundary(r: Rune, nxt: Rune): bool {.inline.} =
   ## check if current match

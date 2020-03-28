@@ -772,7 +772,6 @@ test "tflags":
     \d +  # the integral part
     \.    # the decimal point
     \d *  # some fractional digits""")
-  # XXX VM bug when -d:runTestAtCT
   check re"""(?x)    # verbose mode
     ^                   # beginning of string
     M{0,4}              # thousands - 0 to 4 M's

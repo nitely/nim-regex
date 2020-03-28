@@ -3,7 +3,7 @@ import sets
 
 import unicodedb/properties
 import unicodedb/types
-import unicodeplus except isUpper, isLower
+import unicodeplus
 
 import nodetype
 import common
@@ -24,8 +24,8 @@ func isWordAscii(r: Rune): bool {.inline.} =
     false
 
 template isWordBoundaryImpl(r, nxt, isWordProc): bool =
-  ((r.int > -1 and isWordProc(r)) xor
-    (nxt.int > -1 and isWordProc(nxt)))
+  (r.int > -1 and isWordProc(r)) xor
+    (nxt.int > -1 and isWordProc(nxt))
 
 func isWordBoundary(r: Rune, nxt: Rune): bool {.inline.} =
   ## check if current match

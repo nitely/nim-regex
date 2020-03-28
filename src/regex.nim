@@ -169,28 +169,26 @@ func match*(
   const f: MatchFlags = {}
   result = matchImpl(s, pattern, m, f, start)
 
+when (NimMajor, NimMinor) >= (1, 1):
+  func match*(
+    s: string,
+    pattern: static Regex,
+    m: var RegexMatch,
+    start = 0
+  ): bool {.inline.} =
+    const f: MatchFlags = {}
+    result = matchImpl(s, pattern, m, f, start)
+
 func match*(s: string, pattern: Regex): bool {.inline.} =
   var m: RegexMatch
   result = matchImpl(s, pattern, m, {mfNoCaptures})
 
-func match*(
-  s: string,
-  pattern: static Regex,
-  m: var RegexMatch,
-  start = 0
-): bool {.inline.} =
-  const f: MatchFlags = {}
-  result = matchImpl(s, pattern, m, f, start)
+when (NimMajor, NimMinor) >= (1, 1):
+  func match*(s: string, pattern: static Regex): bool {.inline.} =
+    var m: RegexMatch
+    result = matchImpl(s, pattern, m, {mfNoCaptures})
 
-func match*(s: string, pattern: static Regex): bool {.inline.} =
-  var m: RegexMatch
-  result = matchImpl(s, pattern, m, {mfNoCaptures})
-
-func contains*(s: string, pattern: Regex): bool =
-  ## search for the pattern anywhere
-  ## in the string. It returns as soon
-  ## as there is a match, even when the
-  ## expression has repetitions
+template containsImpl(): untyped {.dirty.} =
   result = false
   var m: RegexMatch
   var i = 0
@@ -200,6 +198,17 @@ func contains*(s: string, pattern: Regex): bool =
     if result:
       break
     fastRuneAt(s, i, c, true)
+
+func contains*(s: string, pattern: Regex): bool =
+  ## search for the pattern anywhere
+  ## in the string. It returns as soon
+  ## as there is a match, even when the
+  ## expression has repetitions
+  containsImpl()
+
+when (NimMajor, NimMinor) >= (1, 1):
+  func contains*(s: string, pattern: static Regex): bool =
+    containsImpl()
 
 func find*(
   s: string,
@@ -217,6 +226,26 @@ func find*(
       doAssert result
       break
     fastRuneAt(s, i, c, true)
+
+when (NimMajor, NimMinor) >= (1, 1):
+  func find*(
+    s: string,
+    pattern: static Regex,
+    m: var RegexMatch,
+    start = 0
+  ): bool =
+    result = false
+    var i = start
+    var c: Rune
+    while i < len(s):
+      # XXX Nim/issues/13252
+      result = matchImpl(s, pattern, m, {mfLongestMatch}, i)
+      #result = matchImpl(s, pattern, m, {mfShortestMatch, mfNoCaptures}, i)
+      if result:
+        #result = matchImpl(s, pattern2, m, {mfLongestMatch}, i)
+        doAssert result
+        break
+      fastRuneAt(s, i, c, true)
 
 iterator findAll*(
   s: string,
@@ -264,6 +293,7 @@ template runeIncAt(s: string, n: var int) =
   else:
     inc(n, runeLenAt(s, n))
 
+# XXX there is no static version because of Nim/issues/13791
 iterator split*(s: string, sep: Regex): string {.inline.} =
   ## return not matched substrings
   var
@@ -312,9 +342,11 @@ func startsWith*(s: string, pattern: Regex, start = 0): bool =
   var m: RegexMatch
   result = matchImpl(s, pattern, m, {mfShortestMatch, mfNoCaptures}, start)
 
-func endsWith*(s: string, pattern: Regex): bool =
-  ## return whether the string
-  ## ends with the pattern or not
+func startsWith*(s: string, pattern: static Regex, start = 0): bool =
+  var m: RegexMatch
+  result = matchImpl(s, pattern, m, {mfShortestMatch, mfNoCaptures}, start)
+
+template endsWithImpl(): untyped {.dirty.} =
   result = false
   var
     m: RegexMatch
@@ -323,6 +355,14 @@ func endsWith*(s: string, pattern: Regex): bool =
     result = matchImpl(s, pattern, m, {mfNoCaptures}, i)
     if result: return
     s.runeIncAt(i)
+
+func endsWith*(s: string, pattern: Regex): bool =
+  ## return whether the string
+  ## ends with the pattern or not
+  endsWithImpl()
+
+func endsWith*(s: string, pattern: static Regex): bool =
+  endsWithImpl()
 
 func flatCaptures(
   result: var seq[string],
@@ -360,6 +400,8 @@ func addsubstr(result: var string, s: string, first, last: int) =
 func addsubstr(result: var string, s: string, first: int) {.inline.} =
   addsubstr(result, s, first, s.high)
 
+# XXX there is no static version because of Nim/issues/13791
+#     this func uses findAll iterator
 func replace*(
   s: string,
   pattern: Regex,

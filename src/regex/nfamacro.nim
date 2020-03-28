@@ -79,17 +79,17 @@ func genMatch(c: NimNode, n: Node): NimNode =
       genWordMatch(c)
     of reNotAlphaNum:
       let wordMatch = genWordMatch(c)
-      quote do: not (`wordMatch`)
+      quote do: not `wordMatch`
     of reDigit:
       genDigitMatch(c)
     of reNotDigit:
       let digitMatch = genDigitMatch(c)
-      quote do: not (`digitMatch`)
+      quote do: not `digitMatch`
     of reWhiteSpace:
       genWhiteSpaceMatch(c)
     of reNotWhiteSpace:
       let whiteSpaceMatch = genWhiteSpaceMatch(c)
-      quote do: not (`whiteSpaceMatch`)
+      quote do: not `whiteSpaceMatch`
     of reAny:
       quote do: `c` != '\L'.ord
     of reAnyAscii:
@@ -105,17 +105,17 @@ func genMatch(c: NimNode, n: Node): NimNode =
       genWordAsciiMatch(c)
     of reNotAlphaNumAscii:
       let wordMatch = genWordAsciiMatch(c)
-      quote do: not (`wordMatch`)
+      quote do: not `wordMatch`
     of reDigitAscii:
       genDigitAsciiMatch(c)
     of reNotDigitAscii:
       let digitMatch = genDigitAsciiMatch(c)
-      quote do: not (`digitMatch`)
+      quote do: not `digitMatch`
     of reWhiteSpaceAscii:
       genWhiteSpaceAsciiMatch(c)
     of reNotWhiteSpaceAscii:
       let whiteSpaceMatch = genWhiteSpaceAsciiMatch(c)
-      quote do: not (`whiteSpaceMatch`)
+      quote do: not `whiteSpaceMatch`
     of reUCC:
       let cc = newLit n.cc.int32
       quote do: contains(
@@ -164,11 +164,11 @@ func genSetMatch(c: NimNode, n: Node): NimNode =
   assert terms.len > 0
   let term = terms[0]
   result = quote do:
-    (`term`)
+    `term`
   for i in 1 .. terms.len-1:
     let term = terms[i]
     result = quote do:
-      `result` or (`term`)
+      `result` or `term`
 
 func genWordBoundary(cA, cB: NimNode): NimNode =
   let wordMatchA = genWordMatch(cA)
@@ -285,13 +285,13 @@ macro genSubmatch(
           quote do: `c` == -1'i32
         of reInSet:
           let m = genSetMatch(c, regex.nfa[nt])
-          quote do: `c` >= 0'i32 and (`m`)
+          quote do: `c` >= 0'i32 and `m`
         of reNotSet:
           let m = genSetMatch(c, regex.nfa[nt])
-          quote do: `c` >= 0'i32 and not (`m`)
+          quote do: `c` >= 0'i32 and not `m`
         else:
           let m = genMatch(c, regex.nfa[nt])
-          quote do: `c` >= 0'i32 and (`m`)
+          quote do: `c` >= 0'i32 and `m`
       let ntLit = newLit nt
       let matchedBodyStmt = genMatchedBody(
         smB, ntLit, capt, matched, captx,

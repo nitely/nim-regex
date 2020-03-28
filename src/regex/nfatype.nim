@@ -7,10 +7,11 @@ import algorithm
 import nfa
 
 type
+  CaptIdx* = int32
   CaptNode* = object
-    parent*: int32
+    parent*: CaptIdx
     bound*: int
-    idx*: int16
+    idx*: int16  # XXX rename to group or groupNum
   Capts* = seq[CaptNode]
   Captures* = seq[seq[Slice[int]]]
 
@@ -70,7 +71,6 @@ func clear*(m: var RegexMatch) {.inline.} =
 
 type
   NodeIdx* = int16
-  CaptIdx* = int32
   Submatches* = ref object
     ## Parallel states would be a better name.
     ## This is a sparse set

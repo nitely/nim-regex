@@ -189,8 +189,7 @@ when (NimMajor, NimMinor) >= (1, 1):
     result = matchImpl(s, pattern, m, {mfNoCaptures})
 
 template containsImpl(): untyped {.dirty.} =
-  # XXX mfShortestMatch
-  const f = {mfLongestMatch, mfFindMatch, mfNoCaptures}
+  const f = {mfShortestMatch, mfFindMatch, mfNoCaptures}
   var m: RegexMatch
   result = matchImpl(s, pattern, m, f)
 

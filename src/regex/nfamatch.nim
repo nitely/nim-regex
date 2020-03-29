@@ -88,6 +88,8 @@ template findMatch(): untyped {.dirty.} =
         (smA.len == 0 or startLong < smA[0][2]):
       smA.clear()
       longestMatchExit()
+  elif mfShortestMatch in flags:
+    discard
   else:
     doAssert false
   smA.add((0'i16, -1'i32, i))

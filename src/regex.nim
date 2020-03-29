@@ -189,15 +189,10 @@ when (NimMajor, NimMinor) >= (1, 1):
     result = matchImpl(s, pattern, m, {mfNoCaptures})
 
 template containsImpl(): untyped {.dirty.} =
-  result = false
+  # XXX mfShortestMatch
+  const f = {mfLongestMatch, mfFindMatch, mfNoCaptures}
   var m: RegexMatch
-  var i = 0
-  var c: Rune
-  while i < len(s):
-    result = matchImpl(s, pattern, m, {mfShortestMatch, mfNoCaptures}, i)
-    if result:
-      break
-    fastRuneAt(s, i, c, true)
+  result = matchImpl(s, pattern, m, f)
 
 func contains*(s: string, pattern: Regex): bool =
   ## search for the pattern anywhere
@@ -210,22 +205,16 @@ when (NimMajor, NimMinor) >= (1, 1):
   func contains*(s: string, pattern: static Regex): bool =
     containsImpl()
 
+template findImpl(): untyped {.dirty.} =
+  matchImpl(s, pattern, m, {mfLongestMatch, mfFindMatch}, start)
+
 func find*(
   s: string,
   pattern: Regex,
   m: var RegexMatch,
   start = 0
 ): bool =
-  result = false
-  var i = start
-  var c: Rune
-  while i < len(s):
-    result = matchImpl(s, pattern, m, {mfShortestMatch, mfNoCaptures}, i)
-    if result:
-      result = matchImpl(s, pattern, m, {mfLongestMatch}, i)
-      doAssert result
-      break
-    fastRuneAt(s, i, c, true)
+  findImpl()
 
 when (NimMajor, NimMinor) >= (1, 1):
   func find*(
@@ -234,18 +223,7 @@ when (NimMajor, NimMinor) >= (1, 1):
     m: var RegexMatch,
     start = 0
   ): bool =
-    result = false
-    var i = start
-    var c: Rune
-    while i < len(s):
-      # XXX Nim/issues/13252
-      result = matchImpl(s, pattern, m, {mfLongestMatch}, i)
-      #result = matchImpl(s, pattern, m, {mfShortestMatch, mfNoCaptures}, i)
-      if result:
-        #result = matchImpl(s, pattern2, m, {mfLongestMatch}, i)
-        doAssert result
-        break
-      fastRuneAt(s, i, c, true)
+    findImpl()
 
 iterator findAll*(
   s: string,
@@ -256,14 +234,13 @@ iterator findAll*(
   var c: Rune
   var m: RegexMatch
   while i < len(s):
-    if find(s, pattern, m, i):
-      if i < m.boundaries.b+1:
-        i = m.boundaries.b+1
-      else:
-        fastRuneAt(s, i, c, true)
-      yield m
-    else:
+    if not find(s, pattern, m, i):
+      break
+    if i < m.boundaries.b+1:
+      i = m.boundaries.b+1
+    else:  # empty match
       fastRuneAt(s, i, c, true)
+    yield m
 
 func findAll*(
   s: string,
@@ -297,16 +274,19 @@ template runeIncAt(s: string, n: var int) =
 iterator split*(s: string, sep: Regex): string {.inline.} =
   ## return not matched substrings
   var
-    first = 0
-    last = 0
+    first, last = 0
     m: RegexMatch
   while last <= s.len:
     first = last
     while last <= s.len:
-      discard matchImpl(s, sep, m, {mfLongestMatch, mfNoCaptures}, last)
-      if m.boundaries.a <= m.boundaries.b:
+      if not find(s, sep, m, last):
+        last = s.len + 1
         break
-      s.runeIncAt last
+      if m.boundaries.a <= m.boundaries.b:
+        last = m.boundaries.a
+        break
+      # empty match
+      runeIncAt(s, last)
     yield substr(s, first, last-1)
     if m.boundaries.a <= m.boundaries.b:
       doAssert last < m.boundaries.b+1
@@ -318,16 +298,19 @@ func split*(s: string, sep: Regex): seq[string] =
 
 func splitIncl*(s: string, sep: Regex): seq[string] =
   var
-    first = 0
-    last = 0
+    first, last = 0
     m: RegexMatch
   while last <= s.len:
     first = last
     while last <= s.len:
-      discard matchImpl(s, sep, m, {mfLongestMatch, mfNoCaptures}, last)
-      if m.boundaries.a <= m.boundaries.b:
+      if not find(s, sep, m, last):
+        last = s.len + 1
         break
-      s.runeIncAt last
+      if m.boundaries.a <= m.boundaries.b:
+        last = m.boundaries.a
+        break
+      # empty match
+      runeIncAt(s, last)
     result.add substr(s, first, last-1)
     for g in 0 ..< m.groupsCount:
       for sl in m.group(g):
@@ -342,9 +325,10 @@ func startsWith*(s: string, pattern: Regex, start = 0): bool =
   var m: RegexMatch
   result = matchImpl(s, pattern, m, {mfShortestMatch, mfNoCaptures}, start)
 
-func startsWith*(s: string, pattern: static Regex, start = 0): bool =
-  var m: RegexMatch
-  result = matchImpl(s, pattern, m, {mfShortestMatch, mfNoCaptures}, start)
+when (NimMajor, NimMinor) >= (1, 1):
+  func startsWith*(s: string, pattern: static Regex, start = 0): bool =
+    var m: RegexMatch
+    result = matchImpl(s, pattern, m, {mfShortestMatch, mfNoCaptures}, start)
 
 template endsWithImpl(): untyped {.dirty.} =
   result = false
@@ -361,8 +345,9 @@ func endsWith*(s: string, pattern: Regex): bool =
   ## ends with the pattern or not
   endsWithImpl()
 
-func endsWith*(s: string, pattern: static Regex): bool =
-  endsWithImpl()
+when (NimMajor, NimMinor) >= (1, 1):
+  func endsWith*(s: string, pattern: static Regex): bool =
+    endsWithImpl()
 
 func flatCaptures(
   result: var seq[string],

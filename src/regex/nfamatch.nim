@@ -20,14 +20,14 @@ func submatch(
   smB.clear()
   var captx: int32
   var matched = true
-  for n, capt in smA.items:
+  for n, capt, start in smA.items:
     for nti, nt in nfa[n].next.pairs:
       if smB.hasState(nt):
         continue
       if not match(nfa[nt], c2.Rune):
         continue
       if t.allZ[n][nti] == -1'i16:
-        smB.add((nt, capt))
+        smB.add((nt, capt, start))
         continue
       matched = true
       captx = capt
@@ -47,7 +47,7 @@ func submatch(
           assert false
           discard
       if matched:
-        smB.add((nt, captx))
+        smB.add((nt, captx, start))
   swap smA, smB
 
 template shortestMatch: untyped {.dirty.} =
@@ -60,6 +60,7 @@ template longestMatchInit: untyped {.dirty.} =
   var
     matchedLong = false
     captLong = -1'i32
+    startLong = start
     iPrevLong = start
 
 template longestMatchEnter: untyped {.dirty.} =
@@ -67,6 +68,7 @@ template longestMatchEnter: untyped {.dirty.} =
   if smA.len > 0:
     matchedLong = true
     captLong = smA[0][1]
+    startLong = smA[0][2]
     iPrevLong = iPrev
   swap smA, smB
 
@@ -77,8 +79,18 @@ template longestMatchExit: untyped {.dirty.} =
   constructSubmatches(m.captures, capts, captLong, regex.groupsCount)
   if regex.namedGroups.len > 0:
     m.namedGroups = regex.namedGroups
-  m.boundaries = start .. iPrevLong-1
+  m.boundaries = startLong .. iPrevLong-1
   return true
+
+template findMatch(): untyped {.dirty.} =
+  when mfLongestMatch in flags:
+    if matchedLong and
+        (smA.len == 0 or startLong < smA[0][2]):
+      smA.clear()
+      longestMatchExit()
+  else:
+    doAssert false
+  smA.add((0'i16, -1'i32, i))
 
 func matchImpl*(
   text: string,
@@ -99,7 +111,7 @@ func matchImpl*(
     longestMatchInit()
   smA = newSubmatches(regex.nfa.len)
   smB = newSubmatches(regex.nfa.len)
-  smA.add((0'i16, -1'i32))
+  smA.add((0'i16, -1'i32, start))
   while i < len(text):
     fastRuneAt(text, i, c, true)
     when mfShortestMatch in flags:
@@ -107,6 +119,8 @@ func matchImpl*(
     when mfLongestMatch in flags:
       longestMatchEnter()
     submatch(smA, smB, capts, regex, iPrev, cPrev, c.int32, c.int32)
+    when mfFindMatch in flags:
+      findMatch()
     if smA.len == 0:
       when mfLongestMatch in flags:
         longestMatchExit()
@@ -121,5 +135,5 @@ func matchImpl*(
   constructSubmatches(m.captures, capts, smA[0][1], regex.groupsCount)
   if regex.namedGroups.len > 0:
     m.namedGroups = regex.namedGroups
-  m.boundaries = start .. iPrev-1
+  m.boundaries = smA[0][2] .. iPrev-1
   return true

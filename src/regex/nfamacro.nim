@@ -218,14 +218,14 @@ func genMatch(n: Node, cA, cB: NimNode): NimNode =
     quote do: false
 
 func genMatchedBody(
-  smB, ntLit, capt, matched, captx,
+  smB, ntLit, capt, start, matched, captx,
   capts, charIdx, cPrev, c: NimNode,
   i, nti: int,
   regex: Regex
 ): NimNode =
   if regex.transitions.allZ[i][nti] == -1'i16:
     return quote do:
-      add(`smB`, (`ntLit`, `capt`))
+      add(`smB`, (`ntLit`, `capt`, `start`))
   var matchedBody: seq[NimNode]
   matchedBody.add quote do:
     `matched` = true
@@ -250,11 +250,11 @@ func genMatchedBody(
       doAssert false
   matchedBody.add quote do:
     if `matched`:
-      add(`smB`, (`ntLit`, `captx`))
+      add(`smB`, (`ntLit`, `captx`, `start`))
   return newStmtList matchedBody
 
 macro genSubmatch(
-  n, capt, smB, c, matched, captx,
+  n, capt, start, smB, c, matched, captx,
   capts, charIdx, cPrev: typed,
   regex: static Regex
 ): untyped =
@@ -294,7 +294,7 @@ macro genSubmatch(
           quote do: `c` >= 0'i32 and `m`
       let ntLit = newLit nt
       let matchedBodyStmt = genMatchedBody(
-        smB, ntLit, capt, matched, captx,
+        smB, ntLit, capt, start, matched, captx,
         capts, charIdx, cPrev, c,
         i, nti, regex)
       branchBodyN.add quote do:
@@ -322,14 +322,14 @@ template submatch(
   smB.clear()
   var captx: int32
   var matched = true
-  for n, capt in smA.items:
+  for n, capt, start in smA.items:
     genSubmatch(
-      n, capt, smB, c, matched, captx,
+      n, capt, start, smB, c, matched, captx,
       capts, charIdx, cPrev, regex)
   swap smA, smB
 
 macro genSubmatchEoe(
-  n, capt, smB, c, c2, matched, captx,
+  n, capt, start, smB, c, c2, matched, captx,
   capts, charIdx, cPrev: typed,
   regex: static Regex
 ): untyped =
@@ -357,7 +357,7 @@ macro genSubmatchEoe(
       if regex.nfa[nt].kind == reEoe:
         let ntLit = newLit nt
         let matchedBodyStmt = genMatchedBody(
-          smB, ntLit, capt, matched, captx,
+          smB, ntLit, capt, start, matched, captx,
           capts, charIdx, cPrev, c,
           i, nti, regex)
         branchBodyN.add quote do:
@@ -383,9 +383,9 @@ template submatchEoe(
   smB.clear()
   var captx: int32
   var matched = true
-  for n, capt in smA.items:
+  for n, capt, start in smA.items:
     genSubmatchEoe(
-      n, capt, smB, c, c2, matched, captx,
+      n, capt, start, smB, c, c2, matched, captx,
       capts, charIdx, cPrev, regex)
   swap smA, smB
 
@@ -399,6 +399,7 @@ template longestMatchInit: untyped {.dirty.} =
   var
     matchedLong = false
     captLong = -1'i32
+    startLong = start
     iPrevLong = start
 
 template longestMatchEnter: untyped {.dirty.} =
@@ -406,6 +407,7 @@ template longestMatchEnter: untyped {.dirty.} =
   if smA.len > 0:
     matchedLong = true
     captLong = smA[0][1]
+    startLong = smA[0][2]
     iPrevLong = iPrev
   swap smA, smB
 
@@ -417,8 +419,18 @@ template longestMatchExit: untyped {.dirty.} =
     constructSubmatches(m.captures, capts, captLong, groupsCount)
   when namedGroups.len > 0:
     m.namedGroups = namedGroups
-  m.boundaries = start .. iPrevLong-1
+  m.boundaries = startLong .. iPrevLong-1
   return true
+
+template findMatch(): untyped {.dirty.} =
+  when mfLongestMatch in flags:
+    if matchedLong and
+        (smA.len == 0 or startLong < smA[0][2]):
+      smA.clear()
+      longestMatchExit()
+  else:
+    doAssert false
+  smA.add((0'i16, -1'i32, i))
 
 func matchImpl*(
   text: string,
@@ -442,7 +454,7 @@ func matchImpl*(
     longestMatchInit()
   smA = newSubmatches(regex.nfa.len)
   smB = newSubmatches(regex.nfa.len)
-  smA.add((0'i16, -1'i32))
+  smA.add((0'i16, -1'i32, start))
   while i < len(text):
     fastRuneAt(text, i, c, true)
     #c = text[i].Rune
@@ -452,6 +464,8 @@ func matchImpl*(
     when mfLongestMatch in flags:
       longestMatchEnter()
     submatch(smA, smB, regex, c.int32, capts, iPrev, cPrev)
+    when mfFindMatch in flags:
+      findMatch()
     if smA.len == 0:
       when mfLongestMatch in flags:
         longestMatchExit()
@@ -467,5 +481,5 @@ func matchImpl*(
     constructSubmatches(m.captures, capts, smA[0][1], groupsCount)
   when namedGroups.len > 0:
     m.namedGroups = namedGroups
-  m.boundaries = start .. iPrev-1
+  m.boundaries = smA[0][2] .. iPrev-1
   return true

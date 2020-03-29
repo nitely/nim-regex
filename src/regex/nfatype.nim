@@ -71,30 +71,32 @@ func clear*(m: var RegexMatch) {.inline.} =
 
 type
   NodeIdx* = int16
+  StartBound* = int
+  PState* = (NodeIdx, CaptIdx, StartBound)
   Submatches* = ref object
     ## Parallel states would be a better name.
     ## This is a sparse set
-    sx: seq[(NodeIdx, CaptIdx)]
+    sx: seq[PState]
     ss: seq[int16]
     si: int16
 
 func newSubmatches*(size: int): Submatches {.inline.} =
   result = new Submatches
-  result.sx = newSeq[(NodeIdx, CaptIdx)](8)
+  result.sx = newSeq[PState](8)
   result.ss = newSeq[int16](size)
   result.si = 0
 
 when defined(release):
   {.push checks: off.}
 
-func `[]`*(sm: Submatches, i: int): (NodeIdx, CaptIdx) {.inline.} =
+func `[]`*(sm: Submatches, i: int): PState {.inline.} =
   assert i < sm.si
   sm.sx[i]
 
 func hasState*(sm: Submatches, n: int16): bool {.inline.} =
   sm.ss[n] < sm.si and sm.sx[sm.ss[n]][0] == n
 
-func add*(sm: var Submatches, item: (NodeIdx, CaptIdx)) {.inline.} =
+func add*(sm: var Submatches, item: PState) {.inline.} =
   assert not sm.hasState(item[0])
   assert sm.si <= sm.sx.len
   if (sm.si == sm.sx.len).unlikely:
@@ -109,7 +111,7 @@ func len*(sm: Submatches): int {.inline.} =
 func clear*(sm: var Submatches) {.inline.} =
   sm.si = 0
 
-iterator items*(sm: Submatches): (NodeIdx, CaptIdx) {.inline.} =
+iterator items*(sm: Submatches): PState {.inline.} =
   for i in 0 .. sm.len-1:
     yield sm.sx[i]
 

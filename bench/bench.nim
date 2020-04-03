@@ -69,13 +69,35 @@ bench(re_doremifasol_find, m):
     d = re.find(text, lits_find_re)
   doNotOptimizeAway(d)
 
-var lits_find = regex.re"do|re|mi|fa|sol"
+const lits_find = regex.re"do|re|mi|fa|sol"
 
 benchRelative(regex_doremifasol_find, m):
   var m2: regex.RegexMatch
   for i in 0 ..< m:
     discard regex.find(text, lits_find, m2)
   doNotOptimizeAway(m2)
+
+const bench_text = staticRead("input-text.txt")
+
+var email_find_all_re = re.re"[\w\.+-]+@[\w\.-]+\.[\w\.-]+"
+
+bench(re_email_find_all, m):
+  var d = 0
+  for i in 0 ..< m:
+    for _ in re.findAll(bench_text, email_find_all_re):
+      d += 1
+  doAssert d == 92
+  doNotOptimizeAway(d)
+
+const email_find_all = regex.re"[\w\.+-]+@[\w\.-]+\.[\w\.-]+"
+
+benchRelative(email_find_all, m):
+  var d = 0
+  for i in 0 ..< m:
+    for _ in regex.findAll(bench_text, email_find_all):
+      d += 1
+  doAssert d == 92
+  doNotOptimizeAway(d)
 
 when false:
   bench(runes, m):

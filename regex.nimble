@@ -26,7 +26,8 @@ task test, "Test":
     exec "nim js -r -d:forceRegexAtRuntime tests/tests.nim"
 
   # Test runnable examples
-  exec "nim doc -o:./docs/ugh/ugh.html ./src/regex.nim"
+  when (NimMajor, NimMinor) >= (1, 1):
+    exec "nim doc -o:./docs/ugh/ugh.html ./src/regex.nim"
 
 task docs, "Docs":
   exec "nim doc --project -o:./docs ./src/regex.nim"

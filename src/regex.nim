@@ -1,3 +1,153 @@
+##[
+A library for parsing, compiling, and executing
+regular expressions. The match time is linear
+in the length of the text and
+the regular expression. So, it can handle
+input from untrusted users. The syntax is similar to PCRE
+but lacks a few features that can not be implemented
+while keeping the space/time complexity guarantees,
+i.e.: backreferences and look-around assertions.
+
+Syntax
+******
+
+Matching one character
+######################
+
+.. code-block::
+  .          any character except new line (includes new line with s flag)
+  \d         digit (\p{Nd})
+  \D         not digit
+  \pN        One-letter name Unicode character class
+  \p{Greek}  Unicode character class (general category or script)
+  \PN        Negated one-letter name Unicode character class
+  \P{Greek}  negated Unicode character class (general category or script)
+
+Character classes
+#################
+
+.. code-block::
+  [xyz]         A character class matching either x, y or z (union).
+  [^xyz]        A character class matching any character except x, y and z.
+  [a-z]         A character class matching any character in range a-z.
+  [[:alpha:]]   ASCII character class ([A-Za-z])
+  [[:^alpha:]]  Negated ASCII character class ([^A-Za-z])
+  [\[\]]        Escaping in character classes (matching [ or ])
+
+Composites
+##########
+
+.. code-block::
+  xy   concatenation (x followed by y)
+  x|y  alternation (x or y, prefer x)
+
+Repetitions
+###########
+
+.. code-block::
+  x*       zero or more of x (greedy)
+  x+       one or more of x (greedy)
+  x?       zero or one of x (greedy)
+  x*?      zero or more of x (ungreedy/lazy)
+  x+?      one or more of x (ungreedy/lazy)
+  x??      zero or one of x (ungreedy/lazy)
+  x{n,m}   at least n x and at most m x (greedy)
+  x{n,}    at least n x (greedy)
+  x{n}     exactly n x
+  x{n,m}?  at least n x and at most m x (ungreedy/lazy)
+  x{n,}?   at least n x (ungreedy/lazy)
+  x{n}?    exactly n x
+
+Empty matches
+#############
+
+.. code-block::
+  ^   the beginning of text (or start-of-line with multi-line mode)
+  $   the end of text (or end-of-line with multi-line mode)
+  \A  only the beginning of text (even with multi-line mode enabled)
+  \z  only the end of text (even with multi-line mode enabled)
+  \b  a Unicode word boundary (\w on one side and \W, \A, or \z on other)
+  \B  not a Unicode word boundary
+
+Grouping and flags
+##################
+
+.. code-block::
+  (exp)          numbered capture group (indexed by opening parenthesis)
+  (?P<name>exp)  named (also numbered) capture group (allowed chars: [_0-9a-zA-Z])
+  (?:exp)        non-capturing group
+  (?flags)       set flags within current group
+  (?flags:exp)   set flags for exp (non-capturing)
+
+Flags are each a single character. For example,
+(?x) sets the flag x and (?-x) clears the flag x.
+Multiple flags can be set or cleared at the same
+time: (?xy) sets both the x and y flags, (?x-y)
+sets the x flag and clears the y flag, and (?-xy)
+clears both the x and y flags.
+
+.. code-block::
+  i  case-insensitive: letters match both upper and lower case
+  m  multi-line mode: ^ and $ match begin/end of line
+  s  allow . to match \L (new line)
+  U  swap the meaning of x* and x*? (un-greedy mode)
+  u  Unicode support (enabled by default)
+  x  ignore whitespace and allow line comments (starting with `#`)
+
+`All flags are disabled by default unless stated otherwise`
+
+Escape sequences
+################
+
+.. code-block::
+  \*         literal *, works for any punctuation character: \.+*?()|[]{}^$
+  \a         bell (\x07)
+  \f         form feed (\x0C)
+  \t         horizontal tab
+  \n         new line (\L)
+  \r         carriage return
+  \v         vertical tab (\x0B)
+  \123       octal character code (up to three digits)
+  \x7F       hex character code (exactly two digits)
+  \x{10FFFF} any hex character code corresponding to a Unicode code point
+  \u007F     hex character code (exactly four digits)
+  \U0010FFFF hex character code (exactly eight digits)
+
+Perl character classes (Unicode friendly)
+#########################################
+
+These classes are based on the definitions provided in
+`UTS#18 <http://www.unicode.org/reports/tr18/#Compatibility_Properties>`_
+
+.. code-block::
+  \d  digit (\p{Nd})
+  \D  not digit
+  \s  whitespace (\p{White_Space})
+  \S  not whitespace
+  \w  word character (\p{Alphabetic} + \p{M} + \d + \p{Pc} + \p{Join_Control})
+  \W  not word character
+
+ASCII character classes
+#######################
+
+.. code-block::
+  [[:alnum:]]   alphanumeric ([0-9A-Za-z])
+  [[:alpha:]]   alphabetic ([A-Za-z])
+  [[:ascii:]]   ASCII ([\x00-\x7F])
+  [[:blank:]]   blank ([\t ])
+  [[:cntrl:]]   control ([\x00-\x1F\x7F])
+  [[:digit:]]   digits ([0-9])
+  [[:graph:]]   graphical ([!-~])
+  [[:lower:]]   lower case ([a-z])
+  [[:print:]]   printable ([ -~])
+  [[:punct:]]   punctuation ([!-/:-@\[-`{-~])
+  [[:space:]]   whitespace ([\t\n\v\f\r ])
+  [[:upper:]]   upper case ([A-Z])
+  [[:word:]]    word characters ([0-9A-Za-z_])
+  [[:xdigit:]]  hex digit ([0-9A-Fa-f])
+
+]##
+
 import std/tables
 import std/sequtils
 import std/unicode
@@ -10,15 +160,15 @@ import pkg/regex/exptransformation
 import pkg/regex/nfatype
 import pkg/regex/nfa
 import pkg/regex/nfamatch
-import pkg/regex/nfamacro
+when (NimMajor, NimMinor) >= (1, 1):
+  import pkg/regex/nfamacro
 
 export
   Regex,
   RegexMatch,
-  RegexFlag,
   RegexError
 
-template reImpl(s, flags: untyped): Regex =
+template reImpl(s: untyped): Regex =
   var groups: GroupsCapture
   var transitions: Transitions
   let nfa = s
@@ -29,23 +179,32 @@ template reImpl(s, flags: untyped): Regex =
     nfa: nfa,
     transitions: transitions,
     groupsCount: groups.count,
-    namedGroups: groups.names,
-    flags: flags)
+    namedGroups: groups.names)
 
 func re*(
-  s: string,
-  flags: set[RegexFlag] = {}
-): Regex {.inline.} =
-  reImpl(s, flags)
+  s: string
+): Regex {.raises: [RegexError].} =
+  ## Parse and compile a regular expression at run-time
+  runnableExamples:
+    let abcx = re"abc\w"
+    let abcx2 = re(r"abc\w")
+    let pat = r"abc\w"
+    let abcx3 = re(pat)
+  reImpl(s)
 
 when not defined(forceRegexAtRuntime):
   func re*(
-    s: static string,
-    flags: static[set[RegexFlag]] = {}
-  ): static[Regex] {.inline.} =
-    reImpl(s, flags)
+    s: static string
+  ): static[Regex] {.inline, raises: [RegexError].} =
+    ## Parse and compile a regular expression at compile-time
+    reImpl(s)
 
-iterator group*(m: RegexMatch, i: int): Slice[int] =
+proc toPattern*(
+  s: string
+): Regex {.raises: [RegexError], deprecated: "Use `re` instead".} =
+  re(s)
+
+iterator group*(m: RegexMatch, i: int): Slice[int] {.inline, raises: [].} =
   ## return slices for a given group.
   ## Slices of start > end are empty
   ## matches (i.e.: ``re"(\d?)"``)
@@ -56,18 +215,20 @@ iterator group*(m: RegexMatch, i: int): Slice[int] =
     doAssert text.match(re"(\w)+", m)
     var captures = newSeq[string]()
     for bounds in m.group(0):
-      captures.add(text[bounds])
+      captures.add text[bounds]
     doAssert captures == @["a", "b", "c"]
 
   for capt in m.captures[i]:
     yield capt
 
-func group*(m: RegexMatch, i: int): seq[Slice[int]] =
+func group*(m: RegexMatch, i: int): seq[Slice[int]] {.inline, raises: [].} =
   ## return slices for a given group.
   ## Use the iterator version if you care about performance
   m.captures[i]
 
-iterator group*(m: RegexMatch, s: string): Slice[int] =
+iterator group*(
+  m: RegexMatch, s: string
+): Slice[int] {.inline, raises: [KeyError].} =
   ## return slices for a given named group
   runnableExamples:
     let text = "abc"
@@ -75,18 +236,20 @@ iterator group*(m: RegexMatch, s: string): Slice[int] =
     doAssert text.match(re"(?P<foo>\w)+", m)
     var captures = newSeq[string]()
     for bounds in m.group("foo"):
-      captures.add(text[bounds])
+      captures.add text[bounds]
     doAssert captures == @["a", "b", "c"]
 
   for bounds in m.group(m.namedGroups[s]):
     yield bounds
 
-func group*(m: RegexMatch, s: string): seq[Slice[int]] =
+func group*(
+  m: RegexMatch, s: string
+): seq[Slice[int]] {.inline, raises: [KeyError].} =
   ## return slices for a given named group.
   ## Use the iterator version if you care about performance
   m.group(m.namedGroups[s])
 
-func groupsCount*(m: RegexMatch): int =
+func groupsCount*(m: RegexMatch): int {.inline, raises: [].} =
   ## return the number of capturing groups
   runnableExamples:
     var m: RegexMatch
@@ -95,7 +258,7 @@ func groupsCount*(m: RegexMatch): int =
 
   m.captures.len
 
-func groupNames*(m: RegexMatch): seq[string] =
+func groupNames*(m: RegexMatch): seq[string] {.inline, raises: [].} =
   ## return the names of capturing groups.
   runnableExamples:
     let text = "hello world"
@@ -109,7 +272,7 @@ func group*(
   m: RegexMatch,
   groupName: string,
   text: string
-): seq[string] =
+): seq[string] {.inline, raises: [KeyError].} =
   ## return seq of captured text by group `groupName`
   runnableExamples:
     let text = "hello beautiful world"
@@ -126,7 +289,7 @@ func groupFirstCapture*(
   m: RegexMatch,
   groupName: string,
   text: string
-): string =
+): string {.inline, raises: [KeyError].} =
   ## return first capture for a given capturing group
   runnableExamples:
     let text = "hello beautiful world"
@@ -145,7 +308,7 @@ func groupLastCapture*(
   m: RegexMatch,
   groupName: string,
   text: string
-): string =
+): string {.inline, raises: [KeyError].} =
   ## return last capture for a given capturing group
   runnableExamples:
     let text = "hello beautiful world"
@@ -165,7 +328,16 @@ func match*(
   pattern: Regex,
   m: var RegexMatch,
   start = 0
-): bool {.inline.} =
+): bool {.inline, raises: [].} =
+  ## return a match if the whole string
+  ## matches the regular expression. This
+  ## is similar to ``find(text, re"^regex$", m)``
+  ## but has better performance
+  runnableExamples:
+    var m: RegexMatch
+    doAssert "abcd".match(re"abcd", m)
+    doAssert not "abcd".match(re"abc", m)
+
   const f: MatchFlags = {}
   result = matchImpl(s, pattern, m, f, start)
 
@@ -175,16 +347,18 @@ when (NimMajor, NimMinor) >= (1, 1):
     pattern: static Regex,
     m: var RegexMatch,
     start = 0
-  ): bool {.inline.} =
+  ): bool {.inline, raises: [].} =
     const f: MatchFlags = {}
     result = matchImpl(s, pattern, m, f, start)
 
-func match*(s: string, pattern: Regex): bool {.inline.} =
+func match*(s: string, pattern: Regex): bool {.inline, raises: [].} =
   var m: RegexMatch
   result = matchImpl(s, pattern, m, {mfNoCaptures})
 
 when (NimMajor, NimMinor) >= (1, 1):
-  func match*(s: string, pattern: static Regex): bool {.inline.} =
+  func match*(
+    s: string, pattern: static Regex
+  ): bool {.inline, raises: [].} =
     var m: RegexMatch
     result = matchImpl(s, pattern, m, {mfNoCaptures})
 
@@ -193,15 +367,22 @@ template containsImpl(): untyped {.dirty.} =
   var m: RegexMatch
   result = matchImpl(s, pattern, m, f)
 
-func contains*(s: string, pattern: Regex): bool =
-  ## search for the pattern anywhere
-  ## in the string. It returns as soon
-  ## as there is a match, even when the
-  ## expression has repetitions
+func contains*(s: string, pattern: Regex): bool {.inline, raises: [].} =
+  ##  search for the pattern anywhere
+  ##  in the string. It returns as soon
+  ##  as there is a match, even when the
+  ##  expression has repetitions
+  runnableExamples:
+    doAssert re"bc" in "abcd"
+    doAssert re"(23)+" in "23232"
+    doAssert re"^(23)+$" notin "23232"
+
   containsImpl()
 
 when (NimMajor, NimMinor) >= (1, 1):
-  func contains*(s: string, pattern: static Regex): bool =
+  func contains*(
+    s: string, pattern: static Regex
+  ): bool {.inline, raises: [].} =
     containsImpl()
 
 template findImpl(): untyped {.dirty.} =
@@ -212,7 +393,15 @@ func find*(
   pattern: Regex,
   m: var RegexMatch,
   start = 0
-): bool =
+): bool {.inline, raises: [].} =
+  ## search through the string looking for the first
+  ## location where there is a match
+  runnableExamples:
+    var m: RegexMatch
+    doAssert "abcd".find(re"bc", m)
+    doAssert not "abcd".find(re"de", m)
+    doAssert "2222".find(re"(22)*", m) and
+      m.group(0) == @[0 .. 1, 2 .. 3]
   findImpl()
 
 when (NimMajor, NimMinor) >= (1, 1):
@@ -221,14 +410,27 @@ when (NimMajor, NimMinor) >= (1, 1):
     pattern: static Regex,
     m: var RegexMatch,
     start = 0
-  ): bool =
+  ): bool {.inline, raises: [].} =
     findImpl()
 
 iterator findAll*(
   s: string,
   pattern: Regex,
   start = 0
-): RegexMatch {.inline.} =
+): RegexMatch {.inline, raises: [].} =
+  ## search through the string and
+  ## return each match. Empty matches
+  ## (start > end) are included
+  runnableExamples:
+    var
+      expected = [1 .. 2, 4 .. 5]
+      text = "abcabc"
+      i = 0
+    for m in findAll(text, re"bc"):
+      doAssert text[m.boundaries] == "bc"
+      doAssert m.boundaries == expected[i]
+      inc i
+
   var i = start
   var c: Rune
   var m: RegexMatch
@@ -245,11 +447,13 @@ func findAll*(
   s: string,
   pattern: Regex,
   start = 0
-): seq[RegexMatch] =
+): seq[RegexMatch] {.inline, raises: [].} =
   for m in findAll(s, pattern, start):
     result.add(m)
 
-func findAndCaptureAll*(s: string, pattern: Regex): seq[string] =
+func findAndCaptureAll*(
+  s: string, pattern: Regex
+): seq[string] {.inline, raises: [].} =
   ## search through the string and
   ## return a seq with captures.
   runnableExamples:
@@ -259,7 +463,7 @@ func findAndCaptureAll*(s: string, pattern: Regex): seq[string] =
     doAssert captured == expected
 
   for m in s.findAll(pattern):
-    result.add(s[m.boundaries])
+    result.add s[m.boundaries]
 
 template runeIncAt(s: string, n: var int) =
   ## increment ``n`` up to
@@ -270,8 +474,16 @@ template runeIncAt(s: string, n: var int) =
     inc(n, runeLenAt(s, n))
 
 # XXX there is no static version because of Nim/issues/13791
-iterator split*(s: string, sep: Regex): string {.inline.} =
+iterator split*(s: string, sep: Regex): string {.inline, raises: [].} =
   ## return not matched substrings
+  runnableExamples:
+    var
+      expected = ["", "a", "Ϊ", "Ⓐ", "弢", ""]
+      i = 0
+    for s in split("11a22Ϊ33Ⓐ44弢55", re"\d+"):
+      doAssert s == expected[i]
+      inc i
+
   var
     first, last = 0
     m: RegexMatch
@@ -291,11 +503,25 @@ iterator split*(s: string, sep: Regex): string {.inline.} =
       doAssert last < m.boundaries.b+1
       last = m.boundaries.b+1
 
-func split*(s: string, sep: Regex): seq[string] =
+func split*(s: string, sep: Regex): seq[string] {.inline, raises: [].} =
+  ## return not matched substrings
+  runnableExamples:
+    let
+      parts = split("11a22Ϊ33Ⓐ44弢55", re"\d+")
+      expected = @["", "a", "Ϊ", "Ⓐ", "弢", ""]
+    doAssert parts == expected
+
   for w in split(s, sep):
     result.add w
 
-func splitIncl*(s: string, sep: Regex): seq[string] =
+func splitIncl*(s: string, sep: Regex): seq[string] {.inline, raises: [].} =
+  ## return not matched substrings, including captured groups
+  runnableExamples:
+    let
+      parts = splitIncl("a,b", re"(,)")
+      expected = @["a", ",", "b"]
+    doAssert parts == expected
+
   var
     first, last = 0
     m: RegexMatch
@@ -318,14 +544,21 @@ func splitIncl*(s: string, sep: Regex): seq[string] =
       doAssert last < m.boundaries.b+1
       last = m.boundaries.b+1
 
-func startsWith*(s: string, pattern: Regex, start = 0): bool =
+func startsWith*(
+  s: string, pattern: Regex, start = 0
+): bool {.inline, raises: [].} =
   ## return whether the string
   ## starts with the pattern or not
+  runnableExamples:
+    doAssert "abc".startsWith(re"\w")
+    doAssert not "abc".startsWith(re"\d")
   var m: RegexMatch
   result = matchImpl(s, pattern, m, {mfShortestMatch, mfNoCaptures}, start)
 
 when (NimMajor, NimMinor) >= (1, 1):
-  func startsWith*(s: string, pattern: static Regex, start = 0): bool =
+  func startsWith*(
+    s: string, pattern: static Regex, start = 0
+  ): bool {.inline, raises: [].} =
     var m: RegexMatch
     result = matchImpl(s, pattern, m, {mfShortestMatch, mfNoCaptures}, start)
 
@@ -339,20 +572,25 @@ template endsWithImpl(): untyped {.dirty.} =
     if result: return
     s.runeIncAt(i)
 
-func endsWith*(s: string, pattern: Regex): bool =
+func endsWith*(s: string, pattern: Regex): bool {.inline, raises: [].} =
   ## return whether the string
   ## ends with the pattern or not
+  runnableExamples:
+    doAssert "abc".endsWith(re"\w")
+    doAssert not "abc".endsWith(re"\d")
   endsWithImpl()
 
 when (NimMajor, NimMinor) >= (1, 1):
-  func endsWith*(s: string, pattern: static Regex): bool =
+  func endsWith*(
+    s: string, pattern: static Regex
+  ): bool {.inline, raises: [].} =
     endsWithImpl()
 
 func flatCaptures(
   result: var seq[string],
   m: RegexMatch,
   s: string
-) {.inline.} =
+) {.inline, raises: [].} =
   ## Concat capture repetitions
   var i, n = 0
   for g in 0 ..< m.groupsCount:
@@ -368,7 +606,9 @@ func flatCaptures(
         inc i
     assert i == n
 
-func addsubstr(result: var string, s: string, first, last: int) =
+func addsubstr(
+  result: var string, s: string, first, last: int
+) {.inline, raises: [].} =
   let
     first = max(first, 0)
     last = min(last, s.high)
@@ -381,7 +621,9 @@ func addsubstr(result: var string, s: string, first, last: int) =
     result[n + j] = s[i]
     inc j
 
-func addsubstr(result: var string, s: string, first: int) {.inline.} =
+func addsubstr(
+  result: var string, s: string, first: int
+) {.inline, raises: [].} =
   addsubstr(result, s, first, s.high)
 
 # XXX there is no static version because of Nim/issues/13791
@@ -391,7 +633,7 @@ func replace*(
   pattern: Regex,
   by: string,
   limit = 0
-): string =
+): string {.inline, raises: [ValueError].} =
   ## Replace matched substrings.
   ##
   ## Matched groups can be accessed with ``$N``
@@ -402,6 +644,13 @@ func replace*(
   ## If ``limit`` is given, at most ``limit``
   ## replacements are done. ``limit`` of 0
   ## means there is no limit
+  runnableExamples:
+    doAssert "aaa".replace(re"a", "b", 1) == "baa"
+    doAssert "abc".replace(re"(a(b)c)", "m($1) m($2)") ==
+      "m(abc) m(b)"
+    doAssert "Nim is awesome!".replace(re"(\w\B)", "$1_") ==
+      "N_i_m i_s a_w_e_s_o_m_e!"
+
   result = ""
   var
     i, j = 0
@@ -423,12 +672,23 @@ func replace*(
   pattern: Regex,
   by: proc (m: RegexMatch, s: string): string,
   limit = 0
-): string =
+): string {.inline, raises: [].} =
   ## Replace matched substrings.
   ##
   ## If ``limit`` is given, at most ``limit``
   ## replacements are done. ``limit`` of 0
   ## means there is no limit
+  runnableExamples:
+    proc removeEvenWords(m: RegexMatch, s: string): string =
+      result = ""
+      if m.group(1).len mod 2 != 0:
+        result = s[m.group(0)[0]]
+    
+    let
+      text = "Es macht Spaß, alle geraden Wörter zu entfernen!"
+      expected = "macht , geraden entfernen!"
+    doAssert text.replace(re"((\w)+\s*)", removeEvenWords) == expected
+
   result = ""
   var i, j = 0
   for m in findAll(s, pattern):
@@ -439,11 +699,11 @@ func replace*(
     if limit > 0 and j == limit: break
   result.addsubstr(s, i)
 
-proc isInitialized*(re: Regex): bool {.inline.} =
+proc isInitialized*(re: Regex): bool {.inline, raises: [].} =
   ## Check whether the regex has been initialized
   runnableExamples:
     var re: Regex
-    doAssert(not re.isInitialized)
+    doAssert not re.isInitialized
     re = re"foo"
     doAssert re.isInitialized
 

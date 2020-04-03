@@ -49,7 +49,7 @@ func update(
 
 const eoe = 0'i16
 
-func eNfa(expression: seq[Node]): Nfa =
+func eNfa(expression: seq[Node]): Nfa {.raises: [RegexError].} =
   ## Thompson's construction
   result = newSeqOfCap[Node](expression.len + 2)
   result.add(initEOENode())
@@ -201,7 +201,7 @@ type
 func eRemoval(
   eNfa: Nfa,
   transitions: var Transitions
-): Nfa =
+): Nfa {.raises: [].} =
   ## Remove e-transitions and return
   ## remaining state transtions and
   ## submatches, and zero matches.
@@ -223,8 +223,12 @@ func eRemoval(
   qw.addFirst(start)
   var qu: set[int16]
   qu.incl(start)
+  var qa: int16
   while qw.len > 0:
-    let qa = qw.popLast()
+    try:
+      qa = qw.popLast()
+    except IndexError:
+      doAssert false
     closure.setLen(0)
     teClosure(closure, eNfa, qa)
     eNfa[qa].next.setLen(0)
@@ -260,5 +264,5 @@ func eRemoval(
 func nfa2*(
   exp: seq[Node],
   transitions: var Transitions
-): Nfa =
+): Nfa {.raises: [RegexError].} =
   result = exp.eNfa.eRemoval(transitions)

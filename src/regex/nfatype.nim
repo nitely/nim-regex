@@ -41,15 +41,15 @@ func constructSubmatches*(
     c.reverse()
 
 type
-  RegexFlag* = enum
-    reAscii
+  #RegexFlag* = enum
+  #  reAscii
   Regex* = object
     ## a compiled regular expression
     nfa*: Nfa
     transitions*: Transitions
     groupsCount*: int16
     namedGroups*: OrderedTable[string, int16]
-    flags*: set[RegexFlag]
+    #flags*: set[RegexFlag]
   MatchFlag* = enum
     mfShortestMatch
     mfLongestMatch

@@ -4,3 +4,4 @@ tests/tests
 tests/tests.js
 docs/ugh
 bin/*
+bench/bench

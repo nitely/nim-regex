@@ -398,7 +398,8 @@ func find*(
   ## location where there is a match
   runnableExamples:
     var m: RegexMatch
-    doAssert "abcd".find(re"bc", m)
+    doAssert "abcd".find(re"bc", m) and
+      m.boundaries == 1 .. 2
     doAssert not "abcd".find(re"de", m)
     doAssert "2222".find(re"(22)*", m) and
       m.group(0) == @[0 .. 1, 2 .. 3]
@@ -919,3 +920,51 @@ when isMainModule:
 
   doAssert match("abcabcabc", re"(?:(?:abc)){3}")
   doAssert match("abcabcabc", re"((abc)){3}")
+
+  # subset of tests.nim
+  when (NimMajor, NimMinor) >= (1, 1):
+    proc raisesMsg(pattern: string): string =
+      try:
+        discard re(pattern)
+      except RegexError:
+        result = getCurrentExceptionMsg()
+
+    template test(body: untyped): untyped =
+      static:
+        (proc() = body)()
+      (proc() = body)()
+
+    test:
+      var m: RegexMatch
+      doAssert match("ac", re"a(b|c)", m)
+      doAssert not match("ad", re"a(b|c)", m)
+      doAssert match("ab", re"(ab)*", m)
+      doAssert match("abab", re"(ab)*", m)
+      doAssert not match("ababc", re"(ab)*", m)
+      doAssert not match("a", re"(ab)*", m)
+      doAssert match("abab", re"(ab)*", m) and
+        m.captures == @[@[0 .. 1, 2 .. 3]]
+      doAssert match("bbaa aa", re"([\w ]*?)(\baa\b)", m) and
+        m.captures == @[@[0 .. 4], @[5 .. 6]]
+      doAssert re"bc" in "abcd"
+      doAssert re"(23)+" in "23232"
+      doAssert re"^(23)+$" notin "23232"
+      doAssert re"\w" in "弢"
+      doAssert "2222".find(re"(22)*", m) and
+         m.group(0) == @[0 .. 1, 2 .. 3]
+      doAssert raisesMsg(r"[a-\w]") ==
+        "Invalid set range. Range can't contain " &
+        "a character-class or assertion\n" &
+        "[a-\\w]\n" &
+        "   ^"
+      doAssert "a,b".splitIncl(re"(,)") == @["a", ",", "b"]
+      doAssert "abcabc".replace(re"(abc)", "m($1)") ==
+        "m(abc)m(abc)"
+      const ip = re"""(?x)
+      \b
+      ((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}
+       (25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)
+      \b
+      """
+      doAssert match("127.0.0.1", ip)
+      doAssert not match("127.0.0.999", ip)

@@ -97,7 +97,7 @@ func hasState*(sm: Submatches, n: int16): bool {.inline.} =
   sm.ss[n] < sm.si and sm.sx[sm.ss[n]][0] == n
 
 func add*(sm: var Submatches, item: PState) {.inline.} =
-  assert not sm.hasState(item[0])
+  assert(not sm.hasState(item[0]))
   assert sm.si <= sm.sx.len
   if (sm.si == sm.sx.len).unlikely:
     sm.sx.setLen(sm.sx.len * 2)

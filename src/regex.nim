@@ -153,15 +153,15 @@ import std/sequtils
 import std/unicode
 from std/strutils import addf
 
-import pkg/regex/nodetype
-import pkg/regex/common
-import pkg/regex/parser
-import pkg/regex/exptransformation
-import pkg/regex/nfatype
-import pkg/regex/nfa
-import pkg/regex/nfamatch
+import regex/nodetype
+import regex/common
+import regex/parser
+import regex/exptransformation
+import regex/nfatype
+import regex/nfa
+import regex/nfamatch
 when (NimMajor, NimMinor) >= (1, 1):
-  import pkg/regex/nfamacro
+  import regex/nfamacro
 
 export
   Regex,

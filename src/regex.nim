@@ -199,7 +199,7 @@ when not defined(forceRegexAtRuntime):
     ## Parse and compile a regular expression at compile-time
     reImpl(s)
 
-proc toPattern*(
+func toPattern*(
   s: string
 ): Regex {.raises: [RegexError], deprecated: "Use `re` instead".} =
   re(s)
@@ -700,7 +700,7 @@ func replace*(
     if limit > 0 and j == limit: break
   result.addsubstr(s, i)
 
-proc isInitialized*(re: Regex): bool {.inline, raises: [].} =
+func isInitialized*(re: Regex): bool {.inline, raises: [].} =
   ## Check whether the regex has been initialized
   runnableExamples:
     var re: Regex

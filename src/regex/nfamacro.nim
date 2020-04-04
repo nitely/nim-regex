@@ -422,7 +422,7 @@ template longestMatchExit: untyped {.dirty.} =
   m.boundaries = startLong .. iPrevLong-1
   return true
 
-template findMatch(): untyped {.dirty.} =
+template findMatch: untyped {.dirty.} =
   when mfLongestMatch in flags:
     if matchedLong and
         (smA.len == 0 or startLong < smA[0][2]):

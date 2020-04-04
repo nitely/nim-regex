@@ -63,7 +63,7 @@ benchRelative(nregex_nums2, m):
 
 var lits_find_re = re.re"do|re|mi|fa|sol"
 
-bench(re_doremifasol_find, m):
+bench(re_lits_find, m):
   var d: int
   for i in 0 ..< m:
     d = re.find(text, lits_find_re)
@@ -71,7 +71,7 @@ bench(re_doremifasol_find, m):
 
 const lits_find = regex.re"do|re|mi|fa|sol"
 
-benchRelative(regex_doremifasol_find, m):
+benchRelative(regex_lits_find, m):
   var m2: regex.RegexMatch
   for i in 0 ..< m:
     discard regex.find(text, lits_find, m2)
@@ -89,7 +89,7 @@ bench(re_email_find_all, m):
   doAssert d == 92
   doNotOptimizeAway(d)
 
-const email_find_all = regex.re"[\w\.+-]+@[\w\.-]+\.[\w\.-]+"
+const email_find_all = regex.re"(?-u)[\w\.+-]+@[\w\.-]+\.[\w\.-]+"
 
 benchRelative(email_find_all, m):
   var d = 0

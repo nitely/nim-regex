@@ -39,7 +39,7 @@ bench(re_nums, m):
 
 const n_pattern_nums = regex.re"[0-9]+-[0-9]+-[0-9]+"
 
-benchRelative(nregex_nums, m):
+benchRelative(regex_nums, m):
   var m2: regex.RegexMatch
   for i in 0 ..< m:
     discard regex.match(dummyTextNums, n_pattern_nums, m2)
@@ -55,7 +55,7 @@ bench(re_nums2, m):
 
 const n_pattern_nums2 = regex.re"[0-9]+..*"
 
-benchRelative(nregex_nums2, m):
+benchRelative(regex_nums2, m):
   var m3: regex.RegexMatch
   for i in 0 ..< m:
     discard regex.match(dummyTextNums, n_pattern_nums2, m3)

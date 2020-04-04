@@ -2,6 +2,10 @@ v0.14
 ==================
 
 * Drop Nim 0.19.0 support (0.19.6 is supported)
+* Changed all `proc` to `func`
+* Faster macro for static regex
+* Deprecated `toPattern`
+* New `match` API that does not require the `MatchRegex` parameter
 
 v0.13.1
 ==================

@@ -1,5 +1,6 @@
 nimcache/
 src/regex.js
+src/regex.out
 tests/tests
 tests/tests.js
 docs/ugh

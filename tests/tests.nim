@@ -1633,3 +1633,13 @@ test "tmisc2":
     check match("1111", re1)
     check match("111111", re1)
     check(not match("1", re1))
+  block:  # issue #61
+    const a = "void __mingw_setusermatherr (int (__attribute__((__cdecl__)) *)(struct _exception *));"
+    doAssert replace(a, re"__attribute__[ ]*\(\(.*?\)\)([ ,;])", "$1") ==
+      "void __mingw_setusermatherr (int (;"
+    doAssert replace(a, re"__attribute__[ ]*\(\(.*?\)\)(.*?[ ,;])", "$1") ==
+      "void __mingw_setusermatherr (int ( *)(struct _exception *));"
+    doAssert find(a, re"__attribute__[ ]*\(\(.*?\)\)([ ,;])", m) and
+      m.captures == @[@[85 .. 85]]
+    doAssert find(a, re"__attribute__[ ]*\(\(.*?\)\)(.*?[ ,;])", m) and
+      m.captures == @[@[60 .. 85]]

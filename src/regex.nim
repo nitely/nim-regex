@@ -160,7 +160,11 @@ import regex/exptransformation
 import regex/nfatype
 import regex/nfa
 import regex/nfamatch
-when (NimMajor, NimMinor) >= (1, 1):
+
+const canUseMacro = (NimMajor, NimMinor) >= (1, 1) and
+  not defined(forceRegexAtRuntime)
+
+when canUseMacro:
   import regex/nfamacro
 
 export
@@ -341,7 +345,7 @@ func match*(
   const f: MatchFlags = {}
   result = matchImpl(s, pattern, m, f, start)
 
-when (NimMajor, NimMinor) >= (1, 1):
+when canUseMacro:
   func match*(
     s: string,
     pattern: static Regex,
@@ -355,14 +359,14 @@ func match*(s: string, pattern: Regex): bool {.inline, raises: [].} =
   var m: RegexMatch
   result = matchImpl(s, pattern, m, {mfNoCaptures})
 
-when (NimMajor, NimMinor) >= (1, 1):
+when canUseMacro:
   func match*(
     s: string, pattern: static Regex
   ): bool {.inline, raises: [].} =
     var m: RegexMatch
     result = matchImpl(s, pattern, m, {mfNoCaptures})
 
-template containsImpl(): untyped {.dirty.} =
+template containsImpl: untyped {.dirty.} =
   const f = {mfShortestMatch, mfFindMatch, mfNoCaptures}
   var m: RegexMatch
   result = matchImpl(s, pattern, m, f)
@@ -379,14 +383,14 @@ func contains*(s: string, pattern: Regex): bool {.inline, raises: [].} =
 
   containsImpl()
 
-when (NimMajor, NimMinor) >= (1, 1):
+when canUseMacro:
   func contains*(
     s: string, pattern: static Regex
   ): bool {.inline, raises: [].} =
     containsImpl()
 
-template findImpl(): untyped {.dirty.} =
-  matchImpl(s, pattern, m, {mfLongestMatch, mfFindMatch}, start)
+template findImpl: untyped {.dirty.} =
+  matchImpl(s, pattern, m, {mfFindMatch}, start)
 
 func find*(
   s: string,
@@ -405,7 +409,7 @@ func find*(
       m.group(0) == @[0 .. 1, 2 .. 3]
   findImpl()
 
-when (NimMajor, NimMinor) >= (1, 1):
+when canUseMacro:
   func find*(
     s: string,
     pattern: static Regex,
@@ -492,7 +496,7 @@ iterator split*(s: string, sep: Regex): string {.inline, raises: [].} =
     first = last
     while last <= s.len:
       if not find(s, sep, m, last):
-        last = s.len + 1
+        last = s.len+1
         break
       if m.boundaries.a <= m.boundaries.b:
         last = m.boundaries.a
@@ -556,14 +560,14 @@ func startsWith*(
   var m: RegexMatch
   result = matchImpl(s, pattern, m, {mfShortestMatch, mfNoCaptures}, start)
 
-when (NimMajor, NimMinor) >= (1, 1):
+when canUseMacro:
   func startsWith*(
     s: string, pattern: static Regex, start = 0
   ): bool {.inline, raises: [].} =
     var m: RegexMatch
     result = matchImpl(s, pattern, m, {mfShortestMatch, mfNoCaptures}, start)
 
-template endsWithImpl(): untyped {.dirty.} =
+template endsWithImpl: untyped {.dirty.} =
   result = false
   var
     m: RegexMatch
@@ -581,7 +585,7 @@ func endsWith*(s: string, pattern: Regex): bool {.inline, raises: [].} =
     doAssert not "abc".endsWith(re"\d")
   endsWithImpl()
 
-when (NimMajor, NimMinor) >= (1, 1):
+when canUseMacro:
   func endsWith*(
     s: string, pattern: static Regex
   ): bool {.inline, raises: [].} =
@@ -922,7 +926,7 @@ when isMainModule:
   doAssert match("abcabcabc", re"((abc)){3}")
 
   # subset of tests.nim
-  when (NimMajor, NimMinor) >= (1, 1):
+  when canUseMacro:
     proc raisesMsg(pattern: string): string =
       try:
         discard re(pattern)

@@ -1636,10 +1636,13 @@ test "tmisc2":
   block:  # issue #61
     const a = "void __mingw_setusermatherr (int (__attribute__((__cdecl__)) *)(struct _exception *));"
     doAssert replace(a, re"__attribute__[ ]*\(\(.*?\)\)([ ,;])", "$1") ==
-      "void __mingw_setusermatherr (int (;"
+      "void __mingw_setusermatherr (int ( *)(struct _exception *));"
     doAssert replace(a, re"__attribute__[ ]*\(\(.*?\)\)(.*?[ ,;])", "$1") ==
       "void __mingw_setusermatherr (int ( *)(struct _exception *));"
     doAssert find(a, re"__attribute__[ ]*\(\(.*?\)\)([ ,;])", m) and
-      m.captures == @[@[85 .. 85]]
+      a[m.boundaries] == "__attribute__((__cdecl__)) "
     doAssert find(a, re"__attribute__[ ]*\(\(.*?\)\)(.*?[ ,;])", m) and
-      m.captures == @[@[60 .. 85]]
+      a[m.boundaries] == "__attribute__((__cdecl__)) "
+    # non-greedy
+    doAssert find(a, re"__attribute__[ ]*\(\(.*\)\)([ ,;])", m) and
+      a[m.boundaries] == "__attribute__((__cdecl__)) *)(struct _exception *));"

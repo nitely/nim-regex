@@ -1,4 +1,6 @@
-{.used.}
+# XXX hack because of nfamatch compile warning
+when NimMajor >= 1:
+  {.used.}
 
 import unicode
 import sets

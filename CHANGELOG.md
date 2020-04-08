@@ -1,3 +1,8 @@
+v0.14.1
+==================
+
+* Fix non-greedy find, issue #61 (v0.14.0 regression)
+
 v0.14
 ==================
 

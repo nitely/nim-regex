@@ -1,3 +1,5 @@
+{.used.}
+
 import unicode
 import sets
 from algorithm import sorted

@@ -52,7 +52,6 @@ type
     #flags*: set[RegexFlag]
   MatchFlag* = enum
     mfShortestMatch
-    mfLongestMatch
     mfNoCaptures
     mfFindMatch
   MatchFlags* = set[MatchFlag]
@@ -71,8 +70,8 @@ func clear*(m: var RegexMatch) {.inline.} =
 
 type
   NodeIdx* = int16
-  StartBound* = int
-  PState* = (NodeIdx, CaptIdx, StartBound)
+  Bounds* = Slice[int]
+  PState* = (NodeIdx, CaptIdx, Bounds)
   Submatches* = ref object
     ## Parallel states would be a better name.
     ## This is a sparse set

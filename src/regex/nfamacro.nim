@@ -11,6 +11,14 @@ import unicodedb/types
 import nodetype
 import nfatype
 
+func eoeNode(regex: Regex): int16 =
+  var i = 0
+  for n in 0 .. regex.nfa.len-1:
+    if regex.nfa[n].kind == reEoe:
+      result = n.int16
+      inc i
+  doAssert i == 1
+
 # todo: can not use unicodeplus due to
 # https://github.com/nim-lang/Nim/issues/7059
 func swapCase(r: Rune): Rune =
@@ -218,14 +226,14 @@ func genMatch(n: Node, cA, cB: NimNode): NimNode =
     quote do: false
 
 func genMatchedBody(
-  smB, ntLit, capt, start, matched, captx,
+  smB, ntLit, capt, bounds, matched, captx,
   capts, charIdx, cPrev, c: NimNode,
   i, nti: int,
   regex: Regex
 ): NimNode =
   if regex.transitions.allZ[i][nti] == -1'i16:
     return quote do:
-      add(`smB`, (`ntLit`, `capt`, `start`))
+      add(`smB`, (`ntLit`, `capt`, `bounds`.a .. `charIdx`-1))
   var matchedBody: seq[NimNode]
   matchedBody.add quote do:
     `matched` = true
@@ -250,23 +258,24 @@ func genMatchedBody(
       doAssert false
   matchedBody.add quote do:
     if `matched`:
-      add(`smB`, (`ntLit`, `captx`, `start`))
+      add(`smB`, (`ntLit`, `captx`, `bounds`.a .. `charIdx`-1))
   return newStmtList matchedBody
 
 macro genSubmatch(
-  n, capt, start, smB, c, matched, captx,
+  n, capt, bounds, smB, c, matched, captx,
   capts, charIdx, cPrev: typed,
-  regex: static Regex
+  regex: static Regex,
+  flags: static MatchFlags
 ): untyped =
   #[
     case n
     of 0:
       if not smB.hasState(1):
         if c == 'a':
-          smB.add((1, capt))
+          smB.add((1, capt, bounds))
       if not smB.hasState(4):
         if c == 'b':
-          smB.add((4, capt))
+          smB.add((4, capt, bounds))
     of 1:
       ...
     else:
@@ -276,7 +285,7 @@ macro genSubmatch(
   var caseStmtN: seq[NimNode]
   caseStmtN.add n
   for i in 0 .. regex.nfa.len-1:
-    if regex.nfa[i].next.len == 0:  # end state
+    if regex.nfa[i].kind == reEoe:
       continue
     var branchBodyN: seq[NimNode]
     for nti, nt in regex.nfa[i].next.pairs:
@@ -294,12 +303,18 @@ macro genSubmatch(
           quote do: `c` >= 0'i32 and `m`
       let ntLit = newLit nt
       let matchedBodyStmt = genMatchedBody(
-        smB, ntLit, capt, start, matched, captx,
+        smB, ntLit, capt, bounds, matched, captx,
         capts, charIdx, cPrev, c,
         i, nti, regex)
-      branchBodyN.add quote do:
-        if not hasState(`smB`, `ntLit`) and (`matchCond`):
-          `matchedBodyStmt`
+      if mfFindMatch in flags and
+          regex.nfa[nt].kind == reEoe:
+        branchBodyN.add quote do:
+          if not hasState(`smB`, `ntLit`):
+            `matchedBodyStmt`
+      else:
+        branchBodyN.add quote do:
+          if not hasState(`smB`, `ntLit`) and `matchCond`:
+            `matchedBodyStmt`
     doAssert branchBodyN.len > 0
     caseStmtN.add newTree(nnkOfBranch,
       newLit i.int16,
@@ -315,21 +330,32 @@ macro genSubmatch(
     echo "==== genSubmatch ===="
     echo repr(result)
 
+template findMatchBailOut(
+  eoeNode, smB, n, capt, bounds: untyped
+): untyped =
+  if n == eoeNode:
+    if not smB.hasState(n):
+      smB.add((n, capt, bounds))
+    # first Eoe in SmA wins, it's pointless to
+    # keep matching further than the last Eoe
+    break
+
 template submatch(
-  smA, smB, regex, c,
-  capts, charIdx, cPrev: untyped
+  smA, smB, regex, flags, c,
+  capts, charIdx, cPrev, eoeNode,
+  captx, matched: untyped
 ): untyped =
   smB.clear()
-  var captx: int32
-  var matched = true
-  for n, capt, start in smA.items:
+  for n, capt, bounds in smA.items:
+    when mfFindMatch in flags:
+      findMatchBailOut(eoeNode, smB, n, capt, bounds)
     genSubmatch(
-      n, capt, start, smB, c, matched, captx,
-      capts, charIdx, cPrev, regex)
+      n, capt, bounds, smB, c, matched, captx,
+      capts, charIdx, cPrev, regex, flags)
   swap smA, smB
 
 macro genSubmatchEoe(
-  n, capt, start, smB, c, c2, matched, captx,
+  n, capt, bounds, smB, c, c2, matched, captx,
   capts, charIdx, cPrev: typed,
   regex: static Regex
 ): untyped =
@@ -340,7 +366,7 @@ macro genSubmatchEoe(
     of 0:
       if not smB.hasState(1):
         if c == -1:
-          smB.add((1, capt))
+          smB.add((1, capt, bounds))
     of 1:
       ...
     else:
@@ -350,14 +376,14 @@ macro genSubmatchEoe(
   var caseStmtN: seq[NimNode]
   caseStmtN.add n
   for i in 0 .. regex.nfa.len-1:
-    if regex.nfa[i].next.len == 0:  # end state
+    if regex.nfa[i].kind == reEoe:  # end state
       continue
     var branchBodyN: seq[NimNode]
     for nti, nt in regex.nfa[i].next.pairs:
       if regex.nfa[nt].kind == reEoe:
         let ntLit = newLit nt
         let matchedBodyStmt = genMatchedBody(
-          smB, ntLit, capt, start, matched, captx,
+          smB, ntLit, capt, bounds, matched, captx,
           capts, charIdx, cPrev, c,
           i, nti, regex)
         branchBodyN.add quote do:
@@ -377,62 +403,36 @@ macro genSubmatchEoe(
     echo repr(result)
 
 template submatchEoe(
-  smA, smB, regex, c, c2,
-  capts, charIdx, cPrev: untyped
+  smA, smB, regex, flags, c, c2,
+  capts, charIdx, cPrev, eoeNode,
+  captx, matched: untyped
 ): untyped =
   smB.clear()
-  var captx: int32
-  var matched = true
-  for n, capt, start in smA.items:
+  for n, capt, bounds in smA.items:
+    when mfFindMatch in flags:
+      findMatchBailOut(eoeNode, smB, n, capt, bounds)
     genSubmatchEoe(
-      n, capt, start, smB, c, c2, matched, captx,
+      n, capt, bounds, smB, c, c2, matched, captx,
       capts, charIdx, cPrev, regex)
   swap smA, smB
 
 template shortestMatch: untyped {.dirty.} =
-  submatchEoe(smA, smB, regex, c.int32, -1'i32, capts, iPrev, cPrev)
+  submatchEoe(
+    smA, smB, regex, flags, c.int32, -1'i32,
+    capts, iPrev, cPrev, eoeNode, captx, matched)
   if smA.len > 0:
     return true
   swap smA, smB
 
-template longestMatchInit: untyped {.dirty.} =
-  var
-    matchedLong = false
-    captLong = -1'i32
-    startLong = start
-    iPrevLong = start
-
-template longestMatchEnter: untyped {.dirty.} =
-  submatchEoe(smA, smB, regex, c.int32, -1'i32, capts, iPrev, cPrev)
-  if smA.len > 0:
-    matchedLong = true
-    captLong = smA[0][1]
-    startLong = smA[0][2]
-    iPrevLong = iPrev
-  swap smA, smB
-
-template longestMatchExit: untyped {.dirty.} =
-  if not matchedLong:
-    return false
-  assert smA.len == 0
-  when groupsCount > 0:
-    constructSubmatches(m.captures, capts, captLong, groupsCount)
-  when namedGroups.len > 0:
-    m.namedGroups = namedGroups
-  m.boundaries = startLong .. iPrevLong-1
-  return true
-
 template findMatch: untyped {.dirty.} =
-  when mfLongestMatch in flags:
-    if matchedLong and
-        (smA.len == 0 or startLong < smA[0][2]):
-      smA.clear()
-      longestMatchExit()
-  elif mfShortestMatch in flags:
-    discard
-  else:
-    doAssert false
-  smA.add((0'i16, -1'i32, i))
+  smA.add((0'i16, -1'i32, i .. i-1))
+  if (smA[0][0] == eoeNode).unlikely:
+    when groupsCount > 0:
+      constructSubmatches(m.captures, capts, smA[0][1], groupsCount)
+    when namedGroups.len > 0:
+      m.namedGroups = namedGroups
+    m.boundaries = smA[0][2]
+    return true
 
 func matchImpl*(
   text: string,
@@ -441,6 +441,7 @@ func matchImpl*(
   flags: static MatchFlags,
   start = 0
 ): bool {.inline.} =
+  const eoeNode {.used.} = regex.eoeNode()
   # workaround Nim/issues/13252
   const groupsCount = regex.groupsCount
   const namedGroups = regex.namedGroups
@@ -452,36 +453,34 @@ func matchImpl*(
     cPrev = -1'i32
     i = start
     iPrev = start
-  when mfLongestMatch in flags:
-    longestMatchInit()
+    captx: int32
+    matched: bool
   smA = newSubmatches(regex.nfa.len)
   smB = newSubmatches(regex.nfa.len)
-  smA.add((0'i16, -1'i32, start))
+  smA.add((0'i16, -1'i32, start .. start-1))
   while i < len(text):
     fastRuneAt(text, i, c, true)
     #c = text[i].Rune
     #i += 1
     when mfShortestMatch in flags:
       shortestMatch()
-    when mfLongestMatch in flags:
-      longestMatchEnter()
-    submatch(smA, smB, regex, c.int32, capts, iPrev, cPrev)
+    submatch(
+      smA, smB, regex, flags, c.int32,
+      capts, iPrev, cPrev, eoeNode, captx, matched)
     when mfFindMatch in flags:
       findMatch()
     if smA.len == 0:
-      when mfLongestMatch in flags:
-        longestMatchExit()
       return false
     iPrev = i
     cPrev = c.int32
-  submatchEoe(smA, smB, regex, -1'i32, -1'i32, capts, iPrev, cPrev)
+  submatchEoe(
+    smA, smB, regex, flags, -1'i32, -1'i32,
+    capts, iPrev, cPrev, eoeNode, captx, matched)
   if smA.len == 0:
-    when mfLongestMatch in flags:
-      longestMatchExit()
     return false
   when groupsCount > 0:
     constructSubmatches(m.captures, capts, smA[0][1], groupsCount)
   when namedGroups.len > 0:
     m.namedGroups = namedGroups
-  m.boundaries = smA[0][2] .. iPrev-1
+  m.boundaries = smA[0][2]
   return true

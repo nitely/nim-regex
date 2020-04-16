@@ -54,6 +54,7 @@ type
     mfShortestMatch
     mfNoCaptures
     mfFindMatch
+    mfFindAllMatch
   MatchFlags* = set[MatchFlag]
   RegexMatch* = object
     ## result from matching operations

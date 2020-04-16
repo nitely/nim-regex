@@ -86,6 +86,14 @@ template findMatch: untyped {.dirty.} =
     m.boundaries = smA[0][2]
     return true
 
+func bwRuneAt(s: string, n: int): Rune =
+  ## Take rune ending at ``n``
+  doAssert n > 0
+  var n = n
+  while n > 0 and s[n].ord shr 6 == 0b10:
+    dec n
+  fastRuneAt(s, n, result, false)
+
 func matchImpl*(
   text: string,
   regex: Regex,
@@ -104,6 +112,9 @@ func matchImpl*(
   smA = newSubmatches(regex.nfa.len)
   smB = newSubmatches(regex.nfa.len)
   smA.add((0'i16, -1'i32, start .. start-1))
+  when mfFindAllMatch in flags:
+    if start > 0:
+      cPrev = bwRuneAt(text, start).int32
   while i < len(text):
     fastRuneAt(text, i, c, true)
     when mfShortestMatch in flags:

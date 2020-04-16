@@ -418,6 +418,9 @@ when canUseMacro:
   ): bool {.inline, raises: [].} =
     findImpl()
 
+template findOneImpl: untyped {.dirty.} =
+  matchImpl(s, pattern, m, {mfFindMatch, mfFindAllMatch}, i)
+
 iterator findAll*(
   s: string,
   pattern: Regex,
@@ -440,7 +443,7 @@ iterator findAll*(
   var c: Rune
   var m: RegexMatch
   while i < len(s):
-    if not find(s, pattern, m, i):
+    if not findOneImpl():
       break
     if i < m.boundaries.b+1:
       i = m.boundaries.b+1

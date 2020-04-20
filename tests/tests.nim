@@ -1667,3 +1667,16 @@ test "tmisc2":
     m.boundaries == 4 .. 6
   check find("foo\nbar\nbar", re"(?m)^bar", m, start=4) and
     m.boundaries == 4 .. 6
+  block:
+    # The bounds must contain the empty match index
+    check find("foo\nbar\nbar", re"(?m)^", m) and
+      m.boundaries == 0 .. -1
+    check find("foo\nbar\nbar", re"(?m)^", m, start=1) and
+      m.boundaries == 4 .. 3
+    check find("foo\nbar\nbar", re"(?m)^", m, start=4) and
+      m.boundaries == 4 .. 3
+    check find("foo\nbar\nbar", re"(?m)^", m, start=5) and
+      m.boundaries == 8 .. 7
+    check find("foo\nbar\nbar", re"(?m)^", m, start=8) and
+      m.boundaries == 8 .. 7
+    check(not find("foo\nbar\nbar", re"(?m)^", m, start=9))

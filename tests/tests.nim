@@ -1635,14 +1635,35 @@ test "tmisc2":
     check(not match("1", re1))
   block:  # issue #61
     const a = "void __mingw_setusermatherr (int (__attribute__((__cdecl__)) *)(struct _exception *));"
-    doAssert replace(a, re"__attribute__[ ]*\(\(.*?\)\)([ ,;])", "$1") ==
+    check replace(a, re"__attribute__[ ]*\(\(.*?\)\)([ ,;])", "$1") ==
       "void __mingw_setusermatherr (int ( *)(struct _exception *));"
-    doAssert replace(a, re"__attribute__[ ]*\(\(.*?\)\)(.*?[ ,;])", "$1") ==
+    check replace(a, re"__attribute__[ ]*\(\(.*?\)\)(.*?[ ,;])", "$1") ==
       "void __mingw_setusermatherr (int ( *)(struct _exception *));"
-    doAssert find(a, re"__attribute__[ ]*\(\(.*?\)\)([ ,;])", m) and
+    check find(a, re"__attribute__[ ]*\(\(.*?\)\)([ ,;])", m) and
       a[m.boundaries] == "__attribute__((__cdecl__)) "
-    doAssert find(a, re"__attribute__[ ]*\(\(.*?\)\)(.*?[ ,;])", m) and
+    check find(a, re"__attribute__[ ]*\(\(.*?\)\)(.*?[ ,;])", m) and
       a[m.boundaries] == "__attribute__((__cdecl__)) "
     # non-greedy
-    doAssert find(a, re"__attribute__[ ]*\(\(.*\)\)([ ,;])", m) and
+    check find(a, re"__attribute__[ ]*\(\(.*\)\)([ ,;])", m) and
       a[m.boundaries] == "__attribute__((__cdecl__)) *)(struct _exception *));"
+  block:  # issue #13
+    const input = """foo
+              bar
+      baxx
+                bazz
+    """
+    const expected = """//foo
+//              bar
+//      baxx
+//                bazz
+//    """
+    check replace(input, re"(?m)^", "//") == expected
+  check replace("bar", re"^", "foo") == "foobar"
+  check replace("foo", re"$", "bar") == "foobar"
+  check(not find("foobarbar", re"^bar", m, start=3))
+  check find("foobar\nbar", re"(?m)^bar", m, start=3) and
+    m.boundaries == 7 .. 9
+  check find("foo\nbar\nbar", re"(?m)^bar", m, start=3) and
+    m.boundaries == 4 .. 6
+  check find("foo\nbar\nbar", re"(?m)^bar", m, start=4) and
+    m.boundaries == 4 .. 6

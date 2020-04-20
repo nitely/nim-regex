@@ -418,8 +418,13 @@ when canUseMacro:
   ): bool {.inline, raises: [].} =
     findImpl()
 
-template findOneImpl: untyped {.dirty.} =
-  matchImpl(s, pattern, m, {mfFindMatch, mfFindAllMatch}, i)
+template runeIncAt(s: string, n: var int) =
+  ## increment ``n`` up to
+  ## next rune's index
+  if n < s.len:
+    inc(n, runeLenAt(s, n))
+  else:
+    n = s.len+1
 
 iterator findAll*(
   s: string,
@@ -440,15 +445,17 @@ iterator findAll*(
       inc i
 
   var i = start
-  var c: Rune
   var m: RegexMatch
   while i < len(s):
-    if not findOneImpl():
+    if not find(s, pattern, m, i):
       break
-    if i < m.boundaries.b+1:
+    if m.boundaries.b >= m.boundaries.a:
+      doAssert i < m.boundaries.b+1
       i = m.boundaries.b+1
     else:  # empty match
-      fastRuneAt(s, i, c, true)
+      doAssert i <= m.boundaries.a
+      i = m.boundaries.a
+      runeIncAt(s, i)
     yield m
 
 func findAll*(
@@ -472,14 +479,6 @@ func findAndCaptureAll*(
 
   for m in s.findAll(pattern):
     result.add s[m.boundaries]
-
-template runeIncAt(s: string, n: var int) =
-  ## increment ``n`` up to
-  ## next rune's index
-  if n >= s.len:
-    inc n
-  else:
-    inc(n, runeLenAt(s, n))
 
 # XXX there is no static version because of Nim/issues/13791
 iterator split*(s: string, sep: Regex): string {.inline, raises: [].} =

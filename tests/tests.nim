@@ -1660,6 +1660,18 @@ test "tmisc2":
     check replace(input, re"(?m)^", "//") == expected
   check replace("bar", re"^", "foo") == "foobar"
   check replace("foo", re"$", "bar") == "foobar"
+  block:
+    const input = """foo
+              bar
+      baxx
+                bazz
+    """
+    const expected = """foo//
+              bar//
+      baxx//
+                bazz//
+    //"""
+    check replace(input, re"(?m)$", "//") == expected
   check(not find("foobarbar", re"^bar", m, start=3))
   check find("foobar\nbar", re"(?m)^bar", m, start=3) and
     m.boundaries == 7 .. 9

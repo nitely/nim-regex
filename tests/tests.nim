@@ -1680,3 +1680,25 @@ test "tmisc2":
     check find("foo\nbar\nbar", re"(?m)^", m, start=8) and
       m.boundaries == 8 .. 7
     check(not find("foo\nbar\nbar", re"(?m)^", m, start=9))
+    check find("foo\nbar\nbar", re"(?m)$", m) and
+      m.boundaries == 3 .. 2
+    check find("foo\nbar\nbar", re"(?m)$", m, start=3) and
+      m.boundaries == 3 .. 2
+    check find("foo\nbar\nbar", re"(?m)$", m, start=4) and
+      m.boundaries == 7 .. 6
+    check find("foo\nbar\nbar", re"(?m)$", m, start=7) and
+      m.boundaries == 7 .. 6
+    check find("foo\nbar\nbar", re"(?m)$", m, start=8) and
+      m.boundaries == 11 .. 10
+    check find("foo\nbar\nbar", re"(?m)$", m, start=11) and
+      m.boundaries == 11 .. 10
+    # start is out of bounds, but this is what Nim's re
+    # does, nre throws an error
+    check find("foo\nbar\nbar", re"(?m)$", m, start=12) and
+      m.boundaries == 12 .. 11
+  # XXX make this return false?
+  check match("abc", re"(?m)$", m, start=50)
+  check match("abc", re"(?m)^", m, start=50)
+  # this should be valid though
+  check match("", re"(?m)^", m)
+  check match("", re"(?m)$", m)

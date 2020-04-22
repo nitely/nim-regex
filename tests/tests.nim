@@ -911,7 +911,7 @@ test "tsplitIncl":
   check "12".splitIncl(re"(\d)") == @["", "1", "", "2", ""]
   check splitIncl("aΪⒶ弢", re"(\w)") ==
     @["", "a", "", "Ϊ", "", "Ⓐ", "", "弢", ""]
-  check splitIncl("aΪⒶ弢", re"") == @["aΪⒶ弢"]
+  check splitIncl("aΪⒶ弢", re"") == @["a", "Ϊ", "Ⓐ", "弢"]
   check splitIncl("...words, words...", re"(\W+)") ==
     @["", "...", "words", ", ", "words", "...", ""]
   check splitIncl("Words, words, words.", re"(\W+)") ==
@@ -924,7 +924,7 @@ test "tsplitIncl":
   check splitIncl("AAA :   : BBB", re"\s*:\s*") == @["AAA", "", "BBB"]
   check splitIncl("", re",") == @[""]
   check splitIncl(",,", re",") == @["", "", ""]
-  check splitIncl("abc", re"") == @["abc"]
+  check splitIncl("abc", re"") == @["a", "b", "c"]
   check splitIncl(",a,Ϊ,Ⓐ,弢,", re",") ==
     @["", "a", "Ϊ", "Ⓐ", "弢", ""]
   check splitIncl("弢", re"\xAF") == @["弢"]  # "弢" == "\xF0\xAF\xA2\x94"

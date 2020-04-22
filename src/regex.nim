@@ -418,6 +418,14 @@ when canUseMacro:
   ): bool {.inline, raises: [].} =
     findImpl()
 
+template runeIncAt(s: string, n: var int) =
+  ## increment ``n`` up to
+  ## next rune's index
+  if n < s.len:
+    inc(n, runeLenAt(s, n))
+  else:
+    n = s.len+1
+
 iterator findAll*(
   s: string,
   pattern: Regex,
@@ -437,15 +445,17 @@ iterator findAll*(
       inc i
 
   var i = start
-  var c: Rune
   var m: RegexMatch
   while i < len(s):
     if not find(s, pattern, m, i):
       break
-    if i < m.boundaries.b+1:
+    if m.boundaries.b >= m.boundaries.a:
+      doAssert i < m.boundaries.b+1
       i = m.boundaries.b+1
     else:  # empty match
-      fastRuneAt(s, i, c, true)
+      doAssert i <= m.boundaries.a
+      i = m.boundaries.a
+      runeIncAt(s, i)
     yield m
 
 func findAll*(
@@ -470,14 +480,6 @@ func findAndCaptureAll*(
   for m in s.findAll(pattern):
     result.add s[m.boundaries]
 
-template runeIncAt(s: string, n: var int) =
-  ## increment ``n`` up to
-  ## next rune's index
-  if n >= s.len:
-    inc n
-  else:
-    inc(n, runeLenAt(s, n))
-
 # XXX there is no static version because of Nim/issues/13791
 iterator split*(s: string, sep: Regex): string {.inline, raises: [].} =
   ## return not matched substrings
@@ -490,23 +492,29 @@ iterator split*(s: string, sep: Regex): string {.inline, raises: [].} =
       inc i
 
   var
-    first, last = 0
+    first, last, i = 0
+    skipFirst = true
     m: RegexMatch
-  while last <= s.len:
-    first = last
-    while last <= s.len:
-      if not find(s, sep, m, last):
-        last = s.len+1
-        break
-      if m.boundaries.a <= m.boundaries.b:
-        last = m.boundaries.a
-        break
-      # empty match
-      runeIncAt(s, last)
+  # This is pretty much findAll
+  # but with an extra last iteration
+  while i <= len(s):
+    if not find(s, sep, m, i):
+      i = s.len+1
+      last = s.len+1
+    elif m.boundaries.b >= m.boundaries.a:
+      doAssert i < m.boundaries.b+1
+      i = m.boundaries.b+1
+      last = m.boundaries.a
+    else:  # empty match
+      doAssert i <= m.boundaries.a
+      i = m.boundaries.a
+      runeIncAt(s, i)
+      last = m.boundaries.a
+      if last == 0 and skipFirst:  # edge case
+        skipFirst = false
+        continue
     yield substr(s, first, last-1)
-    if m.boundaries.a <= m.boundaries.b:
-      doAssert last < m.boundaries.b+1
-      last = m.boundaries.b+1
+    first = m.boundaries.b+1
 
 func split*(s: string, sep: Regex): seq[string] {.inline, raises: [].} =
   ## return not matched substrings
@@ -528,26 +536,30 @@ func splitIncl*(s: string, sep: Regex): seq[string] {.inline, raises: [].} =
     doAssert parts == expected
 
   var
-    first, last = 0
+    first, last, i = 0
+    skipFirst = true
     m: RegexMatch
-  while last <= s.len:
-    first = last
-    while last <= s.len:
-      if not find(s, sep, m, last):
-        last = s.len + 1
-        break
-      if m.boundaries.a <= m.boundaries.b:
-        last = m.boundaries.a
-        break
-      # empty match
-      runeIncAt(s, last)
+  while i <= len(s):
+    if not find(s, sep, m, i):
+      i = s.len+1
+      last = s.len+1
+    elif m.boundaries.b >= m.boundaries.a:
+      doAssert i < m.boundaries.b+1
+      i = m.boundaries.b+1
+      last = m.boundaries.a
+    else:  # empty match
+      doAssert i <= m.boundaries.a
+      i = m.boundaries.a
+      runeIncAt(s, i)
+      last = m.boundaries.a
+      if last == 0 and skipFirst:  # edge case
+        skipFirst = false
+        continue
     result.add substr(s, first, last-1)
+    first = m.boundaries.b+1
     for g in 0 ..< m.groupsCount:
       for sl in m.group(g):
         result.add substr(s, sl.a, sl.b)
-    if m.boundaries.a <= m.boundaries.b:
-      doAssert last < m.boundaries.b+1
-      last = m.boundaries.b+1
 
 func startsWith*(
   s: string, pattern: Regex, start = 0

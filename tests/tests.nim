@@ -879,7 +879,7 @@ test "tsplit":
   check split("AAA :   : BBB", re"\s*:\s*") == @["AAA", "", "BBB"]
   check split("", re",") == @[""]
   check split(",,", re",") == @["", "", ""]
-  check split("abc", re"") == @["abc"]
+  check split("abc", re"") == @["a", "b", "c"]
   check split(",a,Ϊ,Ⓐ,弢,", re",") ==
     @["", "a", "Ϊ", "Ⓐ", "弢", ""]
   check split("弢", re"\xAF") == @["弢"]  # "弢" == "\xF0\xAF\xA2\x94"
@@ -911,7 +911,7 @@ test "tsplitIncl":
   check "12".splitIncl(re"(\d)") == @["", "1", "", "2", ""]
   check splitIncl("aΪⒶ弢", re"(\w)") ==
     @["", "a", "", "Ϊ", "", "Ⓐ", "", "弢", ""]
-  check splitIncl("aΪⒶ弢", re"") == @["aΪⒶ弢"]
+  check splitIncl("aΪⒶ弢", re"") == @["a", "Ϊ", "Ⓐ", "弢"]
   check splitIncl("...words, words...", re"(\W+)") ==
     @["", "...", "words", ", ", "words", "...", ""]
   check splitIncl("Words, words, words.", re"(\W+)") ==
@@ -924,7 +924,7 @@ test "tsplitIncl":
   check splitIncl("AAA :   : BBB", re"\s*:\s*") == @["AAA", "", "BBB"]
   check splitIncl("", re",") == @[""]
   check splitIncl(",,", re",") == @["", "", ""]
-  check splitIncl("abc", re"") == @["abc"]
+  check splitIncl("abc", re"") == @["a", "b", "c"]
   check splitIncl(",a,Ϊ,Ⓐ,弢,", re",") ==
     @["", "a", "Ϊ", "Ⓐ", "弢", ""]
   check splitIncl("弢", re"\xAF") == @["弢"]  # "弢" == "\xF0\xAF\xA2\x94"
@@ -1635,14 +1635,118 @@ test "tmisc2":
     check(not match("1", re1))
   block:  # issue #61
     const a = "void __mingw_setusermatherr (int (__attribute__((__cdecl__)) *)(struct _exception *));"
-    doAssert replace(a, re"__attribute__[ ]*\(\(.*?\)\)([ ,;])", "$1") ==
+    check replace(a, re"__attribute__[ ]*\(\(.*?\)\)([ ,;])", "$1") ==
       "void __mingw_setusermatherr (int ( *)(struct _exception *));"
-    doAssert replace(a, re"__attribute__[ ]*\(\(.*?\)\)(.*?[ ,;])", "$1") ==
+    check replace(a, re"__attribute__[ ]*\(\(.*?\)\)(.*?[ ,;])", "$1") ==
       "void __mingw_setusermatherr (int ( *)(struct _exception *));"
-    doAssert find(a, re"__attribute__[ ]*\(\(.*?\)\)([ ,;])", m) and
+    check find(a, re"__attribute__[ ]*\(\(.*?\)\)([ ,;])", m) and
       a[m.boundaries] == "__attribute__((__cdecl__)) "
-    doAssert find(a, re"__attribute__[ ]*\(\(.*?\)\)(.*?[ ,;])", m) and
+    check find(a, re"__attribute__[ ]*\(\(.*?\)\)(.*?[ ,;])", m) and
       a[m.boundaries] == "__attribute__((__cdecl__)) "
     # non-greedy
-    doAssert find(a, re"__attribute__[ ]*\(\(.*\)\)([ ,;])", m) and
+    check find(a, re"__attribute__[ ]*\(\(.*\)\)([ ,;])", m) and
       a[m.boundaries] == "__attribute__((__cdecl__)) *)(struct _exception *));"
+  block:  # issue #13
+    const input = """foo
+              bar
+      baxx
+                bazz
+    """
+    const expected = """//foo
+//              bar
+//      baxx
+//                bazz
+//    """
+    check replace(input, re"(?m)^", "//") == expected
+  check replace("bar", re"^", "foo") == "foobar"
+  check replace("foo", re"$", "bar") == "foobar"
+  block:
+    const input = """foo
+              bar
+      baxx
+                bazz
+    """
+    const expected = """foo//
+              bar//
+      baxx//
+                bazz//
+    //"""
+    check replace(input, re"(?m)$", "//") == expected
+  check(not find("foobarbar", re"^bar", m, start=3))
+  check find("foobar\nbar", re"(?m)^bar", m, start=3) and
+    m.boundaries == 7 .. 9
+  check find("foo\nbar\nbar", re"(?m)^bar", m, start=3) and
+    m.boundaries == 4 .. 6
+  check find("foo\nbar\nbar", re"(?m)^bar", m, start=4) and
+    m.boundaries == 4 .. 6
+  block:
+    # The bounds must contain the empty match index
+    check find("foo\nbar\nbar", re"(?m)^", m) and
+      m.boundaries == 0 .. -1
+    check find("foo\nbar\nbar", re"(?m)^", m, start=1) and
+      m.boundaries == 4 .. 3
+    check find("foo\nbar\nbar", re"(?m)^", m, start=4) and
+      m.boundaries == 4 .. 3
+    check find("foo\nbar\nbar", re"(?m)^", m, start=5) and
+      m.boundaries == 8 .. 7
+    check find("foo\nbar\nbar", re"(?m)^", m, start=8) and
+      m.boundaries == 8 .. 7
+    check(not find("foo\nbar\nbar", re"(?m)^", m, start=9))
+    check find("foo\nbar\nbar", re"(?m)$", m) and
+      m.boundaries == 3 .. 2
+    check find("foo\nbar\nbar", re"(?m)$", m, start=3) and
+      m.boundaries == 3 .. 2
+    check find("foo\nbar\nbar", re"(?m)$", m, start=4) and
+      m.boundaries == 7 .. 6
+    check find("foo\nbar\nbar", re"(?m)$", m, start=7) and
+      m.boundaries == 7 .. 6
+    check find("foo\nbar\nbar", re"(?m)$", m, start=8) and
+      m.boundaries == 11 .. 10
+    check find("foo\nbar\nbar", re"(?m)$", m, start=11) and
+      m.boundaries == 11 .. 10
+    # start is out of bounds, but this is what Nim's re
+    # does, nre throws an error
+    check find("foo\nbar\nbar", re"(?m)$", m, start=12) and
+      m.boundaries == 12 .. 11
+  # XXX make this return false?
+  check match("abc", re"(?m)$", m, start=50)
+  check match("abc", re"(?m)^", m, start=50)
+  # this should be valid though
+  check match("", re"(?m)^", m)
+  check match("", re"(?m)$", m)
+  block:
+    const input = """foo
+              bar
+      baxx
+                bazz
+    """
+    const expected = @[
+      "foo\n",
+      "              bar\n",
+      "      baxx\n",
+      "                bazz\n",
+      "    "
+    ]
+    check split(input, re"(?m)^") == expected
+  block:
+    const input = """foo
+              bar
+      baxx
+                bazz
+    """
+    const expected = @[
+      "foo",
+      "\n              bar",
+      "\n      baxx",
+      "\n                bazz",
+      "\n    "
+    ]
+    check split(input, re"(?m)$") == expected
+  check split("acb\nb\nc\n", re"(?m)^") == @["acb\n", "b\n", "c\n"]
+  check split("a b", re"\b") == @["a", " ", "b"]
+  check split("ab", re"\b") == @["ab"]
+  check split("iaiaiai", re"i") == @["", "a", "a", "a", ""]
+  check split("aiaia", re"i") == @["a", "a", "a"]
+  check split("aaa", re"a") == @["", "", "", ""]
+  check split("a\na\na", re"(?m)^") == @["a\n", "a\n", "a"]
+  check split("\n\n", re"(?m)^") == @["\n", "\n"]

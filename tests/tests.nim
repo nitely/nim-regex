@@ -879,7 +879,7 @@ test "tsplit":
   check split("AAA :   : BBB", re"\s*:\s*") == @["AAA", "", "BBB"]
   check split("", re",") == @[""]
   check split(",,", re",") == @["", "", ""]
-  check split("abc", re"") == @["abc"]
+  check split("abc", re"") == @["a", "b", "c"]
   check split(",a,Ϊ,Ⓐ,弢,", re",") ==
     @["", "a", "Ϊ", "Ⓐ", "弢", ""]
   check split("弢", re"\xAF") == @["弢"]  # "弢" == "\xF0\xAF\xA2\x94"
@@ -1714,3 +1714,37 @@ test "tmisc2":
   # this should be valid though
   check match("", re"(?m)^", m)
   check match("", re"(?m)$", m)
+  block:
+    const input = """foo
+              bar
+      baxx
+                bazz
+    """
+    const expected = @[
+      "foo\n",
+      "              bar\n",
+      "      baxx\n",
+      "                bazz\n",
+      "    "
+    ]
+    check split(input, re"(?m)^") == expected
+  block:
+    const input = """foo
+              bar
+      baxx
+                bazz
+    """
+    const expected = @[
+      "foo",
+      "\n              bar",
+      "\n      baxx",
+      "\n                bazz",
+      "\n    "
+    ]
+    check split(input, re"(?m)$") == expected
+  check split("acb\nb\nc\n", re"(?m)^") == @["acb\n", "b\n", "c\n"]
+  check split("a b", re"\b") == @["a", " ", "b"]
+  check split("ab", re"\b") == @["ab"]
+  check split("iaiaiai", re"i") == @["", "a", "a", "a", ""]
+  check split("aiaia", re"i") == @["a", "a", "a"]
+  check split("aaa", re"a") == @["", "", "", ""]

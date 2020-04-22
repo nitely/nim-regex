@@ -492,23 +492,52 @@ iterator split*(s: string, sep: Regex): string {.inline, raises: [].} =
       inc i
 
   var
-    first, last = 0
+    first, last, i = 0
+    skipFirst = true
     m: RegexMatch
-  while last <= s.len:
-    first = last
-    while last <= s.len:
-      if not find(s, sep, m, last):
-        last = s.len+1
-        break
-      if m.boundaries.a <= m.boundaries.b:
-        last = m.boundaries.a
-        break
-      # empty match
-      runeIncAt(s, last)
+  # This is pretty much findAll
+  # but with an extra last iteration
+  while i <= len(s):
+    if not find(s, sep, m, i):
+      i = s.len+1
+      last = s.len+1
+    elif m.boundaries.b >= m.boundaries.a:
+      doAssert i < m.boundaries.b+1
+      i = m.boundaries.b+1
+      last = m.boundaries.a
+    else:  # empty match
+      doAssert i <= m.boundaries.a
+      i = m.boundaries.a
+      runeIncAt(s, i)
+      last = m.boundaries.a
+      if last == 0 and skipFirst:  # edge case
+        skipFirst = false
+        continue
     yield substr(s, first, last-1)
-    if m.boundaries.a <= m.boundaries.b:
+    first = m.boundaries.b+1
+    
+  #[
+  while last <= s.len:
+    if not find(s, sep, m, last):
+      last = s.len+1
+    elif m.boundaries.b >= m.boundaries.a:
+      last = m.boundaries.a
+    else:  # zero match
+      last = m.boundaries.a
+      # skip first empty match
+      if last == 0 and skipFirst:
+        skipFirst = false
+        runeIncAt(s, last)
+        continue
+    yield substr(s, first, last-1)
+    first = m.boundaries.b+1
+    if last > len(s): break
+    if m.boundaries.b >= m.boundaries.a:
       doAssert last < m.boundaries.b+1
       last = m.boundaries.b+1
+    else:  # zero match
+      runeIncAt(s, last)
+  ]#
 
 func split*(s: string, sep: Regex): seq[string] {.inline, raises: [].} =
   ## return not matched substrings

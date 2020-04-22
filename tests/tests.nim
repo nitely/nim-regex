@@ -1748,3 +1748,5 @@ test "tmisc2":
   check split("iaiaiai", re"i") == @["", "a", "a", "a", ""]
   check split("aiaia", re"i") == @["a", "a", "a"]
   check split("aaa", re"a") == @["", "", "", ""]
+  check split("a\na\na", re"(?m)^") == @["a\n", "a\n", "a"]
+  check split("\n\n", re"(?m)^") == @["\n", "\n"]

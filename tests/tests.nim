@@ -1751,3 +1751,6 @@ test "tmisc2":
   check split("aaa", re"a") == @["", "", "", ""]
   check split("a\na\na", re"(?m)^") == @["a\n", "a\n", "a"]
   check split("\n\n", re"(?m)^") == @["\n", "\n"]
+  # issue #64
+  check match("xabc", re"^abc$", m, start = 1)
+  check find("xabc", re"^abc$", m, start = 1)

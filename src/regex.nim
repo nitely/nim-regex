@@ -426,6 +426,11 @@ template runeIncAt(s: string, n: var int) =
   else:
     n = s.len+1
 
+template findNextImpl(
+  s, pattern, m, i, isNext: untyped
+): untyped =
+  matchImpl(s, pattern, m, {mfFindMatch}, i, isNext)
+
 iterator findAll*(
   s: string,
   pattern: Regex,
@@ -447,7 +452,7 @@ iterator findAll*(
   var i = start
   var m: RegexMatch
   while i <= len(s):
-    if not find(s, pattern, m, i):
+    if not findNextImpl(s, pattern, m, i, i > start):
       break
     elif m.boundaries.b >= m.boundaries.a:
       doAssert i < m.boundaries.b+1
@@ -497,7 +502,7 @@ iterator split*(s: string, sep: Regex): string {.inline, raises: [].} =
     m: RegexMatch
   # This is pretty much findAll
   while i <= len(s):
-    if not find(s, sep, m, i):
+    if not findNextImpl(s, sep, m, i, true):
       i = s.len+1
       last = s.len+1
     elif m.boundaries.b >= m.boundaries.a:
@@ -539,7 +544,7 @@ func splitIncl*(s: string, sep: Regex): seq[string] {.inline, raises: [].} =
     skipFirst = true
     m: RegexMatch
   while i <= len(s):
-    if not find(s, sep, m, i):
+    if not findNextImpl(s, sep, m, i, true):
       i = s.len+1
       last = s.len+1
     elif m.boundaries.b >= m.boundaries.a:

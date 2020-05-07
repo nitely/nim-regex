@@ -100,7 +100,8 @@ func matchImpl*(
   regex: Regex,
   m: var RegexMatch,
   flags: static MatchFlags,
-  start = 0
+  start = 0,
+  isContinuation = false
 ): bool {.inline.} =
   m.clear()
   var
@@ -114,7 +115,8 @@ func matchImpl*(
   smB = newSubmatches(regex.nfa.len)
   smA.add((0'i16, -1'i32, start .. start-1))
   when mfFindMatch in flags:
-    if 0 <= start-1 and start-1 <= len(text)-1:
+    if isContinuation and
+        0 <= start-1 and start-1 <= len(text)-1:
       cPrev = bwRuneAt(text, start-1).int32
   while i < len(text):
     fastRuneAt(text, i, c, true)

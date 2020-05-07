@@ -446,10 +446,10 @@ iterator findAll*(
 
   var i = start
   var m: RegexMatch
-  while i < len(s):
+  while i <= len(s):
     if not find(s, pattern, m, i):
       break
-    if m.boundaries.b >= m.boundaries.a:
+    elif m.boundaries.b >= m.boundaries.a:
       doAssert i < m.boundaries.b+1
       i = m.boundaries.b+1
     else:  # empty match
@@ -496,7 +496,6 @@ iterator split*(s: string, sep: Regex): string {.inline, raises: [].} =
     skipFirst = true
     m: RegexMatch
   # This is pretty much findAll
-  # but with an extra last iteration
   while i <= len(s):
     if not find(s, sep, m, i):
       i = s.len+1

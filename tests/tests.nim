@@ -945,14 +945,21 @@ test "tfindall":
   check findAllBounds("a", re"a") == @[0 .. 0]
   check findAllBounds("a", re"b") == newSeq[Slice[int]]()
   check findAllBounds("", re"b") == newSeq[Slice[int]]()
-  check findAllBounds("a", re"") == @[0 .. -1]
-  check findAllBounds("ab", re"") == @[0 .. -1, 1 .. 0]
-  check findAllBounds("a", re"\b") == @[0 .. -1]
+  # This follows nre's empty match behaviour
+  check findAllBounds("a", re"") == @[0 .. -1, 1 .. 0]
+  check findAllBounds("ab", re"") == @[0 .. -1, 1 .. 0, 2 .. 1]
+  check findAllBounds("a", re"\b") == @[0 .. -1, 1 .. 0]
   check findAllBounds("aΪⒶ弢", re"Ϊ") == @[1 .. 2]
   check findAllBounds("aΪⒶ弢", re"Ⓐ") == @[3 .. 5]
   check findAllBounds("aΪⒶ弢", re"弢") == @[6 .. 9]
   check findAllBounds("aΪⒶ弢aΪⒶ弢", re"Ⓐ") == @[3 .. 5, 13 .. 15]
-  check findAllBounds("aaa", re"a*") == @[0 .. 2]
+  # This is nre and Python's re behaviour,
+  # they match aaa and then empty end
+  check findAllBounds("aaa", re"a*") == @[0 .. 2, 3 .. 2]
+  check findAllBounds("aaab", re"a*") == @[0 .. 2, 3 .. 2, 4 .. 3]
+  check findAllBounds("aaa", re"a+") == @[0 .. 2]
+  check findAllBounds("foo", re"") ==
+    @[0 .. -1, 1 .. 0, 2 .. 1, 3 .. 2]
 
 test "tfindandcaptureall":
   check findAndCaptureAll("abcabc", re"bc") == @["bc", "bc"]
@@ -1125,13 +1132,13 @@ test "treplace":
   check "a".replace(re"(a)", "m($1) m($1)") ==
     "m(a) m(a)"
   check "aaa".replace(re"(a*)", "m($1)") ==
-    "m(aaa)"
+    "m(aaa)m()"  # nre's behaviour
   check "abc".replace(re"(a(b)c)", "m($1) m($2)") ==
     "m(abc) m(b)"
   check "abc".replace(re"(a(b))(c)", "m($1) m($2) m($3)") ==
     "m(ab) m(b) m(c)"
   check "abcabc".replace(re"(abc)*", "m($1)") ==
-    "m(abcabc)"
+    "m(abcabc)m()"  # nre's behaviour
   check "abcabc".replace(re"(abc)", "m($1)") ==
     "m(abc)m(abc)"
   check "abcabc".replace(re"(abc)", "m($1)") ==
@@ -1139,9 +1146,9 @@ test "treplace":
   check "abcab".replace(re"(abc)", "m($1)") ==
     "m(abc)ab"
   check "abcabc".replace(re"((abc)*)", "m($1) m($2)") ==
-    "m(abcabc) m(abcabc)"
+    "m(abcabc) m(abcabc)m() m()"  # nre's behaviour
   check "abcabc".replace(re"((a)bc)*", "m($1) m($2)") ==
-    "m(abcabc) m(aa)"
+    "m(abcabc) m(aa)m() m()"
   check "abc".replace(re"(b)", "m($1)") == "am(b)c"
   check "abc".replace(re"d", "m($1)") == "abc"
   check "abc".replace(re"(d)", "m($1)") == "abc"
@@ -1160,8 +1167,8 @@ test "treplace":
       result.add(')')
 
     check "abc".replace(re"(b)", by) == "am(b,)c"
-    check "aaa".replace(re"(a*)", by) == "m(aaa,)"
-    check "aaa".replace(re"(a)*", by) == "m(a,a,a,)"
+    check "aaa".replace(re"(a*)", by) == "m(aaa,)m(,)"
+    check "aaa".replace(re"(a)*", by) == "m(a,a,a,)m()"
 
   block:
     proc removeEvenWords(m: RegexMatch, s: string): string =
@@ -1646,6 +1653,8 @@ test "tmisc2":
     # non-greedy
     check find(a, re"__attribute__[ ]*\(\(.*\)\)([ ,;])", m) and
       a[m.boundaries] == "__attribute__((__cdecl__)) *)(struct _exception *));"
+  # issue #29
+  check replace("foo", re"", "-") == "-f-o-o-"
   block:  # issue #13
     const input = """foo
               bar

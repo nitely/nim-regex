@@ -1,11 +1,15 @@
-v0.15
+v0.15.0
 ==================
 
-* Fix non-greedy find, issue #61 (v0.14.0 regression)
 * Fix multiline not working with beginning of line, issue #13
 * Fix replace re"", issue #29
 * Fixes a number of issues related to empty matches
   in the `findAll`, `split`, and `replace` APIs
+
+v0.14.1
+==================
+
+* Fix non-greedy find, issue #61 (v0.14.0 regression)
 
 v0.14
 ==================

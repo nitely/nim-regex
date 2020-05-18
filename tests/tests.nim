@@ -1681,18 +1681,26 @@ test "tmisc2":
                 bazz//
     //"""
     check replace(input, re"(?m)$", "//") == expected
-  # We treat start as text[start..^1], see issue #64
-  check find("foobarbar", re"^bar", m, start=3)
-  check find("foobarbar", re"^bar", m, start=3) and
-    m.boundaries == 3 .. 5
-  check find("foobar\nbar", re"(?m)^bar", m, start=4) and
+  check(not find("foobarbar", re"^bar", m, start=3))
+  check find("foobar\nbar", re"(?m)^bar", m, start=3) and
     m.boundaries == 7 .. 9
+  check find("foo\nbar\nbar", re"(?m)^bar", m, start=3) and
+    m.boundaries == 4 .. 6
+  check find("foo\nbar\nbar", re"(?m)^bar", m, start=4) and
+    m.boundaries == 4 .. 6
   block:
     # The bounds must contain the empty match index
     check find("foo\nbar\nbar", re"(?m)^", m) and
       m.boundaries == 0 .. -1
     check find("foo\nbar\nbar", re"(?m)^", m, start=1) and
-      m.boundaries == 1 .. 0
+      m.boundaries == 4 .. 3
+    check find("foo\nbar\nbar", re"(?m)^", m, start=4) and
+      m.boundaries == 4 .. 3
+    check find("foo\nbar\nbar", re"(?m)^", m, start=5) and
+      m.boundaries == 8 .. 7
+    check find("foo\nbar\nbar", re"(?m)^", m, start=8) and
+      m.boundaries == 8 .. 7
+    check(not find("foo\nbar\nbar", re"(?m)^", m, start=9))
     check find("foo\nbar\nbar", re"(?m)$", m) and
       m.boundaries == 3 .. 2
     check find("foo\nbar\nbar", re"(?m)$", m, start=3) and
@@ -1751,6 +1759,3 @@ test "tmisc2":
   check split("aaa", re"a") == @["", "", "", ""]
   check split("a\na\na", re"(?m)^") == @["a\n", "a\n", "a"]
   check split("\n\n", re"(?m)^") == @["\n", "\n"]
-  # issue #64
-  check match("xabc", re"^abc$", m, start = 1)
-  check find("xabc", re"^abc$", m, start = 1)

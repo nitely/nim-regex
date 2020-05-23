@@ -23,13 +23,13 @@ instead of a regular match. We need a special find,
 because the regular find will always consume the
 whole string, so we'd only be able to skip the first
 part of the input until the first `\n`, instead
-of skip multiple parts of the input.
+of skipping multiple parts of the input.
 
 The special find works just like the regular one,
 except it stops when the current character of the
 input cannot be matched by the Regular Expression (RE).
 Once the special find stops, we can run a memchr from
-the index at which the find stopped.
+the index where the find stopped.
 
 We never process a character more than once, hence
 the algorithm runs in linear time.
@@ -38,27 +38,33 @@ the algorithm runs in linear time.
   but this is the meat of it.
 
 re"\wabc"
-This can be optimized the same way
+This can be optimized the same way as
 the first example, except going back
-one character and try to match. We can
-do a memchr for every "a".
+one character after running memchr.
 
 The runtime is again linear, every
-character can be consumed at most 3 times:
-one fordward (memchr), one backward,
-and one fordward (special find).
+character can be consumed at most 2 times:
+one fordward (memchr), and one fordward
+(special find). The "go back" operation does
+not consumes characters, it just does
+index - len(prefix).
 
 The prefix may be longer than just one
 character, as long as the lenght of it
-fixed we can just go back the lenght of
+is fixed we can just go back the lenght of
 the prefix and run a find. We can do
 this even when the prefix contain alternations
 as long as they have the same lenght, for
 example re"(x|y)abc".
 
-The alternative to start X chars back
+The alternative to going back X chars
 is to run the regex prefix in reverse, and
 then run the special find for the full regex.
+This would support prefixes with mixed
+alternation lenghts (i.e: re"(\w\w|\d)foo").
+Since this is needed, the going back X
+chars may just be an optimal optimization
+(meaning I may not implement it).
 
 re"\w+abc"
 This can be optimized by doing a memchr
@@ -71,7 +77,7 @@ the longest match.
 
 We cannot divide the regex in a prefix and suffix
 of "a", and just run that because that would
-take cuadratic time (see the first "\n\n\n" input example).
+run in cuadratic time (see the first "\n\n\n" input example).
 Also, we need to support captures.
 
 re"\w(a|b)"
@@ -91,7 +97,7 @@ instead of memchr.
 
 Single literals should be preferred over
 alternations. For example: re"\w(a|b)c" would
-memchr every "c" character. Meaning other listed
+memchr the "c" character. Meaning other listed
 optimizations are preferred.
 ]#
 

@@ -36,6 +36,63 @@ the algorithm runs in linear time.
 
 ^ There is a bunch of possible literal optimizations,
   but this is the meat of it.
+
+re"\wabc"
+This can be optimized the same way
+the first example, except going back
+one character and try to match. We can
+do a memchr for every "a".
+
+The runtime is again linear, every
+character can be consumed at most 3 times:
+one fordward (memchr), one backward,
+and one fordward (special find).
+
+The prefix may be longer than just one
+character, as long as the lenght of it
+fixed we can just go back the lenght of
+the prefix and run a find. We can do
+this even when the prefix contain alternations
+as long as they have the same lenght, for
+example re"(x|y)abc".
+
+The alternative to start X chars back
+is to run the regex prefix in reverse, and
+then run the special find for the full regex.
+
+re"\w+abc"
+This can be optimized by doing a memchr
+for "a", running a special match for the
+regex prefix ("\w+") in reverse, and running
+the special find for the full regex.
+
+The special match is a regular match that returns
+the longest match.
+
+We cannot divide the regex in a prefix and suffix
+of "a", and just run that because that would
+take cuadratic time (see the first "\n\n\n" input example).
+Also, we need to support captures.
+
+re"\w(a|b)"
+This can be optimized by running two scans,
+one for "a" and one for "b" at the start and
+after each match, and then trying to match the one
+with smaller char index first (i.e: the one
+that we found first).
+
+My experiments show PCRE do this with up to
+two literal alternations. When there are more
+than two alternations, it's likely better to
+generate a DFA. For example:
+re"foo|bar|baz|quz" would generate a DFA
+that matches re"f|b|q". We'd use the DFA
+instead of memchr.
+
+Single literals should be preferred over
+alternations. For example: re"\w(a|b)c" would
+memchr every "c" character. Meaning other listed
+optimizations are preferred.
 ]#
 
 import nfa

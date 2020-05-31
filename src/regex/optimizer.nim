@@ -103,5 +103,8 @@ optimizations are preferred.
 
 import nfa
 
-func prefixLit(nfa: Nfa): int32 =
+# re"(abc)+" -> a
+# re"(abc)*" -> -1
+# re"(abc)*xyz" -> x
+func lonelyLit(nfa: Nfa): int32 =
   discard

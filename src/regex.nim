@@ -197,11 +197,15 @@ func re*(
   reImpl(s)
 
 when not defined(forceRegexAtRuntime):
+  # Workaround Nim/issues/14515
+  func reImplCt(s: string): Regex {.compileTime.} =
+    reImpl(s)
+
   func re*(
     s: static string
-  ): static[Regex] {.inline, raises: [RegexError].} =
+  ): static[Regex] {.inline.} =
     ## Parse and compile a regular expression at compile-time
-    reImpl(s)
+    reImplCt(s)
 
 func toPattern*(
   s: string

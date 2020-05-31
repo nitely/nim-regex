@@ -629,7 +629,9 @@ func parseGroupTag(sc: Scanner[Rune]): Node =
       result = Node(kind: lookAroundKind, cp: sc.next())
     prettyCheck(
       sc.peek == ")".toRune,
-      "Invalid lookahead, expected closing symbol")
+      "Invalid lookaround, expected closing symbol. " &
+      "Beware lookaround is currently limited to " &
+      "match one single character")
     discard sc.next()
   else:
     prettyCheck(

@@ -205,7 +205,12 @@ when not defined(forceRegexAtRuntime):
     s: static string
   ): static[Regex] {.inline.} =
     ## Parse and compile a regular expression at compile-time
-    reImplCt(s)
+    # Ideally we would always use reImplCt,
+    # but the VM dies on Nim < 1.1
+    when canUseMacro:
+      reImplCt(s)
+    else:
+      reImpl(s)
 
 func toPattern*(
   s: string

@@ -1328,6 +1328,10 @@ test "tlook_around":
   check(not "ab".isMatch(re"a(?=b)"))
   check(not "ab".isMatch(re"a(?=c)\w"))
   check "ab".matchWithCapt(re"(a(?=b))b") == @[@["a"]]
+  check "ab".isMatch(re"\w(?<=a)b")
+  check(not "ab".isMatch(re"\w(?<=a)"))
+  check(not "ab".isMatch(re"\w(?<=c)b"))
+  check "ab".matchWithCapt(re"(a(?<=a))b") == @[@["a"]]
 
 test "tpretty_errors":
   block:
@@ -1759,3 +1763,5 @@ test "tmisc2":
   check split("aaa", re"a") == @["", "", "", ""]
   check split("a\na\na", re"(?m)^") == @["a\n", "a\n", "a"]
   check split("\n\n", re"(?m)^") == @["\n", "\n"]
+  check split("foobar", re"(?<=o)b") == @["foo", "ar"]
+  check split("foobar", re"o(?=b)") == @["fo", "bar"]

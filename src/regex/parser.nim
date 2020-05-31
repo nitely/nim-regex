@@ -600,27 +600,38 @@ func parseGroupTag(sc: Scanner[Rune]): Node =
       isCapturing = false)
   #reLookahead,
   #reLookbehind,
-  of "=".toRune:
-    discard sc.next()
+  of "=".toRune, "<".toRune:
+    let lookAroundKind = case sc.peek
+      of "=".toRune:
+        reLookahead
+      else:
+        discard sc.next()  # discard <
+        prettyCheck(
+          sc.peek == "=".toRune,
+          "Invalid lookabehind, expected `<=` symbol")
+        reLookbehind
+    discard sc.next()  # discard =
     # todo: support sets and more
     case sc.peek
     of "\\".toRune:
       let n = parseEscapedSeq(sc)
       prettyCheck(
         n.kind == reChar,
-        "Invalid lookahead. A " &
+        "Invalid lookaround. A " &
         "character was expected, but " &
         "found a special symbol")
-      result = Node(kind: reLookahead, cp: n.cp)
+      result = Node(kind: lookAroundKind, cp: n.cp)
     else:
       prettyCheck(
         not sc.finished,
-        "Invalid lookahead. A character " &
+        "Invalid lookaround. A character " &
         "was expected, but found nothing (end of string)")
-      result = Node(kind: reLookahead, cp: sc.next())
+      result = Node(kind: lookAroundKind, cp: sc.next())
     prettyCheck(
       sc.peek == ")".toRune,
-      "Invalid lookahead, expected closing symbol")
+      "Invalid lookaround, expected closing symbol. " &
+      "Beware lookaround is currently limited to " &
+      "match one single character")
     discard sc.next()
   else:
     prettyCheck(

@@ -196,8 +196,10 @@ func re*(
     let abcx3 = re(pat)
   reImpl(s)
 
+# Workaround Nim/issues/14515
+# ideally only `re(string): Regex`
+# would be needed (without static)
 when not defined(forceRegexAtRuntime):
-  # Workaround Nim/issues/14515
   func reImplCt(s: string): Regex {.compileTime.} =
     reImpl(s)
 
@@ -205,9 +207,7 @@ when not defined(forceRegexAtRuntime):
     s: static string
   ): static[Regex] {.inline.} =
     ## Parse and compile a regular expression at compile-time
-    # Ideally we would always use reImplCt,
-    # but the VM dies on Nim < 1.1
-    when canUseMacro:
+    when canUseMacro:  # VM dies on Nim < 1.1
       reImplCt(s)
     else:
       reImpl(s)

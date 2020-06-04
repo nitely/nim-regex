@@ -19,8 +19,7 @@ type
 func combine(
   nfa: var seq[Node],
   ends: var seq[End],
-  org: int16,
-  target: int16
+  org, target: int16
 ) =
   ## combine ends of ``org``
   ## with ``target``
@@ -30,37 +29,36 @@ func combine(
         ni = target
   ends[org] = ends[target]
 
+const eoe = 0'i16
+
 func update(
   ends: var seq[End],
   ni: int16,
   next: openArray[int16]
 ) =
   ## update the ends of Node ``ni``
-  ## to point to ends of ``n.outA``
-  ## and ``n.outB``. If either outA
-  ## or outB are ``0`` (EOE),
-  ## the ends will point to itself
+  ## to point to the end of the nodes in next.
+  ## If a node in next is Eoe,
+  ## the end of ``ni`` will point to itself
   ends[ni].setLen(0)
   for n in next:
-    if n == 0:
-        ends[ni].add(ni)
+    if n == eoe:
+        ends[ni].add ni 
     else:
-        ends[ni].add(ends[n])
-
-const eoe = 0'i16
+        ends[ni].add ends[n]
 
 func eNfa(expression: seq[Node]): Nfa {.raises: [RegexError].} =
   ## Thompson's construction
   result = newSeqOfCap[Node](expression.len + 2)
-  result.add(initEOENode())
+  result.add initEOENode()
   var
     ends = newSeq[End](expression.len + 1)
     states = newSeq[int16]()
   if expression.len == 0:
-    states.add(eoe)
+    states.add eoe
   for n in expression:
     var n = n
-    assert n.next.len == 0
+    doAssert n.next.len == 0
     check(
       result.high < int16.high,
       ("The expression is too long, " &
@@ -68,16 +66,16 @@ func eNfa(expression: seq[Node]): Nfa {.raises: [RegexError].} =
     let ni = result.len.int16
     case n.kind
     of matchableKind, assertionKind:
-      n.next.add(eoe)
+      n.next.add eoe
       ends.update(ni, [eoe])
-      result.add(n)
-      states.add(ni)
+      result.add n
+      states.add ni
     of reJoiner:
       let
         stateB = states.pop()
         stateA = states.pop()
       result.combine(ends, stateA, stateB)
-      states.add(stateA)
+      states.add stateA
     of reOr:
       check(
         states.len >= 2,
@@ -88,8 +86,8 @@ func eNfa(expression: seq[Node]): Nfa {.raises: [RegexError].} =
         stateA = states.pop()
       n.next.add([stateA, stateB])
       ends.update(ni, n.next)
-      result.add(n)
-      states.add(ni)
+      result.add n
+      states.add ni
     of reZeroOrMore:
       check(
         states.len >= 1,
@@ -99,8 +97,8 @@ func eNfa(expression: seq[Node]): Nfa {.raises: [RegexError].} =
       n.next.add([stateA, eoe])
       ends.update(ni, n.next)
       result.combine(ends, stateA, ni)
-      result.add(n)
-      states.add(ni)
+      result.add n
+      states.add ni
       if n.isGreedy:
         swap(result[^1].next[0], result[^1].next[1])
     of reOneOrMore:
@@ -112,8 +110,8 @@ func eNfa(expression: seq[Node]): Nfa {.raises: [RegexError].} =
       n.next.add([stateA, eoe])
       ends.update(ni, n.next)
       result.combine(ends, stateA, ni)
-      result.add(n)
-      states.add(stateA)
+      result.add n
+      states.add stateA
       if n.isGreedy:
         swap(result[^1].next[0], result[^1].next[1])
     of reZeroOrOne:
@@ -124,30 +122,27 @@ func eNfa(expression: seq[Node]): Nfa {.raises: [RegexError].} =
       let stateA = states.pop()
       n.next.add([stateA, eoe])
       ends.update(ni, n.next)
-      result.add(n)
-      states.add(ni)
+      result.add n
+      states.add ni
       if n.isGreedy:
         swap(result[^1].next[0], result[^1].next[1])
     of reGroupStart:
       let stateA = states.pop()
-      n.next.add(stateA)
+      n.next.add stateA
       ends.update(ni, n.next)
-      result.add(n)
-      states.add(ni)
+      result.add n
+      states.add ni
     of reGroupEnd:
-      n.next.add(eoe)
+      n.next.add eoe
       ends.update(ni, n.next)
       let stateA = states.pop()
       result.combine(ends, stateA, ni)
-      result.add(n)
-      states.add(stateA)
+      result.add n
+      states.add stateA
     else:
-      assert(false, "Unhandled node: $#" %% $n.kind)
-  assert states.len == 1
-  result.add(Node(
-    kind: reSkip,
-    cp: "#".toRune,
-    next: states))
+      doAssert(false, "Unhandled node: $#" %% $n.kind)
+  doAssert states.len == 1
+  result.add initSkipNode(states)
 
 type
   Zclosure = seq[int16]

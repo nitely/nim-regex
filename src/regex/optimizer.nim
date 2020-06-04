@@ -99,12 +99,152 @@ Single literals should be preferred over
 alternations. For example: re"\w(a|b)c" would
 memchr the "c" character. Meaning other listed
 optimizations are preferred.
+
+---------------------------
+
+We should try to match the larger
+amount of literals and try to fail
+early. Let's say we have re"\w+abc",
+trying to match "a" and then an unbounded
+amount of chars at the left will likely take
+more time than trying to match "c", then
+"ab" at the left, since "a" will appear
+at least the same amount of times as "abc",
+but possibly more times.
+
+This translates to finding the largest amount
+of contiguous lits and picking the right most
+lit to memchr.
+
+However, this has the cost of potentially
+requiring a larger left part of the regex (to match the left side),
+so it may be better to find the first lit in the regex and then
+pick the last lit of its contiguous lits (if any).
+
 ]#
 
+import nodetype
 import nfa
+
+type
+  RpnExp = seq[Node]
+  End = seq[int16]
+
+func combine(
+  nfa: var seq[Node],
+  ends: var seq[End],
+  org, target: int16
+) =
+  for e in ends[org]:
+    for i, ni in nfa[e].next.mpairs:
+      if nfa[ni].kind == reEoe:
+        ni = target
+  ends[org] = ends[target]
+
+const eoe = 0'i16
+
+func update(
+  ends: var seq[End],
+  ni: int16,
+  next: openArray[int16]
+) =
+  ends[ni].setLen(0)
+  for n in next:
+    if n == eoe:
+        ends[ni].add ni
+    else:
+        ends[ni].add ends[n]
+
+# Keep lits,
+# replace (...)*, (...)?, and
+# (...|...) by skip nodes.
+# The (...)+ remain, but
+# break the loop.
+# Based on Thompson's construction
+func litNfa(exp: RPNExp): Nfa =
+  result = newSeqOfCap[Node](exp.len + 2)
+  result.add initEoeNode()
+  var
+    ends = newSeq[End](exp.len + 1)
+    states = newSeq[int16]()
+  if exp.len == 0:
+    states.add eoe
+  for n in exp:
+    var n = n
+    doAssert n.next.len == 0
+    let ni = result.len.int16
+    case n.kind
+    of matchableKind, assertionKind:
+      n.next.add eoe
+      ends.update(ni, [eoe])
+      result.add n
+      states.add ni
+    of reJoiner:
+      let
+        stateB = states.pop()
+        stateA = states.pop()
+      result.combine(ends, stateA, stateB)
+      states.add stateA
+    of reOr:
+      discard states.pop()
+      discard states.pop()
+      ends.update(ni, [eoe])
+      result.add initSkipNode([eoe])
+      states.add ni
+    of reZeroOrMore, reZeroOrOne:
+      discard states.pop()
+      ends.update(ni, [eoe])
+      result.add initSkipNode([eoe])
+      states.add ni
+    of reOneOrMore:
+      # states.add(states.pop())
+      discard
+    of reGroupStart:
+      discard
+    of reGroupEnd:
+      discard
+    else:
+      doAssert false
+  doAssert states.len == 1
+  result.add initSkipNode(states)
 
 # re"(abc)+" -> a
 # re"(abc)*" -> -1
 # re"(abc)*xyz" -> x
 func lonelyLit(nfa: Nfa): int32 =
-  discard
+  result = -1
+  var state = nfa[^1]
+  while state.kind != reEoe:
+    if state.kind == reChar:
+      return state.cp.int32
+    doAssert state.next.len == 1
+    state = nfa[state.next[0]]
+
+when isMainModule:
+  import parser
+  import exptransformation
+
+  func rpn(s: string): RpnExp =
+    var groups: GroupsCapture
+    result = s
+      .parse
+      .transformExp(groups)
+
+  func lit(s: string): int32 =
+    s.rpn.litNfa.lonelyLit
+
+  doAssert lit"(abc)+" == 'a'.int
+  doAssert lit"(abc)*" == -1
+  doAssert lit"(abc)*xyz" == 'x'.int
+  doAssert lit"(a|b)" == -1
+  doAssert lit"a?" == -1
+  doAssert lit"a" == 'a'.int
+  doAssert lit"(a|b)xyz" == 'x'.int
+  doAssert lit"(\w\d)*abc" == 'a'.int
+  doAssert lit"(\w\d)+abc" == 'a'.int
+  doAssert lit"(\w\d)?abc" == 'a'.int
+  doAssert lit"z(x|y)+abc" == 'z'.int
+  doAssert lit"((a|b)c*d?(ef)*\w\d\bx)+" == 'x'.int
+  doAssert lit"((a|b)c*d?(ef)*\w\d\bx)+yz" == 'x'.int
+  doAssert lit"((a|b)c*d?(ef)*\w\d\b)+yz" == 'y'.int
+  echo "ok"

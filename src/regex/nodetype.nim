@@ -102,10 +102,10 @@ func initJoinerNode*(): Node =
   ## but they are never part of it
   Node(kind: reJoiner, cp: "~".toRune)
 
-func initEOENode*(): Node =
+func initEoeNode*(): Node =
   ## return the end-of-expression ``Node``.
   ## This is a dummy node that marks a match as successful
-  Node(kind: reEOE, cp: "#".toRune)
+  Node(kind: reEoe, cp: "#".toRune)
 
 template initSetNodeImpl(result: var Node, k: NodeKind) =
   ## base node
@@ -139,6 +139,14 @@ func initGroupStart*(
     name: name,
     flags: flags,
     isCapturing: isCapturing)
+
+func initSkipNode*(next: openArray[int16]): Node =
+  ## Return a dummy node that should be skipped
+  ## in the matching
+  result = Node(
+    kind: reSkip,
+    cp: "#".toRune)
+  result.next.add next
 
 func isEmpty*(n: Node): bool =
   ## check if a set ``Node`` is empty

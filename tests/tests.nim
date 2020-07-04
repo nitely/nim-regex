@@ -1805,3 +1805,9 @@ test "tmisc2":
   check split("\n\n", re"(?m)^") == @["\n", "\n"]
   check split("foobar", re"(?<=o)b") == @["foo", "ar"]
   check split("foobar", re"o(?=b)") == @["fo", "bar"]
+  block:
+    var m: RegexMatch
+    check find("abcxyz", re"(abc)|\w+", m)
+    check m.boundaries == 0 .. 2
+    check find("xyzabc", re"(abc)|\w+", m)
+    check m.boundaries == 0 .. 5

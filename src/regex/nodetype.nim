@@ -71,11 +71,13 @@ type
     reNotLookbehind,  # (?<!...)
     reSkip,  # dummy
     reEoe  # End of expression
+  NodeUid* = int16
   Node* = object
     kind*: NodeKind
     cp*: Rune
     next*: seq[int16]
     isGreedy*: bool
+    uid*: NodeUid
     # reGroupStart, reGroupEnd
     idx*: int16  # todo: rename?
     isCapturing*: bool
@@ -142,7 +144,7 @@ func initGroupStart*(
 
 func initSkipNode*(next: openArray[int16]): Node =
   ## Return a dummy node that should be skipped
-  ## in the matching
+  ## while traversing the NFA
   result = Node(
     kind: reSkip,
     cp: "#".toRune)

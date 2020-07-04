@@ -8,6 +8,7 @@ func check(cond: bool, msg: string) =
     raise newException(RegexError, msg)
 
 type
+  Enfa* = seq[Node]
   Nfa* = seq[Node]
   End = seq[int16]
     ## store all the last
@@ -47,7 +48,7 @@ func update(
     else:
         ends[ni].add ends[n]
 
-func eNfa(expression: seq[Node]): Nfa {.raises: [RegexError].} =
+func eNfa*(expression: seq[Node]): Enfa {.raises: [RegexError].} =
   ## Thompson's construction
   result = newSeqOfCap[Node](expression.len + 2)
   result.add initEOENode()
@@ -84,17 +85,19 @@ func eNfa(expression: seq[Node]): Nfa {.raises: [RegexError].} =
       let
         stateB = states.pop()
         stateA = states.pop()
-      n.next.add([stateA, stateB])
+      n.next.add [stateA, stateB]
       ends.update(ni, n.next)
       result.add n
       states.add ni
+      # XXX tmp hack
+      swap(result[^1].next[0], result[^1].next[1])
     of reZeroOrMore:
       check(
         states.len >= 1,
         "Invalid `*` operator, " &
         "nothing to repeat")
       let stateA = states.pop()
-      n.next.add([stateA, eoe])
+      n.next.add [stateA, eoe]
       ends.update(ni, n.next)
       result.combine(ends, stateA, ni)
       result.add n
@@ -107,7 +110,7 @@ func eNfa(expression: seq[Node]): Nfa {.raises: [RegexError].} =
         "Invalid `+` operator, " &
         "nothing to repeat")
       let stateA = states.pop()
-      n.next.add([stateA, eoe])
+      n.next.add [stateA, eoe]
       ends.update(ni, n.next)
       result.combine(ends, stateA, ni)
       result.add n
@@ -120,7 +123,7 @@ func eNfa(expression: seq[Node]): Nfa {.raises: [RegexError].} =
         "Invalid `?` operator, " &
         "nothing to make optional")
       let stateA = states.pop()
-      n.next.add([stateA, eoe])
+      n.next.add [stateA, eoe]
       ends.update(ni, n.next)
       result.add n
       states.add ni
@@ -193,8 +196,8 @@ type
     allZ*: TransitionsAll
     z*: ZclosureStates
 
-func eRemoval(
-  eNfa: Nfa,
+func eRemoval*(
+  eNfa: Enfa,
   transitions: var Transitions
 ): Nfa {.raises: [].} =
   ## Remove e-transitions and return
@@ -203,57 +206,47 @@ func eRemoval(
   ## Transitions are added in matching order (BFS),
   ## which may help matching performance
   #echo eNfa
-  var eNfa = eNfa
-  transitions.allZ.setLen(eNfa.len)
+  result = newSeqOfCap[Node](eNfa.len)
+  transitions.allZ.setLen eNfa.len
   var statesMap = newSeq[int16](eNfa.len)
   for i in 0 .. statesMap.len-1:
     statesMap[i] = -1
-  var statePos = 0'i16
   let start = int16(eNfa.len-1)
-  statesMap[start] = statePos
-  inc statePos
+  result.add eNfa[start]
+  statesMap[start] = 0'i16
   var closure: TeClosure
   var zc: seq[Node]
   var qw = initDeque[int16](2)
-  qw.addFirst(start)
+  qw.addFirst start
   var qu: set[int16]
-  qu.incl(start)
+  qu.incl start
   var qa: int16
   while qw.len > 0:
     try:
       qa = qw.popLast()
     except IndexError:
       doAssert false
-    closure.setLen(0)
+    closure.setLen 0
     teClosure(closure, eNfa, qa)
-    eNfa[qa].next.setLen(0)
+    result[statesMap[qa]].next.setLen 0
     for qb, zclosure in closure.items:
-      eNfa[qa].next.add(qb)
       if statesMap[qb] == -1:
-        statesMap[qb] = statePos
-        inc statePos
-      assert statesMap[qa] > -1
-      assert statesMap[qb] > -1
-      transitions.allZ[statesMap[qa]].add(-1'i16)
-      zc.setLen(0)
+        result.add eNfa[qb]
+        statesMap[qb] = result.len.int16-1
+      doAssert statesMap[qb] > -1
+      doAssert statesMap[qa] > -1
+      result[statesMap[qa]].next.add statesMap[qb]
+      transitions.allZ[statesMap[qa]].add -1'i16
+      zc.setLen 0
       for z in zclosure:
-        zc.add(eNfa[z])
+        zc.add eNfa[z]
       if zc.len > 0:
-        transitions.z.add(zc)
+        transitions.z.add zc
         transitions.allZ[statesMap[qa]][^1] = int16(transitions.z.len-1)
       if qb notin qu:
-        qu.incl(qb)
-        qw.addFirst(qb)
-  transitions.allZ.setLen(statePos)
-  result = newSeq[Node](statePos)
-  for en, nn in statesMap.pairs:
-    if nn == -1:
-      continue
-    result[nn] = eNfa[en]
-    result[nn].next.setLen(0)
-    for en2 in eNfa[en].next:
-      doAssert statesMap[en2] > -1
-      result[nn].next.add(statesMap[en2])
+        qu.incl qb
+        qw.addFirst qb
+  transitions.allZ.setLen result.len
 
 # XXX rename to nfa when Nim v0.19 is dropped
 func nfa2*(

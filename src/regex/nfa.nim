@@ -89,8 +89,6 @@ func eNfa*(expression: seq[Node]): Enfa {.raises: [RegexError].} =
       ends.update(ni, n.next)
       result.add n
       states.add ni
-      # XXX tmp hack
-      swap(result[^1].next[0], result[^1].next[1])
     of reZeroOrMore:
       check(
         states.len >= 1,
@@ -169,10 +167,10 @@ func teClosure(
 ) =
   if state in visited:
     return
-  visited.incl(state)
+  visited.incl state
   var zTransitionsCurr = zTransitions
   if isTransitionZ(nfa[state]):
-    zTransitionsCurr.add(state)
+    zTransitionsCurr.add state
   if nfa[state].kind in matchableKind + {reEOE}:
     result.add((state, zTransitionsCurr))
     return

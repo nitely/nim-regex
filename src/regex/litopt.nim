@@ -190,7 +190,7 @@ func update(
 # replace (...)+, (...)*, (...)?,
 # and (...|...) by skip nodes.
 # Based on Thompson's construction
-func litNfa(exp: RPNExp): LitNfa =
+func toLitNfa(exp: RPNExp): LitNfa =
   result = newSeqOfCap[Node](exp.len + 2)
   result.add initEoeNode()
   var
@@ -234,9 +234,13 @@ func litNfa(exp: RPNExp): LitNfa =
   doAssert states.len == 1
   result.add initSkipNode(states)
 
-func lonelyLit(litNfa: LitNfa, nfa: Nfa): NodeUid =
+type
+  NodeIdx = int16
+
+func lonelyLit(exp: RpnExp): NodeIdx =
   template state: untyped = litNfa[stateIdx]
   result = -1
+  let litNfa = exp.toLitNfa()
   var cpSeen = initHashSet[Rune](16)
   var lits = newSeq[int16]()
   var stateIdx = litNfa.len.int16-1
@@ -252,41 +256,43 @@ func lonelyLit(litNfa: LitNfa, nfa: Nfa): NodeUid =
   # time, it seems sensible to limit the lits
   lits.setLen min(lits.len, 128)
   var litsTmp = newSeq[int16]()
-  for n in nfa:
+  for ni, n in exp.pairs:
     if n.kind notin matchableKind:
       continue
     for nlit in lits:
-      if n.uid >= litNfa[nlit].uid:
-        return litNfa[nlit].uid
+      doAssert n.uid <= litNfa[nlit].uid
+      if n.uid == litNfa[nlit].uid:
+        return ni.NodeIdx
       if not match(n, litNfa[nlit].cp):
         litsTmp.add nlit
     swap lits, litsTmp
     litsTmp.setLen 0
 
-# XXX use eNfa to handle greediness?
-
-# XXX order Nfa by BFS to improve
-#     cache locality. It does not
-#     matter in the macro matching, though
-func reversed(nfa: Nfa): Nfa =
-  ## Reverse Nfa transitions
-  when true:
-    var res = nfa
-    for n in res.mitems:
-      n.next.setLen 0
-    var visited: set[int16]
-    func rev(nfa: Nfa, ni, pi: int16) =
-      if pi > -1:
-        res[ni].next.add pi
-      if ni in visited:
-        return
-      visited.incl ni
-      for mi in nfa[ni].next:
-        rev(nfa, mi, ni)
-    rev(nfa, 0, -1)
-    result = res
-    for n in result.mitems:
-      n.next.reverse
+func prefix(eNfa: Enfa, uid: NodeUid): Enfa =
+  template state0: untyped = eNfa.len.int16-1
+  result = eNfa
+  for n in result.mitems:
+    n.next.setLen 0
+  var visited: set[int16]
+  func rev(res: var Enfa, ni, pi: int16) =
+    template state: untyped = eNfa[ni]
+    if pi > -1:
+      res[ni].next.add pi
+    if ni in visited:
+      return
+    visited.incl ni
+    # we only care about the prefix
+    if state.uid == uid:
+      return
+    if not state.isGreedy:
+      for mi in state.next.reversed:
+        rev(res, mi, ni)
+    else:
+      for mi in state.next:
+        rev(res, mi, ni)
+  rev(result, state0, -1)
+  for n in result.mitems:
+    n.next.reverse
   # Swap initial state by eoe
   var eoeIdx = -1'i16
   for ni, n in result.pairs:
@@ -294,33 +300,42 @@ func reversed(nfa: Nfa): Nfa =
       doAssert eoeIdx == -1
       eoeIdx = ni.int16
   doAssert eoeIdx != -1
-  for ni in nfa[0].next:
-    #doAssert result[ni].next[^1] == 0
-    #result[ni].next[^1] = eoeIdx
+  for ni in eNfa[state0].next:
     for i in 0 .. result[ni].next.len-1:
-      if result[ni].next[i] == 0:
+      if result[ni].next[i] == state0:
         result[ni].next[i] = eoeIdx
   doAssert result[eoeIdx].kind == reEoe
-  doAssert result[0].kind == reSkip
-  swap result[0].kind, result[eoeIdx].kind
-  swap result[0], result[eoeIdx]
-
-func cut(nfa: var Nfa, uid: NodeUid) =
-  ## Return Nfa where the initial uid state
-  ## is the initial state
+  doAssert result[state0].kind == reSkip
+  swap result[state0].kind, result[eoeIdx].kind
+  swap result[state0], result[eoeIdx]
+  # cut
   var nIdx = -1
-  for ni, n in nfa.pairs:
+  for ni, n in eNfa.pairs:
     if n.uid == uid:
       doAssert nIdx == -1
       nIdx = ni
   doAssert nIdx != -1
-  nfa[0].next = nfa[nIdx].next
+  result[state0].next = result[nIdx].next
 
-func fixGreediness(exp: seq[Node]): seq[Node] =
-  result = exp
-  for n in result.mitems:
-    if n.kind in {reZeroOrOne, reZeroOrMore, reOneOrMore}:
-      n.isGreedy = true
+type
+  LitOpt* = object
+    lit*: Rune
+    nfa*: Nfa
+
+func canOpt*(litOpt: LitOpt): bool =
+  return litOpt.nfa.len > 0
+
+func litopt2*(exp: RpnExp): LitOpt =
+  template litNode: untyped = exp[litIdx]
+  let litIdx = exp.lonelyLit()
+  if litIdx == -1:
+    return
+  result.lit = litNode.cp
+  var transitions: Transitions
+  result.nfa = exp
+    .eNfa
+    .prefix(litNode.uid)
+    .eRemoval(transitions)
 
 when isMainModule:
   from unicode import toUtf8, `$`
@@ -336,17 +351,14 @@ when isMainModule:
     rpn(s, groups)
 
   func lit(s: string): string =
-    var transitions: Transitions
-    let rpn = s.rpn
-    let uid = lonelyLit(
-      rpn.litNfa,
-      rpn.nfa2(transitions))
-    if uid == -1: return ""
-    for n in rpn:
-      if n.uid == uid:
-        doAssert result == ""
-        result = n.cp.toUtf8
-    doAssert result != ""
+    let opt = s.rpn.litopt2
+    if not opt.canOpt: return ""
+    return opt.lit.toUtf8
+
+  func prefix(s: string): Nfa =
+    let opt = s.rpn.litopt2
+    if not opt.canOpt: return
+    return opt.nfa
 
   func toNfa(s: string): Nfa =
     var groups: GroupsCapture
@@ -354,25 +366,6 @@ when isMainModule:
     result = s
       .rpn(groups)
       .nfa2(transitions)
-
-  func toNfaRv(s: string): Nfa =
-    var groups: GroupsCapture
-    var transitions: Transitions
-    result = s
-      .rpn(groups)
-      .fixGreediness
-      .nfa2(transitions)
-      .reversed()
-
-  func prefix(s: string): Nfa =
-    var transitions: Transitions
-    let rpn = s.rpn
-    let uid = lonelyLit(
-      rpn.litNfa,
-      rpn.nfa2(transitions))
-    if uid == -1: return
-    result = s.toNfaRv()
-    result.cut uid
 
   proc toString(
     nfa: Nfa,
@@ -400,6 +393,7 @@ when isMainModule:
     result = toString(nfa, 0, visited)
 
   doAssert lit"(abc)+" == ""
+  doAssert lit"(abc)+xyz" == "x"
   doAssert lit"(abc)*" == ""
   doAssert lit"(abc)*xyz" == "x"
   doAssert lit"(a|b)" == ""
@@ -412,6 +406,16 @@ when isMainModule:
   doAssert lit"a?b" == "b"
   doAssert lit"a" == "a"
   doAssert lit"(a|b)xyz" == "x"
+  doAssert lit"a+b" == "b"
+  doAssert lit"a*b" == "b"
+  doAssert lit"b+b" == ""
+  doAssert lit"b*b" == ""
+  doAssert lit"\d+x" == "x"
+  doAssert lit"\d*x" == "x"
+  doAssert lit"\d?x" == "x"
+  doAssert lit"\w+x" == ""
+  doAssert lit"\w*x" == ""
+  doAssert lit"\w?x" == ""
   doAssert lit"(\w\d)*abc" == ""
   doAssert lit"(\w\d)+abc" == ""
   doAssert lit"(\w\d)?abc" == ""
@@ -432,10 +436,8 @@ when isMainModule:
   doAssert r"\w@&%".prefix.toString == r"\w".toNfa.toString
   doAssert r"\w\d@&%".prefix.toString == r"\d\w".toNfa.toString
 
-  # XXX fix (remove nfa.nim tmp hack)
-  #doAssert r"(a|b)xyz".prefix.toString == r"(a|b)".toNfa.toString
-  doAssert r"(a|b)xyz".prefix.toString == "[#, [a, eoe], [b, eoe]]"
-  #doAssert r"(a|ab)\wxyz".prefix.toString == r"\w(a|ab)".toNfa.toString
+  doAssert r"(a|b)xyz".prefix.toString == r"(a|b)".toNfa.toString
+  doAssert r"(a|ab)\w@&%".prefix.toString == r"\w(a|ba)".toNfa.toString
   doAssert r"(a|ab)\w@&%".prefix.toString == "[#, [w, [a, eoe], [b, [a, eoe]]]]"
   doAssert r"a?b".prefix.toString == r"a?".toNfa.toString
   doAssert r"".prefix.len == 0

@@ -5,6 +5,7 @@ import sets
 import algorithm
 
 import nfa
+import litopt
 
 type
   CaptIdx* = int32
@@ -50,10 +51,12 @@ type
     groupsCount*: int16
     namedGroups*: OrderedTable[string, int16]
     #flags*: set[RegexFlag]
+    litOpt*: LitOpt
   MatchFlag* = enum
     mfShortestMatch
     mfNoCaptures
     mfFindMatch
+    mfFindMatchOpt
   MatchFlags* = set[MatchFlag]
   RegexMatch* = object
     ## result from matching operations

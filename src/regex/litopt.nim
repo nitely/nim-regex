@@ -321,6 +321,7 @@ type
   LitOpt* = object
     lit*: Rune
     nfa*: Nfa
+    tns*: Transitions
 
 func canOpt*(litOpt: LitOpt): bool =
   return litOpt.nfa.len > 0
@@ -331,11 +332,10 @@ func litopt2*(exp: RpnExp): LitOpt =
   if litIdx == -1:
     return
   result.lit = litNode.cp
-  var transitions: Transitions
   result.nfa = exp
     .eNfa
     .prefix(litNode.uid)
-    .eRemoval(transitions)
+    .eRemoval(result.tns)
 
 when isMainModule:
   from unicode import toUtf8, `$`
@@ -432,6 +432,7 @@ when isMainModule:
   doAssert lit"(?m)$" == ""  # XXX \n
 
   doAssert r"abc".prefix.toString == r"".toNfa.toString
+  doAssert r"abc".prefix.toString == "[#, eoe]"
   doAssert r"\w@".prefix.toString == r"\w".toNfa.toString
   doAssert r"\w@&%".prefix.toString == r"\w".toNfa.toString
   doAssert r"\w\d@&%".prefix.toString == r"\d\w".toNfa.toString

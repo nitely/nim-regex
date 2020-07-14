@@ -160,7 +160,7 @@ func isTransitionZ(n: Node): bool {.inline.} =
 
 func teClosure(
   result: var TeClosure,
-  nfa: Nfa,
+  enfa: Enfa,
   state: int16,
   visited: var set[int16],
   zTransitions: Zclosure
@@ -169,23 +169,23 @@ func teClosure(
     return
   visited.incl state
   var zTransitionsCurr = zTransitions
-  if isTransitionZ(nfa[state]):
+  if isTransitionZ(enfa[state]):
     zTransitionsCurr.add state
-  if nfa[state].kind in matchableKind + {reEOE}:
+  if enfa[state].kind in matchableKind + {reEOE}:
     result.add((state, zTransitionsCurr))
     return
-  for s in nfa[state].next:
-    teClosure(result, nfa, s, visited, zTransitionsCurr)
+  for s in enfa[state].next:
+    teClosure(result, enfa, s, visited, zTransitionsCurr)
 
 func teClosure(
   result: var TeClosure,
-  nfa: Nfa,
+  enfa: Enfa,
   state: int16
 ) =
   var visited: set[int16]
   var zclosure: Zclosure
-  for s in nfa[state].next:
-    teClosure(result, nfa, s, visited, zclosure)
+  for s in enfa[state].next:
+    teClosure(result, enfa, s, visited, zclosure)
 
 type
   TransitionsAll* = seq[seq[int16]]

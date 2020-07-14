@@ -81,6 +81,8 @@ template shortestMatch: untyped {.dirty.} =
 template findMatch: untyped {.dirty.} =
   when mfFindMatchOpt in flags:
     if smA.len == 0:
+      # XXX needed on exit too
+      m.boundaries = i .. i-1
       return false
   smA.add((0'i16, -1'i32, i .. i-1))
   if regex.nfa[smA[0][0]].kind == reEoe:

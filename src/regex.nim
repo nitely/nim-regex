@@ -829,6 +829,8 @@ when isMainModule:
   doAssert m.boundaries == 0 .. 1
   doAssert "bc".find(re"bc", m)
   doAssert m.boundaries == 0 .. 1
+  doAssert "ababcd".find(re"bc", m)
+  doAssert m.boundaries == 3 .. 4
   doAssert "abc@xyz".find(re"\w@", m)
   doAssert m.boundaries == 2 .. 3
   doAssert "ab1c@xyz".find(re"\d\w@", m)

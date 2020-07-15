@@ -823,6 +823,7 @@ when isMainModule:
   doAssert r"[[:alpha:][:digit:]]".toAtoms == "[[a-zA-Z][0-9]]"
 
   var m: RegexMatch
+  #when false:
   doAssert "abcd".find(re"bc", m)
   doAssert m.boundaries == 1 .. 2
   doAssert "bcd".find(re"bc", m)
@@ -835,6 +836,16 @@ when isMainModule:
   doAssert m.boundaries == 2 .. 3
   doAssert "ab1c@xyz".find(re"\d\w@", m)
   doAssert m.boundaries == 2 .. 4
+  doAssert "##axyz##".find(re"(a|b)xyz", m)
+  doAssert m.boundaries == 2 .. 5
+  doAssert "##bxyz##".find(re"(a|b)xyz", m)
+  doAssert m.boundaries == 2 .. 5
+  doAssert "##x#ax#axy#bxyz##".find(re"(a|b)xyz", m)
+  doAssert m.boundaries == 11 .. 14
+  doAssert "##z#xyz#yz#bxyz##".find(re"(a|b)xyz", m)
+  doAssert m.boundaries == 11 .. 14
+  doAssert "#xabcx#abc#".find(re"\babc\b", m)
+  doAssert m.boundaries == 7 .. 9
   echo "ok"
 
   when false:

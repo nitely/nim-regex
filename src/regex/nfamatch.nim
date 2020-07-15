@@ -192,10 +192,11 @@ when true:
     start = 0
   ): bool {.inline.} =
     template nfa: untyped = regex.litOpt.nfa
+    doAssert start < len(text)
     var
       smA, smB: Submatches
       c = Rune(-1)
-      cPrev = -1'i32
+      cPrev = text.runeAt(start).int32
       i = start
       iPrev = start
     smA = newSubmatches(nfa.len)

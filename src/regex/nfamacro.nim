@@ -346,7 +346,7 @@ template submatch(
   captx, matched: untyped
 ): untyped =
   smB.clear()
-  for n, capt, bounds in smA.items:
+  for n, capt, bounds in smA.mitems:
     when mfFindMatch in flags:
       findMatchBailOut(eoeNode, smB, n, capt, bounds)
     genSubmatch(
@@ -408,7 +408,7 @@ template submatchEoe(
   captx, matched: untyped
 ): untyped =
   smB.clear()
-  for n, capt, bounds in smA.items:
+  for n, capt, bounds in smA.mitems:
     when mfFindMatch in flags:
       findMatchBailOut(eoeNode, smB, n, capt, bounds)
     genSubmatchEoe(

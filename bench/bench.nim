@@ -69,13 +69,14 @@ bench(re_lits_find, m):
     d = re.find(text, lits_find_re)
   doNotOptimizeAway(d)
 
-const lits_find = regex.re"do|re|mi|fa|sol"
+when false:  # XXX remove
+  const lits_find = regex.re"do|re|mi|fa|sol"
 
-benchRelative(regex_lits_find, m):
-  var m2: regex.RegexMatch
-  for i in 0 ..< m:
-    discard regex.find(text, lits_find, m2)
-  doNotOptimizeAway(m2)
+  benchRelative(regex_lits_find, m):
+    var m2: regex.RegexMatch
+    for i in 0 ..< m:
+      discard regex.find(text, lits_find, m2)
+    doNotOptimizeAway(m2)
 
 const bench_text = staticRead("input-text.txt")
 
@@ -99,10 +100,53 @@ benchRelative(email_find_all, m):
   doAssert d == 92
   doNotOptimizeAway(d)
 
-when false:
+var uri_find_all_re = re.re"[\w]+://[^/\s?#]+[^\s?#]+(?:\?[^\s#]*)?(?:#[^\s]*)?"
+
+bench(re_uri_find_all, m):
+  var d = 0
+  for i in 0 ..< m:
+    for _ in re.findAll(bench_text, uri_find_all_re):
+      d += 1
+  doAssert d == 5301
+  doNotOptimizeAway(d)
+
+const uri_find_all = regex.re"(?-u)[\w]+://[^/\s?#]+[^\s?#]+(?:\?[^\s#]*)?(?:#[^\s]*)?"
+
+benchRelative(uri_find_all, m):
+  var d = 0
+  for i in 0 ..< m:
+    for _ in regex.findAll(bench_text, uri_find_all):
+      d += 1
+  doAssert d == 5301
+  doNotOptimizeAway(d)
+
+var ip_find_all_re = re.re"(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9])\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9])"
+
+bench(re_ip_find_all, m):
+  var d = 0
+  for i in 0 ..< m:
+    for _ in re.findAll(bench_text, ip_find_all_re):
+      d += 1
+  doAssert d == 5
+  doNotOptimizeAway(d)
+
+const ip_find_all = regex.re"(?-u)(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9])\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9])"
+
+benchRelative(ip_find_all, m):
+  var d = 0
+  for i in 0 ..< m:
+    for _ in regex.findAll(bench_text, ip_find_all):
+      d += 1
+  doAssert d == 5
+  doNotOptimizeAway(d)
+
+when true:
   bench(runes, m):
-    for i in text.runes:
-      memoryClobber()
+    var d = 0
+    for i in 0 ..< m:
+      for _ in bench_text.runes:
+        d += 1
+    doNotOptimizeAway(d)
 
 bench(dummy, m):
   for i in 0 ..< m:

@@ -123,5 +123,9 @@ iterator items*(sm: Submatches): PState {.inline.} =
 func cap*(sm: Submatches): int {.inline.} =
   sm.ss.len
 
+iterator mitems*(sm: Submatches): var PState {.inline.} =
+  for i in 0 .. sm.len-1:
+    yield sm.sx[i]
+
 when defined(release):
   {.pop.}

@@ -846,6 +846,10 @@ when isMainModule:
   doAssert m.boundaries == 11 .. 14
   doAssert "#xabcx#abc#".find(re"\babc\b", m)
   doAssert m.boundaries == 7 .. 9
+  doAssert "#foo://#".find(re"[\w]+://", m)
+  doAssert m.boundaries == 1 .. 6
+  doAssert "x#foo://#".find(re"[\w]+://", m)
+  doAssert m.boundaries == 2 .. 7
   echo "ok"
 
   when false:

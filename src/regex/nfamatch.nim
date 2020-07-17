@@ -40,7 +40,7 @@ func submatch(
   smB.clear()
   var captx: int32
   var matched = true
-  for n, capt, bounds in smA.items:
+  for n, capt, bounds in smA.mitems:
     when mfFindMatch in flags:
       findMatchBailOut()
     for nti, nt in nfa[n].next.pairs:
@@ -135,6 +135,8 @@ func matchImpl*(
     cPrev = c.int32
   submatch(smA, smB, capts, regex, iPrev, cPrev, -1'i32, -1'i32, flags)
   if smA.len == 0:
+    when mfFindMatchOpt in flags:
+      m.boundaries = i .. i-1
     return false
   constructSubmatches(m.captures, capts, smA[0].ci, regex.groupsCount)
   if regex.namedGroups.len > 0:
@@ -143,6 +145,15 @@ func matchImpl*(
   return true
 
 when true:
+  type
+    SM* = object
+      a: Submatches
+      b: Submatches
+  func newSm*(size: int): SM =
+    result = SM(
+      a: newSubmatches(size),
+      b: newSubmatches(size))
+
   template bwFastRuneAt(
     s: string, n: var int, result: var Rune
   ) =
@@ -164,12 +175,12 @@ when true:
     template tns: untyped = regex.litOpt.tns
     smB.clear()
     var matched = true
-    for n, capt, bounds in smA.items:
+    for n, capt, bounds in smA.mitems:
       findMatchBailOut()
       for nti, nt in nfa[n].next.pairs:
         if smB.hasState(nt):
           continue
-        debugEcho nfa[nt].kind
+        #debugEcho nfa[nt].kind
         if nfa[nt].kind != reEoe and not match(nfa[nt], c2.Rune):
           continue
         if tns.allZ[n][nti] == -1'i16:
@@ -204,8 +215,8 @@ when true:
     smA.add((0'i16, -1'i32, start .. start-1))
     while i > 0:
       bwFastRuneAt(text, i, c)
-      debugEcho "txt.Rune=", c
-      debugEcho "txt.i=", i
+      #debugEcho "txt.Rune=", c
+      #debugEcho "txt.i=", i
       submatch2(smA, smB, regex, iPrev, cPrev, c.int32, c.int32)
       if smA.len == 0:
         return false
@@ -224,28 +235,31 @@ when true:
     text: string,
     regex: Regex,
     m: var RegexMatch,
-    start: int
+    start: Natural
   ): bool =
     template opt: untyped = regex.litOpt
     result = false
     var start = start
+    var prevStart = -1
     while start < len(text):
-      debugEcho "lit=", opt.lit
-      debugEcho "start=", start
+      doAssert start > prevStart
+      prevStart = start
+      #debugEcho "lit=", opt.lit
+      #debugEcho "start=", start
       var litIdx = text.find(opt.lit.char, start)
       if litIdx == -1:
         return false
-      debugEcho "litIdx=", litIdx
+      #debugEcho "litIdx=", litIdx
       doAssert litIdx >= start
       start = litIdx
       if not matchImpl2(text, regex, m, start):
-        debugEcho "not.Match=", start
+        #debugEcho "not.Match=", start
         start = litIdx+1
       else:
         #doAssert start <= m.boundaries.a
-        debugEcho "bounds=", m.boundaries
+        #debugEcho "bounds=", m.boundaries
         start = m.boundaries.a
         if matchImpl(text, regex, m, {mfFindMatch, mfFindMatchOpt}, start):
           return true
-        debugEcho "bound.b=", m.boundaries.b
+        #debugEcho "bound.b=", m.boundaries.b
         start = m.boundaries.b

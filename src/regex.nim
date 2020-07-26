@@ -454,18 +454,16 @@ iterator findAll*(
       inc i
 
   var i = start
-  var m: RegexMatch
+  var ms = initRegexMatches(pattern.nfa.len)  # XXX ms: RegexMatches
   while i <= len(s):
-    if not find(s, pattern, m, i):
-      break
-    elif m.boundaries.b >= m.boundaries.a:
-      doAssert i < m.boundaries.b+1
-      i = m.boundaries.b+1
-    else:  # empty match
-      doAssert i <= m.boundaries.a
-      i = m.boundaries.a
-      runeIncAt(s, i)
-    yield m
+    i = matchImpl(s, pattern, ms, i)
+    #debugEcho i
+    if i < 0: break
+    var zm = false
+    for m in ms.matches(pattern):
+      zm = m.boundaries.a > m.boundaries.b
+      yield m
+    if zm and i == len(s): break
 
 func findAll*(
   s: string,
@@ -760,7 +758,8 @@ proc toString(pattern: Regex): string {.used.} =
   var visited: set[int16]
   result = pattern.toString(0, visited)
 
-when isMainModule:
+#when isMainModule:
+when false:
   func toAtoms(s: string): string =
     var groups: GroupsCapture
     let atoms = s

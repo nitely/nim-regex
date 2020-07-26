@@ -512,7 +512,7 @@ test "tgreediness":
     var m: RegexMatch
     check match("aaaa", re"(a*)(a*?)(a*?)", m)
     check m.toStrCaptures("aaaa") ==
-       @[@["aaaa"], @[""], @[""]]
+      @[@["aaaa"], @[""], @[""]]
 
 test "tassertions":
   check "bbaa aa".matchWithCapt(re"([\w ]*?)(\baa\b)") ==
@@ -940,11 +940,22 @@ test "tsplitIncl":
   check splitIncl("", re"foo") == @[""]
 
 test "tfindall":
+  check findAllBounds("abcabc abc", re"abc abc|abc") == @[0 .. 2, 3 .. 9]
   check findAllBounds("abcabc", re"bc") == @[1 .. 2, 4 .. 5]
   check findAllBounds("aa", re"a") == @[0 .. 0, 1 .. 1]
   check findAllBounds("a", re"a") == @[0 .. 0]
   check findAllBounds("a", re"b") == newSeq[Slice[int]]()
   check findAllBounds("", re"b") == newSeq[Slice[int]]()
+  check findAllBounds("abc ab", re"\w+ *") == @[0 .. 3, 4 .. 5]
+  check findAllBounds("AAA :   : BBB", re"\s*:\s*") == @[3 .. 7, 8 .. 9]
+  check findAllBounds("a\n  b\n c\n  ", re"(?m)^") ==
+    @[0 .. -1, 2 .. 1, 6 .. 5, 9 .. 8]
+  check findAllBounds("a\n  b\n c\n  ", re"(?m)$") ==
+    @[1 .. 0, 5 .. 4, 8 .. 7, 11 .. 10]
+  check findAllBounds("\n\n", re"(?m)^") == @[0 .. -1, 1 .. 0, 2 .. 1]
+  check findAllBounds("foobarbaz", re"(?<=o)b") == @[3 .. 3]
+  check findAllBounds("foobar", re"o(?=b)") == @[2 .. 2]
+  check findAllBounds("aaa", re"\w+b|\w") == @[0 .. 0, 1 .. 1, 2 .. 2]
   # This follows nre's empty match behaviour
   check findAllBounds("a", re"") == @[0 .. -1, 1 .. 0]
   check findAllBounds("ab", re"") == @[0 .. -1, 1 .. 0, 2 .. 1]
@@ -960,6 +971,7 @@ test "tfindall":
   check findAllBounds("aaa", re"a+") == @[0 .. 2]
   check findAllBounds("foo", re"") ==
     @[0 .. -1, 1 .. 0, 2 .. 1, 3 .. 2]
+  check findAllBounds("abb", re"a*") == @[0 .. 0, 1 .. 0, 2 .. 1, 3 .. 2]
 
 test "tfindandcaptureall":
   check findAndCaptureAll("abcabc", re"bc") == @["bc", "bc"]

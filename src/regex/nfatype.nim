@@ -71,7 +71,10 @@ func clear*(m: var RegexMatch) {.inline.} =
 type
   NodeIdx* = int16
   Bounds* = Slice[int]
-  PState* = (NodeIdx, CaptIdx, Bounds)
+  PState* = tuple
+    ni: NodeIdx
+    ci: CaptIdx
+    bounds: Bounds
   Submatches* = ref object
     ## Parallel states would be a better name.
     ## This is a sparse set
@@ -93,15 +96,15 @@ func `[]`*(sm: Submatches, i: int): PState {.inline.} =
   sm.sx[i]
 
 func hasState*(sm: Submatches, n: int16): bool {.inline.} =
-  sm.ss[n] < sm.si and sm.sx[sm.ss[n]][0] == n
+  sm.ss[n] < sm.si and sm.sx[sm.ss[n]].ni == n
 
 func add*(sm: var Submatches, item: PState) {.inline.} =
-  assert(not sm.hasState(item[0]))
+  #assert(not sm.hasState(item.ni))
   assert sm.si <= sm.sx.len
   if (sm.si == sm.sx.len).unlikely:
     sm.sx.setLen(sm.sx.len * 2)
   sm.sx[sm.si] = item
-  sm.ss[item[0]] = sm.si
+  sm.ss[item.ni] = sm.si
   sm.si += 1'i16
 
 func len*(sm: Submatches): int {.inline.} =

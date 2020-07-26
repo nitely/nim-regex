@@ -455,15 +455,12 @@ iterator findAll*(
 
   var i = start
   var ms = initRegexMatches(pattern.nfa.len)  # XXX ms: RegexMatches
-  while i <= len(s):
-    i = matchImpl(s, pattern, ms, i)
+  while i < len(s):
+    i = findSomeImpl(s, pattern, ms, i)
     #debugEcho i
     if i < 0: break
-    var zm = false
     for m in ms.matches(pattern):
-      zm = m.boundaries.a > m.boundaries.b
       yield m
-    if zm and i == len(s): break
 
 func findAll*(
   s: string,
@@ -471,7 +468,7 @@ func findAll*(
   start = 0
 ): seq[RegexMatch] {.inline, raises: [].} =
   for m in findAll(s, pattern, start):
-    result.add(m)
+    result.add m
 
 func findAndCaptureAll*(
   s: string, pattern: Regex

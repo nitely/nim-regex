@@ -136,36 +136,12 @@ func matchImpl*(
   m.boundaries = smA[0].bounds
   return true
 
-# Algo
-# * all submatches have the same end,
-#   states in `m` will have lesser/equal
-#   end, and they overlap unless the start
-#   of submatches is greater than end of
-#   state in `m`.
-# * return true if there
-#   is one or more matches,
-#   iterate ms to get all
-#   matches in the consumed range
-# * return when either the first submatch
-#   is reEoe, or there is a state in `m`
-#   with lesser end than the start of first
-#   submatch
-# * when there is a return match
-#   i.e: first element in submatches
-#   is reEoe, it has the longest end bound,
-#   so it overlaps all matches in m or
-#   the latest few, there may be one
-#   that ends before the match starts
-#   re"abc abc|abc" -> "abcabc abc"
-
 when true:
   type
     MatchItem = tuple
       capt: CaptIdx
       bounds: Bounds
-    Matches = object
-      s: seq[MatchItem]
-      start: int
+    Matches = seq[MatchItem]
     RegexMatches* = object
       a, b: Submatches
       m: Matches
@@ -179,20 +155,18 @@ when true:
   # XXX make it log(n)?
   func add(ms: var Matches, m: MatchItem) {.inline.} =
     var size = 0
-    for i in countdown(ms.s.len-1, 0):
-      if max(ms.s[i].bounds.b, ms.s[i].bounds.a) < m.bounds.a:
+    for i in countdown(ms.len-1, 0):
+      if max(ms[i].bounds.b, ms[i].bounds.a) < m.bounds.a:
         size = i+1
         break
-    ms.s.setLen(size)
-    ms.s.add m
+    ms.setLen(size)
+    system.add(ms, m)
 
   func clear(ms: var Matches) {.inline.} =
-    ms.start = 0
-    ms.s.setLen 0
+    ms.setLen 0
 
   func hasMatches(ms: RegexMatches): bool {.inline.} =
-    assert ms.m.s.len >= ms.m.start
-    return ms.m.s.len > 0
+    return ms.m.len > 0
 
   func clear(ms: var RegexMatches) {.inline.} =
     ms.a.clear()
@@ -209,10 +183,10 @@ when true:
     var result: RegexMatch
     if regex.namedGroups.len > 0:
       result.namedGroups = regex.namedGroups
-    for i in m.start .. m.s.len-1:
+    for i in 0 .. m.len-1:
       constructSubmatches(
-        result.captures, ms.c, m.s[i].capt, regex.groupsCount)
-      result.boundaries = m.s[i].bounds
+        result.captures, ms.c, m[i].capt, regex.groupsCount)
+      result.boundaries = m[i].bounds
       yield result
 
   func submatch(
@@ -273,7 +247,7 @@ when true:
       inc smi
     swap smA, smB
 
-  func matchImpl*(
+  func findSomeImpl*(
     text: string,
     regex: Regex,
     ms: var RegexMatches,
@@ -290,19 +264,23 @@ when true:
     if 0 <= start-1 and start-1 <= len(text)-1:
       cPrev = bwRuneAt(text, start-1).int32
     while i < len(text):
+      #debugEcho "it= ", i, " ", cPrev
       fastRuneAt(text, i, c, true)
       submatch(ms, regex, iPrev, cPrev, c.int32, c.int32)
-      #if smA.len == 0:
-      #  debugEcho "smA 0"
-      #  if ms.hasMatches():
-      #    debugEcho "sma=0=", i
-      #    return i
+      when false:  # early return
+        if smA.len == 0:
+          debugEcho "smA 0"
+          if ms.hasMatches() and i < len(text):
+            #debugEcho "m= ", ms.m.s
+            #debugEcho "sma=0=", i
+            return i
       smA.add (0'i16, -1'i32, i .. i-1)
       iPrev = i
       cPrev = c.int32
     submatch(ms, regex, iPrev, cPrev, -1'i32, -1'i32)
     doAssert smA.len == 0
     if ms.hasMatches():
+      #debugEcho "m= ", ms.m.s
       return i
     #debugEcho "noMatch"
     return -1

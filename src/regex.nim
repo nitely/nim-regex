@@ -454,12 +454,14 @@ iterator findAll*(
       inc i
 
   var i = start
-  var ms = initRegexMatches(pattern.nfa.len)  # XXX ms: RegexMatches
+  var m: RegexMatch
+  var ms: RegexMatches
   while i < len(s):
     i = findSomeImpl(s, pattern, ms, i)
     #debugEcho i
     if i < 0: break
-    for m in ms.matches(pattern):
+    for mi in ms:
+      fillMatchImpl(m, mi, ms, pattern)
       yield m
 
 func findAll*(

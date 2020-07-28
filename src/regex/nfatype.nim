@@ -117,5 +117,8 @@ iterator items*(sm: Submatches): PState {.inline.} =
   for i in 0 .. sm.len-1:
     yield sm.sx[i]
 
+func cap*(sm: Submatches): int {.inline.} =
+  sm.ss.len
+
 when defined(release):
   {.pop.}

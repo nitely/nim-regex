@@ -972,10 +972,32 @@ test "tfindall":
   check findAllBounds("foo", re"") ==
     @[0 .. -1, 1 .. 0, 2 .. 1, 3 .. 2]
   check findAllBounds("abb", re"a*") == @[0 .. 0, 1 .. 0, 2 .. 1, 3 .. 2]
+  check findAllBounds("abbbbccccdXabbbbccccdX", re"a(b|c)*d") ==
+    @[0 .. 9, 11 .. 20]
+  check findAllBounds("abbbXabbbX", re"((a)*(b)*)") ==
+    @[0 .. 3, 4 .. 3, 5 .. 8, 9 .. 8, 10 .. 9]
+  check findAllBounds("abbbXabbbX", re"((a)+(b)+)") ==
+    @[0 .. 3, 5 .. 8]
+  check findAllBounds("abbbXabbbX", re"((a(b)*)+(b)*)") ==
+    @[0 .. 3, 5 .. 8]
+  check findAllBounds("abXabX", re"a(b|c)*d") == newSeq[Slice[int]]()
+  check findAllBounds("aaanasdnasdXaaanasdnasd", re"((a)*n?(asd)*)+") ==
+    @[0 .. 10, 11 .. 10, 12 .. 22, 23 .. 22]
 
 test "tfindandcaptureall":
   check findAndCaptureAll("abcabc", re"bc") == @["bc", "bc"]
-  check findAndCaptureAll("a1b2c3a4b5c6", re"\d") == @["1", "2", "3", "4", "5", "6"]
+  check findAndCaptureAll("a1b2c3a4b5c6", re"\d") ==
+    @["1", "2", "3", "4", "5", "6"]
+  check findAndCaptureAll("abbbbccccdXabbbbccccdX", re"a(b|c)*d") ==
+    @["abbbbccccd", "abbbbccccd"]
+  check findAndCaptureAll("abbbXabbbX", re"((a)*(b)*)") ==
+    @["abbb", "", "abbb", "", ""]
+  check findAndCaptureAll("abbbXabbbX", re"((a)+(b)+)") ==
+    @["abbb", "abbb"]
+  check findAndCaptureAll("abbbXabbbX", re"((a(b)*)+(b)*)") ==
+    @["abbb", "abbb"]
+  check findAndCaptureAll("abbbXbbXabbb", re"((a(b)*)*(b)*)") ==
+    @["abbb", "", "bb", "", "abbb", ""]
 
 test "tstarts_with":
   check "abc".startsWith(re"ab")

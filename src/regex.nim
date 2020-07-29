@@ -454,9 +454,11 @@ iterator findAll*(
       inc i
 
   var i = start
+  var i2 = start-1
   var m: RegexMatch
   var ms: RegexMatches
   while i < len(s):
+    doAssert(i > i2); i2 = i
     i = findSomeImpl(s, pattern, ms, i)
     #debugEcho i
     if i < 0: break
@@ -486,7 +488,6 @@ func findAndCaptureAll*(
   for m in s.findAll(pattern):
     result.add s[m.boundaries]
 
-# XXX there is no static version because of Nim/issues/13791
 iterator split*(s: string, sep: Regex): string {.inline, raises: [].} =
   ## return not matched substrings
   runnableExamples:
@@ -499,27 +500,19 @@ iterator split*(s: string, sep: Regex): string {.inline, raises: [].} =
 
   var
     first, last, i = 0
-    skipFirst = true
-    m: RegexMatch
-  # This is pretty much findAll
-  while i <= len(s):
-    if not find(s, sep, m, i):
-      i = s.len+1
-      last = s.len+1
-    elif m.boundaries.b >= m.boundaries.a:
-      doAssert i < m.boundaries.b+1
-      i = m.boundaries.b+1
-      last = m.boundaries.a
-    else:  # empty match
-      doAssert i <= m.boundaries.a
-      i = m.boundaries.a
-      runeIncAt(s, i)
-      last = m.boundaries.a
-      if last == 0 and skipFirst:  # edge case
-        skipFirst = false
-        continue
-    yield substr(s, first, last-1)
-    first = m.boundaries.b+1
+    i2 = -1
+    done = false
+    ms: RegexMatches
+  while not done:
+    doAssert(i > i2); i2 = i
+    i = findSomeImpl(s, sep, ms, i)
+    done = i < 0 or i >= len(s)
+    if done: ms.dummyMatch(s.len)
+    for ab in ms.bounds:
+      last = ab.a
+      if ab.a > 0 or ab.a <= ab.b:  # skip first empty match
+        yield substr(s, first, last-1)
+      first = ab.b+1
 
 func split*(s: string, sep: Regex): seq[string] {.inline, raises: [].} =
   ## return not matched substrings
@@ -540,31 +533,27 @@ func splitIncl*(s: string, sep: Regex): seq[string] {.inline, raises: [].} =
       expected = @["a", ",", "b"]
     doAssert parts == expected
 
+  template ab: untyped = m.boundaries
   var
     first, last, i = 0
-    skipFirst = true
+    i2 = -1
+    done = false
     m: RegexMatch
-  while i <= len(s):
-    if not find(s, sep, m, i):
-      i = s.len+1
-      last = s.len+1
-    elif m.boundaries.b >= m.boundaries.a:
-      doAssert i < m.boundaries.b+1
-      i = m.boundaries.b+1
-      last = m.boundaries.a
-    else:  # empty match
-      doAssert i <= m.boundaries.a
-      i = m.boundaries.a
-      runeIncAt(s, i)
-      last = m.boundaries.a
-      if last == 0 and skipFirst:  # edge case
-        skipFirst = false
-        continue
-    result.add substr(s, first, last-1)
-    first = m.boundaries.b+1
-    for g in 0 ..< m.groupsCount:
-      for sl in m.group(g):
-        result.add substr(s, sl.a, sl.b)
+    ms: RegexMatches
+  while not done:
+    doAssert(i > i2); i2 = i
+    i = findSomeImpl(s, sep, ms, i)
+    done = i < 0 or i >= len(s)
+    if done: ms.dummyMatch(s.len)
+    for mi in ms:
+      fillMatchImpl(m, mi, ms, sep)
+      last = ab.a
+      if ab.a > 0 or ab.a <= ab.b:  # skip first empty match
+        result.add substr(s, first, last-1)
+        for g in 0 ..< m.groupsCount:
+          for sl in m.group(g):
+            result.add substr(s, sl.a, sl.b)
+      first = ab.b+1
 
 func startsWith*(
   s: string, pattern: Regex, start = 0
@@ -636,7 +625,7 @@ func addsubstr(
     last = min(last, s.high)
   if first > last: return
   let n = result.len
-  result.setLen(result.len + last - first + 1)
+  result.setLen(result.len + last-first+1)
   # XXX copyMem
   var j = 0
   for i in first .. last:
@@ -678,13 +667,13 @@ func replace*(
     i, j = 0
     capts = newSeq[string](pattern.groupsCount)
   for m in findAll(s, pattern):
-    result.addsubstr(s, i, m.boundaries.a - 1)
+    result.addsubstr(s, i, m.boundaries.a-1)
     flatCaptures(capts, m, s)
     if capts.len > 0:
       result.addf(by, capts)
     else:
       result.add(by)
-    i = m.boundaries.b + 1
+    i = m.boundaries.b+1
     inc j
     if limit > 0 and j == limit: break
   result.addsubstr(s, i)
@@ -714,9 +703,9 @@ func replace*(
   result = ""
   var i, j = 0
   for m in findAll(s, pattern):
-    result.addsubstr(s, i, m.boundaries.a - 1)
-    result.add(by(m, s))
-    i = m.boundaries.b + 1
+    result.addsubstr(s, i, m.boundaries.a-1)
+    result.add by(m, s)
+    i = m.boundaries.b+1
     inc j
     if limit > 0 and j == limit: break
   result.addsubstr(s, i)

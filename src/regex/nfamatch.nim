@@ -180,6 +180,10 @@ func clear(ms: var RegexMatches) {.inline.} =
   ms.m.clear()
   ms.c.setLen 0
 
+iterator bounds*(ms: RegexMatches): Slice[int] {.inline.} =
+  for i in 0 .. ms.m.len-1:
+    yield ms.m[i].bounds
+
 iterator items*(ms: RegexMatches): MatchItemIdx {.inline.} =
   for i in 0 .. ms.m.len-1:
     yield i
@@ -195,6 +199,15 @@ func fillMatchImpl*(
   constructSubmatches(
     m.captures, ms.c, ms.m[mi].capt, regex.groupsCount)
   m.boundaries = ms.m[mi].bounds
+
+func dummyMatch*(ms: var RegexMatches, i: int) {.inline.} =
+  ## hack to support `split` last value.
+  ## we need to add the end boundary if
+  ## it has not matched the end
+  ## (no match implies this too)
+  template ab: untyped = ms.m[^1].bounds
+  if ms.m.len == 0 or max(ab.a, ab.b) < i:
+    ms.m.add (-1'i32, i+1 .. i)
 
 func submatch(
   ms: var RegexMatches,

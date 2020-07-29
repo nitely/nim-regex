@@ -14,8 +14,8 @@ import nfatype
 
 template findMatchBailOut: untyped {.dirty.} =
   if nfa[n].kind == reEoe:
-    if not smB.hasState(n):
-      smB.add((n, capt, bounds))
+    if not smB.hasState n:
+      smB.add (n, capt, bounds)
     # first Eoe in SmA wins, it's pointless to
     # keep matching further than the last Eoe
     break
@@ -34,8 +34,8 @@ func submatch(
   cPrev, c, c2: int32,
   flags: static MatchFlags,
 ) {.inline.} =
-  template t: untyped {.dirty.} = regex.transitions
-  template nfa: untyped {.dirty.} = regex.nfa
+  template t: untyped = regex.transitions
+  template nfa: untyped = regex.nfa
   smB.clear()
   var captx: int32
   var matched = true
@@ -43,12 +43,12 @@ func submatch(
     when mfFindMatch in flags:
       findMatchBailOut()
     for nti, nt in nfa[n].next.pairs:
-      if smB.hasState(nt):
+      if smB.hasState nt:
         continue
       if notEoe() and not match(nfa[nt], c2.Rune):
         continue
       if t.allZ[n][nti] == -1'i16:
-        smB.add((nt, capt, bounds.a .. i-1))
+        smB.add (nt, capt, bounds.a .. i-1)
         continue
       matched = true
       captx = capt
@@ -57,18 +57,18 @@ func submatch(
           break
         case z.kind
         of groupKind:
-          capts.add(CaptNode(
+          capts.add CaptNode(
             parent: captx,
             bound: i,
-            idx: z.idx))
-          captx = (capts.len-1'i32).int32
+            idx: z.idx)
+          captx = (capts.len-1).int32
         of assertionKind:
           matched = match(z, cPrev.Rune, c.Rune)
         else:
           assert false
           discard
       if matched:
-        smB.add((nt, captx, bounds.a .. i-1))
+        smB.add (nt, captx, bounds.a .. i-1)
   swap smA, smB
 
 template shortestMatch: untyped {.dirty.} =
@@ -78,12 +78,12 @@ template shortestMatch: untyped {.dirty.} =
   swap smA, smB
 
 template findMatch: untyped {.dirty.} =
-  smA.add((0'i16, -1'i32, i .. i-1))
-  if regex.nfa[smA[0][0]].kind == reEoe:
-    constructSubmatches(m.captures, capts, smA[0][1], regex.groupsCount)
+  smA.add (0'i16, -1'i32, i .. i-1)
+  if regex.nfa[smA[0].ni].kind == reEoe:
+    constructSubmatches(m.captures, capts, smA[0].ci, regex.groupsCount)
     if regex.namedGroups.len > 0:
       m.namedGroups = regex.namedGroups
-    m.boundaries = smA[0][2]
+    m.boundaries = smA[0].bounds
     return true
 
 func bwRuneAt(s: string, n: int): Rune =
@@ -112,7 +112,7 @@ func matchImpl*(
     iPrev = start
   smA = newSubmatches(regex.nfa.len)
   smB = newSubmatches(regex.nfa.len)
-  smA.add((0'i16, -1'i32, start .. start-1))
+  smA.add (0'i16, -1'i32, start .. start-1)
   when mfFindMatch in flags:
     if 0 <= start-1 and start-1 <= len(text)-1:
       cPrev = bwRuneAt(text, start-1).int32
@@ -130,8 +130,8 @@ func matchImpl*(
   submatch(smA, smB, capts, regex, iPrev, cPrev, -1'i32, -1'i32, flags)
   if smA.len == 0:
     return false
-  constructSubmatches(m.captures, capts, smA[0][1], regex.groupsCount)
+  constructSubmatches(m.captures, capts, smA[0].ci, regex.groupsCount)
   if regex.namedGroups.len > 0:
     m.namedGroups = regex.namedGroups
-  m.boundaries = smA[0][2]
+  m.boundaries = smA[0].bounds
   return true

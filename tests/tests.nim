@@ -512,7 +512,7 @@ test "tgreediness":
     var m: RegexMatch
     check match("aaaa", re"(a*)(a*?)(a*?)", m)
     check m.toStrCaptures("aaaa") ==
-       @[@["aaaa"], @[""], @[""]]
+      @[@["aaaa"], @[""], @[""]]
 
 test "tassertions":
   check "bbaa aa".matchWithCapt(re"([\w ]*?)(\baa\b)") ==
@@ -879,7 +879,11 @@ test "tsplit":
   check split("AAA :   : BBB", re"\s*:\s*") == @["AAA", "", "BBB"]
   check split("", re",") == @[""]
   check split(",,", re",") == @["", "", ""]
+  # nre's behaviour, differs from python
   check split("abc", re"") == @["a", "b", "c"]
+  check split("ab", re"") == @["a", "b"]
+  check split("ab", re"\b") == @["ab"]
+  check split("a b", re" ") == @["a", "b"]
   check split(",a,Ϊ,Ⓐ,弢,", re",") ==
     @["", "a", "Ϊ", "Ⓐ", "弢", ""]
   check split("弢", re"\xAF") == @["弢"]  # "弢" == "\xF0\xAF\xA2\x94"
@@ -905,7 +909,6 @@ test "tsplit":
   check "12".split(re"\w\b") == @["1", ""]
   check "12".split(re"\w\B") == @["", "2"]
 
-# XXX empty maches need fixing not just here, but in general
 test "tsplitIncl":
   check "a,b".splitIncl(re"(,)") == @["a", ",", "b"]
   check "12".splitIncl(re"(\d)") == @["", "1", "", "2", ""]
@@ -938,13 +941,27 @@ test "tsplitIncl":
   check splitIncl("1 2", re" ") == @["1", "2"]
   check splitIncl("foo", re"foo") == @["", ""]
   check splitIncl("", re"foo") == @[""]
+  check splitIncl("ab", re"") == @["a", "b"]
+  check splitIncl("ab", re"\b") == @["ab"]
+  check splitIncl("a b", re" ") == @["a", "b"]
 
 test "tfindall":
+  check findAllBounds("abcabc abc", re"abc abc|abc") == @[0 .. 2, 3 .. 9]
   check findAllBounds("abcabc", re"bc") == @[1 .. 2, 4 .. 5]
   check findAllBounds("aa", re"a") == @[0 .. 0, 1 .. 1]
   check findAllBounds("a", re"a") == @[0 .. 0]
   check findAllBounds("a", re"b") == newSeq[Slice[int]]()
   check findAllBounds("", re"b") == newSeq[Slice[int]]()
+  check findAllBounds("abc ab", re"\w+ *") == @[0 .. 3, 4 .. 5]
+  check findAllBounds("AAA :   : BBB", re"\s*:\s*") == @[3 .. 7, 8 .. 9]
+  check findAllBounds("a\n  b\n c\n  ", re"(?m)^") ==
+    @[0 .. -1, 2 .. 1, 6 .. 5, 9 .. 8]
+  check findAllBounds("a\n  b\n c\n  ", re"(?m)$") ==
+    @[1 .. 0, 5 .. 4, 8 .. 7, 11 .. 10]
+  check findAllBounds("\n\n", re"(?m)^") == @[0 .. -1, 1 .. 0, 2 .. 1]
+  check findAllBounds("foobarbaz", re"(?<=o)b") == @[3 .. 3]
+  check findAllBounds("foobar", re"o(?=b)") == @[2 .. 2]
+  check findAllBounds("aaa", re"\w+b|\w") == @[0 .. 0, 1 .. 1, 2 .. 2]
   # This follows nre's empty match behaviour
   check findAllBounds("a", re"") == @[0 .. -1, 1 .. 0]
   check findAllBounds("ab", re"") == @[0 .. -1, 1 .. 0, 2 .. 1]
@@ -960,10 +977,33 @@ test "tfindall":
   check findAllBounds("aaa", re"a+") == @[0 .. 2]
   check findAllBounds("foo", re"") ==
     @[0 .. -1, 1 .. 0, 2 .. 1, 3 .. 2]
+  check findAllBounds("abb", re"a*") == @[0 .. 0, 1 .. 0, 2 .. 1, 3 .. 2]
+  check findAllBounds("abbbbccccdXabbbbccccdX", re"a(b|c)*d") ==
+    @[0 .. 9, 11 .. 20]
+  check findAllBounds("abbbXabbbX", re"((a)*(b)*)") ==
+    @[0 .. 3, 4 .. 3, 5 .. 8, 9 .. 8, 10 .. 9]
+  check findAllBounds("abbbXabbbX", re"((a)+(b)+)") ==
+    @[0 .. 3, 5 .. 8]
+  check findAllBounds("abbbXabbbX", re"((a(b)*)+(b)*)") ==
+    @[0 .. 3, 5 .. 8]
+  check findAllBounds("abXabX", re"a(b|c)*d") == newSeq[Slice[int]]()
+  check findAllBounds("aaanasdnasdXaaanasdnasd", re"((a)*n?(asd)*)+") ==
+    @[0 .. 10, 11 .. 10, 12 .. 22, 23 .. 22]
 
 test "tfindandcaptureall":
   check findAndCaptureAll("abcabc", re"bc") == @["bc", "bc"]
-  check findAndCaptureAll("a1b2c3a4b5c6", re"\d") == @["1", "2", "3", "4", "5", "6"]
+  check findAndCaptureAll("a1b2c3a4b5c6", re"\d") ==
+    @["1", "2", "3", "4", "5", "6"]
+  check findAndCaptureAll("abbbbccccdXabbbbccccdX", re"a(b|c)*d") ==
+    @["abbbbccccd", "abbbbccccd"]
+  check findAndCaptureAll("abbbXabbbX", re"((a)*(b)*)") ==
+    @["abbb", "", "abbb", "", ""]
+  check findAndCaptureAll("abbbXabbbX", re"((a)+(b)+)") ==
+    @["abbb", "abbb"]
+  check findAndCaptureAll("abbbXabbbX", re"((a(b)*)+(b)*)") ==
+    @["abbb", "abbb"]
+  check findAndCaptureAll("abbbXbbXabbb", re"((a(b)*)*(b)*)") ==
+    @["abbb", "", "bb", "", "abbb", ""]
 
 test "tstarts_with":
   check "abc".startsWith(re"ab")

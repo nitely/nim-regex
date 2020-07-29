@@ -9,8 +9,8 @@ this will call find 4 times and consume the
 entire string every time.
 
 The way to avoid this is to store all possible
-matches until we know whether this matches are valid
-and should be returned or must be replaced by an overlapping
+matches until we know whether they are valid
+and should be returned or they must be replaced by an overlapping
 match taking priority according to PCRE rules
 (longest-left match wins).
 
@@ -21,13 +21,13 @@ as the current character cannot match the regex,
 i.e: it's a safe point to return. This is just
 to avoid consuming too much memory if possible.
 
-The downside is it takes linear time in the lenght
+The downside is it takes linear time in the length
 of the text to match + the regex. In most cases it
 should take less space, since the matches are index ranges.
 
 The tricky part is to replace all overlapped
 temporary matches every time an Eoe is found,
-then prune following states (as they're overlapped),
+then prune the next states (as they're overlapped),
 then try to match the initial state to the
 current character (next possible match). Other than
 that is the same algorithm as nfamatch.

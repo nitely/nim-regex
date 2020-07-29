@@ -879,7 +879,11 @@ test "tsplit":
   check split("AAA :   : BBB", re"\s*:\s*") == @["AAA", "", "BBB"]
   check split("", re",") == @[""]
   check split(",,", re",") == @["", "", ""]
+  # nre's behaviour, differs from python
   check split("abc", re"") == @["a", "b", "c"]
+  check split("ab", re"") == @["a", "b"]
+  check split("ab", re"\b") == @["ab"]
+  check split("a b", re" ") == @["a", "b"]
   check split(",a,Ϊ,Ⓐ,弢,", re",") ==
     @["", "a", "Ϊ", "Ⓐ", "弢", ""]
   check split("弢", re"\xAF") == @["弢"]  # "弢" == "\xF0\xAF\xA2\x94"
@@ -905,7 +909,6 @@ test "tsplit":
   check "12".split(re"\w\b") == @["1", ""]
   check "12".split(re"\w\B") == @["", "2"]
 
-# XXX empty maches need fixing not just here, but in general
 test "tsplitIncl":
   check "a,b".splitIncl(re"(,)") == @["a", ",", "b"]
   check "12".splitIncl(re"(\d)") == @["", "1", "", "2", ""]
@@ -938,6 +941,9 @@ test "tsplitIncl":
   check splitIncl("1 2", re" ") == @["1", "2"]
   check splitIncl("foo", re"foo") == @["", ""]
   check splitIncl("", re"foo") == @[""]
+  check splitIncl("ab", re"") == @["a", "b"]
+  check splitIncl("ab", re"\b") == @["ab"]
+  check splitIncl("a b", re" ") == @["a", "b"]
 
 test "tfindall":
   check findAllBounds("abcabc abc", re"abc abc|abc") == @[0 .. 2, 3 .. 9]

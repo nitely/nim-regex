@@ -80,9 +80,9 @@ template initMaybeImpl(
   regex: Regex
 ) =
   if ms.a == nil:
-    ms = RegexMatches(
-      a: newSubmatches(regex.nfa.len),
-      b: newSubmatches(regex.nfa.len))
+    assert ms.b == nil
+    ms.a = newSubmatches(regex.nfa.len)
+    ms.b = newSubmatches(regex.nfa.len)
   doAssert ms.a.cap == regex.nfa.len and
     ms.b.cap == regex.nfa.len
 

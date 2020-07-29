@@ -287,9 +287,9 @@ func findSomeImpl*(
     #debugEcho "it= ", i, " ", cPrev
     fastRuneAt(text, i, c, true)
     submatch(ms, regex, iPrev, cPrev, c.int32)
-    when false:  # early return
+    when true:  # early return
       if smA.len == 0:
-        debugEcho "smA 0"
+        #debugEcho "smA 0"
         if ms.hasMatches() and i < len(text):
           #debugEcho "m= ", ms.m.s
           #debugEcho "sma=0=", i

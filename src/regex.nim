@@ -746,8 +746,7 @@ proc toString(pattern: Regex): string {.used.} =
   var visited: set[int16]
   result = pattern.toString(0, visited)
 
-#when isMainModule:
-when false:
+when isMainModule:
   func toAtoms(s: string): string =
     var groups: GroupsCapture
     let atoms = s

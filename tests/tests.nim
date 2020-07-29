@@ -873,9 +873,6 @@ test "tcontains":
   check re"^(23)+$" notin "23232"
 
 test "tsplit":
-  echo split("a,b,c", re",")
-  echo split("", re",")
-  echo split("abc", re"")
   check split("a,b,c", re",") == @["a", "b", "c"]
   check split("00232this02939is39an22example111", re"\d+") ==
     @["", "this", "is", "an", "example", ""]

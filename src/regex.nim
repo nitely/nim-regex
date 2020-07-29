@@ -159,6 +159,7 @@ import regex/parser
 import regex/exptransformation
 import regex/nfatype
 import regex/nfa
+import regex/nfafindall
 import regex/nfamatch
 
 const canUseMacro = (NimMajor, NimMinor) >= (1, 1) and

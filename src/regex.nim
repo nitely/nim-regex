@@ -420,12 +420,8 @@ func find*(
     doAssert not "abcd".find(re"de", m)
     doAssert "2222".find(re"(22)*", m) and
       m.group(0) == @[0 .. 1, 2 .. 3]
-  if not pattern.litOpt.canOpt:
-    doAssert false
-    #result = matchImpl(s, pattern, m, {mfFindMatch}, start)
-  else:
-    doAssert pattern.litOpt.lit.int != -1
-    result = findImpl(s, pattern, m, start)
+
+  findImpl()
 
 when canUseMacro:
   func find*(
@@ -443,6 +439,11 @@ template runeIncAt(s: string, n: var int) =
     inc(n, runeLenAt(s, n))
   else:
     n = s.len+1
+
+template findSomeOptImpl: untyped =
+  doAssert pattern.litOpt.canOpt
+  doAssert pattern.litOpt.lit.int != -1
+  findSomeOptImpl(s, pattern, ms, i)
 
 iterator findAll*(
   s: string,
@@ -468,7 +469,8 @@ iterator findAll*(
   var ms: RegexMatches
   while i < len(s):
     doAssert(i > i2); i2 = i
-    i = findSomeImpl(s, pattern, ms, i)
+    #i = findSomeImpl(s, pattern, ms, i)
+    i = findSomeOptImpl()
     #debugEcho i
     if i < 0: break
     for mi in ms:
@@ -822,35 +824,69 @@ when isMainModule:
   doAssert r"[[:xdigit:]]".toAtoms == "[[0-9a-fA-F]]"
   doAssert r"[[:alpha:][:digit:]]".toAtoms == "[[a-zA-Z][0-9]]"
 
-  var m: RegexMatch
-  #when false:
-  doAssert "abcd".find(re"bc", m)
-  doAssert m.boundaries == 1 .. 2
-  doAssert "bcd".find(re"bc", m)
-  doAssert m.boundaries == 0 .. 1
-  doAssert "bc".find(re"bc", m)
-  doAssert m.boundaries == 0 .. 1
-  doAssert "ababcd".find(re"bc", m)
-  doAssert m.boundaries == 3 .. 4
-  doAssert "abc@xyz".find(re"\w@", m)
-  doAssert m.boundaries == 2 .. 3
-  doAssert "ab1c@xyz".find(re"\d\w@", m)
-  doAssert m.boundaries == 2 .. 4
-  doAssert "##axyz##".find(re"(a|b)xyz", m)
-  doAssert m.boundaries == 2 .. 5
-  doAssert "##bxyz##".find(re"(a|b)xyz", m)
-  doAssert m.boundaries == 2 .. 5
-  doAssert "##x#ax#axy#bxyz##".find(re"(a|b)xyz", m)
-  doAssert m.boundaries == 11 .. 14
-  doAssert "##z#xyz#yz#bxyz##".find(re"(a|b)xyz", m)
-  doAssert m.boundaries == 11 .. 14
-  doAssert "#xabcx#abc#".find(re"\babc\b", m)
-  doAssert m.boundaries == 7 .. 9
-  doAssert "#foo://#".find(re"[\w]+://", m)
-  doAssert m.boundaries == 1 .. 6
-  doAssert "x#foo://#".find(re"[\w]+://", m)
-  doAssert m.boundaries == 2 .. 7
+  func findAllBounds(s: string, reg: Regex): seq[Slice[int]] =
+    result = map(
+      findAll(s, reg),
+      func (m: RegexMatch): Slice[int] =
+        m.boundaries)
+
+  doAssert findAllBounds("abcd", re"bc") ==
+    @[1 .. 2]
+  doAssert "bcd".findAllBounds(re"bc") ==
+    @[0 .. 1]
+  doAssert "bc".findAllBounds(re"bc") ==
+    @[0 .. 1]
+  doAssert "ababcd".findAllBounds(re"bc") ==
+    @[3 .. 4]
+  doAssert "abc@xyz".findAllBounds(re"\w@") ==
+    @[2 .. 3]
+  doAssert "ab1c@xyz".findAllBounds(re"\d\w@") ==
+    @[2 .. 4]
+  doAssert "##axyz##".findAllBounds(re"(a|b)xyz") ==
+    @[2 .. 5]
+  doAssert "##bxyz##".findAllBounds(re"(a|b)xyz") ==
+    @[2 .. 5]
+  doAssert "##x#ax#axy#bxyz##".findAllBounds(re"(a|b)xyz") ==
+    @[11 .. 14]
+  doAssert "##z#xyz#yz#bxyz##".findAllBounds(re"(a|b)xyz") ==
+    @[11 .. 14]
+  doAssert "#xabcx#abc#".findAllBounds(re"\babc\b") ==
+    @[7 .. 9]
+  doAssert "#foo://#".findAllBounds(re"[\w]+://") ==
+    @[1 .. 6]
+  doAssert "x#foo://#".findAllBounds(re"[\w]+://") ==
+    @[2 .. 7]
   echo "ok"
+
+  var m: RegexMatch
+  when false:
+    doAssert "abcd".find(re"bc", m)
+    doAssert m.boundaries == 1 .. 2
+    doAssert "bcd".find(re"bc", m)
+    doAssert m.boundaries == 0 .. 1
+    doAssert "bc".find(re"bc", m)
+    doAssert m.boundaries == 0 .. 1
+    doAssert "ababcd".find(re"bc", m)
+    doAssert m.boundaries == 3 .. 4
+    doAssert "abc@xyz".find(re"\w@", m)
+    doAssert m.boundaries == 2 .. 3
+    doAssert "ab1c@xyz".find(re"\d\w@", m)
+    doAssert m.boundaries == 2 .. 4
+    doAssert "##axyz##".find(re"(a|b)xyz", m)
+    doAssert m.boundaries == 2 .. 5
+    doAssert "##bxyz##".find(re"(a|b)xyz", m)
+    doAssert m.boundaries == 2 .. 5
+    doAssert "##x#ax#axy#bxyz##".find(re"(a|b)xyz", m)
+    doAssert m.boundaries == 11 .. 14
+    doAssert "##z#xyz#yz#bxyz##".find(re"(a|b)xyz", m)
+    doAssert m.boundaries == 11 .. 14
+    doAssert "#xabcx#abc#".find(re"\babc\b", m)
+    doAssert m.boundaries == 7 .. 9
+    doAssert "#foo://#".find(re"[\w]+://", m)
+    doAssert m.boundaries == 1 .. 6
+    doAssert "x#foo://#".find(re"[\w]+://", m)
+    doAssert m.boundaries == 2 .. 7
+    echo "ok"
 
   when false:
     #doAssert match("abc", re(r"abc", {reAscii}), m)

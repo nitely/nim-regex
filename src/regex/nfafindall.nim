@@ -35,6 +35,7 @@ that is the same algorithm as nfamatch.
 
 import unicode
 import tables
+from strutils import find
 
 import nodematch
 import nodetype
@@ -220,133 +221,131 @@ func findSomeImpl*(
   #debugEcho "noMatch"
   return -1
 
-when true:
-  template initMaybeImpl(
-    ms: var RegexMatches,
-    size: int
-  ) =
-    if ms.a == nil:
-      assert ms.b == nil
-      ms.a = newSubmatches size
-      ms.b = newSubmatches size
-    doAssert ms.a.cap >= regex.nfa.len and
-      ms.b.cap >= regex.nfa.len
+template initMaybeImpl(
+  ms: var RegexMatches,
+  size: int
+) =
+  if ms.a == nil:
+    assert ms.b == nil
+    ms.a = newSubmatches size
+    ms.b = newSubmatches size
+  doAssert ms.a.cap >= size and
+    ms.b.cap >= size
 
-  template bwFastRuneAt(
-    s: string, n: var int, result: var Rune
-  ) =
-    ## Take rune ending at ``n``
-    doAssert n > 0
-    doAssert n <= s.len-1
+template bwFastRuneAt(
+  s: string, n: var int, result: var Rune
+) =
+  ## Take rune ending at ``n``
+  doAssert n > 0
+  doAssert n <= s.len-1
+  dec n
+  while n > 0 and s[n].ord shr 6 == 0b10:
     dec n
-    while n > 0 and s[n].ord shr 6 == 0b10:
-      dec n
-    fastRuneAt(s, n, result, false)
+  fastRuneAt(s, n, result, false)
 
-  func submatch2(
-    smA, smB: var Submatches,
-    regex: Regex,
-    i: int,
-    cPrev, c: int32
-  ) =
-    template nfa: untyped = regex.litOpt.nfa
-    template tns: untyped = regex.litOpt.tns
-    smB.clear()
-    var matched = true
-    for n, capt, bounds in smA.mitems:
-      if nfa[n].kind == reEoe:
-        if not smB.hasState(n):
-          smB.add (n, capt, bounds)
-        break
-      for nti, nt in nfa[n].next.pairs:
-        if smB.hasState(nt):
-          continue
-        #debugEcho nfa[nt].kind
-        if nfa[nt].kind != reEoe and not match(nfa[nt], c.Rune):
-          continue
-        if tns.allZ[n][nti] == -1'i16:
-          smB.add((nt, capt, i .. bounds.b))
-          continue
-        matched = true
-        for z in tns.z[tns.allZ[n][nti]]:
-          if z.kind in assertionKind:
-            matched = match(z, cPrev.Rune, c.Rune)
-          if not matched:
-            break
-        if matched:
-          smB.add((nt, capt, i .. bounds.b))
-    swap smA, smB
+func submatch2(
+  smA, smB: var Submatches,
+  regex: Regex,
+  i: int,
+  cPrev, c: int32
+) =
+  template nfa: untyped = regex.litOpt.nfa
+  template tns: untyped = regex.litOpt.tns
+  smB.clear()
+  var matched = true
+  for n, capt, bounds in smA.mitems:
+    if nfa[n].kind == reEoe:
+      if not smB.hasState(n):
+        smB.add (n, capt, bounds)
+      break
+    for nti, nt in nfa[n].next.pairs:
+      if smB.hasState(nt):
+        continue
+      #debugEcho nfa[nt].kind
+      if nfa[nt].kind != reEoe and not match(nfa[nt], c.Rune):
+        continue
+      if tns.allZ[n][nti] == -1'i16:
+        smB.add((nt, capt, i .. bounds.b))
+        continue
+      matched = true
+      for z in tns.z[tns.allZ[n][nti]]:
+        if z.kind in assertionKind:
+          matched = match(z, cPrev.Rune, c.Rune)
+        if not matched:
+          break
+      if matched:
+        smB.add((nt, capt, i .. bounds.b))
+  swap smA, smB
 
-  func matchPrefixImpl(
-    text: string,
-    regex: Regex,
-    smA, smB: var Submatches,
-    start = 0
-  ): int {.inline.} =
-    template nfa: untyped = regex.litOpt.nfa
-    doAssert start < len(text)
-    smA.clear()
-    smB.clear()
-    var
-      c = Rune(-1)
-      cPrev = text.runeAt(start).int32
-      i = start
-      iPrev = start
-    smA.add (0'i16, -1'i32, start .. start-1)
-    while i > 0:
-      bwFastRuneAt(text, i, c)
-      #debugEcho "txt.Rune=", c
-      #debugEcho "txt.i=", i
-      submatch2(smA, smB, regex, iPrev, cPrev, c.int32)
-      if smA.len == 0:
-        return -1
-      if nfa[smA[0].ni].kind == reEoe:
-        return i
-      iPrev = i
-      cPrev = c.int32
-    submatch2(smA, smB, regex, iPrev, cPrev, -1'i32)
+func matchPrefixImpl(
+  text: string,
+  regex: Regex,
+  smA, smB: var Submatches,
+  start = 0
+): int {.inline.} =
+  template nfa: untyped = regex.litOpt.nfa
+  doAssert start < len(text)
+  smA.clear()
+  smB.clear()
+  var
+    c = Rune(-1)
+    cPrev = text.runeAt(start).int32
+    i = start
+    iPrev = start
+  smA.add (0'i16, -1'i32, start .. start-1)
+  while i > 0:
+    bwFastRuneAt(text, i, c)
+    #debugEcho "txt.Rune=", c
+    #debugEcho "txt.i=", i
+    submatch2(smA, smB, regex, iPrev, cPrev, c.int32)
     if smA.len == 0:
       return -1
-    return i
-
-  import strutils
-
-  func findSomeOptImpl*(
-    text: string,
-    regex: Regex,
-    ms: var RegexMatches,
-    start: Natural
-  ): int =
-    template regexSize: untyped =
-      max(regex.litOpt.nfa.len, regex.nfa.len)
-    template opt: untyped = regex.litOpt
-    template smA: untyped = ms.a
-    template smB: untyped = ms.b
-    initMaybeImpl(ms, regexSize)
-    var i = start.int
-    var i2 = -1
-    while i < len(text):
-      doAssert i > i2; i2 = i
-      #debugEcho "lit=", opt.lit
-      #debugEcho "i=", i
-      let litIdx = text.find(opt.lit.char, i)
-      if litIdx == -1:
-        return -1
-      #debugEcho "litIdx=", litIdx
-      doAssert litIdx >= i
-      i = litIdx
-      i = matchPrefixImpl(text, regex, smA, smB, i)
-      if i == -1:
-        #debugEcho "not.Match=", i
-        i = litIdx+1
-      else:
-        #doAssert i <= m.boundaries.a
-        #debugEcho "bounds=", m.boundaries
-        # XXX findSomeImpl must return early (smA==0)
-        #     and it must return the last consumed index (never -1)
-        i = findSomeImpl(text, regex, ms, i)
-        if ms.hasMatches:
-          return i
-        return -1
-        #debugEcho "endBound=", i
+    if nfa[smA[0].ni].kind == reEoe:
+      return i
+    iPrev = i
+    cPrev = c.int32
+  submatch2(smA, smB, regex, iPrev, cPrev, -1'i32)
+  if smA.len == 0:
     return -1
+  return i
+
+func findSomeOptImpl*(
+  text: string,
+  regex: Regex,
+  ms: var RegexMatches,
+  start: Natural
+): int =
+  template regexSize: untyped =
+    max(regex.litOpt.nfa.len, regex.nfa.len)
+  template opt: untyped = regex.litOpt
+  template smA: untyped = ms.a
+  template smB: untyped = ms.b
+  initMaybeImpl(ms, regexSize)
+  var i = start.int
+  var i2 = -1
+  while i < len(text):
+    doAssert i > i2; i2 = i
+    #debugEcho "lit=", opt.lit
+    #debugEcho "i=", i
+    let litIdx = text.find(opt.lit.char, i)
+    if litIdx == -1:
+      return -1
+    #debugEcho "litIdx=", litIdx
+    doAssert litIdx >= i
+    i = litIdx
+    i = matchPrefixImpl(text, regex, smA, smB, i)
+    if i == -1:
+      #debugEcho "not.Match=", i
+      i = litIdx+1
+    else:
+      #doAssert i <= m.boundaries.a
+      #debugEcho "bounds=", m.boundaries
+      # XXX findSomeImpl must return early (smA==0)
+      #     and it must return the last consumed index
+      i = findSomeImpl(text, regex, ms, i)
+      if ms.hasMatches:
+        return i
+      if i == -1:
+        i = len(text)
+      #debugEcho "endBound=", i
+  return -1

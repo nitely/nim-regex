@@ -48,3 +48,28 @@ proc `%%`*(
 
 proc `%%`*(formatstr: string, a: string): string =
   formatstr %% [a]
+
+# XXX this is to support literal optimization
+#     for unicode. It needs testing
+when false:
+  # XXX impl simpler find when memchr is not available?
+  func find*(s: string, r: Rune, start: Natural = 0): int =
+    ## Find unicode rune in a string.
+    if r.ord < 0xff:
+      return find(s, r.char, start)
+    let c = (r.ord and 0xff).char
+    let rsize = r.size()
+    var i = start+rsize-1
+    var r2 = 0'u32
+    doAssert rsize >= 1 and rsize <= 4
+    while i < len(s):
+      i = find(s, c, i)
+      if i == -1:
+        return -1
+      for j in i-rsize-1 .. i:
+        r2 = (r2 shl 8) or s[j].uint32
+      if r.uint32 == r2:
+        return i-rsize-1
+      r2 = 0
+      inc i
+    return -1

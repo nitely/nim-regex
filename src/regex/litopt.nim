@@ -245,7 +245,8 @@ func lonelyLit(exp: RpnExp): NodeIdx =
   var lits = newSeq[int16]()
   var stateIdx = litNfa.len.int16-1
   while state.kind != reEoe:
-    if state.kind == reChar:
+    if state.kind == reChar and
+        state.cp.int <= 255:  # XXX support unicode
       if state.cp notin cpSeen:
         cpSeen.incl state.cp
         lits.add stateIdx
@@ -430,6 +431,7 @@ when isMainModule:
   doAssert lit"a?$" == ""
   doAssert lit"(?m)^" == ""  # XXX \n
   doAssert lit"(?m)$" == ""  # XXX \n
+  doAssert lit"弢" == ""  # XXX support unicode
 
   doAssert r"abc".prefix.toString == r"".toNfa.toString
   doAssert r"abc".prefix.toString == "[#, eoe]"
@@ -451,4 +453,4 @@ when isMainModule:
   doAssert r"(\w\d)*?@".prefix.toString == r"(\d\w)*".toNfa.toString
   doAssert r"(\w\d)+?@".prefix.toString == r"(\d\w)+".toNfa.toString
 
-  echo "ok"
+  echo "litopt ok"

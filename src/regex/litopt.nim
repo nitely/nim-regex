@@ -246,7 +246,7 @@ func lonelyLit(exp: RpnExp): NodeIdx =
   var stateIdx = litNfa.len.int16-1
   while state.kind != reEoe:
     if state.kind == reChar and
-        state.cp.int <= 255:  # XXX support unicode
+        state.cp.int <= 127:  # XXX support unicode
       if state.cp notin cpSeen:
         cpSeen.incl state.cp
         lits.add stateIdx

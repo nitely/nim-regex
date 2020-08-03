@@ -520,9 +520,9 @@ iterator split*(s: string, sep: Regex): string {.inline, raises: [].} =
     ms: RegexMatches
   while not done:
     doAssert(i > i2); i2 = i
-    i = findSomeImpl(s, sep, ms, i)
+    i = findSomeOptTpl(s, sep, ms, i)
     done = i < 0 or i >= len(s)
-    if done: ms.dummyMatch(s.len)
+    if done: ms.dummyMatch(s.len, i > -1)
     for ab in ms.bounds:
       last = ab.a
       if ab.a > 0 or ab.a <= ab.b:  # skip first empty match
@@ -557,9 +557,9 @@ func splitIncl*(s: string, sep: Regex): seq[string] {.inline, raises: [].} =
     ms: RegexMatches
   while not done:
     doAssert(i > i2); i2 = i
-    i = findSomeImpl(s, sep, ms, i)
+    i = findSomeOptTpl(s, sep, ms, i)
     done = i < 0 or i >= len(s)
-    if done: ms.dummyMatch(s.len)
+    if done: ms.dummyMatch(s.len, i > -1)
     for mi in ms:
       fillMatchImpl(m, mi, ms, sep)
       last = ab.a
@@ -833,9 +833,6 @@ when isMainModule:
   doAssert r"[[:word:]]".toAtoms == "[[_0-9a-zA-Z]]"
   doAssert r"[[:xdigit:]]".toAtoms == "[[0-9a-fA-F]]"
   doAssert r"[[:alpha:][:digit:]]".toAtoms == "[[a-zA-Z][0-9]]"
-
-  echo findAllBounds("AAA :   : BBB", re"\s*:\s*")
-  doAssert false
 
   var m: RegexMatch
   #doAssert match("abc", re(r"abc", {reAscii}), m)

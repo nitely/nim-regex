@@ -116,12 +116,18 @@ func fillMatchImpl*(
     m.captures, ms.c, ms.m[mi].capt, regex.groupsCount)
   m.boundaries = ms.m[mi].bounds
 
-func dummyMatch*(ms: var RegexMatches, i: int) {.inline.} =
+func dummyMatch*(
+  ms: var RegexMatches,
+  i: int,
+  matched: bool
+) {.inline.} =
   ## hack to support `split` last value.
   ## we need to add the end boundary if
   ## it has not matched the end
   ## (no match implies this too)
   template ab: untyped = ms.m[^1].bounds
+  if not matched:
+    ms.clear()
   if ms.m.len == 0 or max(ab.a, ab.b) < i:
     ms.m.add (-1'i32, i+1 .. i)
 

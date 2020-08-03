@@ -40,7 +40,7 @@ func submatch(
   smB.clear()
   var captx: int32
   var matched = true
-  for n, capt, bounds in smA.mitems:
+  for n, capt, bounds in smA.items:
     when mfFindMatch in flags:
       findMatchBailOut()
     for nti, nt in nfa[n].next.pairs:

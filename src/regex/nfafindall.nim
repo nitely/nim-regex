@@ -257,7 +257,7 @@ func submatch2(
   template tns: untyped = regex.litOpt.tns
   smB.clear()
   var matched = true
-  for n, capt, bounds in smA.mitems:
+  for n, capt, bounds in smA.items:
     for nti, nt in nfa[n].next.pairs:
       if smB.hasState(nt):
         continue

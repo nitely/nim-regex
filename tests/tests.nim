@@ -1766,6 +1766,9 @@ test "tmisc2":
     check match("1111", re1)
     check match("111111", re1)
     check(not match("1", re1))
+
+test "tmisc3":
+  var m: RegexMatch
   block:  # issue #61
     const a = "void __mingw_setusermatherr (int (__attribute__((__cdecl__)) *)(struct _exception *));"
     check replace(a, re"__attribute__[ ]*\(\(.*?\)\)([ ,;])", "$1") ==

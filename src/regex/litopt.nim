@@ -156,6 +156,9 @@ import nodetype
 import nodematch
 import nfa
 
+when (NimMajor, NimMinor, NimPatch) < (0, 20, 0):
+  import common
+
 type
   RpnExp = seq[Node]
   LitNfa = Nfa
@@ -252,7 +255,7 @@ func lonelyLit(exp: RpnExp): NodeIdx =
         lits.add stateIdx
     doAssert state.next.len == 1
     stateIdx = state.next[0]
-  assert lits == sorted(lits)
+  assert lits == sorted(lits, system.cmp)
   # The algo takes O(litsLen * NfaSize)
   # time, it seems sensible to limit the lits
   lits.setLen min(lits.len, 128)

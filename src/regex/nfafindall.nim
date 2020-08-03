@@ -186,7 +186,8 @@ func findSomeImpl*(
   text: string,
   regex: Regex,
   ms: var RegexMatches,
-  start = 0
+  start: Natural = 0,
+  flags: set[MatchFlag] = {}
 ): int =
   template smA: untyped = ms.a
   initMaybeImpl(ms, regex)
@@ -194,9 +195,10 @@ func findSomeImpl*(
   var
     c = Rune(-1)
     cPrev = -1'i32
-    i = start
-    iPrev = start
-  smA.add (0'i16, -1'i32, start .. start-1)
+    i = start.int
+    iPrev = start.int
+    optFlag = mfFindMatchOpt in flags
+  smA.add (0'i16, -1'i32, i .. i-1)
   if 0 <= start-1 and start-1 <= len(text)-1:
     cPrev = bwRuneAt(text, start-1).int32
   while i < len(text):
@@ -209,6 +211,8 @@ func findSomeImpl*(
       if ms.hasMatches() and i < len(text):
         #debugEcho "m= ", ms.m.s
         #debugEcho "sma=0=", i
+        return i
+      if optFlag:
         return i
     smA.add (0'i16, -1'i32, i .. i-1)
     iPrev = i
@@ -254,34 +258,31 @@ func submatch2(
   smB.clear()
   var matched = true
   for n, capt, bounds in smA.mitems:
-    if nfa[n].kind == reEoe:
-      if not smB.hasState(n):
-        smB.add (n, capt, bounds)
-      break
     for nti, nt in nfa[n].next.pairs:
       if smB.hasState(nt):
         continue
       #debugEcho nfa[nt].kind
       if nfa[nt].kind != reEoe and not match(nfa[nt], c.Rune):
         continue
-      if tns.allZ[n][nti] == -1'i16:
-        smB.add((nt, capt, i .. bounds.b))
-        continue
       matched = true
-      for z in tns.z[tns.allZ[n][nti]]:
-        if z.kind in assertionKind:
-          matched = match(z, cPrev.Rune, c.Rune)
-        if not matched:
-          break
+      if tns.allZ[n][nti] > -1:
+        for z in tns.z[tns.allZ[n][nti]]:
+          if z.kind in assertionKind:
+            matched = match(z, c.Rune, cPrev.Rune)
+          if not matched:
+            break
       if matched:
-        smB.add((nt, capt, i .. bounds.b))
+        smB.add (nt, capt, i .. bounds.b)
+        if nfa[nt].kind == reEoe:
+          swap smA, smB
+          return
   swap smA, smB
 
 func matchPrefixImpl(
   text: string,
   regex: Regex,
   smA, smB: var Submatches,
-  start = 0
+  start: Natural = 0
 ): int {.inline.} =
   template nfa: untyped = regex.litOpt.nfa
   doAssert start < len(text)
@@ -290,9 +291,10 @@ func matchPrefixImpl(
   var
     c = Rune(-1)
     cPrev = text.runeAt(start).int32
-    i = start
-    iPrev = start
-  smA.add (0'i16, -1'i32, start .. start-1)
+    i = start.int
+    iPrev = start.int
+  #debugEcho cPrev.Rune
+  smA.add (0'i16, -1'i32, i .. i-1)
   while i > 0:
     bwFastRuneAt(text, i, c)
     #debugEcho "txt.Rune=", c
@@ -301,13 +303,14 @@ func matchPrefixImpl(
     if smA.len == 0:
       return -1
     if nfa[smA[0].ni].kind == reEoe:
-      return i
+      return smA[0].bounds.a
     iPrev = i
     cPrev = c.int32
   submatch2(smA, smB, regex, iPrev, cPrev, -1'i32)
   if smA.len == 0:
     return -1
-  return i
+  doAssert nfa[smA[0].ni].kind == reEoe
+  return smA[0].bounds.a
 
 func findSomeOptImpl*(
   text: string,
@@ -320,6 +323,7 @@ func findSomeOptImpl*(
   template opt: untyped = regex.litOpt
   template smA: untyped = ms.a
   template smB: untyped = ms.b
+  doAssert opt.nfa.len > 0
   initMaybeImpl(ms, regexSize)
   var i = start.int
   var i2 = -1
@@ -338,14 +342,12 @@ func findSomeOptImpl*(
       #debugEcho "not.Match=", i
       i = litIdx+1
     else:
-      #doAssert i <= m.boundaries.a
-      #debugEcho "bounds=", m.boundaries
-      # XXX findSomeImpl must return early (smA==0)
-      #     and it must return the last consumed index
-      i = findSomeImpl(text, regex, ms, i)
+      doAssert i <= litIdx
+      #debugEcho "bounds.a=", i
+      i = findSomeImpl(text, regex, ms, i, {mfFindMatchOpt})
+      #debugEcho "bounds.b=", i
       if ms.hasMatches:
         return i
       if i == -1:
         i = len(text)
-      #debugEcho "endBound=", i
   return -1

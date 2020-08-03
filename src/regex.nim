@@ -440,10 +440,15 @@ template runeIncAt(s: string, n: var int) =
   else:
     n = s.len+1
 
-template findSomeOptImpl: untyped =
-  doAssert pattern.litOpt.canOpt
-  doAssert pattern.litOpt.lit.int != -1
-  findSomeOptImpl(s, pattern, ms, i)
+when defined(noRegexOpt):
+  template findSomeOptTpl(s, pattern, ms, i): untyped =
+    findSomeImpl(s, pattern, ms, i)
+else:
+  template findSomeOptTpl(s, pattern, ms, i): untyped =
+    if pattern.litOpt.canOpt:
+      findSomeOptImpl(s, pattern, ms, i)
+    else:
+      findSomeImpl(s, pattern, ms, i)
 
 iterator findAll*(
   s: string,
@@ -469,8 +474,7 @@ iterator findAll*(
   var ms: RegexMatches
   while i < len(s):
     doAssert(i > i2); i2 = i
-    #i = findSomeImpl(s, pattern, ms, i)
-    i = findSomeOptImpl()
+    i = findSomeOptTpl(s, pattern, ms, i)
     #debugEcho i
     if i < 0: break
     for mi in ms:
@@ -758,6 +762,12 @@ proc toString(pattern: Regex): string {.used.} =
   result = pattern.toString(0, visited)
 
 when isMainModule:
+  func findAllBounds(s: string, reg: Regex): seq[Slice[int]] =
+    result = map(
+      findAll(s, reg),
+      func (m: RegexMatch): Slice[int] =
+        m.boundaries)
+
   func toAtoms(s: string): string =
     var groups: GroupsCapture
     let atoms = s
@@ -824,231 +834,185 @@ when isMainModule:
   doAssert r"[[:xdigit:]]".toAtoms == "[[0-9a-fA-F]]"
   doAssert r"[[:alpha:][:digit:]]".toAtoms == "[[a-zA-Z][0-9]]"
 
-  func findAllBounds(s: string, reg: Regex): seq[Slice[int]] =
-    result = map(
-      findAll(s, reg),
-      func (m: RegexMatch): Slice[int] =
-        m.boundaries)
-
-  doAssert findAllBounds("abcd", re"bc") ==
-    @[1 .. 2]
-  doAssert "bcd".findAllBounds(re"bc") ==
-    @[0 .. 1]
-  doAssert "bc".findAllBounds(re"bc") ==
-    @[0 .. 1]
-  doAssert "ababcd".findAllBounds(re"bc") ==
-    @[3 .. 4]
-  doAssert "abc@xyz".findAllBounds(re"\w@") ==
-    @[2 .. 3]
-  doAssert "ab1c@xyz".findAllBounds(re"\d\w@") ==
-    @[2 .. 4]
-  doAssert "##axyz##".findAllBounds(re"(a|b)xyz") ==
-    @[2 .. 5]
-  doAssert "##bxyz##".findAllBounds(re"(a|b)xyz") ==
-    @[2 .. 5]
-  doAssert "##x#ax#axy#bxyz##".findAllBounds(re"(a|b)xyz") ==
-    @[11 .. 14]
-  doAssert "##z#xyz#yz#bxyz##".findAllBounds(re"(a|b)xyz") ==
-    @[11 .. 14]
-  doAssert "#xabcx#abc#".findAllBounds(re"\babc\b") ==
-    @[7 .. 9]
-  doAssert "#foo://#".findAllBounds(re"[\w]+://") ==
-    @[1 .. 6]
-  doAssert "x#foo://#".findAllBounds(re"[\w]+://") ==
-    @[2 .. 7]
-  echo "ok"
+  echo findAllBounds("AAA :   : BBB", re"\s*:\s*")
+  doAssert false
 
   var m: RegexMatch
-  when false:
-    doAssert "abcd".find(re"bc", m)
-    doAssert m.boundaries == 1 .. 2
-    doAssert "bcd".find(re"bc", m)
-    doAssert m.boundaries == 0 .. 1
-    doAssert "bc".find(re"bc", m)
-    doAssert m.boundaries == 0 .. 1
-    doAssert "ababcd".find(re"bc", m)
-    doAssert m.boundaries == 3 .. 4
-    doAssert "abc@xyz".find(re"\w@", m)
-    doAssert m.boundaries == 2 .. 3
-    doAssert "ab1c@xyz".find(re"\d\w@", m)
-    doAssert m.boundaries == 2 .. 4
-    doAssert "##axyz##".find(re"(a|b)xyz", m)
-    doAssert m.boundaries == 2 .. 5
-    doAssert "##bxyz##".find(re"(a|b)xyz", m)
-    doAssert m.boundaries == 2 .. 5
-    doAssert "##x#ax#axy#bxyz##".find(re"(a|b)xyz", m)
-    doAssert m.boundaries == 11 .. 14
-    doAssert "##z#xyz#yz#bxyz##".find(re"(a|b)xyz", m)
-    doAssert m.boundaries == 11 .. 14
-    doAssert "#xabcx#abc#".find(re"\babc\b", m)
-    doAssert m.boundaries == 7 .. 9
-    doAssert "#foo://#".find(re"[\w]+://", m)
-    doAssert m.boundaries == 1 .. 6
-    doAssert "x#foo://#".find(re"[\w]+://", m)
-    doAssert m.boundaries == 2 .. 7
-    echo "ok"
+  #doAssert match("abc", re(r"abc", {reAscii}), m)
+  doAssert match("abc", re"abc", m)
+  doAssert match("ab", re"a(b|c)", m)
+  doAssert match("ac", re"a(b|c)", m)
+  doAssert(not match("ad", re"a(b|c)", m))
+  doAssert match("ab", re"(ab)*", m)
+  doAssert match("abab", re"(ab)*", m)
+  doAssert(not match("ababc", re"(ab)*", m))
+  doAssert(not match("a", re"(ab)*", m))
+  doAssert match("ab", re"(ab)+", m)
+  doAssert match("abab", re"(ab)+", m)
+  doAssert(not match("ababc", re"(ab)+", m))
+  doAssert(not match("a", re"(ab)+", m))
+  doAssert match("aa", re"\b\b\baa\b\b\b", m)
+  doAssert(not match("cac", re"c\ba\bc", m))
+  doAssert match("abc", re"[abc]+", m)
+  doAssert match("abc", re"[\w]+", m)
+  doAssert match("弢弢弢", re"[\w]+", m)
+  doAssert(not match("abc", re"[\d]+", m))
+  doAssert match("123", re"[\d]+", m)
+  doAssert match("abc$%&", re".+", m)
+  doAssert(not match("abc$%&\L", re"(.+)", m))
+  doAssert(not match("abc$%&\L", re".+", m))
+  doAssert(not match("弢", re"\W", m))
+  doAssert match("$%&", re"\W+", m)
+  doAssert match("abc123", re"[^\W]+", m)
 
-  when false:
-    #doAssert match("abc", re(r"abc", {reAscii}), m)
-    doAssert match("abc", re"abc", m)
-    doAssert match("ab", re"a(b|c)", m)
-    doAssert match("ac", re"a(b|c)", m)
-    doAssert(not match("ad", re"a(b|c)", m))
-    doAssert match("ab", re"(ab)*", m)
-    doAssert match("abab", re"(ab)*", m)
-    doAssert(not match("ababc", re"(ab)*", m))
-    doAssert(not match("a", re"(ab)*", m))
-    doAssert match("ab", re"(ab)+", m)
-    doAssert match("abab", re"(ab)+", m)
-    doAssert(not match("ababc", re"(ab)+", m))
-    doAssert(not match("a", re"(ab)+", m))
-    doAssert match("aa", re"\b\b\baa\b\b\b", m)
-    doAssert(not match("cac", re"c\ba\bc", m))
-    doAssert match("abc", re"[abc]+", m)
-    doAssert match("abc", re"[\w]+", m)
-    doAssert match("弢弢弢", re"[\w]+", m)
-    doAssert(not match("abc", re"[\d]+", m))
-    doAssert match("123", re"[\d]+", m)
-    doAssert match("abc$%&", re".+", m)
-    doAssert(not match("abc$%&\L", re"(.+)", m))
-    doAssert(not match("abc$%&\L", re".+", m))
-    doAssert(not match("弢", re"\W", m))
-    doAssert match("$%&", re"\W+", m)
-    doAssert match("abc123", re"[^\W]+", m)
+  doAssert match("aabcd", re"(aa)bcd", m) and
+    m.captures == @[@[0 .. 1]]
+  doAssert match("aabc", re"(aa)(bc)", m) and
+    m.captures == @[@[0 .. 1], @[2 .. 3]]
+  doAssert match("ab", re"a(b|c)", m) and
+    m.captures == @[@[1 .. 1]]
+  doAssert match("ab", re"(ab)*", m) and
+    m.captures == @[@[0 .. 1]]
+  doAssert match("abab", re"(ab)*", m) and
+    m.captures == @[@[0 .. 1, 2 .. 3]]
+  doAssert match("ab", re"((a))b", m) and
+    m.captures == @[@[0 .. 0], @[0 .. 0]]
+  doAssert match("c", re"((ab)*)c", m) and
+    m.captures == @[@[0 .. -1], @[]]
+  doAssert match("aab", re"((a)*b)", m) and
+    m.captures == @[@[0 .. 2], @[0 .. 0, 1 .. 1]]
+  doAssert match("abbbbcccc", re"a(b|c)*", m) and
+    m.captures == @[@[1 .. 1, 2 .. 2, 3 .. 3, 4 .. 4, 5 .. 5, 6 .. 6, 7 .. 7, 8 .. 8]]
+  doAssert match("ab", re"(a*)(b*)", m) and
+    m.captures == @[@[0 .. 0], @[1 .. 1]]
+  doAssert match("ab", re"(a)*(b)*", m) and
+    m.captures == @[@[0 .. 0], @[1 .. 1]]
+  doAssert match("ab", re"(a)*b*", m) and
+    m.captures == @[@[0 .. 0]]
+  doAssert match("abbb", re"((a(b)*)*(b)*)", m) and
+    m.captures == @[@[0 .. 3], @[0 .. 3], @[1 .. 1, 2 .. 2, 3 .. 3], @[]]
+  doAssert match("aa", re"(a)+", m) and
+    m.captures == @[@[0 .. 0, 1 .. 1]]
+  doAssert match("abab", re"(ab)+", m) and
+    m.captures == @[@[0 .. 1, 2 .. 3]]
+  doAssert match("a", re"(a)?", m) and
+    m.captures == @[@[0 .. 0]]
+  doAssert match("ab", re"(ab)?", m) and
+    m.captures == @[@[0 .. 1]]
+  doAssert match("aaabbbaaa", re"(a*|b*)*", m) and
+    m.captures == @[@[0 .. 2, 3 .. 5, 6 .. 8]]
+  doAssert match("abab", re"(a(b))*", m) and
+    m.captures == @[@[0 .. 1, 2 .. 3], @[1 .. 1, 3 .. 3]]
+  doAssert match("aaanasdnasd", re"((a)*n?(asd)*)*", m) and
+    m.captures == @[@[0 .. 6, 7 .. 10], @[0 .. 0, 1 .. 1, 2 .. 2], @[4 .. 6, 8 .. 10]]
+  doAssert match("aaanasdnasd", re"((a)*n?(asd))*", m) and
+    m.captures == @[@[0 .. 6, 7 .. 10], @[0 .. 0, 1 .. 1, 2 .. 2], @[4 .. 6, 8 .. 10]]
+  doAssert match("abd", re"((ab)c)|((ab)d)", m) and
+    m.captures == @[@[], @[], @[0 .. 2], @[0 .. 1]]
+  doAssert match("aaa", re"(a*)", m) and
+    m.captures == @[@[0 .. 2]]
+  doAssert match("aaaa", re"(a*)(a*)", m) and
+    m.captures == @[@[0 .. 3], @[4 .. 3]]
+  doAssert match("aaaa", re"(a*?)(a*?)", m) and
+    m.captures == @[@[0 .. -1], @[0 .. 3]]
+  doAssert match("aaaa", re"(a)*(a)", m) and
+    m.captures == @[@[0 .. 0, 1 .. 1, 2 .. 2], @[3 .. 3]]
+  
+  doAssert match("abc", re"abc")
+  doAssert(not match("abc", re"abd"))
+  doAssert(not match("abc", re"ab"))
+  doAssert(not match("abc", re"b"))
+  doAssert(not match("abc", re"c"))
 
-    doAssert match("aabcd", re"(aa)bcd", m) and
-      m.captures == @[@[0 .. 1]]
-    doAssert match("aabc", re"(aa)(bc)", m) and
-      m.captures == @[@[0 .. 1], @[2 .. 3]]
-    doAssert match("ab", re"a(b|c)", m) and
-      m.captures == @[@[1 .. 1]]
-    doAssert match("ab", re"(ab)*", m) and
-      m.captures == @[@[0 .. 1]]
-    doAssert match("abab", re"(ab)*", m) and
-      m.captures == @[@[0 .. 1, 2 .. 3]]
-    doAssert match("ab", re"((a))b", m) and
-      m.captures == @[@[0 .. 0], @[0 .. 0]]
-    doAssert match("c", re"((ab)*)c", m) and
-      m.captures == @[@[0 .. -1], @[]]
-    doAssert match("aab", re"((a)*b)", m) and
-      m.captures == @[@[0 .. 2], @[0 .. 0, 1 .. 1]]
-    doAssert match("abbbbcccc", re"a(b|c)*", m) and
-      m.captures == @[@[1 .. 1, 2 .. 2, 3 .. 3, 4 .. 4, 5 .. 5, 6 .. 6, 7 .. 7, 8 .. 8]]
-    doAssert match("ab", re"(a*)(b*)", m) and
-      m.captures == @[@[0 .. 0], @[1 .. 1]]
-    doAssert match("ab", re"(a)*(b)*", m) and
-      m.captures == @[@[0 .. 0], @[1 .. 1]]
-    doAssert match("ab", re"(a)*b*", m) and
-      m.captures == @[@[0 .. 0]]
-    doAssert match("abbb", re"((a(b)*)*(b)*)", m) and
-      m.captures == @[@[0 .. 3], @[0 .. 3], @[1 .. 1, 2 .. 2, 3 .. 3], @[]]
-    doAssert match("aa", re"(a)+", m) and
-      m.captures == @[@[0 .. 0, 1 .. 1]]
-    doAssert match("abab", re"(ab)+", m) and
-      m.captures == @[@[0 .. 1, 2 .. 3]]
-    doAssert match("a", re"(a)?", m) and
-      m.captures == @[@[0 .. 0]]
-    doAssert match("ab", re"(ab)?", m) and
-      m.captures == @[@[0 .. 1]]
-    doAssert match("aaabbbaaa", re"(a*|b*)*", m) and
-      m.captures == @[@[0 .. 2, 3 .. 5, 6 .. 8]]
-    doAssert match("abab", re"(a(b))*", m) and
-      m.captures == @[@[0 .. 1, 2 .. 3], @[1 .. 1, 3 .. 3]]
-    doAssert match("aaanasdnasd", re"((a)*n?(asd)*)*", m) and
-      m.captures == @[@[0 .. 6, 7 .. 10], @[0 .. 0, 1 .. 1, 2 .. 2], @[4 .. 6, 8 .. 10]]
-    doAssert match("aaanasdnasd", re"((a)*n?(asd))*", m) and
-      m.captures == @[@[0 .. 6, 7 .. 10], @[0 .. 0, 1 .. 1, 2 .. 2], @[4 .. 6, 8 .. 10]]
-    doAssert match("abd", re"((ab)c)|((ab)d)", m) and
-      m.captures == @[@[], @[], @[0 .. 2], @[0 .. 1]]
-    doAssert match("aaa", re"(a*)", m) and
-      m.captures == @[@[0 .. 2]]
-    doAssert match("aaaa", re"(a*)(a*)", m) and
-      m.captures == @[@[0 .. 3], @[4 .. 3]]
-    doAssert match("aaaa", re"(a*?)(a*?)", m) and
-      m.captures == @[@[0 .. -1], @[0 .. 3]]
-    doAssert match("aaaa", re"(a)*(a)", m) and
-      m.captures == @[@[0 .. 0, 1 .. 1, 2 .. 2], @[3 .. 3]]
-    
-    doAssert match("abc", re"abc")
-    doAssert(not match("abc", re"abd"))
-    doAssert(not match("abc", re"ab"))
-    doAssert(not match("abc", re"b"))
-    doAssert(not match("abc", re"c"))
+  doAssert re"bc" in "abcd"
+  doAssert re"(23)+" in "23232"
+  doAssert re"^(23)+$" notin "23232"
+  doAssert re"\w" in "弢"
+  #doAssert re(r"\w", {reAscii}) notin "弢"
+  #doAssert re(r"\w", {reAscii}) in "a"
 
-    doAssert re"bc" in "abcd"
-    doAssert re"(23)+" in "23232"
-    doAssert re"^(23)+$" notin "23232"
-    doAssert re"\w" in "弢"
-    #doAssert re(r"\w", {reAscii}) notin "弢"
-    #doAssert re(r"\w", {reAscii}) in "a"
+  doAssert "abcd".find(re"bc", m)
+  doAssert(not "abcd".find(re"de", m))
+  #doAssert "%ab%".find(re(r"\w{2}", {reAscii}), m)
+  doAssert "%弢弢%".find(re"\w{2}", m)
+  #doAssert(not "%弢弢%".find(re(r"\w{2}", {reAscii}), m)
+  doAssert(
+    "2222".find(re"(22)*", m) and
+    m.group(0) == @[0 .. 1, 2 .. 3])
+  doAssert(
+    "11222211".find(re"(22)+", m) and
+    m.group(0) == @[2 .. 3, 4 .. 5])
+  
+  doAssert match("650-253-0001", re"[0-9]+-[0-9]+-[0-9]+", m)
+  doAssert(not match("abc-253-0001", re"[0-9]+-[0-9]+-[0-9]+", m))
+  doAssert(not match("650-253", re"[0-9]+-[0-9]+-[0-9]+", m))
+  doAssert(not match("650-253-0001-abc", re"[0-9]+-[0-9]+-[0-9]+", m))
+  doAssert match("650-253-0001", re"[0-9]+..*", m)
+  doAssert(not match("abc-253-0001", re"[0-9]+..*", m))
+  doAssert(not match("6", re"[0-9]+..*", m))
 
-    doAssert "abcd".find(re"bc", m)
-    doAssert(not "abcd".find(re"de", m))
-    #doAssert "%ab%".find(re(r"\w{2}", {reAscii}), m)
-    doAssert "%弢弢%".find(re"\w{2}", m)
-    #doAssert(not "%弢弢%".find(re(r"\w{2}", {reAscii}), m)
-    doAssert(
-      "2222".find(re"(22)*", m) and
-      m.group(0) == @[0 .. 1, 2 .. 3])
-    doAssert(
-      "11222211".find(re"(22)+", m) and
-      m.group(0) == @[2 .. 3, 4 .. 5])
-    
-    doAssert match("650-253-0001", re"[0-9]+-[0-9]+-[0-9]+", m)
-    doAssert(not match("abc-253-0001", re"[0-9]+-[0-9]+-[0-9]+", m))
-    doAssert(not match("650-253", re"[0-9]+-[0-9]+-[0-9]+", m))
-    doAssert(not match("650-253-0001-abc", re"[0-9]+-[0-9]+-[0-9]+", m))
-    doAssert match("650-253-0001", re"[0-9]+..*", m)
-    doAssert(not match("abc-253-0001", re"[0-9]+..*", m))
-    doAssert(not match("6", re"[0-9]+..*", m))
+  doAssert match("abcabcabc", re"(?:(?:abc)){3}")
+  doAssert match("abcabcabc", re"((abc)){3}")
 
-    doAssert match("abcabcabc", re"(?:(?:abc)){3}")
-    doAssert match("abcabcabc", re"((abc)){3}")
+  # subset of tests.nim
+  when canUseMacro:
+    proc raisesMsg(pattern: string): string =
+      try:
+        discard re(pattern)
+      except RegexError:
+        result = getCurrentExceptionMsg()
 
-    # subset of tests.nim
-    when canUseMacro:
-      proc raisesMsg(pattern: string): string =
-        try:
-          discard re(pattern)
-        except RegexError:
-          result = getCurrentExceptionMsg()
-
-      template test(body: untyped): untyped =
-        static:
-          (proc() = body)()
+    template test(body: untyped): untyped =
+      static:
         (proc() = body)()
+      (proc() = body)()
 
-      test:
-        var m: RegexMatch
-        doAssert match("ac", re"a(b|c)", m)
-        doAssert not match("ad", re"a(b|c)", m)
-        doAssert match("ab", re"(ab)*", m)
-        doAssert match("abab", re"(ab)*", m)
-        doAssert not match("ababc", re"(ab)*", m)
-        doAssert not match("a", re"(ab)*", m)
-        doAssert match("abab", re"(ab)*", m) and
-          m.captures == @[@[0 .. 1, 2 .. 3]]
-        doAssert match("bbaa aa", re"([\w ]*?)(\baa\b)", m) and
-          m.captures == @[@[0 .. 4], @[5 .. 6]]
-        doAssert re"bc" in "abcd"
-        doAssert re"(23)+" in "23232"
-        doAssert re"^(23)+$" notin "23232"
-        doAssert re"\w" in "弢"
-        doAssert "2222".find(re"(22)*", m) and
-          m.group(0) == @[0 .. 1, 2 .. 3]
-        doAssert raisesMsg(r"[a-\w]") ==
-          "Invalid set range. Range can't contain " &
-          "a character-class or assertion\n" &
-          "[a-\\w]\n" &
-          "   ^"
-        doAssert "a,b".splitIncl(re"(,)") == @["a", ",", "b"]
-        doAssert "abcabc".replace(re"(abc)", "m($1)") ==
-          "m(abc)m(abc)"
-        const ip = re"""(?x)
-        \b
-        ((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}
-        (25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)
-        \b
-        """
-        doAssert match("127.0.0.1", ip)
-        doAssert not match("127.0.0.999", ip)
+    test:
+      var m: RegexMatch
+      doAssert match("ac", re"a(b|c)", m)
+      doAssert not match("ad", re"a(b|c)", m)
+      doAssert match("ab", re"(ab)*", m)
+      doAssert match("abab", re"(ab)*", m)
+      doAssert not match("ababc", re"(ab)*", m)
+      doAssert not match("a", re"(ab)*", m)
+      doAssert match("abab", re"(ab)*", m) and
+        m.captures == @[@[0 .. 1, 2 .. 3]]
+      doAssert match("bbaa aa", re"([\w ]*?)(\baa\b)", m) and
+        m.captures == @[@[0 .. 4], @[5 .. 6]]
+      doAssert re"bc" in "abcd"
+      doAssert re"(23)+" in "23232"
+      doAssert re"^(23)+$" notin "23232"
+      doAssert re"\w" in "弢"
+      doAssert "2222".find(re"(22)*", m) and
+        m.group(0) == @[0 .. 1, 2 .. 3]
+      doAssert raisesMsg(r"[a-\w]") ==
+        "Invalid set range. Range can't contain " &
+        "a character-class or assertion\n" &
+        "[a-\\w]\n" &
+        "   ^"
+      doAssert "a,b".splitIncl(re"(,)") == @["a", ",", "b"]
+      doAssert "abcabc".replace(re"(abc)", "m($1)") ==
+        "m(abc)m(abc)"
+      const ip = re"""(?x)
+      \b
+      ((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}
+      (25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)
+      \b
+      """
+      doAssert match("127.0.0.1", ip)
+      doAssert not match("127.0.0.999", ip)
+      doAssert "abcd".find(re"bc", m) and
+        m.boundaries == 1 .. 2
+      doAssert "bcd".find(re"bc", m) and
+        m.boundaries == 0 .. 1
+      doAssert "bc".find(re"bc", m) and
+        m.boundaries == 0 .. 1
+      doAssert "#foo://#".find(re"[\w]+://", m) and
+        m.boundaries == 1 .. 6
+      doAssert findAllBounds("abcd", re"bc") == @[1 .. 2]
+      doAssert findAllBounds("bcd", re"bc") == @[0 .. 1]
+      doAssert findAllBounds("bc", re"bc") == @[0 .. 1]
+      doAssert findAllBounds("#foo://#", re"[\w]+://") == @[1 .. 6]
+      doAssert findAllBounds("abc\nabc\na", re"(?m)^a") ==
+        @[0 .. 0, 4 .. 4, 8 .. 8]
+  echo "ok regex.nim"

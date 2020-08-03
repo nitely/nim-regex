@@ -57,12 +57,12 @@ proc toStrCaptures(m: RegexMatch, s: string): seq[seq[string]] =
 
 proc matchWithCapt(s: string, pattern: static Regex): seq[seq[string]] =
   var m: RegexMatch
-  doAssert match(s, pattern, m)
+  check match(s, pattern, m)
   result = m.toStrCaptures(s)
 
 proc findWithCapt(s: string, pattern: Regex): seq[seq[string]] =
   var m: RegexMatch
-  doAssert find(s, pattern, m)
+  check find(s, pattern, m)
   result = m.toStrCaptures(s)
 
 func findAllBounds(s: string, reg: Regex): seq[Slice[int]] =
@@ -905,6 +905,7 @@ test "tsplit":
   check split("1 2", re" ") == @["1", "2"]
   check split("foo", re"foo") == @["", ""]
   check split("", re"foo") == @[""]
+  check split("bar", re"foo") == @["bar"]
 
   check "12".split(re"\w\b") == @["1", ""]
   check "12".split(re"\w\B") == @["", "2"]
@@ -1468,75 +1469,75 @@ test "capturingGroupsNames":
   block:
     let text = "hello world"
     var m: RegexMatch
-    doAssert text.match(re"(?P<greet>hello) (?P<who>world)", m)
-    doAssert m.groupsCount == 2
+    check text.match(re"(?P<greet>hello) (?P<who>world)", m)
+    check m.groupsCount == 2
     for name in @["greet", "who"]:
-      doAssert m.groupNames.contains(name)
+      check m.groupNames.contains(name)
 
   block:
     let text = "hello world"
     var m: RegexMatch
-    doAssert text.match(re"(?P<greet>hello) (?P<who>world)", m)
-    doAssert m.group("greet", text) == @["hello"]
-    doAssert m.group("who", text) == @["world"]
+    check text.match(re"(?P<greet>hello) (?P<who>world)", m)
+    check m.group("greet", text) == @["hello"]
+    check m.group("who", text) == @["world"]
     
   block:
     let text = "hello world foo bar"
     var m: RegexMatch
-    doAssert text.match(re"(?P<greet>hello) (?:(?P<who>[^\s]+)\s?)+", m)
-    doAssert m.group("greet", text) == @["hello"]
+    check text.match(re"(?P<greet>hello) (?:(?P<who>[^\s]+)\s?)+", m)
+    check m.group("greet", text) == @["hello"]
     let whoGroups = m.group("who", text)
     for w in @["foo", "bar", "world"]:
-      doAssert whoGroups.contains(w)
+      check whoGroups.contains(w)
 
   block:
     let text = "hello world"
     var m: RegexMatch
-    doAssert text.match(re"(?P<greet>hello) (?P<who>world)", m)
-    doAssert m.groupFirstCapture("greet", text) == "hello"
-    doAssert m.groupFirstCapture("who", text) == "world"
+    check text.match(re"(?P<greet>hello) (?P<who>world)", m)
+    check m.groupFirstCapture("greet", text) == "hello"
+    check m.groupFirstCapture("who", text) == "world"
 
   ## First capture
   block:
     let text = "hello world her"
     var m: RegexMatch
-    doAssert text.match(re"(?P<greet>hello) (?P<who>world) (?P<who>her)", m)
-    doAssert m.groupFirstCapture("greet", text) == "hello"
+    check text.match(re"(?P<greet>hello) (?P<who>world) (?P<who>her)", m)
+    check m.groupFirstCapture("greet", text) == "hello"
 
   block:
     let text = "hello world foo bar"
     var m: RegexMatch
-    doAssert text.match(re"(?P<greet>hello) (?:(?P<who>[^\s]+)\s?)+", m)
+    check text.match(re"(?P<greet>hello) (?:(?P<who>[^\s]+)\s?)+", m)
     # "who" captures @["world", "foo", "bar"]
-    doAssert m.groupFirstCapture("who", text) == "world"
+    check m.groupFirstCapture("who", text) == "world"
   
   block:
     let text = "hello"
     var m: RegexMatch
-    doAssert text.match(re"(?P<greet>hello)\s?(?P<who>world)?", m)
-    doAssert m.groupFirstCapture("greet", text) == "hello"
-    doAssert m.groupFirstCapture("who", text) == ""
+    check text.match(re"(?P<greet>hello)\s?(?P<who>world)?", m)
+    check m.groupFirstCapture("greet", text) == "hello"
+    check m.groupFirstCapture("who", text) == ""
 
   ## Last capture
   block:
     let text = "hello world her"
     var m: RegexMatch
-    doAssert text.match(re"(?P<greet>hello) (?P<who>world) (?P<who>her)", m)
-    doAssert m.groupLastCapture("who", text) == "her"
+    check text.match(re"(?P<greet>hello) (?P<who>world) (?P<who>her)", m)
+    check m.groupLastCapture("who", text) == "her"
 
   block:
     let text = "hello world foo bar"
     var m: RegexMatch
-    doAssert text.match(re"(?P<greet>hello) (?:(?P<who>[^\s]+)\s?)+", m)
+    check text.match(re"(?P<greet>hello) (?:(?P<who>[^\s]+)\s?)+", m)
     # "who" captures @["world", "foo", "bar"]
-    doAssert m.groupLastCapture("who", text) == "bar"
+    check m.groupLastCapture("who", text) == "bar"
 
   block:
     let text = "hello"
     var m: RegexMatch
-    doAssert text.match(re"(?P<greet>hello)\s?(?P<who>world)?", m)
-    doAssert m.groupLastCapture("greet", text) == "hello"
-    doAssert m.groupLastCapture("who", text) == ""
+    check text.match(re"(?P<greet>hello)\s?(?P<who>world)?", m)
+    check m.groupLastCapture("greet", text) == "hello"
+    check m.groupLastCapture("who", text) == ""
 
 # XXX raise a compile error when regex contains unicode
 #     in ascii mode
@@ -1551,6 +1552,85 @@ test "tflags":
   #check "%ab%".find(re(r"\w{2}", {reAscii}), m)
   check "%弢弢%".find(re"\w{2}", m)
   #check(not "%弢弢%".find(re(r"\w{2}", {reAscii}), m))
+
+test "tfindopt":
+  var m: RegexMatch
+  check(not find("bar", re"foo", m))
+  check(not find("bar", re"baz", m))
+  check "abcd".find(re"bc", m)
+  check m.boundaries == 1 .. 2
+  check "bcd".find(re"bc", m)
+  check m.boundaries == 0 .. 1
+  check "bc".find(re"bc", m)
+  check m.boundaries == 0 .. 1
+  check "ababcd".find(re"bc", m)
+  check m.boundaries == 3 .. 4
+  check "abc@xyz".find(re"\w@", m)
+  check m.boundaries == 2 .. 3
+  check "ab1c@xyz".find(re"\d\w@", m)
+  check m.boundaries == 2 .. 4
+  check "##axyz##".find(re"(a|b)xyz", m)
+  check m.boundaries == 2 .. 5
+  check "##bxyz##".find(re"(a|b)xyz", m)
+  check m.boundaries == 2 .. 5
+  check "##x#ax#axy#bxyz##".find(re"(a|b)xyz", m)
+  check m.boundaries == 11 .. 14
+  check "##z#xyz#yz#bxyz##".find(re"(a|b)xyz", m)
+  check m.boundaries == 11 .. 14
+  check "#xabcx#abc#".find(re"\babc\b", m)
+  check m.boundaries == 7 .. 9
+  check "#foo://#".find(re"[\w]+://", m)
+  check m.boundaries == 1 .. 6
+  check "x#foo://#".find(re"[\w]+://", m)
+  check m.boundaries == 2 .. 7
+
+test "tfindallopt":
+  check findAllBounds("bar", re"foo").len == 0
+  check findAllBounds("bar", re"baz").len == 0
+  check findAllBounds("abcd", re"bc") ==
+    @[1 .. 2]
+  check findAllBounds("bcd", re"bc") ==
+    @[0 .. 1]
+  check findAllBounds("bc", re"bc") ==
+    @[0 .. 1]
+  check findAllBounds("ababcd", re"bc") ==
+    @[3 .. 4]
+  check findAllBounds("abc@xyz", re"\w@") ==
+    @[2 .. 3]
+  check findAllBounds("ab1c@xyz", re"\d\w@") ==
+    @[2 .. 4]
+  check findAllBounds("##axyz##", re"(a|b)xyz") ==
+    @[2 .. 5]
+  check findAllBounds("##bxyz##", re"(a|b)xyz") ==
+    @[2 .. 5]
+  check findAllBounds("##x#ax#axy#bxyz##", re"(a|b)xyz") ==
+    @[11 .. 14]
+  check findAllBounds("##z#xyz#yz#bxyz##", re"(a|b)xyz") ==
+    @[11 .. 14]
+  check findAllBounds("#xabcx#abc#", re"\babc\b") ==
+    @[7 .. 9]
+  check findAllBounds("#foo://#", re"[\w]+://") ==
+    @[1 .. 6]
+  check findAllBounds("x#foo://#", re"[\w]+://") ==
+    @[2 .. 7]
+  check findAllBounds("foobarbaz", re"(?<=o)b") ==
+    @[3 .. 3]
+  check findAllBounds("foobarbaz", re"(?<=r)b") ==
+    @[6 .. 6]
+  check findAllBounds("foobar", re"o(?=b)") ==
+    @[2 .. 2]
+  check findAllBounds("foobarbaz", re"a(?=r)") ==
+    @[4 .. 4]
+  check findAllBounds("abcdef", re"^abcd") ==
+    @[0 .. 3]
+  check findAllBounds("abcdef", re"cdef$") ==
+    @[2 .. 5]
+  check findAllBounds("abcdef", re"^abcdef$") ==
+    @[0 .. 5]
+  check findAllBounds("abcdef", re"^abcx").len == 0
+  check findAllBounds("abcdef", re"xcdef$").len == 0
+  check findAllBounds("abc\nabc\na", re"(?m)^a") ==
+    @[0 .. 0, 4 .. 4, 8 .. 8]
 
 test "tmisc2":
   var m: RegexMatch

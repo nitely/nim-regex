@@ -274,24 +274,22 @@ func prefix(eNfa: Enfa, uid: NodeUid): Enfa =
   result = eNfa
   for n in result.mitems:
     n.next.setLen 0
+  # reverse transitions; DFS
+  var stack = @[(state0, -1'i16)]
   var visited: set[int16]
-  func rev(res: var Enfa, ni, pi: int16) =
-    template state: untyped = eNfa[ni]
+  template state: untyped = eNfa[ni]
+  while stack.len > 0:
+    let (ni, pi) = stack.pop()
     if pi > -1:
-      res[ni].next.add pi
+      result[ni].next.add pi
     if ni in visited:
-      return
+      continue
     visited.incl ni
     # we only care about the prefix
     if state.uid == uid:
-      return
-    if not state.isGreedy:
-      for mi in state.next.reversed:
-        rev(res, mi, ni)
-    else:
-      for mi in state.next:
-        rev(res, mi, ni)
-  rev(result, state0, -1)
+      continue
+    for mi in state.next:
+      stack.add (mi, ni)
   for n in result.mitems:
     n.next.reverse
   # Swap initial state by eoe
@@ -448,9 +446,21 @@ when isMainModule:
   doAssert r"\w".prefix.len == 0
   doAssert r"(\w\d)*@".prefix.toString == r"(\d\w)*".toNfa.toString
   doAssert r"(\w\d)+@".prefix.toString == r"(\d\w)+".toNfa.toString
-  # We look for the longest match, so greeddiness
+  # We search the start of the match, so greeddiness
   # does not matter
   doAssert r"(\w\d)*?@".prefix.toString == r"(\d\w)*".toNfa.toString
   doAssert r"(\w\d)+?@".prefix.toString == r"(\d\w)+".toNfa.toString
+  doAssert r"\w+\d+?@".prefix.toString == r"\d+\w+".toNfa.toString
+  doAssert r"\w+?\d+@".prefix.toString == r"\d+\w+".toNfa.toString
+  doAssert r"\w+?\d+?@".prefix.toString == r"\d+\w+".toNfa.toString
+  doAssert r"\w*\d*?@".prefix.toString == r"\d*\w*".toNfa.toString
+  doAssert r"\w*?\d*@".prefix.toString == r"\d*\w*".toNfa.toString
+  doAssert r"\w*?\d*?@".prefix.toString == r"\d*\w*".toNfa.toString
+  doAssert r"\w+\d*?@".prefix.toString == r"\d*\w+".toNfa.toString
+  doAssert r"\w+?\d*@".prefix.toString == r"\d*\w+".toNfa.toString
+  doAssert r"\w+?\d*?@".prefix.toString == r"\d*\w+".toNfa.toString
+  doAssert r"\w*\d+?@".prefix.toString == r"\d+\w*".toNfa.toString
+  doAssert r"\w*?\d+@".prefix.toString == r"\d+\w*".toNfa.toString
+  doAssert r"\w*?\d+?@".prefix.toString == r"\d+\w*".toNfa.toString
 
   echo "litopt ok"

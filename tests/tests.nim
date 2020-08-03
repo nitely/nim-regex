@@ -1631,6 +1631,8 @@ test "tfindallopt":
   check findAllBounds("abcdef", re"xcdef$").len == 0
   check findAllBounds("abc\nabc\na", re"(?m)^a") ==
     @[0 .. 0, 4 .. 4, 8 .. 8]
+  check findAllBounds("#f1o2o3@bar#", re"(\w\d)*?@\w+") ==
+    @[1 .. 10]
 
 test "tmisc2":
   var m: RegexMatch

@@ -116,18 +116,12 @@ func fillMatchImpl*(
     m.captures, ms.c, ms.m[mi].capt, regex.groupsCount)
   m.boundaries = ms.m[mi].bounds
 
-func dummyMatch*(
-  ms: var RegexMatches,
-  i: int,
-  matched: bool
-) {.inline.} =
+func dummyMatch*(ms: var RegexMatches, i: int) {.inline.} =
   ## hack to support `split` last value.
   ## we need to add the end boundary if
   ## it has not matched the end
   ## (no match implies this too)
   template ab: untyped = ms.m[^1].bounds
-  if not matched:
-    ms.clear()
   if ms.m.len == 0 or max(ab.a, ab.b) < i:
     ms.m.add (-1'i32, i+1 .. i)
 
@@ -331,6 +325,7 @@ func findSomeOptImpl*(
   template smB: untyped = ms.b
   doAssert opt.nfa.len > 0
   initMaybeImpl(ms, regexSize)
+  ms.clear()
   var i = start.int
   var i2 = -1
   while i < len(text):

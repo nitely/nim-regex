@@ -522,7 +522,7 @@ iterator split*(s: string, sep: Regex): string {.inline, raises: [].} =
     doAssert(i > i2); i2 = i
     i = findSomeOptTpl(s, sep, ms, i)
     done = i < 0 or i >= len(s)
-    if done: ms.dummyMatch(s.len, i > -1)
+    if done: ms.dummyMatch(s.len)
     for ab in ms.bounds:
       last = ab.a
       if ab.a > 0 or ab.a <= ab.b:  # skip first empty match
@@ -559,7 +559,7 @@ func splitIncl*(s: string, sep: Regex): seq[string] {.inline, raises: [].} =
     doAssert(i > i2); i2 = i
     i = findSomeOptTpl(s, sep, ms, i)
     done = i < 0 or i >= len(s)
-    if done: ms.dummyMatch(s.len, i > -1)
+    if done: ms.dummyMatch(s.len)
     for mi in ms:
       fillMatchImpl(m, mi, ms, sep)
       last = ab.a

@@ -1703,6 +1703,10 @@ test "tfindallopt":
     @[@[@[], @[0 .. 1]]]
   check findAllCapt("aba@&%", re"(?:(ab)|(a))\w@&%") ==
     @[@[@[0 .. 1], @[]]]
+  check findAllCapt("ab@&%abc@&%", re"(?:(a)|(ab))\w@&%") ==
+    @[@[@[0 .. 0], @[]], @[@[], @[5 .. 6]]]
+  check findAllCapt("abc@&%ab@&%", re"(?:(a)|(ab))\w@&%") ==
+    @[@[@[], @[0 .. 1]], @[@[6 .. 6], @[]]]
 
 test "tmisc2":
   var m: RegexMatch

@@ -71,6 +71,13 @@ func findAllBounds(s: string, reg: Regex): seq[Slice[int]] =
     func (m: RegexMatch): Slice[int] =
       m.boundaries)
 
+func findAllCapt(s: string, reg: Regex): seq[seq[seq[Slice[int]]]] =
+  result = map(
+    findAll(s, reg),
+    func (m: RegexMatch): seq[seq[Slice[int]]] =
+      for i in 0 .. m.groupsCount-1:
+        result.add m.group(i))
+
 test "tfull_match":
   check "".isMatch(re"")
   check "a".isMatch(re"a")
@@ -951,8 +958,8 @@ test "tfindall":
   check findAllBounds("abcabc", re"bc") == @[1 .. 2, 4 .. 5]
   check findAllBounds("aa", re"a") == @[0 .. 0, 1 .. 1]
   check findAllBounds("a", re"a") == @[0 .. 0]
-  check findAllBounds("a", re"b") == newSeq[Slice[int]]()
-  check findAllBounds("", re"b") == newSeq[Slice[int]]()
+  check findAllBounds("a", re"b").len == 0
+  check findAllBounds("", re"b").len == 0
   check findAllBounds("abc ab", re"\w+ *") == @[0 .. 3, 4 .. 5]
   check findAllBounds("AAA :   : BBB", re"\s*:\s*") == @[3 .. 7, 8 .. 9]
   check findAllBounds("a\n  b\n c\n  ", re"(?m)^") ==
@@ -987,7 +994,7 @@ test "tfindall":
     @[0 .. 3, 5 .. 8]
   check findAllBounds("abbbXabbbX", re"((a(b)*)+(b)*)") ==
     @[0 .. 3, 5 .. 8]
-  check findAllBounds("abXabX", re"a(b|c)*d") == newSeq[Slice[int]]()
+  check findAllBounds("abXabX", re"a(b|c)*d").len == 0
   check findAllBounds("aaanasdnasdXaaanasdnasd", re"((a)*n?(asd)*)+") ==
     @[0 .. 10, 11 .. 10, 12 .. 22, 23 .. 22]
 
@@ -1595,20 +1602,30 @@ test "tfindallopt":
     @[0 .. 1]
   check findAllBounds("ababcd", re"bc") ==
     @[3 .. 4]
+  check findAllBounds("abcdbcbc", re"bc") ==
+    @[1 .. 2, 4 .. 5, 6 .. 7]
   check findAllBounds("abc@xyz", re"\w@") ==
     @[2 .. 3]
+  check findAllBounds("abc@xyz@@", re"\w@") ==
+    @[2 .. 3, 6 .. 7]
   check findAllBounds("ab1c@xyz", re"\d\w@") ==
     @[2 .. 4]
+  check findAllBounds("ab1c@xy1z@z@", re"\d\w@") ==
+    @[2 .. 4, 7 .. 9]
   check findAllBounds("##axyz##", re"(a|b)xyz") ==
     @[2 .. 5]
   check findAllBounds("##bxyz##", re"(a|b)xyz") ==
     @[2 .. 5]
+  check findAllBounds("##axyz##bxyz", re"(a|b)xyz") ==
+    @[2 .. 5, 8 .. 11]
   check findAllBounds("##x#ax#axy#bxyz##", re"(a|b)xyz") ==
     @[11 .. 14]
   check findAllBounds("##z#xyz#yz#bxyz##", re"(a|b)xyz") ==
     @[11 .. 14]
   check findAllBounds("#xabcx#abc#", re"\babc\b") ==
     @[7 .. 9]
+  check findAllBounds("#xabcx#abc#abc", re"\babc\b") ==
+    @[7 .. 9, 11 .. 13]
   check findAllBounds("#foo://#", re"[\w]+://") ==
     @[1 .. 6]
   check findAllBounds("x#foo://#", re"[\w]+://") ==
@@ -1633,6 +1650,59 @@ test "tfindallopt":
     @[0 .. 0, 4 .. 4, 8 .. 8]
   check findAllBounds("#f1o2o3@bar#", re"(\w\d)*?@\w+") ==
     @[1 .. 10]
+  check findAllBounds("foo@bar@baz", re"\w+@\w+") ==
+    @[0 .. 6]
+  check findAllBounds("foo@111@111", re"\w+@\d+") ==
+    @[0 .. 6]
+  check findAllBounds("foo@111@111", re"\w*@\d+") ==
+    @[0 .. 6, 7 .. 10]
+  check findAllBounds("foo@111@@111", re"\w+@\d+") ==
+    @[0 .. 6]
+  check findAllBounds("foo@111foo@111", re"\w+@\d+") ==
+    @[0 .. 6, 7 .. 13]
+  check findAllBounds("111@111@111", re"\d+@\w+") ==
+    @[0 .. 6]
+  check findAllBounds("abbbbccccd@abbbbccccd@", re"\w(b|c)*d@") ==
+    @[0 .. 10, 11 .. 21]
+  check findAllBounds("abXabX", re"\w(b|c)*@").len == 0
+  check findAllBounds("abbcXabbcX", re"((a(b)*)+(c))") ==
+    @[0 .. 3, 5 .. 8]
+  check findAllBounds("aaanasdnasd@aaanasdnasd@", re"((a)*n?(asd)*)+@") ==
+    @[0 .. 11, 12 .. 23]
+  check findAllBounds("a1@a1a1@", re"(\w\d)+@") ==
+    @[0 .. 2, 3 .. 7]
+  check findAllBounds("a1@a1a1@a@a", re"(\w\d)+@") ==
+    @[0 .. 2, 3 .. 7]
+  check findAllBounds("a1@a1a1@a@a1a@1@a@a1@", re"(\w\d)+@") ==
+    @[0 .. 2, 3 .. 7, 18 .. 20]
+  check findAllBounds("a1@a1a1@", re"(\w\d)*@") ==
+    @[0 .. 2, 3 .. 7]
+  check findAllBounds("a1@a1a1@a@a", re"(\w\d)*@") ==
+    @[0 .. 2, 3 .. 7, 9 .. 9]
+  check findAllBounds("a1@a1a1@", re"(\w\d)+?@") ==
+    @[0 .. 2, 3 .. 7]
+  check findAllBounds("a1@a1a1@", re"(\w\d)*?@") ==
+    @[0 .. 2, 3 .. 7]
+  check findAllBounds("a1@a1a1@", re"\w+\d+?@") ==
+    @[0 .. 2, 3 .. 7]
+  check findAllBounds("a1@a1a1@", re"\w+?\d+@") ==
+    @[0 .. 2, 3 .. 7]
+  check findAllBounds("a1@a1a1@", re"\w+?\d+?@") ==
+    @[0 .. 2, 3 .. 7]
+  check findAllBounds("ab@&%", re"(a|ab)\w@&%") ==
+    @[0 .. 4]
+  check findAllBounds("abc@&%", re"(a|ab)\w@&%") ==
+    @[0 .. 5]
+  check findAllBounds("ab@&%abc@&%", re"(a|ab)\w@&%") ==
+    @[0 .. 4, 5 .. 10]
+  check findAllCapt("ab@&%", re"(?:(a)|(ab))\w@&%") ==
+    @[@[@[0 .. 0], @[]]]
+  check findAllCapt("a#b@&%", re"(?:(a)|(a#))\w@&%") ==
+    @[@[@[], @[0 .. 1]]]
+  check findAllCapt("abc@&%", re"(?:(a)|(ab))\w@&%") ==
+    @[@[@[], @[0 .. 1]]]
+  check findAllCapt("aba@&%", re"(?:(ab)|(a))\w@&%") ==
+    @[@[@[0 .. 1], @[]]]
 
 test "tmisc2":
   var m: RegexMatch

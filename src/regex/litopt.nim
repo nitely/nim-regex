@@ -3,6 +3,8 @@
 ## by quickly searching Regular Expression literals
 ## within the input string. See issue #59.
 
+# XXX update explanation
+
 #[
 Only optimizations that are
 guaranteed to run in linear
@@ -145,6 +147,30 @@ does not has this problem,
 since the literal is not
 matched by the prefix,
 it works as a delimiter
+
+Only optimizations that are
+guaranteed to run in linear
+time are implemented.
+We must also ensure the matches
+are not overlapped.
+I think the best way to understand
+how the current implementation works
+is by example. However, I'll describe
+some parts of the algorithm that
+may be useful to grasp first:
+  * we pick a literal that is memchr'ed
+    to skip parts of the text
+  * the prefix is the regex part before
+    the literal; none of the characters
+    or symbols can match the literal
+  * the prefix is run backwards to find
+    the start of the match
+  * a full findAll is run from the start
+    of the match until a character that
+    cannot be matched is found or the end
+    is reached
+  * hence the literal is a delimeter for
+    the prefix; this prevents quadratic time
 
 ]#
 

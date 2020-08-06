@@ -206,14 +206,15 @@ func findSomeImpl*(
     fastRuneAt(text, i, c, true)
     submatch(ms, regex, iPrev, cPrev, c.int32)
     if smA.len == 0:
-      # XXX clear captures if there are no matches
-      #debugEcho "smA 0"
-      if ms.hasMatches() and i < len(text):
-        #debugEcho "m= ", ms.m.s
-        #debugEcho "sma=0=", i
-        return i
-      if optFlag:
-        return i
+      # avoid returning right before final zero-match
+      if i < len(text):
+        if ms.hasMatches():
+          #debugEcho "m= ", ms.m
+          #debugEcho "sma=0=", i
+          return i
+        # else:  # XXX clear captures
+        if optFlag:
+          return i
     smA.add (0'i16, -1'i32, i .. i-1)
     iPrev = i
     cPrev = c.int32
@@ -350,5 +351,5 @@ func findSomeOptImpl*(
       if ms.hasMatches:
         return i
       if i == -1:
-        i = len(text)
+        return -1
   return -1

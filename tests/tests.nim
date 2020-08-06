@@ -884,6 +884,8 @@ test "tsplit":
   check split("00232this02939is39an22example111", re"\d+") ==
     @["", "this", "is", "an", "example", ""]
   check split("AAA :   : BBB", re"\s*:\s*") == @["AAA", "", "BBB"]
+  check split("AAA :   : BBB :   : CCC", re"\s*:\s*") ==
+    @["AAA", "", "BBB", "", "CCC"]
   check split("", re",") == @[""]
   check split(",,", re",") == @["", "", ""]
   # nre's behaviour, differs from python
@@ -997,6 +999,8 @@ test "tfindall":
   check findAllBounds("abXabX", re"a(b|c)*d").len == 0
   check findAllBounds("aaanasdnasdXaaanasdnasd", re"((a)*n?(asd)*)+") ==
     @[0 .. 10, 11 .. 10, 12 .. 22, 23 .. 22]
+  check findAllBounds("1xxx", re"\d\w+x") == @[0 .. 3]
+  check findAllBounds("xxxx", re"\d\w+x").len == 0
 
 test "tfindandcaptureall":
   check findAndCaptureAll("abcabc", re"bc") == @["bc", "bc"]
@@ -1592,6 +1596,14 @@ test "tfindopt":
   check m.boundaries == 2 .. 7
 
 test "tfindallopt":
+  #findAllBounds("x@xxzx@xxz", re"\w+@\w+(?=z)") == @[0 .. 3, 4 .. 8]
+  #findAllBounds("1x@11zx@xxz", re"\d+\w+@\w+(?=z)") == @[0 .. 4]
+  # findAllBounds("1x@11zx@xxz", re"\d+\w+@\w+") == @[0 .. 6]
+  #findAllBounds("1x@1x@1x", re"\d+\w+@\w+") == @[0 .. 4]
+  # findAllBounds("2222", re"22") == @[0 .. 1, 2 .. 3]
+  # XXX needs fixing, prefix match must not overlap the previous match
+  check findAllBounds("1x@1xx@1x", re"\d+\w+@(1\w)+") == @[0 .. 4]
+  #check false
   check findAllBounds("bar", re"foo").len == 0
   check findAllBounds("bar", re"baz").len == 0
   check findAllBounds("abcd", re"bc") ==
@@ -1970,3 +1982,6 @@ test "tmisc3":
     check m.boundaries == 0 .. 2
     check find("xyzabc", re"(abc)|\w+", m)
     check m.boundaries == 0 .. 5
+  check findAndCaptureAll(
+    "He was carefully disguised but captured quickly by police.",
+    re"\w+ly") == @["carefully", "quickly"]

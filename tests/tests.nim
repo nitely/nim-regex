@@ -1596,14 +1596,6 @@ test "tfindopt":
   check m.boundaries == 2 .. 7
 
 test "tfindallopt":
-  #findAllBounds("x@xxzx@xxz", re"\w+@\w+(?=z)") == @[0 .. 3, 4 .. 8]
-  #findAllBounds("1x@11zx@xxz", re"\d+\w+@\w+(?=z)") == @[0 .. 4]
-  # findAllBounds("1x@11zx@xxz", re"\d+\w+@\w+") == @[0 .. 6]
-  #findAllBounds("1x@1x@1x", re"\d+\w+@\w+") == @[0 .. 4]
-  # findAllBounds("2222", re"22") == @[0 .. 1, 2 .. 3]
-  # XXX needs fixing, prefix match must not overlap the previous match
-  check findAllBounds("1x@1xx@1x", re"\d+\w+@(1\w)+") == @[0 .. 4]
-  #check false
   check findAllBounds("bar", re"foo").len == 0
   check findAllBounds("bar", re"baz").len == 0
   check findAllBounds("abcd", re"bc") ==
@@ -1719,6 +1711,19 @@ test "tfindallopt":
     @[@[@[0 .. 0], @[]], @[@[], @[5 .. 6]]]
   check findAllCapt("abc@&%ab@&%", re"(?:(a)|(ab))\w@&%") ==
     @[@[@[], @[0 .. 1]], @[@[6 .. 6], @[]]]
+  check findAllBounds("x@xxzx@xxz", re"\w+@\w+(?=z)") == @[0 .. 3, 4 .. 8]
+  check findAllBounds("1x@11zx@xxz", re"\d+\w+@\w+(?=z)") == @[0 .. 4]
+  check findAllBounds("1x@11zx@xxz", re"\d+\w+@\w+") == @[0 .. 6]
+  check findAllBounds("1x@1x@1x", re"\d+\w+@\w+") == @[0 .. 4]
+  check findAllBounds("1x@1x@1x", re"\d+\w+@(\d\w)+") == @[0 .. 4]
+  check findAllBounds("2222", re"22") == @[0 .. 1, 2 .. 3]
+  block overlapTests:
+    check findAllBounds("1x@1xx@1x", re"\d+\w+@(1\w)+") == @[0 .. 4]
+    check findAllBounds("1x@1xx1x@1x", re"\d+\w+@(1\w)+") == @[0 .. 4, 6 .. 10]
+    check findAllBounds("1x@1xx@1x", re"\d\w+@(\d\w)+") == @[0 .. 4]
+    check findAllBounds("2x1x@xx", re"(1\w)+@\w+") == @[2 .. 6]
+    check findAllBounds("2x1x1x@xx", re"(1\w)+@\w+") == @[2 .. 8]
+    check findAllBounds("1x@1xx@1x", re"\d+\w+@(1\w)+") == @[0 .. 4]
 
 test "tmisc2":
   var m: RegexMatch

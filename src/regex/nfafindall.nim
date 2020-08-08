@@ -237,6 +237,13 @@ template initMaybeImpl(
   doAssert ms.a.cap >= size and
     ms.b.cap >= size
 
+func firstEoeBound(smA: Submatches, regex: Regex): int =
+  template nfa: untyped = regex.litOpt.nfa
+  for n, capt, bounds in smA.items:
+    if nfa[n].kind == reEoe:
+      return bounds.a
+  return -1
+
 template bwFastRuneAt(
   s: string, n: var int, result: var Rune
 ) =
@@ -259,6 +266,9 @@ func submatch2(
   smB.clear()
   var matched = true
   for n, capt, bounds in smA.items:
+    if nfa[n].kind == reEoe:
+      smB.add (n, capt, bounds)
+      break
     for nti, nt in nfa[n].next.pairs:
       if smB.hasState(nt):
         continue
@@ -283,10 +293,11 @@ func matchPrefixImpl(
   text: string,
   regex: Regex,
   smA, smB: var Submatches,
-  start: Natural = 0
+  start, limit: Natural = 0
 ): int {.inline.} =
   template nfa: untyped = regex.litOpt.nfa
   doAssert start < len(text)
+  doAssert start >= limit
   smA.clear()
   smB.clear()
   var
@@ -296,7 +307,7 @@ func matchPrefixImpl(
     iPrev = start.int
   #debugEcho cPrev.Rune
   smA.add (0'i16, -1'i32, i .. i-1)
-  while i > 0:
+  while i > limit:
     bwFastRuneAt(text, i, c)
     #debugEcho "txt.Rune=", c
     #debugEcho "txt.i=", i
@@ -307,6 +318,8 @@ func matchPrefixImpl(
       return smA[0].bounds.a
     iPrev = i
     cPrev = c.int32
+  if limit > 0:
+    return firstEoeBound(smA, regex)
   submatch2(smA, smB, regex, iPrev, cPrev, -1'i32)
   if smA.len == 0:
     return -1
@@ -326,9 +339,12 @@ func findSomeOptImpl*(
   template smB: untyped = ms.b
   doAssert opt.nfa.len > 0
   initMaybeImpl(ms, regexSize)
-  ms.clear()
+  var limit = start.int
   var i = start.int
   var i2 = -1
+  if ms.hasMatches:
+    limit = max(ms.m[^1].bounds.a, ms.m[^1].bounds.b)
+  ms.clear()
   while i < len(text):
     doAssert i > i2; i2 = i
     #debugEcho "lit=", opt.lit
@@ -339,7 +355,7 @@ func findSomeOptImpl*(
     #debugEcho "litIdx=", litIdx
     doAssert litIdx >= i
     i = litIdx
-    i = matchPrefixImpl(text, regex, smA, smB, i)
+    i = matchPrefixImpl(text, regex, smA, smB, i, limit)
     if i == -1:
       #debugEcho "not.Match=", i
       i = litIdx+1

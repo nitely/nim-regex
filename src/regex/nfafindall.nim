@@ -237,13 +237,6 @@ template initMaybeImpl(
   doAssert ms.a.cap >= size and
     ms.b.cap >= size
 
-func firstEoeBound(smA: Submatches, regex: Regex): int =
-  template nfa: untyped = regex.litOpt.nfa
-  for n, capt, bounds in smA.items:
-    if nfa[n].kind == reEoe:
-      return bounds.a
-  return -1
-
 template bwFastRuneAt(
   s: string, n: var int, result: var Rune
 ) =
@@ -318,13 +311,17 @@ func matchPrefixImpl(
       return smA[0].bounds.a
     iPrev = i
     cPrev = c.int32
-  if limit > 0:
-    return firstEoeBound(smA, regex)
-  submatch2(smA, smB, regex, iPrev, cPrev, -1'i32)
-  if smA.len == 0:
-    return -1
-  doAssert nfa[smA[0].ni].kind == reEoe
-  return smA[0].bounds.a
+  if i > 0:
+    # limit can be part of the match, there is no overlap
+    bwFastRuneAt(text, i, c)
+    #debugEcho "c=", c, " limit=", limit
+  else:
+    c = Rune(-1)
+  submatch2(smA, smB, regex, iPrev, cPrev, c.int32)
+  for n, capt, bounds in smA.items:
+    if nfa[n].kind == reEoe:
+      return bounds.a
+  return -1
 
 func findSomeOptImpl*(
   text: string,
@@ -339,12 +336,10 @@ func findSomeOptImpl*(
   template smB: untyped = ms.b
   doAssert opt.nfa.len > 0
   initMaybeImpl(ms, regexSize)
+  ms.clear()
   var limit = start.int
   var i = start.int
   var i2 = -1
-  if ms.hasMatches:
-    limit = max(ms.m[^1].bounds.a, ms.m[^1].bounds.b)
-  ms.clear()
   while i < len(text):
     doAssert i > i2; i2 = i
     #debugEcho "lit=", opt.lit

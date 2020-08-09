@@ -3,12 +3,49 @@
 ## by quickly searching Regular Expression literals
 ## within the input string. See issue #59.
 
-# XXX update explanation
-
 #[
 Only optimizations that are
 guaranteed to run in linear
 time are implemented.
+We must also ensure the matches
+are not overlapped.
+I think the best way to understand
+how the current implementation works
+is by example. However, I'll describe
+some parts of the algorithm that
+may be useful to grasp first:
+  * we pick a literal that is memchr'ed
+    to skip parts of the text
+  * the prefix is the regex part before
+    the literal; none of the characters
+    or symbols can match the literal
+  * the prefix is run backwards to find
+    the start of the match
+  * a full findAll is run from the start
+    of the match until a character that
+    cannot be matched is found (safe break point)
+    or the end is reached
+
+How is quadratic runtime avoided?
+  * None of the prefix characters
+    or symbols can match the literal;
+    hence the literal is a delimeter for
+    the prefix
+  * In cases where a literal is found, but
+    not match is found, the next prefix match
+    is limited by the literal delimiter;
+    the runtime is O(2N) at most
+  * In cases where a match is found, the next
+    literal is searched from the last character
+    consumed by the matcher
+  * The prefix matcher is also limited by the
+    end boundary of the last match found; this
+    prevents overlapped matches;
+  * The `overlapTests` in tests.nim are good examples
+    of this
+
+------------------------------------
+Examples
 
 re"(?ms)^.+abc"
 can be optimized by running the match
@@ -69,7 +106,7 @@ The alternative to going back X chars
 is to run the regex prefix in reverse, and
 then run the special find for the full regex.
 This would support prefixes with mixed
-alternation lenghts (i.e: re"(\w\w|\d)foo").
+alternation lengths (i.e: re"(\w\w|\d)foo").
 Since this is needed, the going back X
 chars may just be an optimal optimization
 (meaning I may not implement it).
@@ -128,49 +165,6 @@ However, this has the cost of potentially
 requiring a larger left part of the regex (to match the left side),
 so it may be better to find the first lit in the regex and then
 pick the last lit of its contiguous lits (if any).
-
-
-----------------------------------------
-
-XXX edge case
-
-re"\d\w+x"
-text: "xxxxxxxxxxx"
-does it take quadratic time?
-the prefix find goes to the start
-of the string every time?
-
-re"\d\w+@"
-text: "@@@@@@@@"
-text2: "@@@@xxxx@@@@"
-does not has this problem,
-since the literal is not
-matched by the prefix,
-it works as a delimiter
-
-Only optimizations that are
-guaranteed to run in linear
-time are implemented.
-We must also ensure the matches
-are not overlapped.
-I think the best way to understand
-how the current implementation works
-is by example. However, I'll describe
-some parts of the algorithm that
-may be useful to grasp first:
-  * we pick a literal that is memchr'ed
-    to skip parts of the text
-  * the prefix is the regex part before
-    the literal; none of the characters
-    or symbols can match the literal
-  * the prefix is run backwards to find
-    the start of the match
-  * a full findAll is run from the start
-    of the match until a character that
-    cannot be matched is found or the end
-    is reached
-  * hence the literal is a delimeter for
-    the prefix; this prevents quadratic time
 
 ]#
 

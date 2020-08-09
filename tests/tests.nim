@@ -879,8 +879,7 @@ test "tcontains":
   check re"(23)+" in "23232"
   check re"^(23)+$" notin "23232"
 
-#test "tsplit":
-when false:
+test "tsplit":
   check split("a,b,c", re",") == @["a", "b", "c"]
   check split("00232this02939is39an22example111", re"\d+") ==
     @["", "this", "is", "an", "example", ""]
@@ -920,8 +919,7 @@ when false:
   check "12".split(re"\w\b") == @["1", ""]
   check "12".split(re"\w\B") == @["", "2"]
 
-#test "tsplitIncl":
-when false:
+test "tsplitIncl":
   check "a,b".splitIncl(re"(,)") == @["a", ",", "b"]
   check "12".splitIncl(re"(\d)") == @["", "1", "", "2", ""]
   check splitIncl("aΪⒶ弢", re"(\w)") ==
@@ -1654,6 +1652,8 @@ test "tfindallopt":
   check findAllBounds("abcdef", re"xcdef$").len == 0
   check findAllBounds("abc\nabc\na", re"(?m)^a") ==
     @[0 .. 0, 4 .. 4, 8 .. 8]
+  check findAllBounds("x\nabcxx\nabcxx", re"(?m)x$\n?[^x]*") ==
+    @[0 .. 4, 6 .. 10, 12 .. 12]
   check findAllBounds("#f1o2o3@bar#", re"(\w\d)*?@\w+") ==
     @[1 .. 10]
   check findAllBounds("foo@bar@baz", re"\w+@\w+") ==
@@ -1745,6 +1745,18 @@ test "tfindallopt":
   check findAllBounds("bcbc", re"^bc") == @[0 .. 1]
   check findAllBounds("bcabc\nbc\nabc\nbcbc", re"(?m)^bc") ==
     @[0 .. 1, 6 .. 7, 13 .. 14]
+  check findAllBounds("弢@弢@弢", re"\w+@\w+") == @[0 .. 8]
+  check findAllBounds("弢ⒶΪ@弢ⒶΪ@弢ⒶΪ", re"\w+@\w+") == @[0 .. 18]
+  check findAllBounds("۲@弢۲⅕@弢", re"\d+@\w+") == @[0 .. 8]
+  check findAllBounds("۲۲@弢ⒶΪ11@弢ⒶΪ", re"\d+@弢ⒶΪ") ==
+    @[0 .. 13, 14 .. 25]
+  check findAllBounds("#xa弢ⒶΪx#a弢ⒶΪ#", re"\ba弢ⒶΪ\b") == @[14 .. 23]
+  check findAllBounds("#xa弢ⒶΪx#a弢ⒶΪ#a弢ⒶΪ", re"\ba弢ⒶΪ\b") ==
+    @[14 .. 23, 25 .. 34]
+  check findAllBounds("۲Ⓐ@۲弢Ϊ@۲弢", re"\d+\w+@(۲\w)+") == @[0 .. 11]
+  check findAllBounds("۲弢@۲弢۲ΪΪ@۲弢", re"\d+\w+@(۲\w)+") == @[0 .. 16]
+  check findAllBounds("۲Ϊ@۲弢Ⓐ۲Ⓐ@۲弢", re"\d+\w+@(۲\w)+") ==
+    @[0 .. 10, 14 .. 25]
 
 test "tmisc2":
   var m: RegexMatch

@@ -226,6 +226,10 @@ func findSomeImpl*(
   #debugEcho "noMatch"
   return -1
 
+# findAll with literal optimization below,
+# there is an explanation of how this work
+# in litopt.nim, move this there?
+
 template initMaybeImpl(
   ms: var RegexMatches,
   size: int

@@ -82,6 +82,16 @@ of the previous match.
 ^ There is a bunch of possible literal optimizations,
   but this is the meat of it.
 
+re"\d\w+x"
+text: "xxxxxxxxxxx"
+This would take quadratic time,
+as the prefix matcher will match until
+the start of the string every time.
+The solution is disallow the optimization in
+cases where the literal can be matched by the
+prefix. Hence the literal becomes a delimiter
+for the prefix matcher.
+
 re"\wabc"
 This can be optimized the same way as
 the first example, except going back

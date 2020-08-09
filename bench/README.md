@@ -10,7 +10,5 @@ nimble develop
 Run benchmarks:
 
 ```
-nim c -r -d:release bench/bench.nim
+nim c -r -d:danger bench/bench.nim
 ```
-
-> Try -d:danger as well, but release is what most users will set

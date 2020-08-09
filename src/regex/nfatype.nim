@@ -5,6 +5,7 @@ import sets
 import algorithm
 
 import nfa
+import litopt
 
 type
   CaptIdx* = int32
@@ -50,10 +51,12 @@ type
     groupsCount*: int16
     namedGroups*: OrderedTable[string, int16]
     #flags*: set[RegexFlag]
+    litOpt*: LitOpt
   MatchFlag* = enum
     mfShortestMatch
     mfNoCaptures
     mfFindMatch
+    mfFindMatchOpt
   MatchFlags* = set[MatchFlag]
   RegexMatch* = object
     ## result from matching operations
@@ -116,6 +119,11 @@ func clear*(sm: var Submatches) {.inline.} =
 iterator items*(sm: Submatches): PState {.inline.} =
   for i in 0 .. sm.len-1:
     yield sm.sx[i]
+
+# does not work in Nim <= 0.20
+#iterator mitems*(sm: Submatches): var PState {.inline.} =
+#  for i in 0 .. sm.len-1:
+#    yield sm.sx[i]
 
 func cap*(sm: Submatches): int {.inline.} =
   sm.ss.len

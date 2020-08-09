@@ -5,8 +5,9 @@
 # Then port the changes to nfamacro. Hacking
 # with nfamatch is a lot easier.
 
-import unicode
-import tables
+import std/unicode
+import std/tables
+from std/strutils import find
 
 import nodematch
 import nodetype
@@ -78,9 +79,14 @@ template shortestMatch: untyped {.dirty.} =
   swap smA, smB
 
 template findMatch: untyped {.dirty.} =
-  smA.add (0'i16, -1'i32, i .. i-1)
-  if regex.nfa[smA[0].ni].kind == reEoe:
-    constructSubmatches(m.captures, capts, smA[0].ci, regex.groupsCount)
+  when mfFindMatchOpt in flags:
+    if smA.len == 0:
+      # XXX needed on exit too
+      m.boundaries = i .. i-1
+      return false
+  smA.add((0'i16, -1'i32, i .. i-1))
+  if regex.nfa[smA[0][0]].kind == reEoe:
+    constructSubmatches(m.captures, capts, smA[0][1], regex.groupsCount)
     if regex.namedGroups.len > 0:
       m.namedGroups = regex.namedGroups
     m.boundaries = smA[0].bounds
@@ -129,6 +135,8 @@ func matchImpl*(
     cPrev = c.int32
   submatch(smA, smB, capts, regex, iPrev, cPrev, -1'i32, -1'i32, flags)
   if smA.len == 0:
+    when mfFindMatchOpt in flags:
+      m.boundaries = i .. i-1
     return false
   constructSubmatches(m.captures, capts, smA[0].ci, regex.groupsCount)
   if regex.namedGroups.len > 0:

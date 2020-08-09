@@ -182,7 +182,7 @@ func applyFlag(n: var Node, f: Flag) =
       for nn in n.shorthands.mitems:
         nn.kind = nn.kind.toAsciiKind()
   else:
-    assert f in {
+    doAssert f in {
       flagNotAnyMatchNewLine,
       flagNotMultiLine,
       flagNotCaseInsensitive,
@@ -225,7 +225,7 @@ func applyFlags(expression: seq[Node]): seq[Node] =
 func expandOneRepRange(subExpr: seq[Node], n: Node): seq[Node] =
   ## expand a repetition-range expression
   ## into the equivalent repeated expression
-  assert n.kind == reRepRange
+  doAssert n.kind == reRepRange
   if n.max == -1:  # a{n,} -> aaa*
     result = newSeqOfCap[Node](subExpr.len * (n.min + 1) + 1)
     for _ in 0 ..< n.min:
@@ -239,7 +239,7 @@ func expandOneRepRange(subExpr: seq[Node], n: Node): seq[Node] =
     for _ in 0 ..< n.max - 1:
       result.add(subExpr)
   else:  # a{n,m} -> aaa?a?
-    assert n.min < n.max
+    doAssert n.min < n.max
     result = newSeqOfCap[Node](subExpr.len * n.max + n.max - n.min)
     for _ in 0 ..< n.min:
       result.add(subExpr)
@@ -286,10 +286,22 @@ func expandRepRange(expression: seq[Node]): seq[Node] =
     of matchableKind:
       result.add(result[result.len-1 .. result.len-1].expandOneRepRange(n))
     else:
-      raise newException(RegexError, (
-        "Invalid repetition range, either " &
-        "char, shorthand (i.e: \\w), group, or set " &
-        "expected before repetition range"))
+      check(
+        false, 
+        ("Invalid repetition range, either " &
+         "char, shorthand (i.e: \\w), group, or set " &
+         "expected before repetition range"))
+
+func populateUid(exp: seq[Node]): seq[Node] =
+  check(
+    exp.high < NodeUid.high,
+    ("The expression is too long, " &
+     "limit is ~$#") %% $NodeUid.high)
+  result = exp
+  var uid = 1.NodeUid
+  for n in result.mitems:
+    n.uid = uid
+    inc uid
 
 func joinAtoms(expression: seq[Node]): seq[Node] =
   ## Put a ``~`` joiner between atoms. An atom is
@@ -317,7 +329,7 @@ func joinAtoms(expression: seq[Node]): seq[Node] =
         reRepRange:
       inc atomsCount
     else:
-      assert false
+      doAssert false
     result.add(n)
 
 type
@@ -346,7 +358,7 @@ func opsPA(nk: NodeKind): OpsPA =
   of reOr:
     result = (3, asyLeft)
   else:
-    assert false
+    doAssert false
 
 func hasPrecedence(a: NodeKind, b: NodeKind): bool =
   ## Check ``b`` has precedence over ``a``.
@@ -363,7 +375,7 @@ func hasPrecedence(a: NodeKind, b: NodeKind): bool =
       opsPA(b).precedence < opsPA(a).precedence)
 
 func popGreaterThan(ops: var seq[Node], op: Node): seq[Node] =
-  assert op.kind in opKind
+  doAssert op.kind in opKind
   result = newSeqOfCap[Node](ops.len)
   while (ops.len > 0 and
       ops[ops.len - 1].kind in opKind and
@@ -402,7 +414,7 @@ func rpn(expression: seq[Node]): seq[Node] =
       result.add(ops.popGreaterThan(n))
       ops.add(n)
     else:
-      assert false
+      doAssert false
   # reverse ops
   for i in 1 .. ops.len:
     result.add(ops[ops.len - i])
@@ -416,6 +428,7 @@ func toAtoms*(
     .greediness
     .applyFlags
     .expandRepRange
+    .populateUid
     .joinAtoms
 
 func transformExp*(

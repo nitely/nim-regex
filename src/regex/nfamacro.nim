@@ -12,12 +12,12 @@ import nodetype
 import nfatype
 
 func eoeNode(regex: Regex): int16 =
-  var i = 0
+  result = -1
   for n in 0 .. regex.nfa.len-1:
     if regex.nfa[n].kind == reEoe:
+      doAssert result == -1
       result = n.int16
-      inc i
-  doAssert i == 1
+  doAssert result != -1
 
 # todo: can not use unicodeplus due to
 # https://github.com/nim-lang/Nim/issues/7059

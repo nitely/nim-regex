@@ -161,6 +161,7 @@ import regex/nfatype
 import regex/nfa
 import regex/nfafindall
 import regex/nfamatch
+import regex/litopt
 
 const canUseMacro = (NimMajor, NimMinor) >= (1, 1) and
   not defined(forceRegexAtRuntime)
@@ -175,16 +176,18 @@ export
 
 template reImpl(s: untyped): Regex =
   var groups: GroupsCapture
-  var transitions: Transitions
-  let nfa = s
+  let rpn = s
     .parse
     .transformExp(groups)
-    .nfa2(transitions)
+  var transitions: Transitions
+  let nfa = rpn.nfa2(transitions)
+  let opt = rpn.litopt2()
   Regex(
     nfa: nfa,
     transitions: transitions,
     groupsCount: groups.count,
-    namedGroups: groups.names)
+    namedGroups: groups.names,
+    litOpt: opt)
 
 func re*(
   s: string
@@ -417,6 +420,7 @@ func find*(
     doAssert not "abcd".find(re"de", m)
     doAssert "2222".find(re"(22)*", m) and
       m.group(0) == @[0 .. 1, 2 .. 3]
+
   findImpl()
 
 when canUseMacro:
@@ -435,6 +439,16 @@ template runeIncAt(s: string, n: var int) =
     inc(n, runeLenAt(s, n))
   else:
     n = s.len+1
+
+when defined(noRegexOpt):
+  template findSomeOptTpl(s, pattern, ms, i): untyped =
+    findSomeImpl(s, pattern, ms, i)
+else:
+  template findSomeOptTpl(s, pattern, ms, i): untyped =
+    if pattern.litOpt.canOpt:
+      findSomeOptImpl(s, pattern, ms, i)
+    else:
+      findSomeImpl(s, pattern, ms, i)
 
 iterator findAll*(
   s: string,
@@ -460,7 +474,7 @@ iterator findAll*(
   var ms: RegexMatches
   while i < len(s):
     doAssert(i > i2); i2 = i
-    i = findSomeImpl(s, pattern, ms, i)
+    i = findSomeOptTpl(s, pattern, ms, i)
     #debugEcho i
     if i < 0: break
     for mi in ms:
@@ -506,7 +520,7 @@ iterator split*(s: string, sep: Regex): string {.inline, raises: [].} =
     ms: RegexMatches
   while not done:
     doAssert(i > i2); i2 = i
-    i = findSomeImpl(s, sep, ms, i)
+    i = findSomeOptTpl(s, sep, ms, i)
     done = i < 0 or i >= len(s)
     if done: ms.dummyMatch(s.len)
     for ab in ms.bounds:
@@ -543,7 +557,7 @@ func splitIncl*(s: string, sep: Regex): seq[string] {.inline, raises: [].} =
     ms: RegexMatches
   while not done:
     doAssert(i > i2); i2 = i
-    i = findSomeImpl(s, sep, ms, i)
+    i = findSomeOptTpl(s, sep, ms, i)
     done = i < 0 or i >= len(s)
     if done: ms.dummyMatch(s.len)
     for mi in ms:
@@ -748,6 +762,12 @@ proc toString(pattern: Regex): string {.used.} =
   result = pattern.toString(0, visited)
 
 when isMainModule:
+  func findAllBounds(s: string, reg: Regex): seq[Slice[int]] =
+    result = map(
+      findAll(s, reg),
+      func (m: RegexMatch): Slice[int] =
+        m.boundaries)
+
   func toAtoms(s: string): string =
     var groups: GroupsCapture
     let atoms = s
@@ -815,7 +835,6 @@ when isMainModule:
   doAssert r"[[:alpha:][:digit:]]".toAtoms == "[[a-zA-Z][0-9]]"
 
   var m: RegexMatch
-
   #doAssert match("abc", re(r"abc", {reAscii}), m)
   doAssert match("abc", re"abc", m)
   doAssert match("ab", re"a(b|c)", m)
@@ -962,7 +981,7 @@ when isMainModule:
       doAssert re"^(23)+$" notin "23232"
       doAssert re"\w" in "弢"
       doAssert "2222".find(re"(22)*", m) and
-         m.group(0) == @[0 .. 1, 2 .. 3]
+        m.group(0) == @[0 .. 1, 2 .. 3]
       doAssert raisesMsg(r"[a-\w]") ==
         "Invalid set range. Range can't contain " &
         "a character-class or assertion\n" &
@@ -974,8 +993,23 @@ when isMainModule:
       const ip = re"""(?x)
       \b
       ((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}
-       (25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)
+      (25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)
       \b
       """
       doAssert match("127.0.0.1", ip)
       doAssert not match("127.0.0.999", ip)
+      doAssert "abcd".find(re"bc", m) and
+        m.boundaries == 1 .. 2
+      doAssert "bcd".find(re"bc", m) and
+        m.boundaries == 0 .. 1
+      doAssert "bc".find(re"bc", m) and
+        m.boundaries == 0 .. 1
+      doAssert "#foo://#".find(re"[\w]+://", m) and
+        m.boundaries == 1 .. 6
+      doAssert findAllBounds("abcd", re"bc") == @[1 .. 2]
+      doAssert findAllBounds("bcd", re"bc") == @[0 .. 1]
+      doAssert findAllBounds("bc", re"bc") == @[0 .. 1]
+      doAssert findAllBounds("#foo://#", re"[\w]+://") == @[1 .. 6]
+      doAssert findAllBounds("abc\nabc\na", re"(?m)^a") ==
+        @[0 .. 0, 4 .. 4, 8 .. 8]
+  echo "ok regex.nim"

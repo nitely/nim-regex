@@ -57,12 +57,12 @@ proc toStrCaptures(m: RegexMatch, s: string): seq[seq[string]] =
 
 proc matchWithCapt(s: string, pattern: static Regex): seq[seq[string]] =
   var m: RegexMatch
-  doAssert match(s, pattern, m)
+  check match(s, pattern, m)
   result = m.toStrCaptures(s)
 
 proc findWithCapt(s: string, pattern: Regex): seq[seq[string]] =
   var m: RegexMatch
-  doAssert find(s, pattern, m)
+  check find(s, pattern, m)
   result = m.toStrCaptures(s)
 
 func findAllBounds(s: string, reg: Regex): seq[Slice[int]] =
@@ -70,6 +70,13 @@ func findAllBounds(s: string, reg: Regex): seq[Slice[int]] =
     findAll(s, reg),
     func (m: RegexMatch): Slice[int] =
       m.boundaries)
+
+func findAllCapt(s: string, reg: Regex): seq[seq[seq[Slice[int]]]] =
+  result = map(
+    findAll(s, reg),
+    func (m: RegexMatch): seq[seq[Slice[int]]] =
+      for i in 0 .. m.groupsCount-1:
+        result.add m.group(i))
 
 test "tfull_match":
   check "".isMatch(re"")
@@ -877,6 +884,8 @@ test "tsplit":
   check split("00232this02939is39an22example111", re"\d+") ==
     @["", "this", "is", "an", "example", ""]
   check split("AAA :   : BBB", re"\s*:\s*") == @["AAA", "", "BBB"]
+  check split("AAA :   : BBB :   : CCC", re"\s*:\s*") ==
+    @["AAA", "", "BBB", "", "CCC"]
   check split("", re",") == @[""]
   check split(",,", re",") == @["", "", ""]
   # nre's behaviour, differs from python
@@ -905,6 +914,7 @@ test "tsplit":
   check split("1 2", re" ") == @["1", "2"]
   check split("foo", re"foo") == @["", ""]
   check split("", re"foo") == @[""]
+  check split("bar", re"foo") == @["bar"]
 
   check "12".split(re"\w\b") == @["1", ""]
   check "12".split(re"\w\B") == @["", "2"]
@@ -950,8 +960,8 @@ test "tfindall":
   check findAllBounds("abcabc", re"bc") == @[1 .. 2, 4 .. 5]
   check findAllBounds("aa", re"a") == @[0 .. 0, 1 .. 1]
   check findAllBounds("a", re"a") == @[0 .. 0]
-  check findAllBounds("a", re"b") == newSeq[Slice[int]]()
-  check findAllBounds("", re"b") == newSeq[Slice[int]]()
+  check findAllBounds("a", re"b").len == 0
+  check findAllBounds("", re"b").len == 0
   check findAllBounds("abc ab", re"\w+ *") == @[0 .. 3, 4 .. 5]
   check findAllBounds("AAA :   : BBB", re"\s*:\s*") == @[3 .. 7, 8 .. 9]
   check findAllBounds("a\n  b\n c\n  ", re"(?m)^") ==
@@ -986,9 +996,11 @@ test "tfindall":
     @[0 .. 3, 5 .. 8]
   check findAllBounds("abbbXabbbX", re"((a(b)*)+(b)*)") ==
     @[0 .. 3, 5 .. 8]
-  check findAllBounds("abXabX", re"a(b|c)*d") == newSeq[Slice[int]]()
+  check findAllBounds("abXabX", re"a(b|c)*d").len == 0
   check findAllBounds("aaanasdnasdXaaanasdnasd", re"((a)*n?(asd)*)+") ==
     @[0 .. 10, 11 .. 10, 12 .. 22, 23 .. 22]
+  check findAllBounds("1xxx", re"\d\w+x") == @[0 .. 3]
+  check findAllBounds("xxxx", re"\d\w+x").len == 0
 
 test "tfindandcaptureall":
   check findAndCaptureAll("abcabc", re"bc") == @["bc", "bc"]
@@ -1468,75 +1480,75 @@ test "capturingGroupsNames":
   block:
     let text = "hello world"
     var m: RegexMatch
-    doAssert text.match(re"(?P<greet>hello) (?P<who>world)", m)
-    doAssert m.groupsCount == 2
+    check text.match(re"(?P<greet>hello) (?P<who>world)", m)
+    check m.groupsCount == 2
     for name in @["greet", "who"]:
-      doAssert m.groupNames.contains(name)
+      check m.groupNames.contains(name)
 
   block:
     let text = "hello world"
     var m: RegexMatch
-    doAssert text.match(re"(?P<greet>hello) (?P<who>world)", m)
-    doAssert m.group("greet", text) == @["hello"]
-    doAssert m.group("who", text) == @["world"]
+    check text.match(re"(?P<greet>hello) (?P<who>world)", m)
+    check m.group("greet", text) == @["hello"]
+    check m.group("who", text) == @["world"]
     
   block:
     let text = "hello world foo bar"
     var m: RegexMatch
-    doAssert text.match(re"(?P<greet>hello) (?:(?P<who>[^\s]+)\s?)+", m)
-    doAssert m.group("greet", text) == @["hello"]
+    check text.match(re"(?P<greet>hello) (?:(?P<who>[^\s]+)\s?)+", m)
+    check m.group("greet", text) == @["hello"]
     let whoGroups = m.group("who", text)
     for w in @["foo", "bar", "world"]:
-      doAssert whoGroups.contains(w)
+      check whoGroups.contains(w)
 
   block:
     let text = "hello world"
     var m: RegexMatch
-    doAssert text.match(re"(?P<greet>hello) (?P<who>world)", m)
-    doAssert m.groupFirstCapture("greet", text) == "hello"
-    doAssert m.groupFirstCapture("who", text) == "world"
+    check text.match(re"(?P<greet>hello) (?P<who>world)", m)
+    check m.groupFirstCapture("greet", text) == "hello"
+    check m.groupFirstCapture("who", text) == "world"
 
   ## First capture
   block:
     let text = "hello world her"
     var m: RegexMatch
-    doAssert text.match(re"(?P<greet>hello) (?P<who>world) (?P<who>her)", m)
-    doAssert m.groupFirstCapture("greet", text) == "hello"
+    check text.match(re"(?P<greet>hello) (?P<who>world) (?P<who>her)", m)
+    check m.groupFirstCapture("greet", text) == "hello"
 
   block:
     let text = "hello world foo bar"
     var m: RegexMatch
-    doAssert text.match(re"(?P<greet>hello) (?:(?P<who>[^\s]+)\s?)+", m)
+    check text.match(re"(?P<greet>hello) (?:(?P<who>[^\s]+)\s?)+", m)
     # "who" captures @["world", "foo", "bar"]
-    doAssert m.groupFirstCapture("who", text) == "world"
+    check m.groupFirstCapture("who", text) == "world"
   
   block:
     let text = "hello"
     var m: RegexMatch
-    doAssert text.match(re"(?P<greet>hello)\s?(?P<who>world)?", m)
-    doAssert m.groupFirstCapture("greet", text) == "hello"
-    doAssert m.groupFirstCapture("who", text) == ""
+    check text.match(re"(?P<greet>hello)\s?(?P<who>world)?", m)
+    check m.groupFirstCapture("greet", text) == "hello"
+    check m.groupFirstCapture("who", text) == ""
 
   ## Last capture
   block:
     let text = "hello world her"
     var m: RegexMatch
-    doAssert text.match(re"(?P<greet>hello) (?P<who>world) (?P<who>her)", m)
-    doAssert m.groupLastCapture("who", text) == "her"
+    check text.match(re"(?P<greet>hello) (?P<who>world) (?P<who>her)", m)
+    check m.groupLastCapture("who", text) == "her"
 
   block:
     let text = "hello world foo bar"
     var m: RegexMatch
-    doAssert text.match(re"(?P<greet>hello) (?:(?P<who>[^\s]+)\s?)+", m)
+    check text.match(re"(?P<greet>hello) (?:(?P<who>[^\s]+)\s?)+", m)
     # "who" captures @["world", "foo", "bar"]
-    doAssert m.groupLastCapture("who", text) == "bar"
+    check m.groupLastCapture("who", text) == "bar"
 
   block:
     let text = "hello"
     var m: RegexMatch
-    doAssert text.match(re"(?P<greet>hello)\s?(?P<who>world)?", m)
-    doAssert m.groupLastCapture("greet", text) == "hello"
-    doAssert m.groupLastCapture("who", text) == ""
+    check text.match(re"(?P<greet>hello)\s?(?P<who>world)?", m)
+    check m.groupLastCapture("greet", text) == "hello"
+    check m.groupLastCapture("who", text) == ""
 
 # XXX raise a compile error when regex contains unicode
 #     in ascii mode
@@ -1551,6 +1563,200 @@ test "tflags":
   #check "%ab%".find(re(r"\w{2}", {reAscii}), m)
   check "%弢弢%".find(re"\w{2}", m)
   #check(not "%弢弢%".find(re(r"\w{2}", {reAscii}), m))
+
+test "tfindopt":
+  var m: RegexMatch
+  check(not find("bar", re"foo", m))
+  check(not find("bar", re"baz", m))
+  check "abcd".find(re"bc", m)
+  check m.boundaries == 1 .. 2
+  check "bcd".find(re"bc", m)
+  check m.boundaries == 0 .. 1
+  check "bc".find(re"bc", m)
+  check m.boundaries == 0 .. 1
+  check "ababcd".find(re"bc", m)
+  check m.boundaries == 3 .. 4
+  check "abc@xyz".find(re"\w@", m)
+  check m.boundaries == 2 .. 3
+  check "ab1c@xyz".find(re"\d\w@", m)
+  check m.boundaries == 2 .. 4
+  check "##axyz##".find(re"(a|b)xyz", m)
+  check m.boundaries == 2 .. 5
+  check "##bxyz##".find(re"(a|b)xyz", m)
+  check m.boundaries == 2 .. 5
+  check "##x#ax#axy#bxyz##".find(re"(a|b)xyz", m)
+  check m.boundaries == 11 .. 14
+  check "##z#xyz#yz#bxyz##".find(re"(a|b)xyz", m)
+  check m.boundaries == 11 .. 14
+  check "#xabcx#abc#".find(re"\babc\b", m)
+  check m.boundaries == 7 .. 9
+  check "#foo://#".find(re"[\w]+://", m)
+  check m.boundaries == 1 .. 6
+  check "x#foo://#".find(re"[\w]+://", m)
+  check m.boundaries == 2 .. 7
+
+test "tfindallopt":
+  check findAllBounds("bar", re"foo").len == 0
+  check findAllBounds("bar", re"baz").len == 0
+  check findAllBounds("abcd", re"bc") ==
+    @[1 .. 2]
+  check findAllBounds("bcd", re"bc") ==
+    @[0 .. 1]
+  check findAllBounds("bc", re"bc") ==
+    @[0 .. 1]
+  check findAllBounds("ababcd", re"bc") ==
+    @[3 .. 4]
+  check findAllBounds("abcdbcbc", re"bc") ==
+    @[1 .. 2, 4 .. 5, 6 .. 7]
+  check findAllBounds("abc@xyz", re"\w@") ==
+    @[2 .. 3]
+  check findAllBounds("abc@xyz@@", re"\w@") ==
+    @[2 .. 3, 6 .. 7]
+  check findAllBounds("ab1c@xyz", re"\d\w@") ==
+    @[2 .. 4]
+  check findAllBounds("ab1c@xy1z@z@", re"\d\w@") ==
+    @[2 .. 4, 7 .. 9]
+  check findAllBounds("##axyz##", re"(a|b)xyz") ==
+    @[2 .. 5]
+  check findAllBounds("##bxyz##", re"(a|b)xyz") ==
+    @[2 .. 5]
+  check findAllBounds("##axyz##bxyz", re"(a|b)xyz") ==
+    @[2 .. 5, 8 .. 11]
+  check findAllBounds("##x#ax#axy#bxyz##", re"(a|b)xyz") ==
+    @[11 .. 14]
+  check findAllBounds("##z#xyz#yz#bxyz##", re"(a|b)xyz") ==
+    @[11 .. 14]
+  check findAllBounds("#xabcx#abc#", re"\babc\b") ==
+    @[7 .. 9]
+  check findAllBounds("#xabcx#abc#abc", re"\babc\b") ==
+    @[7 .. 9, 11 .. 13]
+  check findAllBounds("#foo://#", re"[\w]+://") ==
+    @[1 .. 6]
+  check findAllBounds("x#foo://#", re"[\w]+://") ==
+    @[2 .. 7]
+  check findAllBounds("foobarbaz", re"(?<=o)b") ==
+    @[3 .. 3]
+  check findAllBounds("foobarbaz", re"(?<=r)b") ==
+    @[6 .. 6]
+  check findAllBounds("foobar", re"o(?=b)") ==
+    @[2 .. 2]
+  check findAllBounds("foobarbaz", re"a(?=r)") ==
+    @[4 .. 4]
+  check findAllBounds("abcdef", re"^abcd") ==
+    @[0 .. 3]
+  check findAllBounds("abcdef", re"cdef$") ==
+    @[2 .. 5]
+  check findAllBounds("abcdef", re"^abcdef$") ==
+    @[0 .. 5]
+  check findAllBounds("abcdef", re"^abcx").len == 0
+  check findAllBounds("abcdef", re"xcdef$").len == 0
+  check findAllBounds("abc\nabc\na", re"(?m)^a") ==
+    @[0 .. 0, 4 .. 4, 8 .. 8]
+  check findAllBounds("x\nabcxx\nabcxx", re"(?m)x$\n?[^x]*") ==
+    @[0 .. 4, 6 .. 10, 12 .. 12]
+  check findAllBounds("#f1o2o3@bar#", re"(\w\d)*?@\w+") ==
+    @[1 .. 10]
+  check findAllBounds("foo@bar@baz", re"\w+@\w+") ==
+    @[0 .. 6]
+  check findAllBounds("foo@111@111", re"\w+@\d+") ==
+    @[0 .. 6]
+  check findAllBounds("foo@111@111", re"\w*@\d+") ==
+    @[0 .. 6, 7 .. 10]
+  check findAllBounds("foo@111@@111", re"\w+@\d+") ==
+    @[0 .. 6]
+  check findAllBounds("foo@111foo@111", re"\w+@\d+") ==
+    @[0 .. 6, 7 .. 13]
+  check findAllBounds("111@111@111", re"\d+@\w+") ==
+    @[0 .. 6]
+  check findAllBounds("abbbbccccd@abbbbccccd@", re"\w(b|c)*d@") ==
+    @[0 .. 10, 11 .. 21]
+  check findAllBounds("abXabX", re"\w(b|c)*@").len == 0
+  check findAllBounds("abbcXabbcX", re"((a(b)*)+(c))") ==
+    @[0 .. 3, 5 .. 8]
+  check findAllBounds("aaanasdnasd@aaanasdnasd@", re"((a)*n?(asd)*)+@") ==
+    @[0 .. 11, 12 .. 23]
+  check findAllBounds("a1@a1a1@", re"(\w\d)+@") ==
+    @[0 .. 2, 3 .. 7]
+  check findAllBounds("a1@a1a1@a@a", re"(\w\d)+@") ==
+    @[0 .. 2, 3 .. 7]
+  check findAllBounds("a1@a1a1@a@a1a@1@a@a1@", re"(\w\d)+@") ==
+    @[0 .. 2, 3 .. 7, 18 .. 20]
+  check findAllBounds("a1@a1a1@", re"(\w\d)*@") ==
+    @[0 .. 2, 3 .. 7]
+  check findAllBounds("a1@a1a1@a@a", re"(\w\d)*@") ==
+    @[0 .. 2, 3 .. 7, 9 .. 9]
+  check findAllBounds("a1@a1a1@", re"(\w\d)+?@") ==
+    @[0 .. 2, 3 .. 7]
+  check findAllBounds("a1@a1a1@", re"(\w\d)*?@") ==
+    @[0 .. 2, 3 .. 7]
+  check findAllBounds("a1@a1a1@", re"\w+\d+?@") ==
+    @[0 .. 2, 3 .. 7]
+  check findAllBounds("a1@a1a1@", re"\w+?\d+@") ==
+    @[0 .. 2, 3 .. 7]
+  check findAllBounds("a1@a1a1@", re"\w+?\d+?@") ==
+    @[0 .. 2, 3 .. 7]
+  check findAllBounds("ab@&%", re"(a|ab)\w@&%") ==
+    @[0 .. 4]
+  check findAllBounds("abc@&%", re"(a|ab)\w@&%") ==
+    @[0 .. 5]
+  check findAllBounds("ab@&%abc@&%", re"(a|ab)\w@&%") ==
+    @[0 .. 4, 5 .. 10]
+  check findAllCapt("ab@&%", re"(?:(a)|(ab))\w@&%") ==
+    @[@[@[0 .. 0], @[]]]
+  check findAllCapt("a#b@&%", re"(?:(a)|(a#))\w@&%") ==
+    @[@[@[], @[0 .. 1]]]
+  check findAllCapt("abc@&%", re"(?:(a)|(ab))\w@&%") ==
+    @[@[@[], @[0 .. 1]]]
+  check findAllCapt("aba@&%", re"(?:(ab)|(a))\w@&%") ==
+    @[@[@[0 .. 1], @[]]]
+  check findAllCapt("ab@&%abc@&%", re"(?:(a)|(ab))\w@&%") ==
+    @[@[@[0 .. 0], @[]], @[@[], @[5 .. 6]]]
+  check findAllCapt("abc@&%ab@&%", re"(?:(a)|(ab))\w@&%") ==
+    @[@[@[], @[0 .. 1]], @[@[6 .. 6], @[]]]
+  check findAllBounds("x@xxzx@xxz", re"\w+@\w+(?=z)") == @[0 .. 3, 4 .. 8]
+  check findAllBounds("1x@11zx@xxz", re"\d+\w+@\w+(?=z)") == @[0 .. 4]
+  check findAllBounds("1x@11zx@xxz", re"\d+\w+@\w+") == @[0 .. 6]
+  check findAllBounds("1x@1x@1x", re"\d+\w+@\w+") == @[0 .. 4]
+  check findAllBounds("1x@1x@1x", re"\d+\w+@(\d\w)+") == @[0 .. 4]
+  check findAllBounds("2222", re"22") == @[0 .. 1, 2 .. 3]
+  block overlapTests:
+    check findAllBounds("1x@1xx@1x", re"\d+\w+@(1\w)+") == @[0 .. 4]
+    check findAllBounds("1x@1x1xx@1x", re"\d+\w+@(1\w)+") == @[0 .. 6]
+    check findAllBounds("1x@1xx1x@1x", re"\d+\w+@(1\w)+") == @[0 .. 4, 6 .. 10]
+    check findAllBounds("1x@1xx@1x", re"\d\w+@(\d\w)+") == @[0 .. 4]
+    check findAllBounds("2x1x@xx", re"(1\w)+@\w+") == @[2 .. 6]
+    check findAllBounds("2x1x1x@xx", re"(1\w)+@\w+") == @[2 .. 8]
+  check findAllBounds("bcbc#bc", re"\bbc\B") == @[0 .. 1]
+  check findAllBounds("bcbc#bca", re"\bbc\B") == @[0 .. 1, 5 .. 6]
+  check findAllBounds("bcbc#bc#xbcx#bcbcbc#bc", re"\bbc\B") ==
+    @[0 .. 1, 13 .. 14]
+  check findAllBounds("bcbc#bc#xbcx#bcbcbc#bc", re"\Bbc\b") ==
+    @[2 .. 3, 17 .. 18]
+  check findAllBounds("bcbc", re"\Bbc") == @[2 .. 3]
+  check findAllBounds("bcbcbc", re"\Bbc") == @[2 .. 3, 4 .. 5]
+  check findAllBounds("bc#bc#xbcx", re"\Bbc\B") == @[7 .. 8]
+  check findAllBounds("bcbc#bca", re"\Bbc\b") == @[2 .. 3]
+  check findAllBounds("bcbc#bc", re"\Bbc\b") == @[2 .. 3]
+  check findAllBounds("abcabc", re"bc") == @[1 .. 2, 4 .. 5]
+  check findAllBounds("bcbc#bc", re"\bbc\b") == @[5 .. 6]
+  check findAllBounds("bcbc", re"\bbc") == @[0 .. 1]
+  check findAllBounds("bc#bc", re"\bbc\b") == @[0 .. 1, 3 .. 4]
+  check findAllBounds("bcabc", re"^bc") == @[0 .. 1]
+  check findAllBounds("bcbc", re"^bc") == @[0 .. 1]
+  check findAllBounds("bcabc\nbc\nabc\nbcbc", re"(?m)^bc") ==
+    @[0 .. 1, 6 .. 7, 13 .. 14]
+  check findAllBounds("弢@弢@弢", re"\w+@\w+") == @[0 .. 8]
+  check findAllBounds("弢ⒶΪ@弢ⒶΪ@弢ⒶΪ", re"\w+@\w+") == @[0 .. 18]
+  check findAllBounds("۲@弢۲⅕@弢", re"\d+@\w+") == @[0 .. 8]
+  check findAllBounds("۲۲@弢ⒶΪ11@弢ⒶΪ", re"\d+@弢ⒶΪ") ==
+    @[0 .. 13, 14 .. 25]
+  check findAllBounds("#xa弢ⒶΪx#a弢ⒶΪ#", re"\ba弢ⒶΪ\b") == @[14 .. 23]
+  check findAllBounds("#xa弢ⒶΪx#a弢ⒶΪ#a弢ⒶΪ", re"\ba弢ⒶΪ\b") ==
+    @[14 .. 23, 25 .. 34]
+  check findAllBounds("۲Ⓐ@۲弢Ϊ@۲弢", re"\d+\w+@(۲\w)+") == @[0 .. 11]
+  check findAllBounds("۲弢@۲弢۲ΪΪ@۲弢", re"\d+\w+@(۲\w)+") == @[0 .. 16]
+  check findAllBounds("۲Ϊ@۲弢Ⓐ۲Ⓐ@۲弢", re"\d+\w+@(۲\w)+") ==
+    @[0 .. 10, 14 .. 25]
 
 test "tmisc2":
   var m: RegexMatch
@@ -1684,6 +1890,9 @@ test "tmisc2":
     check match("1111", re1)
     check match("111111", re1)
     check(not match("1", re1))
+
+test "tmisc3":
+  var m: RegexMatch
   block:  # issue #61
     const a = "void __mingw_setusermatherr (int (__attribute__((__cdecl__)) *)(struct _exception *));"
     check replace(a, re"__attribute__[ ]*\(\(.*?\)\)([ ,;])", "$1") ==
@@ -1805,3 +2014,12 @@ test "tmisc2":
   check split("\n\n", re"(?m)^") == @["\n", "\n"]
   check split("foobar", re"(?<=o)b") == @["foo", "ar"]
   check split("foobar", re"o(?=b)") == @["fo", "bar"]
+  block:
+    var m: RegexMatch
+    check find("abcxyz", re"(abc)|\w+", m)
+    check m.boundaries == 0 .. 2
+    check find("xyzabc", re"(abc)|\w+", m)
+    check m.boundaries == 0 .. 5
+  check findAndCaptureAll(
+    "He was carefully disguised but captured quickly by police.",
+    re"\w+ly") == @["carefully", "quickly"]

@@ -1,6 +1,7 @@
 nimcache/
 src/regex.js
 src/regex.out
+src/regex/litopt
 tests/tests
 tests/tests.js
 docs/ugh

@@ -1,3 +1,16 @@
+v0.16.0
+==================
+
+* Adds literals optimization to `findAll`,
+  `split`, `splitIncl`, and `replace`; this makes
+  some regexes run ~100x faster.
+* Support lookbehind; this is limited to one character
+* Fix: `findAll` ran in quadratic time for some regexes;
+  `split`, `splitIncl`, and `replace` were also affected;
+  Linear time is now guaranteed.
+* Fix: regex compilation errors were swallow due to
+  a Nim bug; A workaround to raise the error was implemented
+
 v0.15.0
 ==================
 

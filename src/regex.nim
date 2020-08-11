@@ -146,6 +146,81 @@ ASCII character classes
   [[:word:]]    word characters ([0-9A-Za-z_])
   [[:xdigit:]]  hex digit ([0-9A-Fa-f])
 
+Lookaround Assertions
+#####################
+
+.. code-block::
+  (?=x)   A positive lookahead assertion
+  (?<=x)  A positive lookbehind assertion
+
+Lookaround assertions are limited to a single character
+at the moment.
+
+Examples
+********
+
+Multiple captures
+#################
+
+Unlike most regex engines, this library supports capturing
+all repetitions. Most other libraries return only the last
+capture. The caveat is even non-repeated groups or
+characters are returned as a list of captures instead of
+a single capture.
+
+.. code-block:: nim
+    :test:
+    let text = "nim c --styleCheck:hint --colors:off regex.nim"
+    var m: RegexMatch
+    if match(text, re"nim c (?:--(\w+:\w+) *)+ (\w+).nim", m):
+      doAssert m.group(0, text) == @["styleCheck:hint", "colors:off"]
+      doAssert m.group(1, text) == @["regex"]
+    else:
+      doAssert false, "no match"
+
+Verbose Mode
+############
+
+Verbose mode `(?x)` makes regexes more readable by allowing
+comments and multi-lines within the regular expression
+itself. The caveat is spaces and pound signs must be
+scaped to be matched.
+
+.. code-block:: nim
+    :test:
+    const exp = re"""(?x)
+    \#   # the hashtag
+    \w+  # hashtag words
+    """
+    let text = "#NimLang"
+    doAssert match(text, exp) 
+
+Find All
+########
+
+The `findAll` function will find all boundaries
+and captures that match the regular expression.
+
+.. code-block:: nim
+    :test:
+    let text = """
+    The Continental's email list:
+    john_wick@continental.com
+    winston@continental.com
+    ms_perkins@continental.com
+    """
+    var matches = newSeq[string]()
+    var captures = newSeq[string]()
+    for m in findAll(text, re"(\w+)@\w+\.\w+"):
+      matches.add text[m.boundaries]
+      captures.add m.group(0, text)
+    doAssert matches == @[
+      "john_wick@continental.com",
+      "winston@continental.com",
+      "ms_perkins@continental.com"
+    ]
+    doAssert captures == @["john_wick", "winston", "ms_perkins"]
+
 ]##
 
 import std/tables
@@ -504,14 +579,14 @@ iterator findAll*(
   ## return each match. Empty matches
   ## (start > end) are included
   runnableExamples:
-    var
-      expected = [1 .. 2, 4 .. 5]
-      text = "abcabc"
-      i = 0
+    let text = "abcabc"
+    var bounds = newSeq[Slice[int]]()
+    var found = newSeq[string]()
     for m in findAll(text, re"bc"):
-      doAssert text[m.boundaries] == "bc"
-      doAssert m.boundaries == expected[i]
-      inc i
+      bounds.add m.boundaries
+      found.add text[m.boundaries]
+    doAssert bounds == @[1 .. 2, 4 .. 5]
+    doAssert found == @["bc", "bc"]
 
   var i = start
   var i2 = start-1
@@ -540,10 +615,8 @@ func findAndCaptureAll*(
   ## search through the string and
   ## return a seq with captures.
   runnableExamples:
-    let
-      captured = findAndCaptureAll("a1b2c3d4e5", re"\d")
-      expected = @["1", "2", "3", "4", "5"]
-    doAssert captured == expected
+    doAssert findAndCaptureAll("a1b2c3d4e5", re"\d") ==
+      @["1", "2", "3", "4", "5"]
 
   for m in s.findAll(pattern):
     result.add s[m.boundaries]
@@ -551,12 +624,10 @@ func findAndCaptureAll*(
 iterator split*(s: string, sep: Regex): string {.inline, raises: [].} =
   ## return not matched substrings
   runnableExamples:
-    var
-      expected = ["", "a", "Ϊ", "Ⓐ", "弢", ""]
-      i = 0
+    var found = newSeq[string]()
     for s in split("11a22Ϊ33Ⓐ44弢55", re"\d+"):
-      doAssert s == expected[i]
-      inc i
+      found.add s
+    doAssert found == @["", "a", "Ϊ", "Ⓐ", "弢", ""]
 
   var
     first, last, i = 0
@@ -577,10 +648,8 @@ iterator split*(s: string, sep: Regex): string {.inline, raises: [].} =
 func split*(s: string, sep: Regex): seq[string] {.inline, raises: [].} =
   ## return not matched substrings
   runnableExamples:
-    let
-      parts = split("11a22Ϊ33Ⓐ44弢55", re"\d+")
-      expected = @["", "a", "Ϊ", "Ⓐ", "弢", ""]
-    doAssert parts == expected
+    doAssert split("11a22Ϊ33Ⓐ44弢55", re"\d+") ==
+      @["", "a", "Ϊ", "Ⓐ", "弢", ""]
 
   for w in split(s, sep):
     result.add w
@@ -755,10 +824,9 @@ func replace*(
       if m.group(1).len mod 2 != 0:
         result = s[m.group(0)[0]]
     
-    let
-      text = "Es macht Spaß, alle geraden Wörter zu entfernen!"
-      expected = "macht , geraden entfernen!"
-    doAssert text.replace(re"((\w)+\s*)", removeEvenWords) == expected
+    let text = "Es macht Spaß, alle geraden Wörter zu entfernen!"
+    doAssert text.replace(re"((\w)+\s*)", removeEvenWords) ==
+      "macht , geraden entfernen!"
 
   result = ""
   var i, j = 0

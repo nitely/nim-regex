@@ -151,7 +151,9 @@ Lookaround Assertions
 
 .. code-block::
   (?=x)   A positive lookahead assertion
+  (?!x)   A negative lookahead assertion
   (?<=x)  A positive lookbehind assertion
+  (?<!x)  A negative lookbehind assertion
 
 Lookaround assertions are limited to a single character
 at the moment.

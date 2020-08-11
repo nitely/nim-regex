@@ -9,7 +9,7 @@ import nodetype
 import common
 import scanner
 
-func check(cond: bool, msg: string) =
+func check(cond: bool, msg: string) {.inline.} =
   if not cond:
     raise newException(RegexError, msg)
 
@@ -600,17 +600,29 @@ func parseGroupTag(sc: Scanner[Rune]): Node =
       isCapturing = false)
   #reLookahead,
   #reLookbehind,
-  of "=".toRune, "<".toRune:
+  of "=".toRune, "<".toRune, "!".toRune:
     let lookAroundKind = case sc.peek
       of "=".toRune:
         reLookahead
+      of "!".toRune:
+        reNotLookahead
+      of "<".toRune:
+        discard sc.next()
+        case sc.peek:
+        of "=".toRune:
+          reLookbehind
+        of "!".toRune:
+          reNotLookbehind
+        else:
+          prettyCheck(
+            false,
+            "Invalid lookabehind, expected `<=` or `<!` symbol")
+          reLookbehind  # XXX hack
       else:
-        discard sc.next()  # discard <
-        prettyCheck(
-          sc.peek == "=".toRune,
-          "Invalid lookabehind, expected `<=` symbol")
-        reLookbehind
-    discard sc.next()  # discard =
+        doAssert false
+        reLookahead  # XXX hack
+    doAssert sc.peek in ["=".toRune, "!".toRune]
+    discard sc.next
     # todo: support sets and more
     case sc.peek
     of "\\".toRune:

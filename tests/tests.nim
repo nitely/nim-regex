@@ -1385,6 +1385,16 @@ test "tlook_around":
   check(not "ab".isMatch(re"\w(?<=c)b"))
   check "ab".matchWithCapt(re"(a(?<=a))b") == @[@["a"]]
 
+test "tnegative_look_around":
+  check "ab".isMatch(re"a(?!c)\w")
+  check(not "ab".isMatch(re"a(?!c)"))
+  check(not "ab".isMatch(re"a(?!b)\w"))
+  check "ab".matchWithCapt(re"(a(?!c))\w") == @[@["a"]]
+  check "ab".isMatch(re"\w(?<!c)b")
+  check(not "ab".isMatch(re"\w(?<!c)"))
+  check(not "ab".isMatch(re"\w(?<!a)b"))
+  check "ab".matchWithCapt(re"(\w(?<!c))b") == @[@["a"]]
+
 test "tpretty_errors":
   block:
     var exp = ""

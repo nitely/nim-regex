@@ -971,7 +971,10 @@ test "tfindall":
   check findAllBounds("\n\n", re"(?m)^") == @[0 .. -1, 1 .. 0, 2 .. 1]
   check findAllBounds("foobarbaz", re"(?<=o)b") == @[3 .. 3]
   check findAllBounds("foobarbaz", re"(?<!o)b") == @[6 .. 6]
+  check findAllBounds("aaaabaaaa", re"(?<!a)a") == @[0 .. 0, 5 .. 5]
   check findAllBounds("foobar", re"o(?=b)") == @[2 .. 2]
+  check findAllBounds("foobar", re"o(?!b)") == @[1 .. 1]
+  check findAllBounds("aaaabaaaa", re"a(?!a)") == @[3 .. 3, 8 .. 8]
   check findAllBounds("aaa", re"\w+b|\w") == @[0 .. 0, 1 .. 1, 2 .. 2]
   # This follows nre's empty match behaviour
   check findAllBounds("a", re"") == @[0 .. -1, 1 .. 0]
@@ -1678,6 +1681,8 @@ test "tfindallopt":
     @[6 .. 6]
   check findAllBounds("foobarbaz", re"(?<!r)b") ==
     @[3 .. 3]
+  check findAllBounds("x@x@y@y@y@x@xy@yx@@", re"(?<!x)@\w+") ==
+    @[5 .. 6, 7 .. 8, 9 .. 10, 14 .. 16]
   check findAllBounds("foobar", re"o(?=b)") ==
     @[2 .. 2]
   check findAllBounds("foobarbaz", re"a(?=r)") ==
@@ -1686,6 +1691,8 @@ test "tfindallopt":
     @[1 .. 1]
   check findAllBounds("foobarbaz", re"a(?!r)") ==
     @[7 .. 7]
+  check findAllBounds("x@x@y@y@y@x@xy@yx@@", re"\w+@(?!x)") ==
+    @[2 .. 3, 4 .. 5, 6 .. 7, 12 .. 14, 15 .. 17]
   check findAllBounds("abcdef", re"^abcd") ==
     @[0 .. 3]
   check findAllBounds("abcdef", re"cdef$") ==

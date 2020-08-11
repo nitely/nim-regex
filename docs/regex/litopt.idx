@@ -1,0 +1,3 @@
+LitOpt	regex/litopt.html#LitOpt	litopt: LitOpt	
+canOpt	regex/litopt.html#canOpt,LitOpt	litopt: canOpt(litOpt: LitOpt): bool	
+litopt2	regex/litopt.html#litopt2,RpnExp	litopt: litopt2(exp: RpnExp): LitOpt	

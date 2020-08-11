@@ -1,0 +1,1 @@
+matchImpl	regex/nfamatch.html#matchImpl,string,Regex,RegexMatch,,int	nfamatch: matchImpl(text: string; regex: Regex; m: var RegexMatch; flags: static MatchFlags;\n          start = 0): bool	

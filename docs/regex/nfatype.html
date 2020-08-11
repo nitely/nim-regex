@@ -20,7 +20,7 @@
 <title>regex/nfatype</title>
 <link rel="stylesheet" type="text/css" href="../nimdoc.out.css">
 
-<script type="text/javascript" src="dochack.js"></script>
+<script type="text/javascript" src="../dochack.js"></script>
 
 <script type="text/javascript">
 function main() {
@@ -47,21 +47,12 @@ function main() {
 
   toggleSwitch.addEventListener('change', switchTheme, false);
 
+  const currentTheme = localStorage.getItem('theme') ? localStorage.getItem('theme') : null;
+  if (currentTheme) {
+    document.documentElement.setAttribute('data-theme', currentTheme);
 
-  if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-    document.documentElement.setAttribute('data-theme', "dark");
-    toggleSwitch.checked = true;
-  } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
-    document.documentElement.setAttribute('data-theme', "light");
-    toggleSwitch.checked = false;
-  } else {
-    const currentTheme = localStorage.getItem('theme') ? localStorage.getItem('theme') : null;
-    if (currentTheme) {
-      document.documentElement.setAttribute('data-theme', currentTheme);
-
-      if (currentTheme === 'dark') {
-        toggleSwitch.checked = true;
-      }
+    if (currentTheme === 'dark') {
+      toggleSwitch.checked = true;
     }
   }
 }
@@ -83,6 +74,9 @@ function main() {
   </div>
   <div id="global-links">
     <ul class="simple">
+    <li>
+      <a href="../theindex.html">Index</a>
+    </li>
     </ul>
   </div>
   <div id="searchInputDiv">
@@ -122,10 +116,11 @@ function main() {
   nfa*: Nfa
   transitions*: Transitions
   groupsCount*: int16
-  namedGroups*: OrderedTable[string, int16]"><wbr />Regex<span class="attachedType"></span></a></li>
+  namedGroups*: OrderedTable[string, int16]
+  litOpt*: LitOpt"><wbr />Regex<span class="attachedType"></span></a></li>
   <li><a class="reference" href="#MatchFlag"
     title="MatchFlag = enum
-  mfShortestMatch, mfLongestMatch, mfNoCaptures, mfFindMatch"><wbr />Match<wbr />Flag<span class="attachedType"></span></a></li>
+  mfShortestMatch, mfNoCaptures, mfFindMatch, mfFindMatchOpt"><wbr />Match<wbr />Flag<span class="attachedType"></span></a></li>
   <li><a class="reference" href="#MatchFlags"
     title="MatchFlags = set[MatchFlag]"><wbr />Match<wbr />Flags<span class="attachedType"></span></a></li>
   <li><a class="reference" href="#RegexMatch"
@@ -135,10 +130,10 @@ function main() {
   boundaries*: Slice[int]"><wbr />Regex<wbr />Match<span class="attachedType"></span></a></li>
   <li><a class="reference" href="#NodeIdx"
     title="NodeIdx = int16"><wbr />Node<wbr />Idx<span class="attachedType"></span></a></li>
-  <li><a class="reference" href="#StartBound"
-    title="StartBound = int"><wbr />Start<wbr />Bound<span class="attachedType"></span></a></li>
+  <li><a class="reference" href="#Bounds"
+    title="Bounds = Slice[int]"><wbr />Bounds<span class="attachedType"></span></a></li>
   <li><a class="reference" href="#PState"
-    title="PState = (NodeIdx, CaptIdx, StartBound)"><wbr />PState<span class="attachedType"></span></a></li>
+    title="PState = tuple[ni: NodeIdx, ci: CaptIdx, bounds: Bounds]"><wbr />PState<span class="attachedType"></span></a></li>
   <li><a class="reference" href="#Submatches"
     title="Submatches = ref object
   sx: seq[PState]
@@ -166,6 +161,8 @@ function main() {
     title="len(sm: Submatches): int"><wbr />len<span class="attachedType">Submatches</span></a></li>
   <li><a class="reference" href="#clear%2CSubmatches"
     title="clear(sm: var Submatches)"><wbr />clear<span class="attachedType">Submatches</span></a></li>
+  <li><a class="reference" href="#cap%2CSubmatches"
+    title="cap(sm: Submatches): int"><wbr />cap<span class="attachedType">Submatches</span></a></li>
 
   </ul>
 </li>
@@ -188,7 +185,7 @@ function main() {
   <div class="section" id="6">
 <h1><a class="toc-backref" href="#6">Imports</a></h1>
 <dl class="item">
-<a class="reference external" href="nfa.html">nfa</a>
+<a class="reference external" href="nfa.html">nfa</a>, <a class="reference external" href="litopt.html">litopt</a>
 </dl></div>
 <div class="section" id="7">
 <h1><a class="toc-backref" href="#7">Types</a></h1>
@@ -231,6 +228,7 @@ function main() {
   <span class="Identifier">transitions</span><span class="Operator">*</span><span class="Other">:</span> <a href="nfa.html#Transitions"><span class="Identifier">Transitions</span></a>
   <span class="Identifier">groupsCount</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int16</span>
   <span class="Identifier">namedGroups</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">OrderedTable</span><span class="Other">[</span><span class="Identifier">string</span><span class="Other">,</span> <span class="Identifier">int16</span><span class="Other">]</span>
+  <span class="Identifier">litOpt</span><span class="Operator">*</span><span class="Other">:</span> <a href="litopt.html#LitOpt"><span class="Identifier">LitOpt</span></a>
 </pre></dt>
 <dd>
 
@@ -239,7 +237,7 @@ a compiled regular expression
 </dd>
 <a id="MatchFlag"></a>
 <dt><pre><a href="nfatype.html#MatchFlag"><span class="Identifier">MatchFlag</span></a> <span class="Other">=</span> <span class="Keyword">enum</span>
-  <span class="Identifier">mfShortestMatch</span><span class="Other">,</span> <span class="Identifier">mfLongestMatch</span><span class="Other">,</span> <span class="Identifier">mfNoCaptures</span><span class="Other">,</span> <span class="Identifier">mfFindMatch</span></pre></dt>
+  <span class="Identifier">mfShortestMatch</span><span class="Other">,</span> <span class="Identifier">mfNoCaptures</span><span class="Other">,</span> <span class="Identifier">mfFindMatch</span><span class="Other">,</span> <span class="Identifier">mfFindMatchOpt</span></pre></dt>
 <dd>
 
 
@@ -270,15 +268,15 @@ result from matching operations
 
 
 </dd>
-<a id="StartBound"></a>
-<dt><pre><a href="nfatype.html#StartBound"><span class="Identifier">StartBound</span></a> <span class="Other">=</span> <span class="Identifier">int</span></pre></dt>
+<a id="Bounds"></a>
+<dt><pre><a href="nfatype.html#Bounds"><span class="Identifier">Bounds</span></a> <span class="Other">=</span> <span class="Identifier">Slice</span><span class="Other">[</span><span class="Identifier">int</span><span class="Other">]</span></pre></dt>
 <dd>
 
 
 
 </dd>
 <a id="PState"></a>
-<dt><pre><a href="nfatype.html#PState"><span class="Identifier">PState</span></a> <span class="Other">=</span> <span class="Other">(</span><a href="nfatype.html#NodeIdx"><span class="Identifier">NodeIdx</span></a><span class="Other">,</span> <a href="nfatype.html#CaptIdx"><span class="Identifier">CaptIdx</span></a><span class="Other">,</span> <a href="nfatype.html#StartBound"><span class="Identifier">StartBound</span></a><span class="Other">)</span></pre></dt>
+<dt><pre><a href="nfatype.html#PState"><span class="Identifier">PState</span></a> <span class="Other">=</span> <span class="Keyword">tuple</span><span class="Other">[</span><span class="Identifier">ni</span><span class="Other">:</span> <a href="nfatype.html#NodeIdx"><span class="Identifier">NodeIdx</span></a><span class="Other">,</span> <span class="Identifier">ci</span><span class="Other">:</span> <a href="nfatype.html#CaptIdx"><span class="Identifier">CaptIdx</span></a><span class="Other">,</span> <span class="Identifier">bounds</span><span class="Other">:</span> <a href="nfatype.html#Bounds"><span class="Identifier">Bounds</span></a><span class="Other">]</span></pre></dt>
 <dd>
 
 
@@ -357,6 +355,13 @@ Parallel states would be a better name. This is a sparse set
 
 
 </dd>
+<a id="cap,Submatches"></a>
+<dt><pre><span class="Keyword">func</span> <a href="#cap%2CSubmatches"><span class="Identifier">cap</span></a><span class="Other">(</span><span class="Identifier">sm</span><span class="Other">:</span> <a href="nfatype.html#Submatches"><span class="Identifier">Submatches</span></a><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">int</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">inline</span><span class="Other">,</span> <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<dd>
+
+
+
+</dd>
 
 </dl></div>
 <div class="section" id="15">
@@ -379,7 +384,7 @@ Parallel states would be a better name. This is a sparse set
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br/>
-        <small style="color: var(--hint);">Made with Nim. Generated: 2020-04-04 00:21:40 UTC</small>
+        <small style="color: var(--hint);">Made with Nim. Generated: 2020-08-11 07:39:04 UTC</small>
       </div>
     </div>
   </div>

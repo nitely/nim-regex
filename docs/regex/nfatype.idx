@@ -1,0 +1,26 @@
+CaptIdx	regex/nfatype.html#CaptIdx	nfatype: CaptIdx	
+CaptNode	regex/nfatype.html#CaptNode	nfatype: CaptNode	
+Capts	regex/nfatype.html#Capts	nfatype: Capts	
+Captures	regex/nfatype.html#Captures	nfatype: Captures	
+constructSubmatches	regex/nfatype.html#constructSubmatches,Captures,Capts,int,int	nfatype: constructSubmatches(captures: var Captures; capts: Capts; capt, size: int)	
+Regex	regex/nfatype.html#Regex	nfatype: Regex	
+mfShortestMatch	regex/nfatype.html#mfShortestMatch	MatchFlag.mfShortestMatch	
+mfNoCaptures	regex/nfatype.html#mfNoCaptures	MatchFlag.mfNoCaptures	
+mfFindMatch	regex/nfatype.html#mfFindMatch	MatchFlag.mfFindMatch	
+mfFindMatchOpt	regex/nfatype.html#mfFindMatchOpt	MatchFlag.mfFindMatchOpt	
+MatchFlag	regex/nfatype.html#MatchFlag	nfatype: MatchFlag	
+MatchFlags	regex/nfatype.html#MatchFlags	nfatype: MatchFlags	
+RegexMatch	regex/nfatype.html#RegexMatch	nfatype: RegexMatch	
+clear	regex/nfatype.html#clear,RegexMatch	nfatype: clear(m: var RegexMatch)	
+NodeIdx	regex/nfatype.html#NodeIdx	nfatype: NodeIdx	
+Bounds	regex/nfatype.html#Bounds	nfatype: Bounds	
+PState	regex/nfatype.html#PState	nfatype: PState	
+Submatches	regex/nfatype.html#Submatches	nfatype: Submatches	
+newSubmatches	regex/nfatype.html#newSubmatches,int	nfatype: newSubmatches(size: int): Submatches	
+`[]`	regex/nfatype.html#[],Submatches,int	nfatype: `[]`(sm: Submatches; i: int): PState	
+hasState	regex/nfatype.html#hasState,Submatches,int16	nfatype: hasState(sm: Submatches; n: int16): bool	
+add	regex/nfatype.html#add,Submatches,PState	nfatype: add(sm: var Submatches; item: PState)	
+len	regex/nfatype.html#len,Submatches	nfatype: len(sm: Submatches): int	
+clear	regex/nfatype.html#clear,Submatches	nfatype: clear(sm: var Submatches)	
+items	regex/nfatype.html#items.i,Submatches	nfatype: items(sm: Submatches): PState	
+cap	regex/nfatype.html#cap,Submatches	nfatype: cap(sm: Submatches): int	

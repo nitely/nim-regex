@@ -1,0 +1,8 @@
+RegexError	regex/common.html#RegexError	common: RegexError	
+invalidRune	regex/common.html#invalidRune	common: invalidRune	
+lineBreakRune	regex/common.html#lineBreakRune	common: lineBreakRune	
+toRune	regex/common.html#toRune,string	common: toRune(s: string): Rune	
+`&lt;=`	regex/common.html#<=,Rune,Rune	common: `&lt;=`(x, y: Rune): bool	
+cmp	regex/common.html#cmp,Rune,Rune	common: cmp(x, y: Rune): int	
+`%%`	regex/common.html#%%,string,openArray[string]	common: `%%`(formatstr: string; a: openArray[string]): string	
+`%%`	regex/common.html#%%,string,string	common: `%%`(formatstr: string; a: string): string	

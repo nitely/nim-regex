@@ -20,7 +20,7 @@
 <title>regex/nodetype</title>
 <link rel="stylesheet" type="text/css" href="../nimdoc.out.css">
 
-<script type="text/javascript" src="dochack.js"></script>
+<script type="text/javascript" src="../dochack.js"></script>
 
 <script type="text/javascript">
 function main() {
@@ -47,21 +47,12 @@ function main() {
 
   toggleSwitch.addEventListener('change', switchTheme, false);
 
+  const currentTheme = localStorage.getItem('theme') ? localStorage.getItem('theme') : null;
+  if (currentTheme) {
+    document.documentElement.setAttribute('data-theme', currentTheme);
 
-  if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-    document.documentElement.setAttribute('data-theme', "dark");
-    toggleSwitch.checked = true;
-  } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
-    document.documentElement.setAttribute('data-theme', "light");
-    toggleSwitch.checked = false;
-  } else {
-    const currentTheme = localStorage.getItem('theme') ? localStorage.getItem('theme') : null;
-    if (currentTheme) {
-      document.documentElement.setAttribute('data-theme', currentTheme);
-
-      if (currentTheme === 'dark') {
-        toggleSwitch.checked = true;
-      }
+    if (currentTheme === 'dark') {
+      toggleSwitch.checked = true;
     }
   }
 }
@@ -83,6 +74,9 @@ function main() {
   </div>
   <div id="global-links">
     <ul class="simple">
+    <li>
+      <a href="../theindex.html">Index</a>
+    </li>
     </ul>
   </div>
   <div id="searchInputDiv">
@@ -121,12 +115,15 @@ function main() {
   reWhiteSpaceAscii, reNotAlphaNumAscii, reNotDigitAscii, reNotWhiteSpaceAscii,
   reAnyAscii, reAnyNlAscii, reInSet, reNotSet, reLookahead, reLookbehind,
   reNotLookahead, reNotLookbehind, reSkip, reEoe"><wbr />Node<wbr />Kind<span class="attachedType"></span></a></li>
+  <li><a class="reference" href="#NodeUid"
+    title="NodeUid = int16"><wbr />Node<wbr />Uid<span class="attachedType"></span></a></li>
   <li><a class="reference" href="#Node"
     title="Node = object
   kind*: NodeKind
   cp*: Rune
   next*: seq[int16]
   isGreedy*: bool
+  uid*: NodeUid
   idx*: int16
   isCapturing*: bool
   name*: string
@@ -174,14 +171,16 @@ function main() {
     title="toCharNode(r: Rune): Node"><wbr />to<wbr />Char<wbr />Node<span class="attachedType">Node</span></a></li>
   <li><a class="reference" href="#initJoinerNode"
     title="initJoinerNode(): Node"><wbr />init<wbr />Joiner<wbr />Node<span class="attachedType">Node</span></a></li>
-  <li><a class="reference" href="#initEOENode"
-    title="initEOENode(): Node"><wbr />init<wbr />EOENode<span class="attachedType">Node</span></a></li>
+  <li><a class="reference" href="#initEoeNode"
+    title="initEoeNode(): Node"><wbr />init<wbr />Eoe<wbr />Node<span class="attachedType">Node</span></a></li>
   <li><a class="reference" href="#initSetNode"
     title="initSetNode(): Node"><wbr />init<wbr />Set<wbr />Node<span class="attachedType">Node</span></a></li>
   <li><a class="reference" href="#initNotSetNode"
     title="initNotSetNode(): Node"><wbr />init<wbr />Not<wbr />Set<wbr />Node<span class="attachedType">Node</span></a></li>
   <li><a class="reference" href="#initGroupStart%2Cstring%2Cseq%5BFlag%5D"
     title="initGroupStart(name: string = &quot;&quot;; flags: seq[Flag] = @[]; isCapturing = true): Node"><wbr />init<wbr />Group<wbr />Start<span class="attachedType">Node</span></a></li>
+  <li><a class="reference" href="#initSkipNode%2CopenArray%5Bint16%5D"
+    title="initSkipNode(next: openArray[int16]): Node"><wbr />init<wbr />Skip<wbr />Node<span class="attachedType">Node</span></a></li>
   <li><a class="reference" href="#isEmpty%2CNode"
     title="isEmpty(n: Node): bool"><wbr />is<wbr />Empty<span class="attachedType">Node</span></a></li>
   <li><a class="reference" href="#toString%2CNode"
@@ -232,12 +231,20 @@ function main() {
 
 
 </dd>
+<a id="NodeUid"></a>
+<dt><pre><a href="nodetype.html#NodeUid"><span class="Identifier">NodeUid</span></a> <span class="Other">=</span> <span class="Identifier">int16</span></pre></dt>
+<dd>
+
+
+
+</dd>
 <a id="Node"></a>
 <dt><pre><a href="nodetype.html#Node"><span class="Identifier">Node</span></a> <span class="Other">=</span> <span class="Keyword">object</span>
   <span class="Identifier">kind</span><span class="Operator">*</span><span class="Other">:</span> <a href="nodetype.html#NodeKind"><span class="Identifier">NodeKind</span></a>
   <span class="Identifier">cp</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Rune</span>
   <span class="Identifier">next</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">int16</span><span class="Other">]</span>
   <span class="Identifier">isGreedy</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">bool</span>
+  <span class="Identifier">uid</span><span class="Operator">*</span><span class="Other">:</span> <a href="nodetype.html#NodeUid"><span class="Identifier">NodeUid</span></a>
   <span class="Identifier">idx</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int16</span>
   <span class="Identifier">isCapturing</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">bool</span>
   <span class="Identifier">name</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">string</span>
@@ -329,8 +336,8 @@ return a <tt class="docutils literal"><span class="pre">Node</span></tt> that is
 return a <tt class="docutils literal"><span class="pre">Node</span></tt> of <tt class="docutils literal"><span class="pre">reJoiner</span></tt> kind. Joiners are temporary nodes, they serve to generate the NFA but they are never part of it
 
 </dd>
-<a id="initEOENode"></a>
-<dt><pre><span class="Keyword">func</span> <a href="#initEOENode"><span class="Identifier">initEOENode</span></a><span class="Other">(</span><span class="Other">)</span><span class="Other">:</span> <a href="nodetype.html#Node"><span class="Identifier">Node</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<a id="initEoeNode"></a>
+<dt><pre><span class="Keyword">func</span> <a href="#initEoeNode"><span class="Identifier">initEoeNode</span></a><span class="Other">(</span><span class="Other">)</span><span class="Other">:</span> <a href="nodetype.html#Node"><span class="Identifier">Node</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
 
 return the end-of-expression <tt class="docutils literal"><span class="pre">Node</span></tt>. This is a dummy node that marks a match as successful
@@ -356,6 +363,13 @@ return a negated set <tt class="docutils literal"><span class="pre">Node</span><
 <dd>
 
 return a <tt class="docutils literal"><span class="pre">reGroupStart</span></tt> node
+
+</dd>
+<a id="initSkipNode,openArray[int16]"></a>
+<dt><pre><span class="Keyword">func</span> <a href="#initSkipNode%2CopenArray%5Bint16%5D"><span class="Identifier">initSkipNode</span></a><span class="Other">(</span><span class="Identifier">next</span><span class="Other">:</span> <span class="Identifier">openArray</span><span class="Other">[</span><span class="Identifier">int16</span><span class="Other">]</span><span class="Other">)</span><span class="Other">:</span> <a href="nodetype.html#Node"><span class="Identifier">Node</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<dd>
+
+Return a dummy node that should be skipped while traversing the NFA
 
 </dd>
 <a id="isEmpty,Node"></a>
@@ -389,7 +403,7 @@ return the string representation of a <tt class="docutils literal"><span class="
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br/>
-        <small style="color: var(--hint);">Made with Nim. Generated: 2020-04-04 00:21:40 UTC</small>
+        <small style="color: var(--hint);">Made with Nim. Generated: 2020-08-11 07:39:03 UTC</small>
       </div>
     </div>
   </div>

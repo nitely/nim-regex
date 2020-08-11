@@ -1,0 +1,3 @@
+GroupsCapture	regex/exptransformation.html#GroupsCapture	exptransformation: GroupsCapture	
+toAtoms	regex/exptransformation.html#toAtoms,seq[Node],GroupsCapture	exptransformation: toAtoms(exp: seq[Node]; groups: var GroupsCapture): seq[Node]	
+transformExp	regex/exptransformation.html#transformExp,seq[Node],GroupsCapture	exptransformation: transformExp(exp: seq[Node]; groups: var GroupsCapture): seq[Node]	

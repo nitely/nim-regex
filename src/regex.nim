@@ -146,7 +146,36 @@ ASCII character classes
   [[:word:]]    word characters ([0-9A-Za-z_])
   [[:xdigit:]]  hex digit ([0-9A-Fa-f])
 
+Lookaround Assertions
+#####################
+
+.. code-block::
+  (?=x)   A positive lookahead assertion
+  (?<=x)  A positive lookbehind assertion
+
+Lookaround assertions are limited to a single character
+at the moment.
+
+Examples
+********
+
+Multiple captures
+#################
+
+Unlike most regex engines, this library support capturing
+all repetitions. Most other libraries return only the last
+capture. The caveat of this is even non-repeated groups or
+characters are returned as a list of captures instead of
+a single capture.
+
 ]##
+runnableExamples:
+  import sequtils
+  var text = "nim c --styleCheck:hint --colors:off regex.nim"
+  var m: RegexMatch
+  if match(text, re"nim c (?:--(\w+) *)+ (\w+).nim", m):
+    doAssert m.group(0, text) == @["styleCheck:hint", "colors:off"]
+    doAssert m.group(1, text) == @["regex"]
 
 import std/tables
 import std/sequtils

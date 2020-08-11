@@ -1484,14 +1484,12 @@ test "capturingGroupsNames":
     check m.groupsCount == 2
     for name in @["greet", "who"]:
       check m.groupNames.contains(name)
-
   block:
     let text = "hello world"
     var m: RegexMatch
     check text.match(re"(?P<greet>hello) (?P<who>world)", m)
     check m.group("greet", text) == @["hello"]
     check m.group("who", text) == @["world"]
-    
   block:
     let text = "hello world foo bar"
     var m: RegexMatch
@@ -1500,55 +1498,82 @@ test "capturingGroupsNames":
     let whoGroups = m.group("who", text)
     for w in @["foo", "bar", "world"]:
       check whoGroups.contains(w)
-
   block:
     let text = "hello world"
     var m: RegexMatch
     check text.match(re"(?P<greet>hello) (?P<who>world)", m)
     check m.groupFirstCapture("greet", text) == "hello"
     check m.groupFirstCapture("who", text) == "world"
-
-  ## First capture
   block:
     let text = "hello world her"
     var m: RegexMatch
     check text.match(re"(?P<greet>hello) (?P<who>world) (?P<who>her)", m)
     check m.groupFirstCapture("greet", text) == "hello"
-
   block:
     let text = "hello world foo bar"
     var m: RegexMatch
     check text.match(re"(?P<greet>hello) (?:(?P<who>[^\s]+)\s?)+", m)
     # "who" captures @["world", "foo", "bar"]
     check m.groupFirstCapture("who", text) == "world"
-  
   block:
     let text = "hello"
     var m: RegexMatch
     check text.match(re"(?P<greet>hello)\s?(?P<who>world)?", m)
     check m.groupFirstCapture("greet", text) == "hello"
     check m.groupFirstCapture("who", text) == ""
-
-  ## Last capture
   block:
     let text = "hello world her"
     var m: RegexMatch
     check text.match(re"(?P<greet>hello) (?P<who>world) (?P<who>her)", m)
     check m.groupLastCapture("who", text) == "her"
-
   block:
     let text = "hello world foo bar"
     var m: RegexMatch
     check text.match(re"(?P<greet>hello) (?:(?P<who>[^\s]+)\s?)+", m)
     # "who" captures @["world", "foo", "bar"]
     check m.groupLastCapture("who", text) == "bar"
-
   block:
     let text = "hello"
     var m: RegexMatch
     check text.match(re"(?P<greet>hello)\s?(?P<who>world)?", m)
     check m.groupLastCapture("greet", text) == "hello"
     check m.groupLastCapture("who", text) == ""
+  block:
+    let text = "hello"
+    var m: RegexMatch
+    check text.match(re"(hello)\s?(world)?", m)
+    check m.groupLastCapture(0, text) == "hello"
+    check m.groupLastCapture(1, text) == ""
+  block:
+    let text = ""
+    var m: RegexMatch
+    check text.match(re"(hello)?\s?(world)?", m)
+    check m.groupLastCapture(0, text) == ""
+    check m.groupLastCapture(1, text) == ""
+  block:
+    let text = "hello world foo bar"
+    var m: RegexMatch
+    check text.match(re"(hello) (?:([^\s]+)\s?)+", m)
+    # "who" captures @["world", "foo", "bar"]
+    check m.groupLastCapture(1, text) == "bar"
+  block:
+    let text = "hello"
+    var m: RegexMatch
+    check text.match(re"(hello)\s?(world)?", m)
+    check m.groupFirstCapture(0, text) == "hello"
+    check m.groupFirstCapture(1, text) == ""
+  block:
+    let text = ""
+    var m: RegexMatch
+    check text.match(re"(hello)?\s?(world)?", m)
+    check m.groupFirstCapture(0, text) == ""
+    check m.groupFirstCapture(1, text) == ""
+  block:
+    let text = "hello world foo bar"
+    var m: RegexMatch
+    check text.match(re"(hello) (?:([^\s]+)\s?)+", m)
+    # "who" captures @["world", "foo", "bar"]
+    check m.groupFirstCapture(1, text) == "world"
 
 # XXX raise a compile error when regex contains unicode
 #     in ascii mode

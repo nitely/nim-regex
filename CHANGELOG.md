@@ -1,3 +1,10 @@
+v0.16.1
+==================
+
+* Adds `groupFirstCapture`, `groupLastCapture`, and
+  `group(1): seq[string]` for group numbers
+* Adds support for negative lookaround assertions
+
 v0.16.0
 ==================
 

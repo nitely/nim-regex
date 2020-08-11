@@ -970,6 +970,7 @@ test "tfindall":
     @[1 .. 0, 5 .. 4, 8 .. 7, 11 .. 10]
   check findAllBounds("\n\n", re"(?m)^") == @[0 .. -1, 1 .. 0, 2 .. 1]
   check findAllBounds("foobarbaz", re"(?<=o)b") == @[3 .. 3]
+  check findAllBounds("foobarbaz", re"(?<!o)b") == @[6 .. 6]
   check findAllBounds("foobar", re"o(?=b)") == @[2 .. 2]
   check findAllBounds("aaa", re"\w+b|\w") == @[0 .. 0, 1 .. 1, 2 .. 2]
   # This follows nre's empty match behaviour
@@ -1673,10 +1674,18 @@ test "tfindallopt":
     @[3 .. 3]
   check findAllBounds("foobarbaz", re"(?<=r)b") ==
     @[6 .. 6]
+  check findAllBounds("foobarbaz", re"(?<!o)b") ==
+    @[6 .. 6]
+  check findAllBounds("foobarbaz", re"(?<!r)b") ==
+    @[3 .. 3]
   check findAllBounds("foobar", re"o(?=b)") ==
     @[2 .. 2]
   check findAllBounds("foobarbaz", re"a(?=r)") ==
     @[4 .. 4]
+  check findAllBounds("foobar", re"o(?!b)") ==
+    @[1 .. 1]
+  check findAllBounds("foobarbaz", re"a(?!r)") ==
+    @[7 .. 7]
   check findAllBounds("abcdef", re"^abcd") ==
     @[0 .. 3]
   check findAllBounds("abcdef", re"cdef$") ==
@@ -2048,7 +2057,9 @@ test "tmisc3":
   check split("a\na\na", re"(?m)^") == @["a\n", "a\n", "a"]
   check split("\n\n", re"(?m)^") == @["\n", "\n"]
   check split("foobar", re"(?<=o)b") == @["foo", "ar"]
+  check split("foobarbaz", re"(?<!o)b") == @["foobar", "az"]
   check split("foobar", re"o(?=b)") == @["fo", "bar"]
+  check split("foobar", re"o(?!b)") == @["f", "obar"]
   block:
     var m: RegexMatch
     check find("abcxyz", re"(abc)|\w+", m)

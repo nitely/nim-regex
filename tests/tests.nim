@@ -970,7 +970,11 @@ test "tfindall":
     @[1 .. 0, 5 .. 4, 8 .. 7, 11 .. 10]
   check findAllBounds("\n\n", re"(?m)^") == @[0 .. -1, 1 .. 0, 2 .. 1]
   check findAllBounds("foobarbaz", re"(?<=o)b") == @[3 .. 3]
+  check findAllBounds("foobarbaz", re"(?<!o)b") == @[6 .. 6]
+  check findAllBounds("aaaabaaaa", re"(?<!a)a") == @[0 .. 0, 5 .. 5]
   check findAllBounds("foobar", re"o(?=b)") == @[2 .. 2]
+  check findAllBounds("foobar", re"o(?!b)") == @[1 .. 1]
+  check findAllBounds("aaaabaaaa", re"a(?!a)") == @[3 .. 3, 8 .. 8]
   check findAllBounds("aaa", re"\w+b|\w") == @[0 .. 0, 1 .. 1, 2 .. 2]
   # This follows nre's empty match behaviour
   check findAllBounds("a", re"") == @[0 .. -1, 1 .. 0]
@@ -1385,6 +1389,16 @@ test "tlook_around":
   check(not "ab".isMatch(re"\w(?<=c)b"))
   check "ab".matchWithCapt(re"(a(?<=a))b") == @[@["a"]]
 
+test "tnegative_look_around":
+  check "ab".isMatch(re"a(?!c)\w")
+  check(not "ab".isMatch(re"a(?!c)"))
+  check(not "ab".isMatch(re"a(?!b)\w"))
+  check "ab".matchWithCapt(re"(a(?!c))\w") == @[@["a"]]
+  check "ab".isMatch(re"\w(?<!c)b")
+  check(not "ab".isMatch(re"\w(?<!c)"))
+  check(not "ab".isMatch(re"\w(?<!a)b"))
+  check "ab".matchWithCapt(re"(\w(?<!c))b") == @[@["a"]]
+
 test "tpretty_errors":
   block:
     var exp = ""
@@ -1663,10 +1677,22 @@ test "tfindallopt":
     @[3 .. 3]
   check findAllBounds("foobarbaz", re"(?<=r)b") ==
     @[6 .. 6]
+  check findAllBounds("foobarbaz", re"(?<!o)b") ==
+    @[6 .. 6]
+  check findAllBounds("foobarbaz", re"(?<!r)b") ==
+    @[3 .. 3]
+  check findAllBounds("x@x@y@y@y@x@xy@yx@@", re"(?<!x)@\w+") ==
+    @[5 .. 6, 7 .. 8, 9 .. 10, 14 .. 16]
   check findAllBounds("foobar", re"o(?=b)") ==
     @[2 .. 2]
   check findAllBounds("foobarbaz", re"a(?=r)") ==
     @[4 .. 4]
+  check findAllBounds("foobar", re"o(?!b)") ==
+    @[1 .. 1]
+  check findAllBounds("foobarbaz", re"a(?!r)") ==
+    @[7 .. 7]
+  check findAllBounds("x@x@y@y@y@x@xy@yx@@", re"\w+@(?!x)") ==
+    @[2 .. 3, 4 .. 5, 6 .. 7, 12 .. 14, 15 .. 17]
   check findAllBounds("abcdef", re"^abcd") ==
     @[0 .. 3]
   check findAllBounds("abcdef", re"cdef$") ==
@@ -2038,7 +2064,9 @@ test "tmisc3":
   check split("a\na\na", re"(?m)^") == @["a\n", "a\n", "a"]
   check split("\n\n", re"(?m)^") == @["\n", "\n"]
   check split("foobar", re"(?<=o)b") == @["foo", "ar"]
+  check split("foobarbaz", re"(?<!o)b") == @["foobar", "az"]
   check split("foobar", re"o(?=b)") == @["fo", "bar"]
+  check split("foobar", re"o(?!b)") == @["f", "obar"]
   block:
     var m: RegexMatch
     check find("abcxyz", re"(abc)|\w+", m)

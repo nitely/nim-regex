@@ -603,23 +603,23 @@ func parseGroupTag(sc: Scanner[Rune]): Node =
   of "=".toRune, "<".toRune, "!".toRune:
     var lookAroundKind: NodeKind
     case sc.peek
+    of "=".toRune:
+      lookAroundKind = reLookahead
+    of "!".toRune:
+      lookAroundKind = reNotLookahead
+    of "<".toRune:
+      discard sc.next()
+      case sc.peek:
       of "=".toRune:
-        lookAroundKind = reLookahead
+        lookAroundKind = reLookbehind
       of "!".toRune:
-        lookAroundKind = reNotLookahead
-      of "<".toRune:
-        discard sc.next()
-        case sc.peek:
-        of "=".toRune:
-          lookAroundKind = reLookbehind
-        of "!".toRune:
-          lookAroundKind = reNotLookbehind
-        else:
-          prettyCheck(
-            false,
-            "Invalid lookabehind, expected `<=` or `<!` symbol")
+        lookAroundKind = reNotLookbehind
       else:
-        doAssert false
+        prettyCheck(
+          false,
+          "Invalid lookabehind, expected `<=` or `<!` symbol")
+    else:
+      doAssert false
     doAssert sc.peek in ["=".toRune, "!".toRune]
     discard sc.next
     # todo: support sets and more

@@ -243,6 +243,51 @@ func group*(m: RegexMatch, i: int): seq[Slice[int]] {.inline, raises: [].} =
   ## Use the iterator version if you care about performance
   m.captures[i]
 
+func group*(
+  m: RegexMatch, i: int, text: string
+): seq[string] {.inline, raises: [].} =
+  ## return seq of captured text by group number `i`
+  runnableExamples:
+    let text = "hello beautiful world"
+    var m: RegexMatch
+    doAssert text.match(re"(hello) (?:([^\s]+)\s?)+", m)
+    doAssert m.group(0, text) == @["hello"]
+    doAssert m.group(1, text) == @["beautiful", "world"]
+
+  result = newSeq[string]()
+  for bounds in m.group i:
+    result.add text[bounds]
+
+func groupFirstCapture*(
+  m: RegexMatch, i: int, text: string
+): string {.inline, raises: [].} =
+  ## return first capture for a given capturing group
+  runnableExamples:
+    let text = "hello beautiful world"
+    var m: RegexMatch
+    doAssert text.match(re"(hello) (?:([^\s]+)\s?)+", m)
+    doAssert m.groupFirstCapture(0, text) == "hello"
+    doAssert m.groupFirstCapture(1, text) == "beautiful"
+
+  for bounds in m.group i:
+    return text[bounds]
+
+func groupLastCapture*(
+  m: RegexMatch, i: int, text: string
+): string {.inline, raises: [].} =
+  ## return last capture for a given capturing group
+  runnableExamples:
+    let text = "hello beautiful world"
+    var m: RegexMatch
+    doAssert text.match(re"(hello) (?:([^\s]+)\s?)+", m)
+    doAssert m.groupLastCapture(0, text) == "hello"
+    doAssert m.groupLastCapture(1, text) == "world"
+
+  var b = 0 .. -1
+  for bounds in m.group i:
+    b = bounds
+  result = text[b]
+
 iterator group*(
   m: RegexMatch, s: string
 ): Slice[int] {.inline, raises: [KeyError].} =
@@ -264,26 +309,7 @@ func group*(
 ): seq[Slice[int]] {.inline, raises: [KeyError].} =
   ## return slices for a given named group.
   ## Use the iterator version if you care about performance
-  m.group(m.namedGroups[s])
-
-func groupsCount*(m: RegexMatch): int {.inline, raises: [].} =
-  ## return the number of capturing groups
-  runnableExamples:
-    var m: RegexMatch
-    doAssert "ab".match(re"(a)(b)", m)
-    doAssert m.groupsCount == 2
-
-  m.captures.len
-
-func groupNames*(m: RegexMatch): seq[string] {.inline, raises: [].} =
-  ## return the names of capturing groups.
-  runnableExamples:
-    let text = "hello world"
-    var m: RegexMatch
-    doAssert text.match(re"(?P<greet>hello) (?P<who>world)", m)
-    doAssert m.groupNames() == @["greet", "who"]
-
-  result = toSeq(m.namedGroups.keys)
+  m.group m.namedGroups[s]
 
 func group*(
   m: RegexMatch,
@@ -339,6 +365,25 @@ func groupLastCapture*(
     return captures[captures.len-1]
   else:
     return ""
+
+func groupsCount*(m: RegexMatch): int {.inline, raises: [].} =
+  ## return the number of capturing groups
+  runnableExamples:
+    var m: RegexMatch
+    doAssert "ab".match(re"(a)(b)", m)
+    doAssert m.groupsCount == 2
+
+  m.captures.len
+
+func groupNames*(m: RegexMatch): seq[string] {.inline, raises: [].} =
+  ## return the names of capturing groups.
+  runnableExamples:
+    let text = "hello world"
+    var m: RegexMatch
+    doAssert text.match(re"(?P<greet>hello) (?P<who>world)", m)
+    doAssert m.groupNames() == @["greet", "who"]
+
+  result = toSeq(m.namedGroups.keys)
 
 func match*(
   s: string,

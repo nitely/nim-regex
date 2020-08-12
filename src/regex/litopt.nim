@@ -47,6 +47,11 @@ How is quadratic runtime avoided?
 ------------------------------------
 Examples
 
+Most of the optimizations for these examples
+are not implemented, may not get implemented,
+or are already part of the more general implemented
+optimization
+
 re"(?ms)^.+abc"
 can be optimized by running the match
 at every \n. We can do a quick memchr to find
@@ -69,9 +74,6 @@ except it stops when the current character of the
 input cannot be matched by the Regular Expression (RE).
 Once the special find stops, we can run a memchr from
 the index where the find stopped.
-
-We never process a character more than once, hence
-the algorithm runs in linear time.
 
 Notice find returns non-overlapping matches,
 hence the next search must not process
@@ -159,7 +161,7 @@ optimizations are preferred.
 
 We should try to match the larger
 amount of literals and try to fail
-early. Let's say we have re"\w+abc",
+early. Let's say we have re"\d+abc",
 trying to match "a" and then an unbounded
 amount of chars at the left will likely take
 more time than trying to match "c", then

@@ -121,10 +121,10 @@ Since this is needed, the going back X
 chars may just be an optimal optimization
 (meaning I may not implement it).
 
-re"\w+abc"
+re"\d+abc"
 This can be optimized by doing a memchr
 for "a", running a special match for the
-regex prefix ("\w+") in reverse, and running
+regex prefix ("\d+") in reverse, and running
 the special find for the full regex.
 
 The special match is a regular match that returns
@@ -428,10 +428,13 @@ when isMainModule:
     var visited: set[int16]
     result = toString(nfa, 0, visited)
 
+  doAssert lit"abc" == "c"
+  doAssert lit"abcab" == "c"
+  doAssert lit"abc\wxyz" == "c"
   doAssert lit"(abc)+" == ""
-  doAssert lit"(abc)+xyz" == "x"
+  doAssert lit"(abc)+xyz" == "z"
   doAssert lit"(abc)*" == ""
-  doAssert lit"(abc)*xyz" == "x"
+  doAssert lit"(abc)*xyz" == "z"
   doAssert lit"(a|b)" == ""
   doAssert lit"(a+|b)" == ""
   doAssert lit"(a+|b+)" == ""
@@ -441,7 +444,9 @@ when isMainModule:
   doAssert lit"a?" == ""
   doAssert lit"a?b" == "b"
   doAssert lit"a" == "a"
-  doAssert lit"(a|b)xyz" == "x"
+  doAssert lit"(a|b)xyz" == "z"
+  doAssert lit"(a|bc)xyz" == "z"
+  doAssert lit"(ab|c)xyz" == "z"
   doAssert lit"a+b" == "b"
   doAssert lit"a*b" == "b"
   doAssert lit"b+b" == ""
@@ -457,8 +462,8 @@ when isMainModule:
   doAssert lit"(\w\d)?abc" == ""
   doAssert lit"z(x|y)+abc" == "z"
   doAssert lit"((a|b)c*d?(ef)*\w\d\b@)+" == ""
-  doAssert lit"((a|b)c*d?(ef)*\w\d\b@)+&%" == "&"
-  doAssert lit"((a|b)c*d?(ef)*\w\d\b)+@&%" == "@"
+  doAssert lit"((a|b)c*d?(ef)*\w\d\b@)+&%" == "%"
+  doAssert lit"((a|b)c*d?(ef)*\w\d\b)+@&%" == "%"
   doAssert lit"((a|b)c*d?(ef)*\w\d\bx)+" == ""
   doAssert lit"((a|b)c*d?(ef)*\w\d\bx)+yz" == ""
   doAssert lit"((a|b)c*d?(ef)*\w\d\b)+xyz" == ""
@@ -468,15 +473,18 @@ when isMainModule:
   doAssert lit"(?m)$" == ""  # XXX \n
   doAssert lit"弢" == ""  # XXX support unicode
 
-  doAssert r"abc".prefix.toString == r"".toNfa.toString
-  doAssert r"abc".prefix.toString == "[#, eoe]"
+  doAssert r"abc".prefix.toString == r"ba".toNfa.toString
+  doAssert r"abcab".prefix.toString == r"ba".toNfa.toString
+  doAssert r"abc\wxyz".prefix.toString == r"ba".toNfa.toString
+  doAssert r"abccc".prefix.toString == r"ba".toNfa.toString
   doAssert r"\w@".prefix.toString == r"\w".toNfa.toString
-  doAssert r"\w@&%".prefix.toString == r"\w".toNfa.toString
-  doAssert r"\w\d@&%".prefix.toString == r"\d\w".toNfa.toString
+  doAssert r"\w@&%".prefix.toString == r"&@\w".toNfa.toString
+  doAssert r"\w\d@&%".prefix.toString == r"&@\d\w".toNfa.toString
 
-  doAssert r"(a|b)xyz".prefix.toString == r"(a|b)".toNfa.toString
-  doAssert r"(a|ab)\w@&%".prefix.toString == r"\w(a|ba)".toNfa.toString
-  doAssert r"(a|ab)\w@&%".prefix.toString == "[#, [w, [a, eoe], [b, [a, eoe]]]]"
+  doAssert r"(a|b)xyz".prefix.toString == r"yx(a|b)".toNfa.toString
+  doAssert r"(a|ab)\w@&%".prefix.toString == r"&@\w(a|ba)".toNfa.toString
+  doAssert r"(a|ab)\w@&%".prefix.toString ==
+    "[#, [&, [@, [w, [a, eoe], [b, [a, eoe]]]]]]"
   doAssert r"a?b".prefix.toString == r"a?".toNfa.toString
   doAssert r"".prefix.len == 0
   doAssert r"a?".prefix.len == 0

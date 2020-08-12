@@ -1,3 +1,9 @@
+v0.16.2
+==================
+
+* Adds `findAllBounds`
+* Adds some minor perf improvements
+
 v0.16.1
 ==================
 

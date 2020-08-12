@@ -911,12 +911,6 @@ proc toString(pattern: Regex): string {.used.} =
   result = pattern.toString(0, visited)
 
 when isMainModule:
-  func findAllBounds(s: string, reg: Regex): seq[Slice[int]] =
-    result = map(
-      findAll(s, reg),
-      func (m: RegexMatch): Slice[int] =
-        m.boundaries)
-
   func toAtoms(s: string): string =
     var groups: GroupsCapture
     let atoms = s

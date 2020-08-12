@@ -65,12 +65,6 @@ proc findWithCapt(s: string, pattern: Regex): seq[seq[string]] =
   check find(s, pattern, m)
   result = m.toStrCaptures(s)
 
-func findAllBounds(s: string, reg: Regex): seq[Slice[int]] =
-  result = map(
-    findAll(s, reg),
-    func (m: RegexMatch): Slice[int] =
-      m.boundaries)
-
 func findAllCapt(s: string, reg: Regex): seq[seq[seq[Slice[int]]]] =
   result = map(
     findAll(s, reg),

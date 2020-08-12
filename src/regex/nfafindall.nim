@@ -212,9 +212,9 @@ func findSomeImpl*(
     cPrev = bwRuneAt(text, start-1).int32
   while i < len(text):
     #debugEcho "it= ", i, " ", cPrev
-    #fastRuneAt(text, i, c, true)
-    c = text[i].Rune
-    i += 1
+    fastRuneAt(text, i, c, true)
+    #c = text[i].Rune
+    #i += 1
     submatch(ms, regex, iPrev, cPrev, c.int32)
     if smA.len == 0:
       # avoid returning right before final zero-match
@@ -316,9 +316,9 @@ func matchPrefixImpl(
   #debugEcho cPrev.Rune
   smA.add (0'i16, -1'i32, i .. i-1)
   while i > limit:
-    #bwFastRuneAt(text, i, c)
-    i -= 1
-    c = text[i].Rune
+    bwFastRuneAt(text, i, c)
+    #i -= 1
+    #c = text[i].Rune
     #debugEcho "txt.Rune=", c
     #debugEcho "txt.i=", i
     submatch2(smA, smB, regex, iPrev, cPrev, c.int32)

@@ -291,12 +291,16 @@ func lonelyLit(exp: RpnExp): NodeIdx =
   lits.setLen min(lits.len, 128)
   var litsTmp = newSeq[int16]()
   for ni, n in exp.pairs:
+    # break after last lit of first lits sequence
+    if result > -1 and exp[result].uid+1 < n.uid:
+      break
     if n.kind notin matchableKind:
       continue
     for nlit in lits:
       doAssert n.uid <= litNfa[nlit].uid
       if n.uid == litNfa[nlit].uid:
-        return ni.NodeIdx
+        result = ni.NodeIdx
+        #return
       if not match(n, litNfa[nlit].cp):
         litsTmp.add nlit
     swap lits, litsTmp

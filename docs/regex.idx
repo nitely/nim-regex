@@ -38,6 +38,8 @@ find	regex.html#find,string,Regex,RegexMatch,int	regex: find(s: string; pattern:
 find	regex.html#find,string,,RegexMatch,int	regex: find(s: string; pattern: static Regex; m: var RegexMatch; start = 0): bool	
 findAll	regex.html#findAll.i,string,Regex,int	regex: findAll(s: string; pattern: Regex; start = 0): RegexMatch	
 findAll	regex.html#findAll,string,Regex,int	regex: findAll(s: string; pattern: Regex; start = 0): seq[RegexMatch]	
+findAllBounds	regex.html#findAllBounds.i,string,Regex,int	regex: findAllBounds(s: string; pattern: Regex; start = 0): Slice[int]	
+findAllBounds	regex.html#findAllBounds,string,Regex,int	regex: findAllBounds(s: string; pattern: Regex; start = 0): seq[Slice[int]]	
 findAndCaptureAll	regex.html#findAndCaptureAll,string,Regex	regex: findAndCaptureAll(s: string; pattern: Regex): seq[string]	
 split	regex.html#split.i,string,Regex	regex: split(s: string; sep: Regex): string	
 split	regex.html#split,string,Regex	regex: split(s: string; sep: Regex): seq[string]	

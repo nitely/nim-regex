@@ -55,11 +55,16 @@ type
   MatchItem = tuple
     capt: CaptIdx
     bounds: Bounds
-  Matches = seq[MatchItem]
+  Matches = object
+    s: seq[MatchItem]
+    i: int
   RegexMatches* = object
     a, b: Submatches
     m: Matches
     c: Capts
+
+func len(ms: Matches): int {.inline.} =
+  ms.i
 
 # XXX make it log(n)? altough this does
 #     not add to the time complexity
@@ -67,14 +72,18 @@ func add(ms: var Matches, m: MatchItem) {.inline.} =
   ## Add `m` to `ms`. Remove all overlapped matches.
   var size = 0
   for i in countdown(ms.len-1, 0):
-    if max(ms[i].bounds.b, ms[i].bounds.a) < m.bounds.a:
+    if max(ms.s[i].bounds.b, ms.s[i].bounds.a) < m.bounds.a:
       size = i+1
       break
-  ms.setLen size
-  system.add(ms, m)
+  ms.i = size
+  if ms.i <= ms.s.len-1:
+    ms.s[ms.i] = m
+  else:
+    ms.s.add m
+  ms.i += 1
 
 func clear(ms: var Matches) {.inline.} =
-  ms.setLen 0
+  ms.i = 0
 
 template initMaybeImpl(
   ms: var RegexMatches,
@@ -98,7 +107,7 @@ func clear(ms: var RegexMatches) {.inline.} =
 
 iterator bounds*(ms: RegexMatches): Slice[int] {.inline.} =
   for i in 0 .. ms.m.len-1:
-    yield ms.m[i].bounds
+    yield ms.m.s[i].bounds
 
 iterator items*(ms: RegexMatches): MatchItemIdx {.inline.} =
   for i in 0 .. ms.m.len-1:
@@ -113,15 +122,15 @@ func fillMatchImpl*(
   if m.namedGroups.len != regex.namedGroups.len:
     m.namedGroups = regex.namedGroups
   constructSubmatches(
-    m.captures, ms.c, ms.m[mi].capt, regex.groupsCount)
-  m.boundaries = ms.m[mi].bounds
+    m.captures, ms.c, ms.m.s[mi].capt, regex.groupsCount)
+  m.boundaries = ms.m.s[mi].bounds
 
 func dummyMatch*(ms: var RegexMatches, i: int) {.inline.} =
   ## hack to support `split` last value.
   ## we need to add the end boundary if
   ## it has not matched the end
   ## (no match implies this too)
-  template ab: untyped = ms.m[^1].bounds
+  template ab: untyped = ms.m.s[^1].bounds
   if ms.m.len == 0 or max(ab.a, ab.b) < i:
     ms.m.add (-1'i32, i+1 .. i)
 
@@ -203,7 +212,9 @@ func findSomeImpl*(
     cPrev = bwRuneAt(text, start-1).int32
   while i < len(text):
     #debugEcho "it= ", i, " ", cPrev
-    fastRuneAt(text, i, c, true)
+    #fastRuneAt(text, i, c, true)
+    c = text[i].Rune
+    i += 1
     submatch(ms, regex, iPrev, cPrev, c.int32)
     if smA.len == 0:
       # avoid returning right before final zero-match
@@ -305,7 +316,9 @@ func matchPrefixImpl(
   #debugEcho cPrev.Rune
   smA.add (0'i16, -1'i32, i .. i-1)
   while i > limit:
-    bwFastRuneAt(text, i, c)
+    #bwFastRuneAt(text, i, c)
+    i -= 1
+    c = text[i].Rune
     #debugEcho "txt.Rune=", c
     #debugEcho "txt.i=", i
     submatch2(smA, smB, regex, iPrev, cPrev, c.int32)

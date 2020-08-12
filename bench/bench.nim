@@ -90,7 +90,7 @@ bench(re_email_find_all, m):
   doAssert d == 92
   doNotOptimizeAway(d)
 
-const email_find_all = regex.re"(?-u)[\w\.+-]+@[\w\.-]+\.[\w\.-]+"
+const email_find_all = regex.re"[\w\.+-]+@[\w\.-]+\.[\w\.-]+"
 
 benchRelative(email_find_all, m):
   var d = 0
@@ -110,7 +110,7 @@ bench(re_uri_find_all, m):
   doAssert d == 5301
   doNotOptimizeAway(d)
 
-const uri_find_all = regex.re"(?-u)[\w]+://[^/\s?#]+[^\s?#]+(?:\?[^\s#]*)?(?:#[^\s]*)?"
+const uri_find_all = regex.re"[\w]+://[^/\s?#]+[^\s?#]+(?:\?[^\s#]*)?(?:#[^\s]*)?"
 
 benchRelative(uri_find_all, m):
   var d = 0
@@ -130,7 +130,7 @@ bench(re_ip_find_all, m):
   doAssert d == 5
   doNotOptimizeAway(d)
 
-const ip_find_all = regex.re"(?-u)(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9])\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9])"
+const ip_find_all = regex.re"(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9])\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9])"
 
 benchRelative(ip_find_all, m):
   var d = 0

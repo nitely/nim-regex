@@ -611,6 +611,40 @@ func findAll*(
   for m in findAll(s, pattern, start):
     result.add m
 
+iterator findAllBounds*(
+  s: string,
+  pattern: Regex,
+  start = 0
+): Slice[int] {.inline, raises: [].} =
+  ## search through the string and
+  ## return each match. Empty matches
+  ## (start > end) are included
+  runnableExamples:
+    let text = "abcabc"
+    var bounds = newSeq[Slice[int]]()
+    for bd in findAllBounds(text, re"bc"):
+      bounds.add bd
+    doAssert bounds == @[1 .. 2, 4 .. 5]
+
+  var i = start
+  var i2 = start-1
+  var ms: RegexMatches
+  while i < len(s):
+    doAssert(i > i2); i2 = i
+    i = findSomeOptTpl(s, pattern, ms, i)
+    #debugEcho i
+    if i < 0: break
+    for ab in ms.bounds:
+      yield ab
+
+func findAllBounds*(
+  s: string,
+  pattern: Regex,
+  start = 0
+): seq[Slice[int]] {.inline, raises: [].} =
+  for m in findAllBounds(s, pattern, start):
+    result.add m
+
 func findAndCaptureAll*(
   s: string, pattern: Regex
 ): seq[string] {.inline, raises: [].} =
@@ -877,12 +911,6 @@ proc toString(pattern: Regex): string {.used.} =
   result = pattern.toString(0, visited)
 
 when isMainModule:
-  func findAllBounds(s: string, reg: Regex): seq[Slice[int]] =
-    result = map(
-      findAll(s, reg),
-      func (m: RegexMatch): Slice[int] =
-        m.boundaries)
-
   func toAtoms(s: string): string =
     var groups: GroupsCapture
     let atoms = s

@@ -47,6 +47,11 @@ How is quadratic runtime avoided?
 ------------------------------------
 Examples
 
+Most of the optimizations for these examples
+are not implemented, may not get implemented,
+or are already part of the more general implemented
+optimization
+
 re"(?ms)^.+abc"
 can be optimized by running the match
 at every \n. We can do a quick memchr to find
@@ -69,9 +74,6 @@ except it stops when the current character of the
 input cannot be matched by the Regular Expression (RE).
 Once the special find stops, we can run a memchr from
 the index where the find stopped.
-
-We never process a character more than once, hence
-the algorithm runs in linear time.
 
 Notice find returns non-overlapping matches,
 hence the next search must not process
@@ -121,10 +123,10 @@ Since this is needed, the going back X
 chars may just be an optimal optimization
 (meaning I may not implement it).
 
-re"\w+abc"
+re"\d+abc"
 This can be optimized by doing a memchr
 for "a", running a special match for the
-regex prefix ("\w+") in reverse, and running
+regex prefix ("\d+") in reverse, and running
 the special find for the full regex.
 
 The special match is a regular match that returns
@@ -159,7 +161,7 @@ optimizations are preferred.
 
 We should try to match the larger
 amount of literals and try to fail
-early. Let's say we have re"\w+abc",
+early. Let's say we have re"\d+abc",
 trying to match "a" and then an unbounded
 amount of chars at the left will likely take
 more time than trying to match "c", then
@@ -291,12 +293,16 @@ func lonelyLit(exp: RpnExp): NodeIdx =
   lits.setLen min(lits.len, 128)
   var litsTmp = newSeq[int16]()
   for ni, n in exp.pairs:
+    # break after last lit of first lits sequence
+    if result > -1 and exp[result].uid+1 < n.uid:
+      break
     if n.kind notin matchableKind:
       continue
     for nlit in lits:
       doAssert n.uid <= litNfa[nlit].uid
       if n.uid == litNfa[nlit].uid:
-        return ni.NodeIdx
+        result = ni.NodeIdx
+        #return
       if not match(n, litNfa[nlit].cp):
         litsTmp.add nlit
     swap lits, litsTmp
@@ -424,10 +430,13 @@ when isMainModule:
     var visited: set[int16]
     result = toString(nfa, 0, visited)
 
+  doAssert lit"abc" == "c"
+  doAssert lit"abcab" == "c"
+  doAssert lit"abc\wxyz" == "c"
   doAssert lit"(abc)+" == ""
-  doAssert lit"(abc)+xyz" == "x"
+  doAssert lit"(abc)+xyz" == "z"
   doAssert lit"(abc)*" == ""
-  doAssert lit"(abc)*xyz" == "x"
+  doAssert lit"(abc)*xyz" == "z"
   doAssert lit"(a|b)" == ""
   doAssert lit"(a+|b)" == ""
   doAssert lit"(a+|b+)" == ""
@@ -437,7 +446,9 @@ when isMainModule:
   doAssert lit"a?" == ""
   doAssert lit"a?b" == "b"
   doAssert lit"a" == "a"
-  doAssert lit"(a|b)xyz" == "x"
+  doAssert lit"(a|b)xyz" == "z"
+  doAssert lit"(a|bc)xyz" == "z"
+  doAssert lit"(ab|c)xyz" == "z"
   doAssert lit"a+b" == "b"
   doAssert lit"a*b" == "b"
   doAssert lit"b+b" == ""
@@ -453,8 +464,8 @@ when isMainModule:
   doAssert lit"(\w\d)?abc" == ""
   doAssert lit"z(x|y)+abc" == "z"
   doAssert lit"((a|b)c*d?(ef)*\w\d\b@)+" == ""
-  doAssert lit"((a|b)c*d?(ef)*\w\d\b@)+&%" == "&"
-  doAssert lit"((a|b)c*d?(ef)*\w\d\b)+@&%" == "@"
+  doAssert lit"((a|b)c*d?(ef)*\w\d\b@)+&%" == "%"
+  doAssert lit"((a|b)c*d?(ef)*\w\d\b)+@&%" == "%"
   doAssert lit"((a|b)c*d?(ef)*\w\d\bx)+" == ""
   doAssert lit"((a|b)c*d?(ef)*\w\d\bx)+yz" == ""
   doAssert lit"((a|b)c*d?(ef)*\w\d\b)+xyz" == ""
@@ -464,15 +475,18 @@ when isMainModule:
   doAssert lit"(?m)$" == ""  # XXX \n
   doAssert lit"弢" == ""  # XXX support unicode
 
-  doAssert r"abc".prefix.toString == r"".toNfa.toString
-  doAssert r"abc".prefix.toString == "[#, eoe]"
+  doAssert r"abc".prefix.toString == r"ba".toNfa.toString
+  doAssert r"abcab".prefix.toString == r"ba".toNfa.toString
+  doAssert r"abc\wxyz".prefix.toString == r"ba".toNfa.toString
+  doAssert r"abccc".prefix.toString == r"ba".toNfa.toString
   doAssert r"\w@".prefix.toString == r"\w".toNfa.toString
-  doAssert r"\w@&%".prefix.toString == r"\w".toNfa.toString
-  doAssert r"\w\d@&%".prefix.toString == r"\d\w".toNfa.toString
+  doAssert r"\w@&%".prefix.toString == r"&@\w".toNfa.toString
+  doAssert r"\w\d@&%".prefix.toString == r"&@\d\w".toNfa.toString
 
-  doAssert r"(a|b)xyz".prefix.toString == r"(a|b)".toNfa.toString
-  doAssert r"(a|ab)\w@&%".prefix.toString == r"\w(a|ba)".toNfa.toString
-  doAssert r"(a|ab)\w@&%".prefix.toString == "[#, [w, [a, eoe], [b, [a, eoe]]]]"
+  doAssert r"(a|b)xyz".prefix.toString == r"yx(a|b)".toNfa.toString
+  doAssert r"(a|ab)\w@&%".prefix.toString == r"&@\w(a|ba)".toNfa.toString
+  doAssert r"(a|ab)\w@&%".prefix.toString ==
+    "[#, [&, [@, [w, [a, eoe], [b, [a, eoe]]]]]]"
   doAssert r"a?b".prefix.toString == r"a?".toNfa.toString
   doAssert r"".prefix.len == 0
   doAssert r"a?".prefix.len == 0

@@ -7,7 +7,6 @@
 
 import std/unicode
 import std/tables
-from std/strutils import find
 
 import nodematch
 import nodetype

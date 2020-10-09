@@ -243,7 +243,7 @@ import regex/litopt
 const canUseMacro = (NimMajor, NimMinor) >= (1, 1) and
   not defined(forceRegexAtRuntime)
 
-when canUseMacro:
+when false:
   import regex/nfamacro
 
 export

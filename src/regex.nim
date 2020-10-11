@@ -1064,11 +1064,11 @@ when isMainModule:
   test:
     var m: RegexMatch
     doAssert match("ac", re"a(b|c)", m)
-    doAssert not match("ad", re"a(b|c)", m)
+    doAssert(not match("ad", re"a(b|c)", m))
     doAssert match("ab", re"(ab)*", m)
     doAssert match("abab", re"(ab)*", m)
-    doAssert not match("ababc", re"(ab)*", m)
-    doAssert not match("a", re"(ab)*", m)
+    doAssert(not match("ababc", re"(ab)*", m))
+    doAssert(not match("a", re"(ab)*", m))
     doAssert match("abab", re"(ab)*", m) and
       m.captures == @[@[0 .. 1, 2 .. 3]]
     doAssert match("bbaa aa", re"([\w ]*?)(\baa\b)", m) and
@@ -1094,7 +1094,7 @@ when isMainModule:
     \b
     """
     doAssert match("127.0.0.1", ip)
-    doAssert not match("127.0.0.999", ip)
+    doAssert(not match("127.0.0.999", ip))
     doAssert "abcd".find(re"bc", m) and
       m.boundaries == 1 .. 2
     doAssert "bcd".find(re"bc", m) and
@@ -1109,4 +1109,17 @@ when isMainModule:
     doAssert findAllBounds("#foo://#", re"[\w]+://") == @[1 .. 6]
     doAssert findAllBounds("abc\nabc\na", re"(?m)^a") ==
       @[0 .. 0, 4 .. 4, 8 .. 8]
+    when canUseMacro:
+      block:
+        var m = false
+        if "abc" ~= r"\w+":
+          m = true
+        doAssert m
+      block:
+        var m = "abc" ~= r"\w+"
+        doAssert m
+      doAssert(not("ab" ~= r"a(b|c)*d"))
+      doAssert(not("a" ~= r"b"))
+      doAssert(not("a" ~= r""))
+      doAssert " \"word\" " ~= r"\s"".*""\s"
   echo "ok regex.nim"

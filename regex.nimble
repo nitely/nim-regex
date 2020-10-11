@@ -12,7 +12,7 @@ requires "unicodedb >= 0.7.2"
 requires "unicodeplus >= 0.5.0"
 
 task test, "Test":
-  exec "nim c -r -o:bin/regex src/regex.nim"
+  #exec "nim c -r -o:bin/regex src/regex.nim"
   exec "nim c -r -o:bin/litopt src/regex/litopt.nim"
   exec "nim c -r tests/tests.nim"
   exec "nim c -r -d:forceRegexAtRuntime tests/tests.nim"

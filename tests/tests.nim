@@ -1,6 +1,6 @@
 from std/sequtils import map
 
-import regex
+import ./regex
 
 template test(desc: string, body: untyped): untyped =
   when defined(runTestAtCT):

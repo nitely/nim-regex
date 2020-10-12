@@ -184,9 +184,9 @@ import std/algorithm
 import std/sets
 import std/unicode
 
-import nodetype
-import nodematch
-import nfa
+import ./nodetype
+import ./nodematch
+import ./nfa
 
 when (NimMajor, NimMinor, NimPatch) < (0, 20, 0):
   import common

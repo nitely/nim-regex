@@ -8,7 +8,7 @@ from std/algorithm import sorted
 
 import pkg/unicodedb/properties
 
-import common
+import ./common
 
 type
   Flag* = enum

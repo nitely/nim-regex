@@ -230,20 +230,20 @@ import std/sequtils
 import std/unicode
 from std/strutils import addf
 
-import regex/nodetype
-import regex/common
-import regex/parser
-import regex/exptransformation
-import regex/nfatype
-import regex/nfa
-import regex/nfafindall
-import regex/nfamatch
-import regex/litopt
+import ./regex/nodetype
+import ./regex/common
+import ./regex/parser
+import ./regex/exptransformation
+import ./regex/nfatype
+import ./regex/nfa
+import ./regex/nfafindall
+import ./regex/nfamatch
+import ./regex/litopt
 
 const canUseMacro = (NimMajor, NimMinor) >= (1, 1)
 
 when canUseMacro:
-  import regex/nfamacro
+  import ./regex/nfamacro
   export `~=`
 
 export

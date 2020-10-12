@@ -8,9 +8,9 @@ import std/sets
 import pkg/unicodedb/properties
 import pkg/unicodedb/types
 
-import nodetype
-import nfatype
-import compiler
+import ./nodetype
+import ./nfatype
+import ./compiler
 
 macro defIdents(idns: varargs[untyped]): untyped =
   var lets = newNimNode nnkLetSection

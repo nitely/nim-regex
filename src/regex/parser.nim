@@ -5,9 +5,9 @@ import std/parseutils
 
 import pkg/unicodedb/properties
 
-import nodetype
-import common
-import scanner
+import ./nodetype
+import ./common
+import ./scanner
 
 func check(cond: bool, msg: string) {.inline.} =
   if not cond:

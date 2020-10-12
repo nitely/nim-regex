@@ -5,8 +5,8 @@ import pkg/unicodedb/properties
 import pkg/unicodedb/types
 import pkg/unicodeplus
 
-import nodetype
-import common
+import ./nodetype
+import ./common
 
 func isWord*(r: Rune): bool {.inline.} =
   utmWord in unicodeTypes(r)

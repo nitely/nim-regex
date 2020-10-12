@@ -3,9 +3,9 @@ import std/sets
 import std/tables
 import std/algorithm
 
-import nodetype
-import common
-import scanner
+import ./nodetype
+import ./common
+import ./scanner
 
 # todo: can not use unicodeplus due to
 # https://github.com/nim-lang/Nim/issues/7059

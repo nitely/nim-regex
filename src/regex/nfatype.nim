@@ -4,8 +4,8 @@ import std/tables
 import std/sets
 import std/algorithm
 
-import nfa
-import litopt
+import ./nfa
+import ./litopt
 
 type
   CaptIdx* = int32

@@ -1,8 +1,8 @@
-import parser
-import exptransformation
-import nfatype
-import nfa
-import litopt
+import ./parser
+import ./exptransformation
+import ./nfatype
+import ./nfa
+import ./litopt
 
 template reImpl(s: untyped): Regex =
   var groups: GroupsCapture

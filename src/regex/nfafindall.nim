@@ -37,9 +37,9 @@ import std/unicode
 import std/tables
 from std/strutils import find
 
-import nodematch
-import nodetype
-import nfatype
+import ./nodematch
+import ./nodetype
+import ./nfatype
 
 func bwRuneAt(s: string, n: int): Rune =
   ## Take rune ending at ``n``

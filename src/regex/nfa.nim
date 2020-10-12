@@ -1,7 +1,7 @@
 import std/deques
 
-import nodetype
-import common
+import ./nodetype
+import ./common
 
 func check(cond: bool, msg: string) =
   if not cond:

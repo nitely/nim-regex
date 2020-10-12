@@ -1,4 +1,4 @@
-import deques
+import std/deques
 
 import nodetype
 import common

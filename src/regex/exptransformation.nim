@@ -1,7 +1,7 @@
-import unicode
-import sets
-import tables
-import algorithm
+import std/unicode
+import std/sets
+import std/tables
+import std/algorithm
 
 import nodetype
 import common

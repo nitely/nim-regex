@@ -1,4 +1,4 @@
-import unicode
+import std/unicode
 
 import nodetype
 import common

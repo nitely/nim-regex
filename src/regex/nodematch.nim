@@ -1,9 +1,9 @@
-import unicode
-import sets
+import std/unicode
+import std/sets
 
-import unicodedb/properties
-import unicodedb/types
-import unicodeplus
+import pkg/unicodedb/properties
+import pkg/unicodedb/types
+import pkg/unicodeplus
 
 import nodetype
 import common

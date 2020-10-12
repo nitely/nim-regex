@@ -1,12 +1,12 @@
 ## NFA matcher for static regexes
 
-import macros
-import unicode
-import tables
-import sets
+import std/macros
+import std/unicode
+import std/tables
+import std/sets
 
-import unicodedb/properties
-import unicodedb/types
+import pkg/unicodedb/properties
+import pkg/unicodedb/types
 
 import nodetype
 import nfatype

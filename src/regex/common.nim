@@ -1,5 +1,5 @@
-import unicode
-import strutils
+import std/unicode
+import std/strutils
 
 when (NimMajor, NimMinor, NimPatch) < (0, 20, 0):
   import sets

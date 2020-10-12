@@ -1,4 +1,4 @@
-from sequtils import map
+from std/sequtils import map
 
 import regex
 

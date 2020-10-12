@@ -1122,4 +1122,5 @@ when isMainModule:
       doAssert(not("a" ~= r"b"))
       doAssert(not("a" ~= r""))
       doAssert " \"word\" " ~= r"\s"".*""\s"
+
   echo "ok regex.nim"

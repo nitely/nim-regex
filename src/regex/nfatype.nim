@@ -1,8 +1,8 @@
 ## Types used by the NFA
 
-import tables
-import sets
-import algorithm
+import std/tables
+import std/sets
+import std/algorithm
 
 import nfa
 import litopt

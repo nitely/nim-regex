@@ -1,9 +1,9 @@
-import unicode
-import strutils
-import sets
-import parseutils
+import std/unicode
+import std/strutils
+import std/sets
+import std/parseutils
 
-import unicodedb/properties
+import pkg/unicodedb/properties
 
 import nodetype
 import common

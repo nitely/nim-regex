@@ -180,9 +180,9 @@ pick the last lit of its contiguous lits (if any).
 
 ]#
 
-import algorithm
-import sets
-import unicode
+import std/algorithm
+import std/sets
+import std/unicode
 
 import nodetype
 import nodematch

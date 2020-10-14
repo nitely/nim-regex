@@ -73,6 +73,23 @@ func findAllCapt(s: string, reg: Regex): seq[seq[seq[Slice[int]]]] =
         result.add m.group(i))
 
 when (NimMajor, NimMinor) >= (1, 1):
+  template matchMacro(s, r: untyped): untyped =
+    block:
+      var m = false
+      match s, r:
+        m = true
+      m
+
+  template matchMacroCapt(s, r: untyped): untyped =
+    block:
+      var m = false
+      var c: seq[string]
+      match s, r:
+        m = true
+        c = matches
+      check m
+      c
+
   test "tmatch_macro":
     block hasOwnScope:
       var m = false
@@ -91,24 +108,24 @@ when (NimMajor, NimMinor) >= (1, 1):
     block:
       var m = false
       match "abc", rex"(a(b)c)":
-        doAssert matches == @["abc", "b"]
+        check matches == @["abc", "b"]
         m = true
-      doAssert m
+      check m
     block:
       var m = false
       match "x", rex"y":
         m = true
-      doAssert not m
+      check not m
       match "y", rex"y":
         m = true
-      doAssert m
+      check m
     block:
       var m = false
       match "abc", rex"""(?x)
         abc  # verbose mode
       """:
         m = true
-      doAssert m
+      check m
     block:
       template myRegex: untyped =
         rex"""(?x)
@@ -117,13 +134,129 @@ when (NimMajor, NimMinor) >= (1, 1):
       var m = false
       match "abc", myRegex:
         m = true
-      doAssert m
+      check m
     block:
       var m = false
       var txt = "abc"
       match txt, rex"(\w)+":
         m = true
-      doAssert m
+      check m
+  
+  test "tmatch_macro_captures":
+    check matchMacroCapt("ab", rex"(a)b") == @["a"]
+    check matchMacroCapt("aa", rex"(a)*") == @["a"]
+    check matchMacroCapt("aab", rex"((a)*b)") == @["aab", "a"]
+    check matchMacroCapt("abbbbccccd", rex"a(b|c)*d") == @["c"]
+    check matchMacroCapt("abbb", rex"((a)*(b)*)") == @["abbb", "a", "b"]
+    check matchMacroCapt("abbb", rex"((a(b)*)*(b)*)") ==
+      @["abbb", "abbb", "b", ""]
+    check matchMacroCapt("aa", rex"(a)+") == @["a"]
+    check matchMacroCapt("abab", rex"(ab)+") == @["ab"]
+    check matchMacroCapt("a", rex"(a)?") == @["a"]
+    check matchMacroCapt("ab", rex"(ab)?") == @["ab"]
+    check matchMacroCapt("aaabbbaaa", rex"(a*|b*)*") == @["aaa"]
+    check matchMacroCapt("abab", rex"(a(b))*") == @["ab", "b"]
+    # Following two should match the same
+    check matchMacroCapt("aaanasdnasd", rex"((a)*n?(asd)*)*") ==
+      @["nasd", "a", "asd"]
+    check matchMacroCapt("aaanasdnasd", rex"((a)*n?(asd))*") ==
+      @["nasd", "a", "asd"]
+    check matchMacroCapt("b", rex"(a)?b") == @[""]
+    check matchMacroCapt("ฅa", rex"(\w)(a)") == @["ฅ", "a"]
+    
+  test "tmatch_macro_misc":
+    check matchMacro("abc", rex"\w+")
+    check not matchMacro("abc@", rex"\w+")
+    check matchMacro("", rex"")
+    check matchMacro("a", rex"a")
+    check matchMacro("ab", rex"(a)b")
+    check matchMacro("aa", rex"(a)*")
+    check matchMacro("aab", rex"((a)*b)")
+    check matchMacro("abbbbccccd", rex"a(b|c)*d")
+    check matchMacro("abbb", rex"((a)*(b)*)")
+    check matchMacro("abbb", rex"((a(b)*)*(b)*)")
+    check matchMacro("a", rex"a|b")
+    check matchMacro("b", rex"a|b")
+    check(not matchMacro("ab", rex"a(b|c)*d"))
+    check(not matchMacro("a", rex"b"))
+    check(not matchMacro("a", rex""))
+    check matchMacro(" \"word\" ", rex"\s"".*""\s")
+    check matchMacro("aaa", rex"a**")
+    check matchMacro("aaa", rex"(a*)*")
+    check matchMacro("aaabbbaaa", rex"((a*|b*))*")
+    check matchMacro("aaa", rex"a*****")
+    check matchMacro("aaa", rex"(a?)*")
+    check matchMacro("aaaa", rex"((a)*(a)*)*")
+    check matchMacro("aaa", rex"a**")
+    check matchMacro("aaa", rex"(a*)*")
+    check matchMacro("aaabbbaaa", rex"((a*|b*))*")
+    check matchMacro("aaa", rex"a*****")
+    check matchMacro("aaa", rex"(a?)*")
+    check matchMacro("aaaa", rex"((a)*(a)*)*")
+    check matchMacro("<TAG>two</TAG>", rex"<TAG>.*?</TAG>")
+    check matchMacro("abc", rex"abc")
+    check matchMacro("ab", rex"a(b|c)")
+    check matchMacro("ac", rex"a(b|c)")
+    check(not matchMacro("ad", rex"a(b|c)"))
+    check matchMacro("ab", rex"(ab)*")
+    check matchMacro("abab", rex"(ab)*")
+    check(not matchMacro("ababc", rex"(ab)*"))
+    check(not matchMacro("a", rex"(ab)*"))
+    check matchMacro("ab", rex"(ab)+")
+    check matchMacro("abab", rex"(ab)+")
+    check(not matchMacro("ababc", rex"(ab)+"))
+    check(not matchMacro("a", rex"(ab)+"))
+  
+  test "tmatch_macro_misc2":
+    check matchMacro("aa", rex"\b\b\baa\b\b\b")
+    check(not matchMacro("cac", rex"c\ba\bc"))
+    check matchMacro("abc", rex"[abc]+")
+    check matchMacro("abc", rex"[\w]+")
+    check matchMacro("弢弢弢", rex"[\w]+")
+    check(not matchMacro("abc", rex"[\d]+"))
+    check matchMacro("123", rex"[\d]+")
+    check matchMacro("abc$%&", rex".+")
+    check(not matchMacro("abc$%&\L", rex"(.+)"))
+    check(not matchMacro("abc$%&\L", rex".+"))
+    check(not matchMacro("弢", rex"\W"))
+    check matchMacro("$%&", rex"\W+")
+    check matchMacro("abc123", rex"[^\W]+")
+    check matchMacro("650-253-0001", rex"[0-9]+-[0-9]+-[0-9]+")
+    check(not matchMacro("abc-253-0001", rex"[0-9]+-[0-9]+-[0-9]+"))
+    check(not matchMacro("650-253", rex"[0-9]+-[0-9]+-[0-9]+"))
+    check(not matchMacro("650-253-0001-abc", rex"[0-9]+-[0-9]+-[0-9]+"))
+    check matchMacro("650-253-0001", rex"[0-9]+..*")
+    check(not matchMacro("abc-253-0001", rex"[0-9]+..*"))
+    check(not matchMacro("6", rex"[0-9]+..*"))
+    check matchMacro("", rex"(11)*+(111)*")
+    check matchMacro("11", rex"(11)*+(111)*")
+    check matchMacro("111", rex"(11)*+(111)*")
+    check matchMacro("11111", rex"(11)*+(111)*")
+    check matchMacro("1111111", rex"(11)*+(111)*")
+    check matchMacro("1111111111", rex"(11)*+(111)*")
+    check(not matchMacro("1", rex"(11)*+(111)*"))
+    check(not matchMacro("", rex"(11)+(111)*"))
+    check matchMacro("11", rex"(11)+(111)*")
+    check(not matchMacro("111", rex"(11)+(111)*"))
+    check matchMacro("11111", rex"(11)+(111)*")
+    check matchMacro("aabb", rex"(aabb)(ab)*")
+    check matchMacro("aabbab", rex"(aabb)(ab)*")
+    check matchMacro("aabbabab", rex"(aabb)(ab)*")
+    check(not matchMacro("ab", rex"(aabb)(ab)*"))
+    check(not matchMacro("aabbaba", rex"(aabb)(ab)*"))
+    check matchMacro("0", rex"0(10)*")
+    check matchMacro("010", rex"0(10)*")
+    check(not matchMacro("", rex"0(10)*"))
+    check(not matchMacro("0101", rex"0(10)*"))
+    check(not matchMacro("0100", rex"0(10)*"))
+    check(not matchMacro("00", rex"0(10)*"))
+    check(not matchMacro("000", rex"0(10)*"))
+    check matchMacro("", rex"(11)*|(111)*")
+    check matchMacro("11", rex"(11)*|(111)*")
+    check matchMacro("111", rex"(11)*|(111)*")
+    check matchMacro("1111", rex"(11)*|(111)*")
+    check matchMacro("111111", rex"(11)*|(111)*")
+    check(not matchMacro("1", rex"(11)*|(111)*"))
 
 test "tfull_match":
   check "".isMatch(re"")

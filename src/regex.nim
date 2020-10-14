@@ -788,8 +788,6 @@ func addsubstr(
 ) {.inline, raises: [].} =
   addsubstr(result, s, first, s.high)
 
-# XXX there is no static version because of Nim/issues/13791
-#     this func uses findAll iterator
 func replace*(
   s: string,
   pattern: Regex,

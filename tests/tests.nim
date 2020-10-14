@@ -163,7 +163,41 @@ when (NimMajor, NimMinor) >= (1, 1):
       @["nasd", "a", "asd"]
     check matchMacroCapt("b", rex"(a)?b") == @[""]
     check matchMacroCapt("ฅa", rex"(\w)(a)") == @["ฅ", "a"]
-    
+
+    check matchMacroCapt("aabcd", rex"(aa)bcd") == @["aa"]
+    check matchMacroCapt("aabc", rex"(aa)(bc)") == @["aa", "bc"]
+    check matchMacroCapt("ab", rex"a(b|c)") == @["b"]
+    check matchMacroCapt("ab", rex"(ab)*") == @["ab"]
+    check matchMacroCapt("abab", rex"(ab)*") == @["ab"]
+    check matchMacroCapt("ab", rex"((a))b") == @["a", "a"]
+    check matchMacroCapt("c", rex"((ab)*)c") == @["", ""]
+    check matchMacroCapt("aab", rex"((a)*b)") == @["aab", "a"]
+    check matchMacroCapt("abbbbcccc", rex"a(b|c)*") == @["c"]
+    check matchMacroCapt("ab", rex"(a*)(b*)") == @["a", "b"]
+    check matchMacroCapt("ab", rex"(a)*(b)*") == @["a", "b"]
+    check matchMacroCapt("ab", rex"(a)*b*") == @["a"]
+    check matchMacroCapt("abbb", rex"((a(b)*)*(b)*)") ==
+      @["abbb", "abbb", "b", ""]
+    check matchMacroCapt("aa", rex"(a)+") == @["a"]
+    check matchMacroCapt("abab", rex"(ab)+") == @["ab"]
+    check matchMacroCapt("a", rex"(a)?") == @["a"]
+    check matchMacroCapt("ab", rex"(ab)?") == @["ab"]
+    check matchMacroCapt("aaabbbaaa", rex"(a*|b*)*") == @["aaa"]
+    check matchMacroCapt("abab", rex"(a(b))*") == @["ab", "b"]
+    echo matchMacroCapt("aaanasdnasd", rex"((a)*n?(asd)*)*")
+    echo matchMacroCapt("aa", rex"(a?)+")
+    assert false
+    check matchMacroCapt("aaanasdnasd", rex"((a)*n?(asd)*)*") ==
+      @["nasd", "", "asd"]
+    check matchMacroCapt("aaanasdnasd", rex"((a)*n?(asd))*") ==
+      @["nasd", "", "asd"]
+    check matchMacroCapt("abd", rex"((ab)c)|((ab)d)") ==
+      @["", "", "abd", "ab"]
+    check matchMacroCapt("aaa", rex"(a*)") == @["aaa"]
+    check matchMacroCapt("aaaa", rex"(a*)(a*)") == @["aaaa", ""]
+    check matchMacroCapt("aaaa", rex"(a*?)(a*?)") == @["", "aaaa"]
+    check matchMacroCapt("aaaa", rex"(a)*(a)") == @["a", "a"]
+
   test "tmatch_macro_misc":
     check matchMacro("abc", rex"\w+")
     check not matchMacro("abc@", rex"\w+")

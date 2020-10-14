@@ -12,11 +12,18 @@ import ./nodetype
 import ./nfatype
 import ./compiler
 
-macro defIdents(idns: varargs[untyped]): untyped =
+macro defVars(idns: varargs[untyped]): untyped =
   var lets = newNimNode nnkLetSection
   for idn in idns:
     lets.add newIdentDefs(
-      idn, newEmptyNode(), newCall("ident", newLit $idn))
+      idn, newEmptyNode(), newCall("genSym", newLit nskVar, newLit $idn))
+  return newStmtList lets
+
+macro defForVars(idns: varargs[untyped]): untyped =
+  var lets = newNimNode nnkLetSection
+  for idn in idns:
+    lets.add newIdentDefs(
+      idn, newEmptyNode(), newCall("genSym", newLit nskForVar, newLit $idn))
   return newStmtList lets
 
 # todo: can not use unicodeplus due to
@@ -329,7 +336,7 @@ func submatch(
   captx, matched: NimNode,
   regex: Regex
 ): NimNode =
-  defIdents n, capt, bounds
+  defForVars n, capt, bounds
   let genSubmatchCall = genSubmatch(
     n, capt, bounds, smB, c, matched, captx,
     capts, charIdx, cPrev, regex)
@@ -394,7 +401,7 @@ func submatchEoe(
   captx, matched: NimNode,
   regex: Regex
 ): NimNode =
-  defIdents n, capt, bounds
+  defForVars n, capt, bounds
   let genSubmatchEoeCall = genSubmatchEoe(
     n, capt, bounds, smB, matched, captx,
     capts, charIdx, cPrev, regex)
@@ -421,11 +428,11 @@ template constructSubmatches2(
   for i in 0 .. bounds.len-1:
     captures[i] = txt[bounds[i]]
 
-proc matchImpl(text, expLit, body: NimNode): NimNode =
+proc matchImpl*(text, expLit, body: NimNode): NimNode =
   if not (expLit.kind == nnkCallStrLit and $expLit[0] == "rex"):
     error "not a regex literal; only rex\"regex\" is allowed", expLit
   let exp = expLit[1]
-  defIdents smA, smB, c, capts, iPrev, cPrev, captx, matched
+  defVars smA, smB, c, capts, iPrev, cPrev, captx, matched
   let c2 = quote do: int32(`c`)
   let regex = re(exp.strVal)
   let submatchCall = submatch(
@@ -462,16 +469,3 @@ proc matchImpl(text, expLit, body: NimNode): NimNode =
           constructSubmatches2(
             matches, `text`, `capts`, `smA`[0].ci, `nfaGroupsLen`)
         `body`
-
-type
-  RegexLit* = distinct string
-
-func rex*(s: string): RegexLit =
-  RegexLit s
-
-macro match*(
-  text: string,
-  regex: RegexLit,
-  body: untyped
-): untyped =
-  matchImpl(text, regex, body)

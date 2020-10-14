@@ -42,8 +42,8 @@ func constructSubmatches*(
     c.reverse()
 
 type
-  #RegexFlag* = enum
-  #  reAscii
+  RegexLit* = distinct string
+    ## raw regex literal string
   Regex* = object
     ## a compiled regular expression
     nfa*: Nfa

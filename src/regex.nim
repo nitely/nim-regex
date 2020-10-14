@@ -223,6 +223,25 @@ and captures that match the regular expression.
     ]
     doAssert captures == @["john_wick", "winston", "ms_perkins"]
 
+Match Macro
+###########
+
+The ``match`` macro is sometimes more convenient, and
+faster than the function version. It will run a full
+match on the whole string, similar to `^regex$`.
+
+A ``matches: seq[string]`` variable is injected into
+the scope, and it contains the submatches for every capture group.
+
+.. code-block:: nim
+    :test:
+    var matched = false
+    let text = "[my link](https://example.com)"
+    match text, rex"\[([a-z ]*)\]\((https?://[^)]+)\)":
+      doAssert matches == @["my link", "https://example.com"]
+      matched = true
+    doAssert matched
+
 ]##
 
 import std/tables
@@ -244,10 +263,7 @@ const canUseMacro = (NimMajor, NimMinor) >= (1, 1)
 
 when canUseMacro:
   import ./regex/nfamacro
-  export
-    match,
-    RegexLit,
-    rex
+  export RegexLit
 
 export
   Regex,
@@ -300,6 +316,11 @@ func toPattern*(
   s: string
 ): Regex {.raises: [RegexError], deprecated: "Use `re` instead".} =
   re(s)
+
+when canUseMacro:
+  func rex*(s: string): RegexLit =
+    ## Raw regex literal string
+    RegexLit s
 
 iterator group*(m: RegexMatch, i: int): Slice[int] {.inline, raises: [].} =
   ## return slices for a given group.
@@ -464,6 +485,31 @@ func groupNames*(m: RegexMatch): seq[string] {.inline, raises: [].} =
     doAssert m.groupNames() == @["greet", "who"]
 
   result = toSeq(m.namedGroups.keys)
+
+when canUseMacro:
+  macro match*(
+    text: string,
+    regex: RegexLit,
+    body: untyped
+  ): untyped =
+    ## return a match if the whole string
+    ## matches the regular expression. This is
+    ## similar to the ``match`` function, but
+    ## faster. Notice it requires a raw regex *literal*
+    ## string as second parameter; the regex must be
+    ## known at compile time, and cannot be a var/let/const
+    ##
+    ## A ``matches: seq[string]`` variable is injected into
+    ## the scope, and it contains the submatches for every capture
+    ## group. If a group is repeated (ex: `(\\w)+`), it will
+    ## contain the last capture for that group.
+    ##
+    ## Note: Only available in Nim +1.1
+    runnableExamples:
+      match "abc", rex"(a(b)c)":
+        doAssert matches == @["abc", "b"]
+
+    matchImpl(text, regex, body)
 
 func match*(
   s: string,
@@ -1156,5 +1202,12 @@ when isMainModule:
         match txt, rex"(\w)+":
           m = true
         doAssert m
+      block:
+        var matched = false
+        let text = "[my link](https://example.com)"
+        match text, rex"\[([a-z ]*)\]\((https?://[^)]+)\)":
+          doAssert matches == @["my link", "https://example.com"]
+          matched = true
+        doAssert matched
 
   echo "ok regex.nim"

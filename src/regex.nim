@@ -1115,11 +1115,12 @@ when isMainModule:
     when canUseMacro:
       block:
         var m = false
-        var matches {.used.}: seq[string]
+        var matches: seq[string]
         match "abc", rex"(\w+)":
           doAssert matches == @["abc"]
           m = true
         doAssert m
+        doAssert matches.len == 0
       block:
         var m = false
         match "abc", rex"(\w)+":
@@ -1127,7 +1128,33 @@ when isMainModule:
           m = true
         doAssert m
       block:
+        var m = false
         match "abc", rex"(a(b)c)":
           doAssert matches == @["abc", "b"]
+          m = true
+        doAssert m
+      block:
+        var m = false
+        match "x", rex"y":
+          m = true
+        doAssert not m
+        match "y", rex"y":
+          m = true
+        doAssert m
+      block:
+        template myRegex: untyped =
+          rex"""(?x)
+            abc  # verbose mode
+          """
+        var m = false
+        match "abc", myRegex:
+          m = true
+        doAssert m
+      block:
+        var m = false
+        var txt = "abc"
+        match txt, rex"(\w)+":
+          m = true
+        doAssert m
 
   echo "ok regex.nim"

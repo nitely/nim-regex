@@ -74,13 +74,14 @@ func findAllCapt(s: string, reg: Regex): seq[seq[seq[Slice[int]]]] =
 
 when (NimMajor, NimMinor) >= (1, 1):
   test "tmatch_macro":
-    block:
+    block hasOwnScope:
       var m = false
-      var matches {.used.}: seq[string]
+      var matches: seq[string]
       match "abc", rex"(\w+)":
         check matches == @["abc"]
         m = true
       check m
+      check matches.len == 0
     block:
       var m = false
       match "abc", rex"(\w)+":
@@ -88,8 +89,41 @@ when (NimMajor, NimMinor) >= (1, 1):
         m = true
       check m
     block:
+      var m = false
       match "abc", rex"(a(b)c)":
-        check matches == @["abc", "b"]
+        doAssert matches == @["abc", "b"]
+        m = true
+      doAssert m
+    block:
+      var m = false
+      match "x", rex"y":
+        m = true
+      doAssert not m
+      match "y", rex"y":
+        m = true
+      doAssert m
+    block:
+      var m = false
+      match "abc", rex"""(?x)
+        abc  # verbose mode
+      """:
+        m = true
+      doAssert m
+    block:
+      template myRegex: untyped =
+        rex"""(?x)
+          abc  # verbose mode
+        """
+      var m = false
+      match "abc", myRegex:
+        m = true
+      doAssert m
+    block:
+      var m = false
+      var txt = "abc"
+      match txt, rex"(\w)+":
+        m = true
+      doAssert m
 
 test "tfull_match":
   check "".isMatch(re"")

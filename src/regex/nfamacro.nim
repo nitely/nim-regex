@@ -433,7 +433,7 @@ proc matchImpl(text, expLit, body: NimNode): NimNode =
   let submatchEoeCall = submatchEoe(
     smA, smB, capts, iPrev, cPrev, captx, matched, regex)
   let nfaLenLit = newLit regex.nfa.len
-  let nfaGroupsLen = regex.groupsCount  # newLit ?
+  let nfaGroupsLen = regex.groupsCount
   result = quote do:
     block:
       var
@@ -443,7 +443,7 @@ proc matchImpl(text, expLit, body: NimNode): NimNode =
         `iPrev` = 0
         `capts` {.used.}: Capts
         `captx` {.used.}: int32
-        `matched`: bool
+        `matched` {.used.}: bool
         i = 0
       `smA` = newSubmatches `nfaLenLit`
       `smB` = newSubmatches `nfaLenLit`
@@ -457,7 +457,7 @@ proc matchImpl(text, expLit, body: NimNode): NimNode =
         `cPrev` = `c2`
       `submatchEoeCall`
       if `smA`.len > 0:
-        var matches {.inject.}: seq[string]
+        var matches {.used, inject.}: seq[string]
         when `nfaGroupsLen` > 0:
           constructSubmatches2(
             matches, `text`, `capts`, `smA`[0].ci, `nfaGroupsLen`)

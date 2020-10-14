@@ -244,7 +244,10 @@ const canUseMacro = (NimMajor, NimMinor) >= (1, 1)
 
 when canUseMacro:
   import ./regex/nfamacro
-  export `~=`
+  export
+    match,
+    RegexLit,
+    rex
 
 export
   Regex,
@@ -1112,15 +1115,19 @@ when isMainModule:
     when canUseMacro:
       block:
         var m = false
-        if "abc" ~= r"\w+":
+        var matches {.used.}: seq[string]
+        match "abc", rex"(\w+)":
+          doAssert matches == @["abc"]
           m = true
         doAssert m
       block:
-        var m = "abc" ~= r"\w+"
+        var m = false
+        match "abc", rex"(\w)+":
+          doAssert matches == @["c"]
+          m = true
         doAssert m
-      doAssert(not("ab" ~= r"a(b|c)*d"))
-      doAssert(not("a" ~= r"b"))
-      doAssert(not("a" ~= r""))
-      doAssert " \"word\" " ~= r"\s"".*""\s"
+      block:
+        match "abc", rex"(a(b)c)":
+          doAssert matches == @["abc", "b"]
 
   echo "ok regex.nim"

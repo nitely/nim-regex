@@ -261,7 +261,7 @@ func genMatchedBody(
       add(`smB`, (`ntLit`, `captx`, `bounds`.a .. `charIdx`-1))
   return newStmtList matchedBody
 
-proc genSubmatch(
+func genSubmatch(
   n, capt, bounds, smB, c, matched, captx,
   capts, charIdx, cPrev: NimNode,
   regex: Regex
@@ -323,7 +323,7 @@ proc genSubmatch(
     echo "==== genSubmatch ===="
     echo repr(result)
 
-proc submatch(
+func submatch(
   smA, smB, c,
   capts, charIdx, cPrev,
   captx, matched: NimNode,
@@ -339,7 +339,7 @@ proc submatch(
       `genSubmatchCall`
     swap `smA`, `smB`
 
-proc genSubmatchEoe(
+func genSubmatchEoe(
   n, capt, bounds, smB, matched, captx,
   capts, charIdx, cPrev: NimNode,
   regex: Regex
@@ -388,7 +388,7 @@ proc genSubmatchEoe(
     echo "==== genSubmatchEoe ===="
     echo repr(result)
 
-proc submatchEoe(
+func submatchEoe(
   smA, smB,
   capts, charIdx, cPrev,
   captx, matched: NimNode,
@@ -404,9 +404,27 @@ proc submatchEoe(
       `genSubmatchEoeCall`
     swap `smA`, `smB`
 
-proc matchImpl(text, exp: NimNode): NimNode =
-  if exp.kind notin {nnkStrLit..nnkTripleStrLit}:
-    error "not a string literal", exp
+template constructSubmatches2(
+  captures, txt, capts, capt, size: untyped
+): untyped =
+  var bounds: array[size, Slice[int]]
+  for i in 0 .. bounds.len-1:
+    bounds[i] = -2 .. -3
+  var captx = capt
+  while captx != -1:
+    if bounds[capts[captx].idx].b == -3:
+      bounds[capts[captx].idx].b = capts[captx].bound-1
+    elif bounds[capts[captx].idx].a == -2:
+      bounds[capts[captx].idx].a = capts[captx].bound
+    captx = capts[captx].parent
+  captures.setLen size
+  for i in 0 .. bounds.len-1:
+    captures[i] = txt[bounds[i]]
+
+proc matchImpl(text, expLit, body: NimNode): NimNode =
+  if not (expLit.kind == nnkCallStrLit and $expLit[0] == "rex"):
+    error "not a regex literal; only rex\"regex\" is allowed", expLit
+  let exp = expLit[1]
   defIdents smA, smB, c, capts, iPrev, cPrev, captx, matched
   let c2 = quote do: int32(`c`)
   let regex = re(exp.strVal)
@@ -414,33 +432,46 @@ proc matchImpl(text, exp: NimNode): NimNode =
     smA, smB, c2, capts, iPrev, cPrev, captx, matched, regex)
   let submatchEoeCall = submatchEoe(
     smA, smB, capts, iPrev, cPrev, captx, matched, regex)
-  let nfaLenLit = regex.nfa.len
+  let nfaLenLit = newLit regex.nfa.len
+  let nfaGroupsLen = regex.groupsCount  # newLit ?
   result = quote do:
-    (func (txt: string): bool =
+    block:
       var
         `smA`, `smB`: Submatches
-        `capts`: Capts
         `c` = Rune(-1)
         `cPrev` = -1'i32
         `iPrev` = 0
-        `captx`: int32
+        `capts` {.used.}: Capts
+        `captx` {.used.}: int32
         `matched`: bool
         i = 0
       `smA` = newSubmatches `nfaLenLit`
       `smB` = newSubmatches `nfaLenLit`
       add(`smA`, (0'i16, -1'i32, 0 .. -1))
-      while i < len(txt):
-        fastRuneAt(txt, i, `c`, true)
+      while i < len(`text`):
+        fastRuneAt(`text`, i, `c`, true)
         `submatchCall`
         if `smA`.len == 0:
-          return false
+          break
         `iPrev` = i
         `cPrev` = `c2`
       `submatchEoeCall`
-      if `smA`.len == 0:
-        return false
-      return true)(`text`)
+      if `smA`.len > 0:
+        var matches {.inject.}: seq[string]
+        when `nfaGroupsLen` > 0:
+          constructSubmatches2(
+            matches, `text`, `capts`, `smA`[0].ci, `nfaGroupsLen`)
+        `body`
 
-macro `~=`*(text, regex: string): untyped =
-  matchImpl(text, regex)
+type
+  RegexLit* = distinct string
 
+func rex*(s: string): RegexLit =
+  RegexLit s
+
+macro match*(
+  text: string,
+  regex: RegexLit,
+  body: untyped
+): untyped =
+  matchImpl(text, regex, body)

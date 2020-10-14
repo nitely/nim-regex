@@ -76,26 +76,20 @@ when (NimMajor, NimMinor) >= (1, 1):
   test "tmatch_macro":
     block:
       var m = false
-      if "abc" ~= r"\w+":
+      var matches {.used.}: seq[string]
+      match "abc", rex"(\w+)":
+        check matches == @["abc"]
         m = true
       check m
     block:
-      var m = "abc" ~= r"\w+"
+      var m = false
+      match "abc", rex"(\w)+":
+        check matches == @["c"]
+        m = true
       check m
-    check "" ~= r""
-    check "a" ~= r"a"
-    check "ab" ~= r"(a)b"
-    check "aa" ~= r"(a)*"
-    check "aab" ~= r"((a)*b)"
-    check "abbbbccccd" ~= r"a(b|c)*d"
-    check "abbb" ~= r"((a)*(b)*)"
-    check "abbb" ~= r"((a(b)*)*(b)*)"
-    check "a" ~= r"a|b"
-    check "b" ~= r"a|b"
-    check(not("ab" ~= r"a(b|c)*d"))
-    check(not("a" ~= r"b"))
-    check(not("a" ~= r""))
-    check " \"word\" " ~= r"\s"".*""\s"
+    block:
+      match "abc", rex"(a(b)c)":
+        check matches == @["abc", "b"]
 
 test "tfull_match":
   check "".isMatch(re"")

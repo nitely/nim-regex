@@ -22,9 +22,9 @@ func constructSubmatches*(
   capt, size: int
 ) {.inline.} =
   template currGroup: untyped = captures[capts[capt].idx]
-  captures.setLen(size)
+  captures.setLen size
   for i in 0 .. captures.len-1:
-    captures[i].setLen(0)
+    captures[i].setLen 0
   if capts.len == 0:
     return
   var capt = capt

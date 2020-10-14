@@ -251,13 +251,13 @@ from std/strutils import addf
 
 import ./regex/nodetype
 import ./regex/common
-import ./regex/parser
-import ./regex/exptransformation
+import ./regex/compiler
 import ./regex/nfatype
 import ./regex/nfa
 import ./regex/nfafindall
 import ./regex/nfamatch
-import ./regex/litopt
+when not defined(noRegexOpt):
+  import ./regex/litopt
 
 const canUseMacro = (NimMajor, NimMinor) >= (1, 1)
 
@@ -269,21 +269,6 @@ export
   Regex,
   RegexMatch,
   RegexError
-
-template reImpl(s: untyped): Regex =
-  var groups: GroupsCapture
-  let rpn = s
-    .parse
-    .transformExp(groups)
-  var transitions: Transitions
-  let nfa = rpn.nfa2(transitions)
-  let opt = rpn.litopt2()
-  Regex(
-    nfa: nfa,
-    transitions: transitions,
-    groupsCount: groups.count,
-    namedGroups: groups.names,
-    litOpt: opt)
 
 func re*(
   s: string
@@ -300,15 +285,12 @@ func re*(
 # ideally only `re(string): Regex`
 # would be needed (without static)
 when not defined(forceRegexAtRuntime):
-  func reImplCt(s: string): Regex {.compileTime.} =
-    reImpl(s)
-
   func re*(
     s: static string
   ): static[Regex] {.inline.} =
     ## Parse and compile a regular expression at compile-time
     when canUseMacro:  # VM dies on Nim < 1.1
-      reImplCt(s)
+      reCt(s)
     else:
       reImpl(s)
 
@@ -915,6 +897,9 @@ proc toString(pattern: Regex): string {.used.} =
   result = pattern.toString(0, visited)
 
 when isMainModule:
+  import ./regex/parser
+  import ./regex/exptransformation
+
   func toAtoms(s: string): string =
     var groups: GroupsCapture
     let atoms = s

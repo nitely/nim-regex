@@ -4,7 +4,7 @@ import ./nfatype
 import ./nfa
 import ./litopt
 
-template reImpl(s: untyped): Regex =
+func reImpl*(s: string): Regex {.inline.} =
   var groups: GroupsCapture
   let rpn = s
     .parse
@@ -12,12 +12,12 @@ template reImpl(s: untyped): Regex =
   var transitions: Transitions
   let nfa = rpn.nfa2(transitions)
   let opt = rpn.litopt2()
-  Regex(
+  result = Regex(
     nfa: nfa,
     transitions: transitions,
     groupsCount: groups.count,
     namedGroups: groups.names,
     litOpt: opt)
 
-func re*(s: string): Regex {.compileTime.} =
+func reCt*(s: string): Regex {.compileTime.} =
   reImpl(s)

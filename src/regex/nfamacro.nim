@@ -434,7 +434,7 @@ proc matchImpl*(text, expLit, body: NimNode): NimNode =
   let exp = expLit[1]
   defVars smA, smB, c, capts, iPrev, cPrev, captx, matched
   let c2 = quote do: int32(`c`)
-  let regex = re(exp.strVal)
+  let regex = reCt(exp.strVal)
   let submatchCall = submatch(
     smA, smB, c2, capts, iPrev, cPrev, captx, matched, regex)
   let submatchEoeCall = submatchEoe(

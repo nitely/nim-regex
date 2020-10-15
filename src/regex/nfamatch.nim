@@ -8,9 +8,9 @@
 import std/unicode
 import std/tables
 
-import nodematch
-import nodetype
-import nfatype
+import ./nodematch
+import ./nodetype
+import ./nfatype
 
 template findMatchBailOut: untyped {.dirty.} =
   if nfa[n].kind == reEoe:

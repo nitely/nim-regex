@@ -180,13 +180,13 @@ pick the last lit of its contiguous lits (if any).
 
 ]#
 
-import algorithm
-import sets
-import unicode
+import std/algorithm
+import std/sets
+import std/unicode
 
-import nodetype
-import nodematch
-import nfa
+import ./nodetype
+import ./nodematch
+import ./nfa
 
 when (NimMajor, NimMinor, NimPatch) < (0, 20, 0):
   import common

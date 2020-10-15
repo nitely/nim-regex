@@ -1,11 +1,11 @@
 ## Types used by the NFA
 
-import tables
-import sets
-import algorithm
+import std/tables
+import std/sets
+import std/algorithm
 
-import nfa
-import litopt
+import ./nfa
+import ./litopt
 
 type
   CaptIdx* = int32
@@ -22,9 +22,9 @@ func constructSubmatches*(
   capt, size: int
 ) {.inline.} =
   template currGroup: untyped = captures[capts[capt].idx]
-  captures.setLen(size)
+  captures.setLen size
   for i in 0 .. captures.len-1:
-    captures[i].setLen(0)
+    captures[i].setLen 0
   if capts.len == 0:
     return
   var capt = capt
@@ -42,8 +42,8 @@ func constructSubmatches*(
     c.reverse()
 
 type
-  #RegexFlag* = enum
-  #  reAscii
+  RegexLit* = distinct string
+    ## raw regex literal string
   Regex* = object
     ## a compiled regular expression
     nfa*: Nfa

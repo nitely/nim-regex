@@ -1,7 +1,7 @@
-import unicode
+import std/unicode
 
-import nodetype
-import common
+import ./nodetype
+import ./common
 
 type
   Scanner*[T: Rune|Node] = ref object

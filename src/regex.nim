@@ -223,6 +223,25 @@ and captures that match the regular expression.
     ]
     doAssert captures == @["john_wick", "winston", "ms_perkins"]
 
+Match Macro
+###########
+
+The ``match`` macro is sometimes more convenient, and
+faster than the function version. It will run a full
+match on the whole string, similar to `^regex$`.
+
+A ``matches: seq[string]`` variable is injected into
+the scope, and it contains the submatches for every capture group.
+
+.. code-block:: nim
+    :test:
+    var matched = false
+    let text = "[my link](https://example.com)"
+    match text, rex"\[([a-z ]*)\]\((https?://[^)]+)\)":
+      doAssert matches == @["my link", "https://example.com"]
+      matched = true
+    doAssert matched
+
 ]##
 
 import std/tables
@@ -230,41 +249,26 @@ import std/sequtils
 import std/unicode
 from std/strutils import addf
 
-import regex/nodetype
-import regex/common
-import regex/parser
-import regex/exptransformation
-import regex/nfatype
-import regex/nfa
-import regex/nfafindall
-import regex/nfamatch
-import regex/litopt
+import ./regex/nodetype
+import ./regex/common
+import ./regex/compiler
+import ./regex/nfatype
+import ./regex/nfa
+import ./regex/nfafindall
+import ./regex/nfamatch
+when not defined(noRegexOpt):
+  import ./regex/litopt
 
-const canUseMacro = (NimMajor, NimMinor) >= (1, 1) and
-  not defined(forceRegexAtRuntime)
+const canUseMacro = (NimMajor, NimMinor) >= (1, 1)
 
 when canUseMacro:
-  import regex/nfamacro
+  import ./regex/nfamacro
+  export RegexLit
 
 export
   Regex,
   RegexMatch,
   RegexError
-
-template reImpl(s: untyped): Regex =
-  var groups: GroupsCapture
-  let rpn = s
-    .parse
-    .transformExp(groups)
-  var transitions: Transitions
-  let nfa = rpn.nfa2(transitions)
-  let opt = rpn.litopt2()
-  Regex(
-    nfa: nfa,
-    transitions: transitions,
-    groupsCount: groups.count,
-    namedGroups: groups.names,
-    litOpt: opt)
 
 func re*(
   s: string
@@ -281,15 +285,12 @@ func re*(
 # ideally only `re(string): Regex`
 # would be needed (without static)
 when not defined(forceRegexAtRuntime):
-  func reImplCt(s: string): Regex {.compileTime.} =
-    reImpl(s)
-
   func re*(
     s: static string
   ): static[Regex] {.inline.} =
     ## Parse and compile a regular expression at compile-time
     when canUseMacro:  # VM dies on Nim < 1.1
-      reImplCt(s)
+      reCt(s)
     else:
       reImpl(s)
 
@@ -297,6 +298,11 @@ func toPattern*(
   s: string
 ): Regex {.raises: [RegexError], deprecated: "Use `re` instead".} =
   re(s)
+
+when canUseMacro:
+  func rex*(s: string): RegexLit =
+    ## Raw regex literal string
+    RegexLit s
 
 iterator group*(m: RegexMatch, i: int): Slice[int] {.inline, raises: [].} =
   ## return slices for a given group.
@@ -462,6 +468,31 @@ func groupNames*(m: RegexMatch): seq[string] {.inline, raises: [].} =
 
   result = toSeq(m.namedGroups.keys)
 
+when canUseMacro:
+  macro match*(
+    text: string,
+    regex: RegexLit,
+    body: untyped
+  ): untyped =
+    ## return a match if the whole string
+    ## matches the regular expression. This is
+    ## similar to the ``match`` function, but
+    ## faster. Notice it requires a raw regex *literal*
+    ## string as second parameter; the regex must be
+    ## known at compile time, and cannot be a var/let/const
+    ##
+    ## A ``matches: seq[string]`` variable is injected into
+    ## the scope, and it contains the submatches for every capture
+    ## group. If a group is repeated (ex: `(\\w)+`), it will
+    ## contain the last capture for that group.
+    ##
+    ## Note: Only available in Nim +1.1
+    runnableExamples:
+      match "abc", rex"(a(b)c)":
+        doAssert matches == @["abc", "b"]
+
+    matchImpl(text, regex, body)
+
 func match*(
   s: string,
   pattern: Regex,
@@ -480,26 +511,9 @@ func match*(
   const f: MatchFlags = {}
   result = matchImpl(s, pattern, m, f, start)
 
-when canUseMacro:
-  func match*(
-    s: string,
-    pattern: static Regex,
-    m: var RegexMatch,
-    start = 0
-  ): bool {.inline, raises: [].} =
-    const f: MatchFlags = {}
-    result = matchImpl(s, pattern, m, f, start)
-
 func match*(s: string, pattern: Regex): bool {.inline, raises: [].} =
   var m: RegexMatch
   result = matchImpl(s, pattern, m, {mfNoCaptures})
-
-when canUseMacro:
-  func match*(
-    s: string, pattern: static Regex
-  ): bool {.inline, raises: [].} =
-    var m: RegexMatch
-    result = matchImpl(s, pattern, m, {mfNoCaptures})
 
 template containsImpl: untyped {.dirty.} =
   const f = {mfShortestMatch, mfFindMatch, mfNoCaptures}
@@ -517,12 +531,6 @@ func contains*(s: string, pattern: Regex): bool {.inline, raises: [].} =
     doAssert re"^(23)+$" notin "23232"
 
   containsImpl()
-
-when canUseMacro:
-  func contains*(
-    s: string, pattern: static Regex
-  ): bool {.inline, raises: [].} =
-    containsImpl()
 
 template findImpl: untyped {.dirty.} =
   matchImpl(s, pattern, m, {mfFindMatch}, start)
@@ -544,15 +552,6 @@ func find*(
       m.group(0) == @[0 .. 1, 2 .. 3]
 
   findImpl()
-
-when canUseMacro:
-  func find*(
-    s: string,
-    pattern: static Regex,
-    m: var RegexMatch,
-    start = 0
-  ): bool {.inline, raises: [].} =
-    findImpl()
 
 template runeIncAt(s: string, n: var int) =
   ## increment ``n`` up to
@@ -731,13 +730,6 @@ func startsWith*(
   var m: RegexMatch
   result = matchImpl(s, pattern, m, {mfShortestMatch, mfNoCaptures}, start)
 
-when canUseMacro:
-  func startsWith*(
-    s: string, pattern: static Regex, start = 0
-  ): bool {.inline, raises: [].} =
-    var m: RegexMatch
-    result = matchImpl(s, pattern, m, {mfShortestMatch, mfNoCaptures}, start)
-
 template endsWithImpl: untyped {.dirty.} =
   result = false
   var
@@ -755,12 +747,6 @@ func endsWith*(s: string, pattern: Regex): bool {.inline, raises: [].} =
     doAssert "abc".endsWith(re"\w")
     doAssert not "abc".endsWith(re"\d")
   endsWithImpl()
-
-when canUseMacro:
-  func endsWith*(
-    s: string, pattern: static Regex
-  ): bool {.inline, raises: [].} =
-    endsWithImpl()
 
 func flatCaptures(
   result: var seq[string],
@@ -802,8 +788,6 @@ func addsubstr(
 ) {.inline, raises: [].} =
   addsubstr(result, s, first, s.high)
 
-# XXX there is no static version because of Nim/issues/13791
-#     this func uses findAll iterator
 func replace*(
   s: string,
   pattern: Regex,
@@ -911,6 +895,9 @@ proc toString(pattern: Regex): string {.used.} =
   result = pattern.toString(0, visited)
 
 when isMainModule:
+  import ./regex/parser
+  import ./regex/exptransformation
+
   func toAtoms(s: string): string =
     var groups: GroupsCapture
     let atoms = s
@@ -1095,64 +1082,115 @@ when isMainModule:
   doAssert match("abcabcabc", re"((abc)){3}")
 
   # subset of tests.nim
-  when canUseMacro:
-    proc raisesMsg(pattern: string): string =
-      try:
-        discard re(pattern)
-      except RegexError:
-        result = getCurrentExceptionMsg()
+  proc raisesMsg(pattern: string): string =
+    try:
+      discard re(pattern)
+    except RegexError:
+      result = getCurrentExceptionMsg()
 
-    template test(body: untyped): untyped =
-      static:
-        (proc() = body)()
+  template test(body: untyped): untyped =
+    static:
       (proc() = body)()
+    (proc() = body)()
 
-    test:
-      var m: RegexMatch
-      doAssert match("ac", re"a(b|c)", m)
-      doAssert not match("ad", re"a(b|c)", m)
-      doAssert match("ab", re"(ab)*", m)
-      doAssert match("abab", re"(ab)*", m)
-      doAssert not match("ababc", re"(ab)*", m)
-      doAssert not match("a", re"(ab)*", m)
-      doAssert match("abab", re"(ab)*", m) and
-        m.captures == @[@[0 .. 1, 2 .. 3]]
-      doAssert match("bbaa aa", re"([\w ]*?)(\baa\b)", m) and
-        m.captures == @[@[0 .. 4], @[5 .. 6]]
-      doAssert re"bc" in "abcd"
-      doAssert re"(23)+" in "23232"
-      doAssert re"^(23)+$" notin "23232"
-      doAssert re"\w" in "弢"
-      doAssert "2222".find(re"(22)*", m) and
-        m.group(0) == @[0 .. 1, 2 .. 3]
-      doAssert raisesMsg(r"[a-\w]") ==
-        "Invalid set range. Range can't contain " &
-        "a character-class or assertion\n" &
-        "[a-\\w]\n" &
-        "   ^"
-      doAssert "a,b".splitIncl(re"(,)") == @["a", ",", "b"]
-      doAssert "abcabc".replace(re"(abc)", "m($1)") ==
-        "m(abc)m(abc)"
-      const ip = re"""(?x)
-      \b
-      ((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}
-      (25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)
-      \b
-      """
-      doAssert match("127.0.0.1", ip)
-      doAssert not match("127.0.0.999", ip)
-      doAssert "abcd".find(re"bc", m) and
-        m.boundaries == 1 .. 2
-      doAssert "bcd".find(re"bc", m) and
-        m.boundaries == 0 .. 1
-      doAssert "bc".find(re"bc", m) and
-        m.boundaries == 0 .. 1
-      doAssert "#foo://#".find(re"[\w]+://", m) and
-        m.boundaries == 1 .. 6
-      doAssert findAllBounds("abcd", re"bc") == @[1 .. 2]
-      doAssert findAllBounds("bcd", re"bc") == @[0 .. 1]
-      doAssert findAllBounds("bc", re"bc") == @[0 .. 1]
-      doAssert findAllBounds("#foo://#", re"[\w]+://") == @[1 .. 6]
-      doAssert findAllBounds("abc\nabc\na", re"(?m)^a") ==
-        @[0 .. 0, 4 .. 4, 8 .. 8]
+  test:
+    var m: RegexMatch
+    doAssert match("ac", re"a(b|c)", m)
+    doAssert(not match("ad", re"a(b|c)", m))
+    doAssert match("ab", re"(ab)*", m)
+    doAssert match("abab", re"(ab)*", m)
+    doAssert(not match("ababc", re"(ab)*", m))
+    doAssert(not match("a", re"(ab)*", m))
+    doAssert match("abab", re"(ab)*", m) and
+      m.captures == @[@[0 .. 1, 2 .. 3]]
+    doAssert match("bbaa aa", re"([\w ]*?)(\baa\b)", m) and
+      m.captures == @[@[0 .. 4], @[5 .. 6]]
+    doAssert re"bc" in "abcd"
+    doAssert re"(23)+" in "23232"
+    doAssert re"^(23)+$" notin "23232"
+    doAssert re"\w" in "弢"
+    doAssert "2222".find(re"(22)*", m) and
+      m.group(0) == @[0 .. 1, 2 .. 3]
+    doAssert raisesMsg(r"[a-\w]") ==
+      "Invalid set range. Range can't contain " &
+      "a character-class or assertion\n" &
+      "[a-\\w]\n" &
+      "   ^"
+    doAssert "a,b".splitIncl(re"(,)") == @["a", ",", "b"]
+    doAssert "abcabc".replace(re"(abc)", "m($1)") ==
+      "m(abc)m(abc)"
+    const ip = re"""(?x)
+    \b
+    ((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}
+    (25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)
+    \b
+    """
+    doAssert match("127.0.0.1", ip)
+    doAssert(not match("127.0.0.999", ip))
+    doAssert "abcd".find(re"bc", m) and
+      m.boundaries == 1 .. 2
+    doAssert "bcd".find(re"bc", m) and
+      m.boundaries == 0 .. 1
+    doAssert "bc".find(re"bc", m) and
+      m.boundaries == 0 .. 1
+    doAssert "#foo://#".find(re"[\w]+://", m) and
+      m.boundaries == 1 .. 6
+    doAssert findAllBounds("abcd", re"bc") == @[1 .. 2]
+    doAssert findAllBounds("bcd", re"bc") == @[0 .. 1]
+    doAssert findAllBounds("bc", re"bc") == @[0 .. 1]
+    doAssert findAllBounds("#foo://#", re"[\w]+://") == @[1 .. 6]
+    doAssert findAllBounds("abc\nabc\na", re"(?m)^a") ==
+      @[0 .. 0, 4 .. 4, 8 .. 8]
+    when canUseMacro:
+      block:
+        var m = false
+        var matches: seq[string]
+        match "abc", rex"(\w+)":
+          doAssert matches == @["abc"]
+          m = true
+        doAssert m
+        doAssert matches.len == 0
+      block:
+        var m = false
+        match "abc", rex"(\w)+":
+          doAssert matches == @["c"]
+          m = true
+        doAssert m
+      block:
+        var m = false
+        match "abc", rex"(a(b)c)":
+          doAssert matches == @["abc", "b"]
+          m = true
+        doAssert m
+      block:
+        var m = false
+        match "x", rex"y":
+          m = true
+        doAssert not m
+        match "y", rex"y":
+          m = true
+        doAssert m
+      block:
+        template myRegex: untyped =
+          rex"""(?x)
+            abc  # verbose mode
+          """
+        var m = false
+        match "abc", myRegex:
+          m = true
+        doAssert m
+      block:
+        var m = false
+        var txt = "abc"
+        match txt, rex"(\w)+":
+          m = true
+        doAssert m
+      block:
+        var matched = false
+        let text = "[my link](https://example.com)"
+        match text, rex"\[([a-z ]*)\]\((https?://[^)]+)\)":
+          doAssert matches == @["my link", "https://example.com"]
+          matched = true
+        doAssert matched
+
   echo "ok regex.nim"

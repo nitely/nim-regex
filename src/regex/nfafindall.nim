@@ -33,13 +33,13 @@ current character (next possible match). Other than
 that is the same algorithm as nfamatch.
 ]#
 
-import unicode
-import tables
-from strutils import find
+import std/unicode
+import std/tables
+from std/strutils import find
 
-import nodematch
-import nodetype
-import nfatype
+import ./nodematch
+import ./nodetype
+import ./nfatype
 
 func bwRuneAt(s: string, n: int): Rune =
   ## Take rune ending at ``n``

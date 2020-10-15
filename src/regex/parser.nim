@@ -1,13 +1,13 @@
-import unicode
-import strutils
-import sets
-import parseutils
+import std/unicode
+import std/strutils
+import std/sets
+import std/parseutils
 
-import unicodedb/properties
+import pkg/unicodedb/properties
 
-import nodetype
-import common
-import scanner
+import ./nodetype
+import ./common
+import ./scanner
 
 func check(cond: bool, msg: string) {.inline.} =
   if not cond:

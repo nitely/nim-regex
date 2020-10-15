@@ -2,13 +2,13 @@
 when NimMajor >= 1:
   {.used.}
 
-import unicode
-import sets
-from algorithm import sorted
+import std/unicode
+import std/sets
+from std/algorithm import sorted
 
-import unicodedb/properties
+import pkg/unicodedb/properties
 
-import common
+import ./common
 
 type
   Flag* = enum

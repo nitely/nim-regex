@@ -184,13 +184,10 @@ when (NimMajor, NimMinor) >= (1, 1):
     check matchMacroCapt("ab", rex"(ab)?") == @["ab"]
     check matchMacroCapt("aaabbbaaa", rex"(a*|b*)*") == @["aaa"]
     check matchMacroCapt("abab", rex"(a(b))*") == @["ab", "b"]
-    echo matchMacroCapt("aaanasdnasd", rex"((a)*n?(asd)*)*")
-    echo matchMacroCapt("aa", rex"(a?)+")
-    assert false
     check matchMacroCapt("aaanasdnasd", rex"((a)*n?(asd)*)*") ==
-      @["nasd", "", "asd"]
+      @["nasd", "a", "asd"]
     check matchMacroCapt("aaanasdnasd", rex"((a)*n?(asd))*") ==
-      @["nasd", "", "asd"]
+      @["nasd", "a", "asd"]
     check matchMacroCapt("abd", rex"((ab)c)|((ab)d)") ==
       @["", "", "abd", "ab"]
     check matchMacroCapt("aaa", rex"(a*)") == @["aaa"]

@@ -593,7 +593,7 @@ iterator findAll*(
   var i2 = start-1
   var m: RegexMatch
   var ms: RegexMatches
-  while i < len(s):
+  while i <= len(s):
     doAssert(i > i2); i2 = i
     i = findSomeOptTpl(s, pattern, ms, i)
     #debugEcho i
@@ -601,6 +601,8 @@ iterator findAll*(
     for mi in ms:
       fillMatchImpl(m, mi, ms, pattern)
       yield m
+    if i == len(s):
+      break
 
 func findAll*(
   s: string,
@@ -628,13 +630,15 @@ iterator findAllBounds*(
   var i = start
   var i2 = start-1
   var ms: RegexMatches
-  while i < len(s):
+  while i <= len(s):
     doAssert(i > i2); i2 = i
     i = findSomeOptTpl(s, pattern, ms, i)
     #debugEcho i
     if i < 0: break
     for ab in ms.bounds:
       yield ab
+    if i == len(s):
+      break
 
 func findAllBounds*(
   s: string,
@@ -965,10 +969,6 @@ when isMainModule:
   doAssert r"[[:alpha:][:digit:]]".toAtoms == "[[a-zA-Z][0-9]]"
 
   var m: RegexMatch
-  doAssert match("a", re"(a?b?)*", m)
-  echo  m.captures
-  doAssert match("a", re"(a?)*", m)
-  echo  m.captures
   #doAssert match("abc", re(r"abc", {reAscii}), m)
   doAssert match("abc", re"abc", m)
   doAssert match("ab", re"a(b|c)", m)

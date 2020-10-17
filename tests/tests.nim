@@ -314,9 +314,11 @@ test "trepetition_cycle":
   check "".matchWithCapt(re"(a*)*") == @[@[""]]
   check "".matchWithCapt(re"(a*)*(a*)*") == @[@[""], @[""]]
   check "a".matchWithCapt(re"(a*)*?") == @[@["a"]]
-  check "".matchWithCapt(re"(a?)+") == @[@["", ""]]  # ?
+  check "".matchWithCapt(re"(a?)+") == @[@["", ""]]
+  check "".matchWithCapt(re"(a?)(a?)*") == @[@[""], @[""]]
   check "a".matchWithCapt(re"(a?)+") == @[@["a", ""]]
-  check "".matchWithCapt(re"(a*)+") == @[@["", ""]]  # ?
+  check "".matchWithCapt(re"(a*)+") == @[@["", ""]]
+  check "".matchWithCapt(re"(a*)(a*)*") == @[@[""], @[""]]
   check "a".matchWithCapt(re"(a*)+") == @[@["a", ""]]
   check "b".matchWithCapt(re"(a*)+b") == @[@["", ""]]
   check "b".matchWithCapt(re"(a*)+b*") == @[@["", ""]]
@@ -331,10 +333,20 @@ test "trepetition_cycle":
   check "".matchWithCapt(re"(a?b?)*") == @[@[""]]
   # same as nre, but python returns ["", ""]
   check findAllBounds("a", re"(a*)+") == @[0 .. 0, 1 .. 0]
-  #check findAllBounds("", re"(a*)+") == @[0 .. -1]  # XXX returns empty
+  check findAllBounds("a", re"(a*)(a*)*") == @[0 .. 0, 1 .. 0]
+  check findAllBounds("", re"(a*)+") == @[0 .. -1]
+  # same as Python finditer
+  check findAllCapt("a", re"(a*)+") == @[
+    @[@[0 .. 0, 1 .. 0]],
+    @[@[1 .. 0, 1 .. 0]]]
+  check findAllCapt("", re"(a*)+") == @[@[@[0 .. -1, 0 .. -1]]]
   # same as nre, but python returns ["", ""]
   check findAllBounds("a", re"(a*)*") == @[0 .. 0, 1 .. 0]
-  #check findAllBounds("", re"(a*)*") == @[0 .. -1]  # XXX returns empty
+  check findAllBounds("", re"(a*)*") == @[0 .. -1]
+  check findAllCapt("a", re"(a*)*") == @[
+    @[@[0 .. 0, 1 .. 0]],
+    @[@[1 .. 0]]]
+  check findAllCapt("", re"(a*)*") == @[@[@[0 .. -1]]]
 
 test "tcaptures":
   check "ab".matchWithCapt(re"(a)b") == @[@["a"]]

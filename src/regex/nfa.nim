@@ -165,16 +165,18 @@ func teClosure(
   visited: var set[int16],
   zTransitions: Zclosure
 ) =
-  if state in visited:
-    return
-  visited.incl state
   var zTransitionsCurr = zTransitions
   if isTransitionZ(enfa[state]):
     zTransitionsCurr.add state
   if enfa[state].kind in matchableKind + {reEOE}:
     result.add((state, zTransitionsCurr))
     return
-  for s in enfa[state].next:
+  for i, s in pairs enfa[state].next:
+    # Enter loops only once. Allows: "(a*)*" -> ["a", ""] 
+    if enfa[state].kind in repetitionKind:
+      if s in visited and i == int(enfa[state].isGreedy):
+        continue
+      visited.incl s
     teClosure(result, enfa, s, visited, zTransitionsCurr)
 
 func teClosure(

@@ -965,6 +965,10 @@ when isMainModule:
   doAssert r"[[:alpha:][:digit:]]".toAtoms == "[[a-zA-Z][0-9]]"
 
   var m: RegexMatch
+  doAssert match("a", re"(a?b?)*", m)
+  echo  m.captures
+  doAssert match("a", re"(a?)*", m)
+  echo  m.captures
   #doAssert match("abc", re(r"abc", {reAscii}), m)
   doAssert match("abc", re"abc", m)
   doAssert match("ab", re"a(b|c)", m)
@@ -1027,11 +1031,11 @@ when isMainModule:
   doAssert match("ab", re"(ab)?", m) and
     m.captures == @[@[0 .. 1]]
   doAssert match("aaabbbaaa", re"(a*|b*)*", m) and
-    m.captures == @[@[0 .. 2, 3 .. 5, 6 .. 8]]
+    m.captures == @[@[0 .. 2, 3 .. 5, 6 .. 8, 9 .. 8]]
   doAssert match("abab", re"(a(b))*", m) and
     m.captures == @[@[0 .. 1, 2 .. 3], @[1 .. 1, 3 .. 3]]
   doAssert match("aaanasdnasd", re"((a)*n?(asd)*)*", m) and
-    m.captures == @[@[0 .. 6, 7 .. 10], @[0 .. 0, 1 .. 1, 2 .. 2], @[4 .. 6, 8 .. 10]]
+    m.captures == @[@[0 .. 6, 7 .. 10, 11 .. 10], @[0 .. 0, 1 .. 1, 2 .. 2], @[4 .. 6, 8 .. 10]]
   doAssert match("aaanasdnasd", re"((a)*n?(asd))*", m) and
     m.captures == @[@[0 .. 6, 7 .. 10], @[0 .. 0, 1 .. 1, 2 .. 2], @[4 .. 6, 8 .. 10]]
   doAssert match("abd", re"((ab)c)|((ab)d)", m) and

@@ -2128,6 +2128,9 @@ test "tmisc2":
       @[4 .. 6, 8 .. 10]]
   check match("aaanasdnasd", re"((a)*n?(asd))*", m) and
     m.captures == @[@[0 .. 6, 7 .. 10], @[0 .. 0, 1 .. 1, 2 .. 2], @[4 .. 6, 8 .. 10]]
+
+test "tmisc2_5":
+  var m: RegexMatch
   check match("abd", re"((ab)c)|((ab)d)", m) and
     m.captures == @[@[], @[], @[0 .. 2], @[0 .. 1]]
   check match("aaa", re"(a*)", m) and

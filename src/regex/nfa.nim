@@ -100,7 +100,7 @@ func eNfa*(expression: seq[Node]): Enfa {.raises: [RegexError].} =
       result.combine(ends, stateA, ni)
       result.add n
       states.add ni
-      if n.isGreedy:
+      if not n.isGreedy:
         swap(result[^1].next[0], result[^1].next[1])
     of reOneOrMore:
       check(
@@ -113,7 +113,7 @@ func eNfa*(expression: seq[Node]): Enfa {.raises: [RegexError].} =
       result.combine(ends, stateA, ni)
       result.add n
       states.add stateA
-      if n.isGreedy:
+      if not n.isGreedy:
         swap(result[^1].next[0], result[^1].next[1])
     of reZeroOrOne:
       check(
@@ -125,7 +125,7 @@ func eNfa*(expression: seq[Node]): Enfa {.raises: [RegexError].} =
       ends.update(ni, n.next)
       result.add n
       states.add ni
-      if n.isGreedy:
+      if not n.isGreedy:
         swap(result[^1].next[0], result[^1].next[1])
     of reGroupStart:
       let stateA = states.pop()
@@ -174,7 +174,7 @@ func teClosure(
   for i, s in pairs enfa[state].next:
     # Enter loops only once. Allows: "(a*)*" -> ["a", ""] 
     if enfa[state].kind in repetitionKind:
-      if s in visited and i == int(enfa[state].isGreedy):
+      if s in visited and i == int(not enfa[state].isGreedy):
         continue
       visited.incl s
     teClosure(result, enfa, s, visited, zTransitionsCurr)

@@ -238,7 +238,7 @@ func toString*(n: Node): string =
   of reZeroOrMore,
       reOneOrMore,
       reZeroOrOne:
-    if n.isGreedy:
+    if not n.isGreedy:
       n.cp.toUTF8 & "?"
     else:
       n.cp.toUTF8

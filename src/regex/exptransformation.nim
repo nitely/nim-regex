@@ -28,11 +28,12 @@ func greediness(expression: seq[Node]): seq[Node] =
   result = newSeqOfCap[Node](expression.len)
   var sc = expression.scan()
   for n in sc.mitems():
-    if (n.kind in repetitionKind or
-        n.kind == reZeroOrOne) and
-        sc.peek.kind == reZeroOrOne:
+    if n.kind in repetitionKind or
+        n.kind == reZeroOrOne:
       n.isGreedy = true
-      discard sc.next
+      if sc.peek.kind == reZeroOrOne:
+        n.isGreedy = false
+        discard sc.next
     result.add(n)
 
 type

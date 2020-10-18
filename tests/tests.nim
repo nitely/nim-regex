@@ -154,16 +154,14 @@ when (NimMajor, NimMinor) >= (1, 1):
     check matchMacroCapt("abab", rex"(ab)+") == @["ab"]
     check matchMacroCapt("a", rex"(a)?") == @["a"]
     check matchMacroCapt("ab", rex"(ab)?") == @["ab"]
-    check matchMacroCapt("aaabbbaaa", rex"(a*|b*)*") == @["aaa"]
+    check matchMacroCapt("aaabbbaaa", rex"(a*|b*)*") == @[""]
     check matchMacroCapt("abab", rex"(a(b))*") == @["ab", "b"]
-    # Following two should match the same
     check matchMacroCapt("aaanasdnasd", rex"((a)*n?(asd)*)*") ==
-      @["nasd", "a", "asd"]
+      @["", "a", "asd"]
     check matchMacroCapt("aaanasdnasd", rex"((a)*n?(asd))*") ==
       @["nasd", "a", "asd"]
     check matchMacroCapt("b", rex"(a)?b") == @[""]
     check matchMacroCapt("ฅa", rex"(\w)(a)") == @["ฅ", "a"]
-
     check matchMacroCapt("aabcd", rex"(aa)bcd") == @["aa"]
     check matchMacroCapt("aabc", rex"(aa)(bc)") == @["aa", "bc"]
     check matchMacroCapt("ab", rex"a(b|c)") == @["b"]
@@ -176,18 +174,6 @@ when (NimMajor, NimMinor) >= (1, 1):
     check matchMacroCapt("ab", rex"(a*)(b*)") == @["a", "b"]
     check matchMacroCapt("ab", rex"(a)*(b)*") == @["a", "b"]
     check matchMacroCapt("ab", rex"(a)*b*") == @["a"]
-    check matchMacroCapt("abbb", rex"((a(b)*)*(b)*)") ==
-      @["abbb", "abbb", "b", ""]
-    check matchMacroCapt("aa", rex"(a)+") == @["a"]
-    check matchMacroCapt("abab", rex"(ab)+") == @["ab"]
-    check matchMacroCapt("a", rex"(a)?") == @["a"]
-    check matchMacroCapt("ab", rex"(ab)?") == @["ab"]
-    check matchMacroCapt("aaabbbaaa", rex"(a*|b*)*") == @["aaa"]
-    check matchMacroCapt("abab", rex"(a(b))*") == @["ab", "b"]
-    check matchMacroCapt("aaanasdnasd", rex"((a)*n?(asd)*)*") ==
-      @["nasd", "a", "asd"]
-    check matchMacroCapt("aaanasdnasd", rex"((a)*n?(asd))*") ==
-      @["nasd", "a", "asd"]
     check matchMacroCapt("abd", rex"((ab)c)|((ab)d)") ==
       @["", "", "abd", "ab"]
     check matchMacroCapt("aaa", rex"(a*)") == @["aaa"]
@@ -315,6 +301,52 @@ test "trepetition_cycle":
   check raises(r"a*{,}")
   check "aaa".isMatch(re"(a?)*")
   check "aaaa".isMatch(re"((a)*(a)*)*")
+  # Same as PCRE "^(a*)*?$"
+  check "aa".matchWithCapt(re"(a*)*?") == @[@["aa"]]
+  check "aa".matchWithCapt(re"(a*)*?(a*)*?") ==
+    @[newSeq[string](), @["aa"]]
+  check "".matchWithCapt(re"(a*)*?(a*)*?") ==
+    @[newSeq[string](), newSeq[string]()]
+  check "aa".matchWithCapt(re"(.*?)") == @[@["aa"]]
+  check "aa".matchWithCapt(re"(.*)*") == @[@["aa", ""]]
+  check "a".matchWithCapt(re"(a*)*") == @[@["a", ""]]
+  check "a".matchWithCapt(re"(a*)*(a*)*") == @[@["a", ""], @[""]]
+  check "".matchWithCapt(re"(a*)*") == @[@[""]]
+  check "".matchWithCapt(re"(a*)*(a*)*") == @[@[""], @[""]]
+  check "a".matchWithCapt(re"(a*)*?") == @[@["a"]]
+  check "".matchWithCapt(re"(a?)+") == @[@["", ""]]
+  check "".matchWithCapt(re"(a?)(a?)*") == @[@[""], @[""]]
+  check "a".matchWithCapt(re"(a?)+") == @[@["a", ""]]
+  check "".matchWithCapt(re"(a*)+") == @[@["", ""]]
+  check "".matchWithCapt(re"(a*)(a*)*") == @[@[""], @[""]]
+  check "a".matchWithCapt(re"(a*)+") == @[@["a", ""]]
+  check "b".matchWithCapt(re"(a*)+b") == @[@["", ""]]
+  check "b".matchWithCapt(re"(a*)+b*") == @[@["", ""]]
+  check "ab".matchWithCapt(re"(a*)+b") == @[@["a", ""]]
+  check "".matchWithCapt(re"(a?)*") == @[@[""]]
+  check "a".matchWithCapt(re"(a?)*") == @[@["a", ""]]
+  check "a".matchWithCapt(re"(a?)*(a?)*") == @[@["a", ""], @[""]]
+  check "ab".matchWithCapt(re"(a?)*b") == @[@["a", ""]]
+  check "".matchWithCapt(re"(a+)*") == @[newSeq[string]()]
+  check "a".matchWithCapt(re"(?:a*)*") == newSeq[seq[string]]()
+  check "a".matchWithCapt(re"(a?b?)*") == @[@["a", ""]]
+  check "".matchWithCapt(re"(a?b?)*") == @[@[""]]
+  # same as nre, but python returns ["", ""]
+  check findAllBounds("a", re"(a*)+") == @[0 .. 0, 1 .. 0]
+  check findAllBounds("a", re"(a*)(a*)*") == @[0 .. 0, 1 .. 0]
+  check findAllBounds("", re"(a*)+") == @[0 .. -1]
+  # same as Python finditer
+  check findAllCapt("a", re"(a*)+") == @[
+    @[@[0 .. 0, 1 .. 0]],
+    @[@[1 .. 0, 1 .. 0]]]
+  check findAllCapt("", re"(a*)+") == @[@[@[0 .. -1, 0 .. -1]]]
+  # same as nre, but python returns ["", ""]
+  check findAllBounds("a", re"(a*)*") == @[0 .. 0, 1 .. 0]
+  check findAllBounds("", re"(a*)*") == @[0 .. -1]
+  check findAllCapt("a", re"(a*)*") == @[
+    @[@[0 .. 0, 1 .. 0]],
+    @[@[1 .. 0]]]
+  check findAllCapt("", re"(a*)*") == @[@[@[0 .. -1]]]
 
 test "tcaptures":
   check "ab".matchWithCapt(re"(a)b") == @[@["a"]]
@@ -332,12 +364,11 @@ test "tcaptures":
   check "a".matchWithCapt(re"(a)?") == @[@["a"]]
   check "ab".matchWithCapt(re"(ab)?") == @[@["ab"]]
   check "aaabbbaaa".matchWithCapt(re"(a*|b*)*") ==
-    @[@["aaa", "bbb", "aaa"]]
+    @[@["aaa", "bbb", "aaa", ""]]
   check "abab".matchWithCapt(re"(a(b))*") ==
     @[@["ab", "ab"], @["b", "b"]]
-  # Following two should match the same
   check "aaanasdnasd".matchWithCapt(re"((a)*n?(asd)*)*") ==
-    @[@["aaanasd", "nasd"], @["a", "a", "a"], @["asd", "asd"]]
+    @[@["aaanasd", "nasd", ""], @["a", "a", "a"], @["asd", "asd"]]
   check "aaanasdnasd".matchWithCapt(re"((a)*n?(asd))*") ==
     @[@["aaanasd", "nasd"], @["a", "a", "a"], @["asd", "asd"]]
   check "b".matchWithCapt(re"(a)?b") ==
@@ -622,7 +653,7 @@ test "trepetition_range":
   check raises(r"a*{1}")
   check "aaa".matchWithCapt(re"(a){,}") ==
     @[@["a", "a", "a"]]
-  check "aaa".matchWithCapt(re"(a{,}){,}") == @[@["aaa"]]
+  check "aaa".matchWithCapt(re"(a{,}){,}") == @[@["aaa", ""]]
   check "aaaaa".matchWithCapt(re"(a){5}") ==
     @[@["a", "a", "a", "a", "a"]]
   check "a".matchWithCapt(re"(a){1,5}") == @[@["a"]]
@@ -630,15 +661,15 @@ test "trepetition_range":
     @[@["a", "a", "a"]]
   check "".matchWithCapt(re"(a){,}") ==
     @[newSeq[string]()]
-  check "aaa".matchWithCapt(re"(a{,}){,}") == @[@["aaa"]]
+  check "aaa".matchWithCapt(re"(a{,}){,}") == @[@["aaa", ""]]
   check "aaa".matchWithCapt(re"(a{1}){,}") ==
     @[@["a", "a", "a"]]
   check "aaaa".matchWithCapt(re"(a{2}){,}") ==
     @[@["aa", "aa"]]
   check "aaaa".matchWithCapt(re"(a{,3}){,}") ==
-    @[@["aaa", "a"]]
+    @[@["aaa", "a", ""]]
   check "".matchWithCapt(re"(a{,3}){,}") ==
-    @[newSeq[string]()]
+    @[@[""]]
   check "aaa".matchWithCapt(re"(a{1,}){,}") ==
     @[@["aaa"]]
   check "".matchWithCapt(re"(a{1,}){,}") ==
@@ -2087,13 +2118,19 @@ test "tmisc2":
   check match("ab", re"(ab)?", m) and
     m.captures == @[@[0 .. 1]]
   check match("aaabbbaaa", re"(a*|b*)*", m) and
-    m.captures == @[@[0 .. 2, 3 .. 5, 6 .. 8]]
+    m.captures == @[@[0 .. 2, 3 .. 5, 6 .. 8, 9 .. 8]]
   check match("abab", re"(a(b))*", m) and
     m.captures == @[@[0 .. 1, 2 .. 3], @[1 .. 1, 3 .. 3]]
   check match("aaanasdnasd", re"((a)*n?(asd)*)*", m) and
-    m.captures == @[@[0 .. 6, 7 .. 10], @[0 .. 0, 1 .. 1, 2 .. 2], @[4 .. 6, 8 .. 10]]
+    m.captures == @[
+      @[0 .. 6, 7 .. 10, 11 .. 10],
+      @[0 .. 0, 1 .. 1, 2 .. 2],
+      @[4 .. 6, 8 .. 10]]
   check match("aaanasdnasd", re"((a)*n?(asd))*", m) and
     m.captures == @[@[0 .. 6, 7 .. 10], @[0 .. 0, 1 .. 1, 2 .. 2], @[4 .. 6, 8 .. 10]]
+
+test "tmisc2_5":
+  var m: RegexMatch
   check match("abd", re"((ab)c)|((ab)d)", m) and
     m.captures == @[@[], @[], @[0 .. 2], @[0 .. 1]]
   check match("aaa", re"(a*)", m) and

@@ -593,7 +593,7 @@ iterator findAll*(
   var i2 = start-1
   var m: RegexMatch
   var ms: RegexMatches
-  while i < len(s):
+  while i <= len(s):
     doAssert(i > i2); i2 = i
     i = findSomeOptTpl(s, pattern, ms, i)
     #debugEcho i
@@ -601,6 +601,8 @@ iterator findAll*(
     for mi in ms:
       fillMatchImpl(m, mi, ms, pattern)
       yield m
+    if i == len(s):
+      break
 
 func findAll*(
   s: string,
@@ -628,13 +630,15 @@ iterator findAllBounds*(
   var i = start
   var i2 = start-1
   var ms: RegexMatches
-  while i < len(s):
+  while i <= len(s):
     doAssert(i > i2); i2 = i
     i = findSomeOptTpl(s, pattern, ms, i)
     #debugEcho i
     if i < 0: break
     for ab in ms.bounds:
       yield ab
+    if i == len(s):
+      break
 
 func findAllBounds*(
   s: string,
@@ -1027,11 +1031,11 @@ when isMainModule:
   doAssert match("ab", re"(ab)?", m) and
     m.captures == @[@[0 .. 1]]
   doAssert match("aaabbbaaa", re"(a*|b*)*", m) and
-    m.captures == @[@[0 .. 2, 3 .. 5, 6 .. 8]]
+    m.captures == @[@[0 .. 2, 3 .. 5, 6 .. 8, 9 .. 8]]
   doAssert match("abab", re"(a(b))*", m) and
     m.captures == @[@[0 .. 1, 2 .. 3], @[1 .. 1, 3 .. 3]]
   doAssert match("aaanasdnasd", re"((a)*n?(asd)*)*", m) and
-    m.captures == @[@[0 .. 6, 7 .. 10], @[0 .. 0, 1 .. 1, 2 .. 2], @[4 .. 6, 8 .. 10]]
+    m.captures == @[@[0 .. 6, 7 .. 10, 11 .. 10], @[0 .. 0, 1 .. 1, 2 .. 2], @[4 .. 6, 8 .. 10]]
   doAssert match("aaanasdnasd", re"((a)*n?(asd))*", m) and
     m.captures == @[@[0 .. 6, 7 .. 10], @[0 .. 0, 1 .. 1, 2 .. 2], @[4 .. 6, 8 .. 10]]
   doAssert match("abd", re"((ab)c)|((ab)d)", m) and

@@ -331,6 +331,7 @@ func prefix(eNfa: Enfa, uid: NodeUid): Enfa =
       stack.add (mi, ni)
   for n in result.mitems:
     n.next.reverse
+    n.isGreedy = false
   # Swap initial state by eoe
   var eoeIdx = -1'i16
   for ni, n in result.pairs:

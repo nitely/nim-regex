@@ -347,6 +347,23 @@ test "trepetition_cycle":
     @[@[0 .. 0, 1 .. 0]],
     @[@[1 .. 0]]]
   check findAllCapt("", re"(a*)*") == @[@[@[0 .. -1]]]
+  # litopt
+  check findAllBounds("@", re"@(a*)*") == @[0 .. 0]
+  check findAllBounds("@", re"@(a*)*?") == @[0 .. 0]
+  check findAllBounds("@", re"@(a*?)*") == @[0 .. 0]
+  check findAllBounds("@", re"@(a*?)*?") == @[0 .. 0]
+  check findAllBounds("@", re"@(a*)+") == @[0 .. 0]
+  check findAllBounds("@", re"@(a*)+?") == @[0 .. 0]
+  check findAllBounds("@", re"@(a*?)+") == @[0 .. 0]
+  check findAllBounds("@", re"@(a*?)+?") == @[0 .. 0]
+  check findAllBounds("@", re"(a*)*@") == @[0 .. 0]
+  check findAllBounds("@", re"(a*)*?@") == @[0 .. 0]
+  check findAllBounds("@", re"(a*?)*@") == @[0 .. 0]
+  check findAllBounds("@", re"(a*?)*?@") == @[0 .. 0]
+  check findAllBounds("@", re"(a*)+@") == @[0 .. 0]
+  check findAllBounds("@", re"(a*)+?@") == @[0 .. 0]
+  check findAllBounds("@", re"(a*?)+@") == @[0 .. 0]
+  check findAllBounds("@", re"(a*?)+?@") == @[0 .. 0]
 
 test "tcaptures":
   check "ab".matchWithCapt(re"(a)b") == @[@["a"]]

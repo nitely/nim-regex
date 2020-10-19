@@ -1,3 +1,11 @@
+v0.17.0
+==================
+
+* Removes macro usage for regular function APIs
+* Adds `match` block macro
+* Fix: sub-matches with nested optional operators
+  (ex: `(a?)*`) to work the same as PCRE
+
 v0.16.2
 ==================
 

@@ -1,6 +1,6 @@
 # Package
 
-version = "0.16.2"
+version = "0.17.0"
 author = "Esteban Castro Borsani (@nitely)"
 description = "Linear time regex matching"
 license = "MIT"

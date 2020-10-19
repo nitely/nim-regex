@@ -141,6 +141,13 @@ when (NimMajor, NimMinor) >= (1, 1):
       match txt, rex"(\w)+":
         m = true
       check m
+    block:
+      (func () = 
+        var m = false
+        var txt = "abc"
+        match txt, rex"(\w)+":
+          m = true
+        check m)()
   
   test "tmatch_macro_captures":
     check matchMacroCapt("ab", rex"(a)b") == @["a"]

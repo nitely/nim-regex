@@ -109,12 +109,13 @@ function main() {
     title="NodeKind = enum
   reChar, reCharCi, reJoiner, reGroupStart, reGroupEnd, reOr, reZeroOrMore,
   reOneOrMore, reZeroOrOne, reRepRange, reStartSym, reEndSym, reStartSymML,
-  reEndSymML, reStart, reEnd, reWordBoundary, reNotWordBoundary, reWord, reDigit,
-  reWhiteSpace, reUCC, reNotAlphaNum, reNotDigit, reNotWhiteSpace, reNotUCC, reAny,
-  reAnyNl, reWordBoundaryAscii, reNotWordBoundaryAscii, reWordAscii, reDigitAscii,
-  reWhiteSpaceAscii, reNotAlphaNumAscii, reNotDigitAscii, reNotWhiteSpaceAscii,
-  reAnyAscii, reAnyNlAscii, reInSet, reNotSet, reLookahead, reLookbehind,
-  reNotLookahead, reNotLookbehind, reSkip, reEoe"><wbr />Node<wbr />Kind<span class="attachedType"></span></a></li>
+  reEndSymML, reStart, reEnd, reWordBoundary, reNotWordBoundary, reWord,
+  reDigit, reWhiteSpace, reUCC, reNotAlphaNum, reNotDigit, reNotWhiteSpace,
+  reNotUCC, reAny, reAnyNl, reWordBoundaryAscii, reNotWordBoundaryAscii,
+  reWordAscii, reDigitAscii, reWhiteSpaceAscii, reNotAlphaNumAscii,
+  reNotDigitAscii, reNotWhiteSpaceAscii, reAnyAscii, reAnyNlAscii, reInSet,
+  reNotSet, reLookahead, reLookbehind, reNotLookahead, reNotLookbehind, reSkip,
+  reEoe"><wbr />Node<wbr />Kind<span class="attachedType"></span></a></li>
   <li><a class="reference" href="#NodeUid"
     title="NodeUid = int16"><wbr />Node<wbr />Uid<span class="attachedType"></span></a></li>
   <li><a class="reference" href="#Node"
@@ -143,20 +144,20 @@ function main() {
     title="opKind = {reJoiner, reOr, reZeroOrMore, reOneOrMore, reZeroOrOne, reRepRange}"><wbr />op<wbr />Kind<span class="attachedType"></span></a></li>
   <li><a class="reference" href="#assertionKind"
     title="assertionKind = {reStartSym, reEndSym, reStartSymML, reEndSymML, reStart, reEnd,
-               reWordBoundary, reNotWordBoundary, reWordBoundaryAscii,
-               reNotWordBoundaryAscii, reLookahead, reLookbehind, reNotLookahead,
-               reNotLookbehind}"><wbr />assertion<wbr />Kind<span class="attachedType"></span></a></li>
+                 reWordBoundary, reNotWordBoundary, reWordBoundaryAscii,
+                 reNotWordBoundaryAscii, reLookahead, reLookbehind,
+                 reNotLookahead, reNotLookbehind}"><wbr />assertion<wbr />Kind<span class="attachedType"></span></a></li>
   <li><a class="reference" href="#shorthandKind"
-    title="shorthandKind = {reWord, reDigit, reWhiteSpace, reUCC, reNotAlphaNum, reNotDigit,
-               reNotWhiteSpace, reNotUCC, reWordAscii, reDigitAscii,
-               reWhiteSpaceAscii, reNotAlphaNumAscii, reNotDigitAscii,
-               reNotWhiteSpaceAscii}"><wbr />shorthand<wbr />Kind<span class="attachedType"></span></a></li>
+    title="shorthandKind = {reWord, reDigit, reWhiteSpace, reUCC, reNotAlphaNum,
+                 reNotDigit, reNotWhiteSpace, reNotUCC, reWordAscii,
+                 reDigitAscii, reWhiteSpaceAscii, reNotAlphaNumAscii,
+                 reNotDigitAscii, reNotWhiteSpaceAscii}"><wbr />shorthand<wbr />Kind<span class="attachedType"></span></a></li>
   <li><a class="reference" href="#matchableKind"
-    title="matchableKind = {reChar, reCharCi, reWord, reDigit, reWhiteSpace, reUCC, reNotAlphaNum,
-               reNotDigit, reNotWhiteSpace, reNotUCC, reAny, reAnyNl, reInSet,
-               reNotSet, reWordAscii, reDigitAscii, reWhiteSpaceAscii,
-               reNotAlphaNumAscii, reNotDigitAscii, reNotWhiteSpaceAscii,
-               reAnyAscii, reAnyNlAscii}"><wbr />matchable<wbr />Kind<span class="attachedType"></span></a></li>
+    title="matchableKind = {reChar, reCharCi, reWord, reDigit, reWhiteSpace, reUCC,
+                 reNotAlphaNum, reNotDigit, reNotWhiteSpace, reNotUCC, reAny,
+                 reAnyNl, reInSet, reNotSet, reWordAscii, reDigitAscii,
+                 reWhiteSpaceAscii, reNotAlphaNumAscii, reNotDigitAscii,
+                 reNotWhiteSpaceAscii, reAnyAscii, reAnyNlAscii}"><wbr />matchable<wbr />Kind<span class="attachedType"></span></a></li>
   <li><a class="reference" href="#repetitionKind"
     title="repetitionKind = {reZeroOrMore, reOneOrMore, reRepRange}"><wbr />repetition<wbr />Kind<span class="attachedType"></span></a></li>
   <li><a class="reference" href="#groupKind"
@@ -167,26 +168,53 @@ function main() {
 <li>
   <a class="reference reference-toplevel" href="#13" id="63">Funcs</a>
   <ul class="simple simple-toc-section">
-      <li><a class="reference" href="#toCharNode%2CRune"
-    title="toCharNode(r: Rune): Node"><wbr />to<wbr />Char<wbr />Node<span class="attachedType">Node</span></a></li>
-  <li><a class="reference" href="#initJoinerNode"
-    title="initJoinerNode(): Node"><wbr />init<wbr />Joiner<wbr />Node<span class="attachedType">Node</span></a></li>
-  <li><a class="reference" href="#initEoeNode"
-    title="initEoeNode(): Node"><wbr />init<wbr />Eoe<wbr />Node<span class="attachedType">Node</span></a></li>
-  <li><a class="reference" href="#initSetNode"
-    title="initSetNode(): Node"><wbr />init<wbr />Set<wbr />Node<span class="attachedType">Node</span></a></li>
-  <li><a class="reference" href="#initNotSetNode"
-    title="initNotSetNode(): Node"><wbr />init<wbr />Not<wbr />Set<wbr />Node<span class="attachedType">Node</span></a></li>
-  <li><a class="reference" href="#initGroupStart%2Cstring%2Cseq%5BFlag%5D"
-    title="initGroupStart(name: string = &quot;&quot;; flags: seq[Flag] = @[]; isCapturing = true): Node"><wbr />init<wbr />Group<wbr />Start<span class="attachedType">Node</span></a></li>
-  <li><a class="reference" href="#initSkipNode%2CopenArray%5Bint16%5D"
-    title="initSkipNode(next: openArray[int16]): Node"><wbr />init<wbr />Skip<wbr />Node<span class="attachedType">Node</span></a></li>
-  <li><a class="reference" href="#isEmpty%2CNode"
-    title="isEmpty(n: Node): bool"><wbr />is<wbr />Empty<span class="attachedType">Node</span></a></li>
-  <li><a class="reference" href="#toString%2CNode"
-    title="toString(n: Node): string"><wbr />to<wbr />String<span class="attachedType">Node</span></a></li>
+      <ul class="simple nested-toc-section">initNotSetNode
+      <li><a class="reference" href="#initNotSetNode"
+    title="initNotSetNode(): Node">initNotSetNode<span class="attachedType">Node</span></a></li>
+
+  </ul>
+  <ul class="simple nested-toc-section">initEoeNode
+      <li><a class="reference" href="#initEoeNode"
+    title="initEoeNode(): Node">initEoeNode<span class="attachedType">Node</span></a></li>
+
+  </ul>
+  <ul class="simple nested-toc-section">initSkipNode
+      <li><a class="reference" href="#initSkipNode%2CopenArray%5Bint16%5D"
+    title="initSkipNode(next: openArray[int16]): Node">initSkipNode,openArray[int16]<span class="attachedType">Node</span></a></li>
+
+  </ul>
+  <ul class="simple nested-toc-section">initGroupStart
+      <li><a class="reference" href="#initGroupStart%2Cstring%2Cseq%5BFlag%5D"
+    title="initGroupStart(name: string = &quot;&quot;; flags: seq[Flag] = @[]; isCapturing = true): Node">initGroupStart,string,seq[Flag]<span class="attachedType">Node</span></a></li>
+
+  </ul>
+  <ul class="simple nested-toc-section">initJoinerNode
+      <li><a class="reference" href="#initJoinerNode"
+    title="initJoinerNode(): Node">initJoinerNode<span class="attachedType">Node</span></a></li>
+
+  </ul>
+  <ul class="simple nested-toc-section">initSetNode
+      <li><a class="reference" href="#initSetNode"
+    title="initSetNode(): Node">initSetNode<span class="attachedType">Node</span></a></li>
+
+  </ul>
+  <ul class="simple nested-toc-section">toString
+      <li><a class="reference" href="#toString%2CNode"
+    title="toString(n: Node): string">toString,Node<span class="attachedType">Node</span></a></li>
   <li><a class="reference" href="#toString%2Cseq%5BNode%5D"
-    title="toString(n: seq[Node]): string"><wbr />to<wbr />String<span class="attachedType">Node</span></a></li>
+    title="toString(n: seq[Node]): string">toString,seq[Node]<span class="attachedType">Node</span></a></li>
+
+  </ul>
+  <ul class="simple nested-toc-section">isEmpty
+      <li><a class="reference" href="#isEmpty%2CNode"
+    title="isEmpty(n: Node): bool">isEmpty,Node<span class="attachedType">Node</span></a></li>
+
+  </ul>
+  <ul class="simple nested-toc-section">toCharNode
+      <li><a class="reference" href="#toCharNode%2CRune"
+    title="toCharNode(r: Rune): Node">toCharNode,Rune<span class="attachedType">Node</span></a></li>
+
+  </ul>
 
   </ul>
 </li>
@@ -220,12 +248,13 @@ function main() {
 <dt><pre><a href="nodetype.html#NodeKind"><span class="Identifier">NodeKind</span></a> <span class="Other">=</span> <span class="Keyword">enum</span>
   <span class="Identifier">reChar</span><span class="Other">,</span> <span class="Identifier">reCharCi</span><span class="Other">,</span> <span class="Identifier">reJoiner</span><span class="Other">,</span> <span class="Identifier">reGroupStart</span><span class="Other">,</span> <span class="Identifier">reGroupEnd</span><span class="Other">,</span> <span class="Identifier">reOr</span><span class="Other">,</span> <span class="Identifier">reZeroOrMore</span><span class="Other">,</span>
   <span class="Identifier">reOneOrMore</span><span class="Other">,</span> <span class="Identifier">reZeroOrOne</span><span class="Other">,</span> <span class="Identifier">reRepRange</span><span class="Other">,</span> <span class="Identifier">reStartSym</span><span class="Other">,</span> <span class="Identifier">reEndSym</span><span class="Other">,</span> <span class="Identifier">reStartSymML</span><span class="Other">,</span>
-  <span class="Identifier">reEndSymML</span><span class="Other">,</span> <span class="Identifier">reStart</span><span class="Other">,</span> <span class="Identifier">reEnd</span><span class="Other">,</span> <span class="Identifier">reWordBoundary</span><span class="Other">,</span> <span class="Identifier">reNotWordBoundary</span><span class="Other">,</span> <span class="Identifier">reWord</span><span class="Other">,</span> <span class="Identifier">reDigit</span><span class="Other">,</span>
-  <span class="Identifier">reWhiteSpace</span><span class="Other">,</span> <span class="Identifier">reUCC</span><span class="Other">,</span> <span class="Identifier">reNotAlphaNum</span><span class="Other">,</span> <span class="Identifier">reNotDigit</span><span class="Other">,</span> <span class="Identifier">reNotWhiteSpace</span><span class="Other">,</span> <span class="Identifier">reNotUCC</span><span class="Other">,</span> <span class="Identifier">reAny</span><span class="Other">,</span>
-  <span class="Identifier">reAnyNl</span><span class="Other">,</span> <span class="Identifier">reWordBoundaryAscii</span><span class="Other">,</span> <span class="Identifier">reNotWordBoundaryAscii</span><span class="Other">,</span> <span class="Identifier">reWordAscii</span><span class="Other">,</span> <span class="Identifier">reDigitAscii</span><span class="Other">,</span>
-  <span class="Identifier">reWhiteSpaceAscii</span><span class="Other">,</span> <span class="Identifier">reNotAlphaNumAscii</span><span class="Other">,</span> <span class="Identifier">reNotDigitAscii</span><span class="Other">,</span> <span class="Identifier">reNotWhiteSpaceAscii</span><span class="Other">,</span>
-  <span class="Identifier">reAnyAscii</span><span class="Other">,</span> <span class="Identifier">reAnyNlAscii</span><span class="Other">,</span> <span class="Identifier">reInSet</span><span class="Other">,</span> <span class="Identifier">reNotSet</span><span class="Other">,</span> <span class="Identifier">reLookahead</span><span class="Other">,</span> <span class="Identifier">reLookbehind</span><span class="Other">,</span>
-  <span class="Identifier">reNotLookahead</span><span class="Other">,</span> <span class="Identifier">reNotLookbehind</span><span class="Other">,</span> <span class="Identifier">reSkip</span><span class="Other">,</span> <span class="Identifier">reEoe</span></pre></dt>
+  <span class="Identifier">reEndSymML</span><span class="Other">,</span> <span class="Identifier">reStart</span><span class="Other">,</span> <span class="Identifier">reEnd</span><span class="Other">,</span> <span class="Identifier">reWordBoundary</span><span class="Other">,</span> <span class="Identifier">reNotWordBoundary</span><span class="Other">,</span> <span class="Identifier">reWord</span><span class="Other">,</span>
+  <span class="Identifier">reDigit</span><span class="Other">,</span> <span class="Identifier">reWhiteSpace</span><span class="Other">,</span> <span class="Identifier">reUCC</span><span class="Other">,</span> <span class="Identifier">reNotAlphaNum</span><span class="Other">,</span> <span class="Identifier">reNotDigit</span><span class="Other">,</span> <span class="Identifier">reNotWhiteSpace</span><span class="Other">,</span>
+  <span class="Identifier">reNotUCC</span><span class="Other">,</span> <span class="Identifier">reAny</span><span class="Other">,</span> <span class="Identifier">reAnyNl</span><span class="Other">,</span> <span class="Identifier">reWordBoundaryAscii</span><span class="Other">,</span> <span class="Identifier">reNotWordBoundaryAscii</span><span class="Other">,</span>
+  <span class="Identifier">reWordAscii</span><span class="Other">,</span> <span class="Identifier">reDigitAscii</span><span class="Other">,</span> <span class="Identifier">reWhiteSpaceAscii</span><span class="Other">,</span> <span class="Identifier">reNotAlphaNumAscii</span><span class="Other">,</span>
+  <span class="Identifier">reNotDigitAscii</span><span class="Other">,</span> <span class="Identifier">reNotWhiteSpaceAscii</span><span class="Other">,</span> <span class="Identifier">reAnyAscii</span><span class="Other">,</span> <span class="Identifier">reAnyNlAscii</span><span class="Other">,</span> <span class="Identifier">reInSet</span><span class="Other">,</span>
+  <span class="Identifier">reNotSet</span><span class="Other">,</span> <span class="Identifier">reLookahead</span><span class="Other">,</span> <span class="Identifier">reLookbehind</span><span class="Other">,</span> <span class="Identifier">reNotLookahead</span><span class="Other">,</span> <span class="Identifier">reNotLookbehind</span><span class="Other">,</span> <span class="Identifier">reSkip</span><span class="Other">,</span>
+  <span class="Identifier">reEoe</span></pre></dt>
 <dd>
 
 
@@ -274,30 +303,30 @@ function main() {
 </dd>
 <a id="assertionKind"></a>
 <dt><pre><a href="nodetype.html#assertionKind"><span class="Identifier">assertionKind</span></a> <span class="Other">=</span> <span class="Other">{</span><span class="DecNumber">reStartSym</span><span class="Other">,</span> <span class="DecNumber">reEndSym</span><span class="Other">,</span> <span class="DecNumber">reStartSymML</span><span class="Other">,</span> <span class="DecNumber">reEndSymML</span><span class="Other">,</span> <span class="DecNumber">reStart</span><span class="Other">,</span> <span class="DecNumber">reEnd</span><span class="Other">,</span>
-               <span class="DecNumber">reWordBoundary</span><span class="Other">,</span> <span class="DecNumber">reNotWordBoundary</span><span class="Other">,</span> <span class="DecNumber">reWordBoundaryAscii</span><span class="Other">,</span>
-               <span class="DecNumber">reNotWordBoundaryAscii</span><span class="Other">,</span> <span class="DecNumber">reLookahead</span><span class="Other">,</span> <span class="DecNumber">reLookbehind</span><span class="Other">,</span> <span class="DecNumber">reNotLookahead</span><span class="Other">,</span>
-               <span class="DecNumber">reNotLookbehind</span><span class="Other">}</span></pre></dt>
+                 <span class="DecNumber">reWordBoundary</span><span class="Other">,</span> <span class="DecNumber">reNotWordBoundary</span><span class="Other">,</span> <span class="DecNumber">reWordBoundaryAscii</span><span class="Other">,</span>
+                 <span class="DecNumber">reNotWordBoundaryAscii</span><span class="Other">,</span> <span class="DecNumber">reLookahead</span><span class="Other">,</span> <span class="DecNumber">reLookbehind</span><span class="Other">,</span>
+                 <span class="DecNumber">reNotLookahead</span><span class="Other">,</span> <span class="DecNumber">reNotLookbehind</span><span class="Other">}</span></pre></dt>
 <dd>
 
 
 
 </dd>
 <a id="shorthandKind"></a>
-<dt><pre><a href="nodetype.html#shorthandKind"><span class="Identifier">shorthandKind</span></a> <span class="Other">=</span> <span class="Other">{</span><span class="DecNumber">reWord</span><span class="Other">,</span> <span class="DecNumber">reDigit</span><span class="Other">,</span> <span class="DecNumber">reWhiteSpace</span><span class="Other">,</span> <span class="DecNumber">reUCC</span><span class="Other">,</span> <span class="DecNumber">reNotAlphaNum</span><span class="Other">,</span> <span class="DecNumber">reNotDigit</span><span class="Other">,</span>
-               <span class="DecNumber">reNotWhiteSpace</span><span class="Other">,</span> <span class="DecNumber">reNotUCC</span><span class="Other">,</span> <span class="DecNumber">reWordAscii</span><span class="Other">,</span> <span class="DecNumber">reDigitAscii</span><span class="Other">,</span>
-               <span class="DecNumber">reWhiteSpaceAscii</span><span class="Other">,</span> <span class="DecNumber">reNotAlphaNumAscii</span><span class="Other">,</span> <span class="DecNumber">reNotDigitAscii</span><span class="Other">,</span>
-               <span class="DecNumber">reNotWhiteSpaceAscii</span><span class="Other">}</span></pre></dt>
+<dt><pre><a href="nodetype.html#shorthandKind"><span class="Identifier">shorthandKind</span></a> <span class="Other">=</span> <span class="Other">{</span><span class="DecNumber">reWord</span><span class="Other">,</span> <span class="DecNumber">reDigit</span><span class="Other">,</span> <span class="DecNumber">reWhiteSpace</span><span class="Other">,</span> <span class="DecNumber">reUCC</span><span class="Other">,</span> <span class="DecNumber">reNotAlphaNum</span><span class="Other">,</span>
+                 <span class="DecNumber">reNotDigit</span><span class="Other">,</span> <span class="DecNumber">reNotWhiteSpace</span><span class="Other">,</span> <span class="DecNumber">reNotUCC</span><span class="Other">,</span> <span class="DecNumber">reWordAscii</span><span class="Other">,</span>
+                 <span class="DecNumber">reDigitAscii</span><span class="Other">,</span> <span class="DecNumber">reWhiteSpaceAscii</span><span class="Other">,</span> <span class="DecNumber">reNotAlphaNumAscii</span><span class="Other">,</span>
+                 <span class="DecNumber">reNotDigitAscii</span><span class="Other">,</span> <span class="DecNumber">reNotWhiteSpaceAscii</span><span class="Other">}</span></pre></dt>
 <dd>
 
 
 
 </dd>
 <a id="matchableKind"></a>
-<dt><pre><a href="nodetype.html#matchableKind"><span class="Identifier">matchableKind</span></a> <span class="Other">=</span> <span class="Other">{</span><span class="DecNumber">reChar</span><span class="Other">,</span> <span class="DecNumber">reCharCi</span><span class="Other">,</span> <span class="DecNumber">reWord</span><span class="Other">,</span> <span class="DecNumber">reDigit</span><span class="Other">,</span> <span class="DecNumber">reWhiteSpace</span><span class="Other">,</span> <span class="DecNumber">reUCC</span><span class="Other">,</span> <span class="DecNumber">reNotAlphaNum</span><span class="Other">,</span>
-               <span class="DecNumber">reNotDigit</span><span class="Other">,</span> <span class="DecNumber">reNotWhiteSpace</span><span class="Other">,</span> <span class="DecNumber">reNotUCC</span><span class="Other">,</span> <span class="DecNumber">reAny</span><span class="Other">,</span> <span class="DecNumber">reAnyNl</span><span class="Other">,</span> <span class="DecNumber">reInSet</span><span class="Other">,</span>
-               <span class="DecNumber">reNotSet</span><span class="Other">,</span> <span class="DecNumber">reWordAscii</span><span class="Other">,</span> <span class="DecNumber">reDigitAscii</span><span class="Other">,</span> <span class="DecNumber">reWhiteSpaceAscii</span><span class="Other">,</span>
-               <span class="DecNumber">reNotAlphaNumAscii</span><span class="Other">,</span> <span class="DecNumber">reNotDigitAscii</span><span class="Other">,</span> <span class="DecNumber">reNotWhiteSpaceAscii</span><span class="Other">,</span>
-               <span class="DecNumber">reAnyAscii</span><span class="Other">,</span> <span class="DecNumber">reAnyNlAscii</span><span class="Other">}</span></pre></dt>
+<dt><pre><a href="nodetype.html#matchableKind"><span class="Identifier">matchableKind</span></a> <span class="Other">=</span> <span class="Other">{</span><span class="DecNumber">reChar</span><span class="Other">,</span> <span class="DecNumber">reCharCi</span><span class="Other">,</span> <span class="DecNumber">reWord</span><span class="Other">,</span> <span class="DecNumber">reDigit</span><span class="Other">,</span> <span class="DecNumber">reWhiteSpace</span><span class="Other">,</span> <span class="DecNumber">reUCC</span><span class="Other">,</span>
+                 <span class="DecNumber">reNotAlphaNum</span><span class="Other">,</span> <span class="DecNumber">reNotDigit</span><span class="Other">,</span> <span class="DecNumber">reNotWhiteSpace</span><span class="Other">,</span> <span class="DecNumber">reNotUCC</span><span class="Other">,</span> <span class="DecNumber">reAny</span><span class="Other">,</span>
+                 <span class="DecNumber">reAnyNl</span><span class="Other">,</span> <span class="DecNumber">reInSet</span><span class="Other">,</span> <span class="DecNumber">reNotSet</span><span class="Other">,</span> <span class="DecNumber">reWordAscii</span><span class="Other">,</span> <span class="DecNumber">reDigitAscii</span><span class="Other">,</span>
+                 <span class="DecNumber">reWhiteSpaceAscii</span><span class="Other">,</span> <span class="DecNumber">reNotAlphaNumAscii</span><span class="Other">,</span> <span class="DecNumber">reNotDigitAscii</span><span class="Other">,</span>
+                 <span class="DecNumber">reNotWhiteSpaceAscii</span><span class="Other">,</span> <span class="DecNumber">reAnyAscii</span><span class="Other">,</span> <span class="DecNumber">reAnyNlAscii</span><span class="Other">}</span></pre></dt>
 <dd>
 
 
@@ -358,8 +387,8 @@ return a negated set <tt class="docutils literal"><span class="pre">Node</span><
 
 </dd>
 <a id="initGroupStart,string,seq[Flag]"></a>
-<dt><pre><span class="Keyword">func</span> <a href="#initGroupStart%2Cstring%2Cseq%5BFlag%5D"><span class="Identifier">initGroupStart</span></a><span class="Other">(</span><span class="Identifier">name</span><span class="Other">:</span> <span class="Identifier">string</span> <span class="Other">=</span> <span class="StringLit">&quot;&quot;</span><span class="Other">;</span> <span class="Identifier">flags</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><a href="nodetype.html#Flag"><span class="Identifier">Flag</span></a><span class="Other">]</span> <span class="Other">=</span> <span class="Operator">@</span><span class="Other">[</span><span class="Other">]</span><span class="Other">;</span> <span class="Identifier">isCapturing</span> <span class="Other">=</span> <span class="Identifier">true</span><span class="Other">)</span><span class="Other">:</span> <a href="nodetype.html#Node"><span class="Identifier">Node</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma">
-    <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<dt><pre><span class="Keyword">func</span> <a href="#initGroupStart%2Cstring%2Cseq%5BFlag%5D"><span class="Identifier">initGroupStart</span></a><span class="Other">(</span><span class="Identifier">name</span><span class="Other">:</span> <span class="Identifier">string</span> <span class="Other">=</span> <span class="StringLit">&quot;&quot;</span><span class="Other">;</span> <span class="Identifier">flags</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><a href="nodetype.html#Flag"><span class="Identifier">Flag</span></a><span class="Other">]</span> <span class="Other">=</span> <span class="Operator">@</span><span class="Other">[</span><span class="Other">]</span><span class="Other">;</span>
+                    <span class="Identifier">isCapturing</span> <span class="Other">=</span> <span class="Identifier">true</span><span class="Other">)</span><span class="Other">:</span> <a href="nodetype.html#Node"><span class="Identifier">Node</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
 
 return a <tt class="docutils literal"><span class="pre">reGroupStart</span></tt> node
@@ -403,7 +432,7 @@ return the string representation of a <tt class="docutils literal"><span class="
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br/>
-        <small style="color: var(--hint);">Made with Nim. Generated: 2020-08-12 16:24:40 UTC</small>
+        <small style="color: var(--hint);">Made with Nim. Generated: 2020-10-19 06:46:09 UTC</small>
       </div>
     </div>
   </div>

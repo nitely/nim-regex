@@ -1,1 +1,1 @@
-matchImpl	regex/nfamacro.html#matchImpl,string,,RegexMatch,,int	nfamacro: matchImpl(text: string; regex: static Regex; m: var RegexMatch;\n          flags: static MatchFlags; start = 0): bool	
+matchImpl	regex/nfamacro.html#matchImpl,NimNode,NimNode,NimNode	nfamacro: matchImpl(text, expLit, body: NimNode): NimNode	

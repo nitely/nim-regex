@@ -63,7 +63,7 @@ function main() {
 <div class="document" id="documentId">
   <div class="container">
     <h1 class="title">Index</h1>
-    Modules: <a href="regex.html">regex</a>, <a href="regex/common.html">regex/common</a>, <a href="regex/exptransformation.html">regex/exptransformation</a>, <a href="regex/litopt.html">regex/litopt</a>, <a href="regex/nfa.html">regex/nfa</a>, <a href="regex/nfafindall.html">regex/nfafindall</a>, <a href="regex/nfamacro.html">regex/nfamacro</a>, <a href="regex/nfamatch.html">regex/nfamatch</a>, <a href="regex/nfatype.html">regex/nfatype</a>, <a href="regex/nodematch.html">regex/nodematch</a>, <a href="regex/nodetype.html">regex/nodetype</a>, <a href="regex/parser.html">regex/parser</a>, <a href="regex/scanner.html">regex/scanner</a>.<br/><p /><h2>API symbols</h2>
+    Modules: <a href="regex.html">regex</a>, <a href="regex/common.html">regex/common</a>, <a href="regex/compiler.html">regex/compiler</a>, <a href="regex/exptransformation.html">regex/exptransformation</a>, <a href="regex/litopt.html">regex/litopt</a>, <a href="regex/nfa.html">regex/nfa</a>, <a href="regex/nfafindall.html">regex/nfafindall</a>, <a href="regex/nfamacro.html">regex/nfamacro</a>, <a href="regex/nfamatch.html">regex/nfamatch</a>, <a href="regex/nfatype.html">regex/nfatype</a>, <a href="regex/nodematch.html">regex/nodematch</a>, <a href="regex/nodetype.html">regex/nodetype</a>, <a href="regex/parser.html">regex/parser</a>, <a href="regex/scanner.html">regex/scanner</a>.<br/><p /><h2>API symbols</h2>
 <dl><dt><a name="%60%25%25%60" href="#%60%25%25%60"><span>`%%`:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="common: `%%`(formatstr: string; a: openArray[string]): string" href="regex/common.html#%25%25%2Cstring%2CopenArray%5Bstring%5D">common: `%%`(formatstr: string; a: openArray[string]): string</a></li>
@@ -134,8 +134,6 @@ function main() {
           </ul></dd>
 <dt><a name="contains" href="#contains"><span>contains:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
-          data-doc-search-tag="regex: contains(s: string; pattern: static Regex): bool" href="regex.html#contains%2Cstring%2C">regex: contains(s: string; pattern: static Regex): bool</a></li>
-          <li><a class="reference external"
           data-doc-search-tag="regex: contains(s: string; pattern: Regex): bool" href="regex.html#contains%2Cstring%2CRegex">regex: contains(s: string; pattern: Regex): bool</a></li>
           </ul></dd>
 <dt><a name="curr" href="#curr"><span>curr:</span></a></dt><dd><ul class="simple">
@@ -148,8 +146,6 @@ function main() {
           </ul></dd>
 <dt><a name="endsWith" href="#endsWith"><span>endsWith:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
-          data-doc-search-tag="regex: endsWith(s: string; pattern: static Regex): bool" href="regex.html#endsWith%2Cstring%2C">regex: endsWith(s: string; pattern: static Regex): bool</a></li>
-          <li><a class="reference external"
           data-doc-search-tag="regex: endsWith(s: string; pattern: Regex): bool" href="regex.html#endsWith%2Cstring%2CRegex">regex: endsWith(s: string; pattern: Regex): bool</a></li>
           </ul></dd>
 <dt><a name="Enfa" href="#Enfa"><span>Enfa:</span></a></dt><dd><ul class="simple">
@@ -166,12 +162,12 @@ function main() {
           </ul></dd>
 <dt><a name="fillMatchImpl" href="#fillMatchImpl"><span>fillMatchImpl:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
-          data-doc-search-tag="nfafindall: fillMatchImpl(m: var RegexMatch; mi: MatchItemIdx; ms: RegexMatches; regex: Regex)" href="regex/nfafindall.html#fillMatchImpl%2CRegexMatch%2CMatchItemIdx%2CRegexMatches%2CRegex">nfafindall: fillMatchImpl(m: var RegexMatch; mi: MatchItemIdx; ms: RegexMatches; regex: Regex)</a></li>
+          data-doc-search-tag="nfafindall: fillMatchImpl(m: var RegexMatch; mi: MatchItemIdx; ms: RegexMatches;
+              regex: Regex)" href="regex/nfafindall.html#fillMatchImpl%2CRegexMatch%2CMatchItemIdx%2CRegexMatches%2CRegex">nfafindall: fillMatchImpl(m: var RegexMatch; mi: MatchItemIdx; ms: RegexMatches;
+              regex: Regex)</a></li>
           </ul></dd>
 <dt><a name="find" href="#find"><span>find:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
-          data-doc-search-tag="regex: find(s: string; pattern: static Regex; m: var RegexMatch; start = 0): bool" href="regex.html#find%2Cstring%2C%2CRegexMatch%2Cint">regex: find(s: string; pattern: static Regex; m: var RegexMatch; start = 0): bool</a></li>
-          <li><a class="reference external"
           data-doc-search-tag="regex: find(s: string; pattern: Regex; m: var RegexMatch; start = 0): bool" href="regex.html#find%2Cstring%2CRegex%2CRegexMatch%2Cint">regex: find(s: string; pattern: Regex; m: var RegexMatch; start = 0): bool</a></li>
           <li><a class="reference external"
           data-doc-search-tag="scanner: find(sc: Scanner[Rune]; r: Rune): int" href="regex/scanner.html#find%2CScanner%5BRune%5D%2CRune">scanner: find(sc: Scanner[Rune]; r: Rune): int</a></li>
@@ -194,9 +190,9 @@ function main() {
           </ul></dd>
 <dt><a name="findSomeImpl" href="#findSomeImpl"><span>findSomeImpl:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
-          data-doc-search-tag="nfafindall: findSomeImpl(text: string; regex: Regex; ms: var RegexMatches; start: Natural = 0;
-             flags: set[MatchFlag] = {}): int" href="regex/nfafindall.html#findSomeImpl%2Cstring%2CRegex%2CRegexMatches%2CNatural%2Cset%5BMatchFlag%5D">nfafindall: findSomeImpl(text: string; regex: Regex; ms: var RegexMatches; start: Natural = 0;
-             flags: set[MatchFlag] = {}): int</a></li>
+          data-doc-search-tag="nfafindall: findSomeImpl(text: string; regex: Regex; ms: var RegexMatches;
+             start: Natural = 0; flags: set[MatchFlag] = {}): int" href="regex/nfafindall.html#findSomeImpl%2Cstring%2CRegex%2CRegexMatches%2CNatural%2Cset%5BMatchFlag%5D">nfafindall: findSomeImpl(text: string; regex: Regex; ms: var RegexMatches;
+             start: Natural = 0; flags: set[MatchFlag] = {}): int</a></li>
           </ul></dd>
 <dt><a name="findSomeOptImpl" href="#findSomeOptImpl"><span>findSomeOptImpl:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -370,13 +366,11 @@ function main() {
           </ul></dd>
 <dt><a name="match" href="#match"><span>match:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
-          data-doc-search-tag="regex: match(s: string; pattern: static Regex): bool" href="regex.html#match%2Cstring%2C">regex: match(s: string; pattern: static Regex): bool</a></li>
-          <li><a class="reference external"
-          data-doc-search-tag="regex: match(s: string; pattern: static Regex; m: var RegexMatch; start = 0): bool" href="regex.html#match%2Cstring%2C%2CRegexMatch%2Cint">regex: match(s: string; pattern: static Regex; m: var RegexMatch; start = 0): bool</a></li>
-          <li><a class="reference external"
           data-doc-search-tag="regex: match(s: string; pattern: Regex): bool" href="regex.html#match%2Cstring%2CRegex">regex: match(s: string; pattern: Regex): bool</a></li>
           <li><a class="reference external"
           data-doc-search-tag="regex: match(s: string; pattern: Regex; m: var RegexMatch; start = 0): bool" href="regex.html#match%2Cstring%2CRegex%2CRegexMatch%2Cint">regex: match(s: string; pattern: Regex; m: var RegexMatch; start = 0): bool</a></li>
+          <li><a class="reference external"
+          data-doc-search-tag="regex: match(text: string; regex: RegexLit; body: untyped): untyped" href="regex.html#match.m%2Cstring%2CRegexLit%2Cuntyped">regex: match(text: string; regex: RegexLit; body: untyped): untyped</a></li>
           <li><a class="reference external"
           data-doc-search-tag="nodematch: match(n: Node; r: Rune): bool" href="regex/nodematch.html#match%2CNode%2CRune">nodematch: match(n: Node; r: Rune): bool</a></li>
           <li><a class="reference external"
@@ -396,13 +390,11 @@ function main() {
           </ul></dd>
 <dt><a name="matchImpl" href="#matchImpl"><span>matchImpl:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
-          data-doc-search-tag="nfamacro: matchImpl(text: string; regex: static Regex; m: var RegexMatch;
-          flags: static MatchFlags; start = 0): bool" href="regex/nfamacro.html#matchImpl%2Cstring%2C%2CRegexMatch%2C%2Cint">nfamacro: matchImpl(text: string; regex: static Regex; m: var RegexMatch;
-          flags: static MatchFlags; start = 0): bool</a></li>
+          data-doc-search-tag="nfamacro: matchImpl(text, expLit, body: NimNode): NimNode" href="regex/nfamacro.html#matchImpl%2CNimNode%2CNimNode%2CNimNode">nfamacro: matchImpl(text, expLit, body: NimNode): NimNode</a></li>
           <li><a class="reference external"
-          data-doc-search-tag="nfamatch: matchImpl(text: string; regex: Regex; m: var RegexMatch; flags: static MatchFlags;
-          start = 0): bool" href="regex/nfamatch.html#matchImpl%2Cstring%2CRegex%2CRegexMatch%2C%2Cint">nfamatch: matchImpl(text: string; regex: Regex; m: var RegexMatch; flags: static MatchFlags;
-          start = 0): bool</a></li>
+          data-doc-search-tag="nfamatch: matchImpl(text: string; regex: Regex; m: var RegexMatch;
+          flags: static MatchFlags; start = 0): bool" href="regex/nfamatch.html#matchImpl%2Cstring%2CRegex%2CRegexMatch%2CstaticMatchFlags%2Cint">nfamatch: matchImpl(text: string; regex: Regex; m: var RegexMatch;
+          flags: static MatchFlags; start = 0): bool</a></li>
           </ul></dd>
 <dt><a name="mfFindMatch" href="#mfFindMatch"><span>mfFindMatch:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -486,7 +478,7 @@ function main() {
           </ul></dd>
 <dt><a name="re" href="#re"><span>re:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
-          data-doc-search-tag="regex: re(s: static string): static[Regex]" href="regex.html#re">regex: re(s: static string): static[Regex]</a></li>
+          data-doc-search-tag="regex: re(s: static string): static[Regex]" href="regex.html#re%2Cstaticstring">regex: re(s: static string): static[Regex]</a></li>
           <li><a class="reference external"
           data-doc-search-tag="regex: re(s: string): Regex" href="regex.html#re%2Cstring">regex: re(s: string): Regex</a></li>
           </ul></dd>
@@ -513,6 +505,10 @@ function main() {
 <dt><a name="reCharCi" href="#reCharCi"><span>reCharCi:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="NodeKind.reCharCi" href="regex/nodetype.html#reCharCi">NodeKind.reCharCi</a></li>
+          </ul></dd>
+<dt><a name="reCt" href="#reCt"><span>reCt:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="compiler: reCt(s: string): Regex" href="regex/compiler.html#reCt%2Cstring">compiler: reCt(s: string): Regex</a></li>
           </ul></dd>
 <dt><a name="reDigit" href="#reDigit"><span>reDigit:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -546,6 +542,10 @@ function main() {
 <li><a class="reference external"
           data-doc-search-tag="common: RegexError" href="regex/common.html#RegexError">common: RegexError</a></li>
           </ul></dd>
+<dt><a name="RegexLit" href="#RegexLit"><span>RegexLit:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="nfatype: RegexLit" href="regex/nfatype.html#RegexLit">nfatype: RegexLit</a></li>
+          </ul></dd>
 <dt><a name="RegexMatch" href="#RegexMatch"><span>RegexMatch:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="nfatype: RegexMatch" href="regex/nfatype.html#RegexMatch">nfatype: RegexMatch</a></li>
@@ -561,6 +561,10 @@ function main() {
 <dt><a name="reGroupStart" href="#reGroupStart"><span>reGroupStart:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="NodeKind.reGroupStart" href="regex/nodetype.html#reGroupStart">NodeKind.reGroupStart</a></li>
+          </ul></dd>
+<dt><a name="reImpl" href="#reImpl"><span>reImpl:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="compiler: reImpl(s: string): Regex" href="regex/compiler.html#reImpl%2Cstring">compiler: reImpl(s: string): Regex</a></li>
           </ul></dd>
 <dt><a name="reInSet" href="#reInSet"><span>reInSet:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -640,7 +644,9 @@ function main() {
           </ul></dd>
 <dt><a name="replace" href="#replace"><span>replace:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
-          data-doc-search-tag="regex: replace(s: string; pattern: Regex; by: proc (m: RegexMatch; s: string): string; limit = 0): string" href="regex.html#replace%2Cstring%2CRegex%2Cproc%28RegexMatch%2Cstring%29%2Cint">regex: replace(s: string; pattern: Regex; by: proc (m: RegexMatch; s: string): string; limit = 0): string</a></li>
+          data-doc-search-tag="regex: replace(s: string; pattern: Regex; by: proc (m: RegexMatch; s: string): string;
+        limit = 0): string" href="regex.html#replace%2Cstring%2CRegex%2Cproc%28RegexMatch%2Cstring%29%2Cint">regex: replace(s: string; pattern: Regex; by: proc (m: RegexMatch; s: string): string;
+        limit = 0): string</a></li>
           <li><a class="reference external"
           data-doc-search-tag="regex: replace(s: string; pattern: Regex; by: string; limit = 0): string" href="regex.html#replace%2Cstring%2CRegex%2Cstring%2Cint">regex: replace(s: string; pattern: Regex; by: string; limit = 0): string</a></li>
           </ul></dd>
@@ -692,6 +698,10 @@ function main() {
 <li><a class="reference external"
           data-doc-search-tag="NodeKind.reWordBoundaryAscii" href="regex/nodetype.html#reWordBoundaryAscii">NodeKind.reWordBoundaryAscii</a></li>
           </ul></dd>
+<dt><a name="rex" href="#rex"><span>rex:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="regex: rex(s: string): RegexLit" href="regex.html#rex%2Cstring">regex: rex(s: string): RegexLit</a></li>
+          </ul></dd>
 <dt><a name="reZeroOrMore" href="#reZeroOrMore"><span>reZeroOrMore:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="NodeKind.reZeroOrMore" href="regex/nodetype.html#reZeroOrMore">NodeKind.reZeroOrMore</a></li>
@@ -726,8 +736,6 @@ function main() {
           </ul></dd>
 <dt><a name="startsWith" href="#startsWith"><span>startsWith:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
-          data-doc-search-tag="regex: startsWith(s: string; pattern: static Regex; start = 0): bool" href="regex.html#startsWith%2Cstring%2C%2Cint">regex: startsWith(s: string; pattern: static Regex; start = 0): bool</a></li>
-          <li><a class="reference external"
           data-doc-search-tag="regex: startsWith(s: string; pattern: Regex; start = 0): bool" href="regex.html#startsWith%2Cstring%2CRegex%2Cint">regex: startsWith(s: string; pattern: Regex; start = 0): bool</a></li>
           </ul></dd>
 <dt><a name="Submatches" href="#Submatches"><span>Submatches:</span></a></dt><dd><ul class="simple">
@@ -781,7 +789,7 @@ function main() {
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br/>
-        <small style="color: var(--hint);">Made with Nim. Generated: 2020-08-12 16:24:43 UTC</small>
+        <small style="color: var(--hint);">Made with Nim. Generated: 2020-10-19 06:46:16 UTC</small>
       </div>
     </div>
   </div>

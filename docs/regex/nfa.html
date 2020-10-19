@@ -118,12 +118,21 @@ function main() {
 <li>
   <a class="reference reference-toplevel" href="#13" id="63">Funcs</a>
   <ul class="simple simple-toc-section">
+      <ul class="simple nested-toc-section">eNfa
       <li><a class="reference" href="#eNfa%2Cseq%5BNode%5D"
-    title="eNfa(expression: seq[Node]): Enfa"><wbr />e<wbr />Nfa<span class="attachedType">Enfa</span></a></li>
-  <li><a class="reference" href="#eRemoval%2CEnfa%2CTransitions"
-    title="eRemoval(eNfa: Enfa; transitions: var Transitions): Nfa"><wbr />e<wbr />Removal<span class="attachedType">Enfa</span></a></li>
-  <li><a class="reference" href="#nfa2%2Cseq%5BNode%5D%2CTransitions"
-    title="nfa2(exp: seq[Node]; transitions: var Transitions): Nfa"><wbr />nfa2<span class="attachedType">Nfa</span></a></li>
+    title="eNfa(expression: seq[Node]): Enfa">eNfa,seq[Node]<span class="attachedType">Enfa</span></a></li>
+
+  </ul>
+  <ul class="simple nested-toc-section">eRemoval
+      <li><a class="reference" href="#eRemoval%2CEnfa%2CTransitions"
+    title="eRemoval(eNfa: Enfa; transitions: var Transitions): Nfa">eRemoval,Enfa,Transitions<span class="attachedType">Enfa</span></a></li>
+
+  </ul>
+  <ul class="simple nested-toc-section">nfa2
+      <li><a class="reference" href="#nfa2%2Cseq%5BNode%5D%2CTransitions"
+    title="nfa2(exp: seq[Node]; transitions: var Transitions): Nfa">nfa2,seq[Node],Transitions<span class="attachedType">Nfa</span></a></li>
+
+  </ul>
 
   </ul>
 </li>
@@ -194,15 +203,16 @@ Thompson's construction
 
 </dd>
 <a id="eRemoval,Enfa,Transitions"></a>
-<dt><pre><span class="Keyword">func</span> <a href="#eRemoval%2CEnfa%2CTransitions"><span class="Identifier">eRemoval</span></a><span class="Other">(</span><span class="Identifier">eNfa</span><span class="Other">:</span> <a href="nfa.html#Enfa"><span class="Identifier">Enfa</span></a><span class="Other">;</span> <span class="Identifier">transitions</span><span class="Other">:</span> <span class="Keyword">var</span> <a href="nfa.html#Transitions"><span class="Identifier">Transitions</span></a><span class="Other">)</span><span class="Other">:</span> <a href="nfa.html#Nfa"><span class="Identifier">Nfa</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<dt><pre><span class="Keyword">func</span> <a href="#eRemoval%2CEnfa%2CTransitions"><span class="Identifier">eRemoval</span></a><span class="Other">(</span><span class="Identifier">eNfa</span><span class="Other">:</span> <a href="nfa.html#Enfa"><span class="Identifier">Enfa</span></a><span class="Other">;</span> <span class="Identifier">transitions</span><span class="Other">:</span> <span class="Keyword">var</span> <a href="nfa.html#Transitions"><span class="Identifier">Transitions</span></a><span class="Other">)</span><span class="Other">:</span> <a href="nfa.html#Nfa"><span class="Identifier">Nfa</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span>
+    <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
 
 Remove e-transitions and return remaining state transtions and submatches, and zero matches. Transitions are added in matching order (BFS), which may help matching performance
 
 </dd>
 <a id="nfa2,seq[Node],Transitions"></a>
-<dt><pre><span class="Keyword">func</span> <a href="#nfa2%2Cseq%5BNode%5D%2CTransitions"><span class="Identifier">nfa2</span></a><span class="Other">(</span><span class="Identifier">exp</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><a href="nodetype.html#Node"><span class="Identifier">Node</span></a><span class="Other">]</span><span class="Other">;</span> <span class="Identifier">transitions</span><span class="Other">:</span> <span class="Keyword">var</span> <a href="nfa.html#Transitions"><span class="Identifier">Transitions</span></a><span class="Other">)</span><span class="Other">:</span> <a href="nfa.html#Nfa"><span class="Identifier">Nfa</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><a href="common.html#RegexError"><span class="Identifier">RegexError</span></a><span class="Other">]</span><span class="Other">,</span>
-    <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<dt><pre><span class="Keyword">func</span> <a href="#nfa2%2Cseq%5BNode%5D%2CTransitions"><span class="Identifier">nfa2</span></a><span class="Other">(</span><span class="Identifier">exp</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><a href="nodetype.html#Node"><span class="Identifier">Node</span></a><span class="Other">]</span><span class="Other">;</span> <span class="Identifier">transitions</span><span class="Other">:</span> <span class="Keyword">var</span> <a href="nfa.html#Transitions"><span class="Identifier">Transitions</span></a><span class="Other">)</span><span class="Other">:</span> <a href="nfa.html#Nfa"><span class="Identifier">Nfa</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma">
+    <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><a href="common.html#RegexError"><span class="Identifier">RegexError</span></a><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
 
 
@@ -218,7 +228,7 @@ Remove e-transitions and return remaining state transtions and submatches, and z
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br/>
-        <small style="color: var(--hint);">Made with Nim. Generated: 2020-08-12 16:24:40 UTC</small>
+        <small style="color: var(--hint);">Made with Nim. Generated: 2020-10-19 06:46:10 UTC</small>
       </div>
     </div>
   </div>

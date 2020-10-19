@@ -3,6 +3,7 @@ CaptNode	regex/nfatype.html#CaptNode	nfatype: CaptNode
 Capts	regex/nfatype.html#Capts	nfatype: Capts	
 Captures	regex/nfatype.html#Captures	nfatype: Captures	
 constructSubmatches	regex/nfatype.html#constructSubmatches,Captures,Capts,int,int	nfatype: constructSubmatches(captures: var Captures; capts: Capts; capt, size: int)	
+RegexLit	regex/nfatype.html#RegexLit	nfatype: RegexLit	
 Regex	regex/nfatype.html#Regex	nfatype: Regex	
 mfShortestMatch	regex/nfatype.html#mfShortestMatch	MatchFlag.mfShortestMatch	
 mfNoCaptures	regex/nfatype.html#mfNoCaptures	MatchFlag.mfNoCaptures	

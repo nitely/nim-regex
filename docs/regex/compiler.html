@@ -17,7 +17,7 @@
 <link href='https://fonts.googleapis.com/css?family=Source+Code+Pro:400,500,600' rel='stylesheet' type='text/css'/>
 
 <!-- CSS -->
-<title>regex/nodematch</title>
+<title>regex/compiler</title>
 <link rel="stylesheet" type="text/css" href="../nimdoc.out.css">
 
 <script type="text/javascript" src="../dochack.js"></script>
@@ -62,7 +62,7 @@ function main() {
 <body onload="main()">
 <div class="document" id="documentId">
   <div class="container">
-    <h1 class="title">regex/nodematch</h1>
+    <h1 class="title">regex/compiler</h1>
     <div class="row">
   <div class="three columns">
   <div class="theme-switch-wrapper">
@@ -100,21 +100,14 @@ function main() {
 <li>
   <a class="reference reference-toplevel" href="#13" id="63">Funcs</a>
   <ul class="simple simple-toc-section">
-      <ul class="simple nested-toc-section">isWord
-      <li><a class="reference" href="#isWord%2CRune"
-    title="isWord(r: Rune): bool">isWord,Rune<span class="attachedType"></span></a></li>
+      <ul class="simple nested-toc-section">reCt
+      <li><a class="reference" href="#reCt%2Cstring"
+    title="reCt(s: string): Regex">reCt,string<span class="attachedType"></span></a></li>
 
   </ul>
-  <ul class="simple nested-toc-section">swapCase
-      <li><a class="reference" href="#swapCase%2CRune"
-    title="swapCase(r: Rune): Rune">swapCase,Rune<span class="attachedType"></span></a></li>
-
-  </ul>
-  <ul class="simple nested-toc-section">match
-      <li><a class="reference" href="#match%2CNode%2CRune%2CRune"
-    title="match(n: Node; r: Rune; nxt: Rune): bool">match,Node,Rune,Rune<span class="attachedType"></span></a></li>
-  <li><a class="reference" href="#match%2CNode%2CRune"
-    title="match(n: Node; r: Rune): bool">match,Node,Rune<span class="attachedType"></span></a></li>
+  <ul class="simple nested-toc-section">reImpl
+      <li><a class="reference" href="#reImpl%2Cstring"
+    title="reImpl(s: string): Regex">reImpl,string<span class="attachedType"></span></a></li>
 
   </ul>
 
@@ -131,37 +124,23 @@ function main() {
   <div class="section" id="6">
 <h1><a class="toc-backref" href="#6">Imports</a></h1>
 <dl class="item">
-<a class="reference external" href="nodetype.html">nodetype</a>, <a class="reference external" href="common.html">common</a>
+<a class="reference external" href="parser.html">parser</a>, <a class="reference external" href="exptransformation.html">exptransformation</a>, <a class="reference external" href="nfatype.html">nfatype</a>, <a class="reference external" href="nfa.html">nfa</a>, <a class="reference external" href="litopt.html">litopt</a>
 </dl></div>
 <div class="section" id="13">
 <h1><a class="toc-backref" href="#13">Funcs</a></h1>
 <dl class="item">
-<a id="isWord,Rune"></a>
-<dt><pre><span class="Keyword">func</span> <a href="#isWord%2CRune"><span class="Identifier">isWord</span></a><span class="Other">(</span><span class="Identifier">r</span><span class="Other">:</span> <span class="Identifier">Rune</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">bool</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">inline</span><span class="Other">,</span> <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<a id="reImpl,string"></a>
+<dt><pre><span class="Keyword">func</span> <a href="#reImpl%2Cstring"><span class="Identifier">reImpl</span></a><span class="Other">(</span><span class="Identifier">s</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">)</span><span class="Other">:</span> <a href="nfatype.html#Regex"><span class="Identifier">Regex</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">inline</span><span class="Other">,</span> <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RegexError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
 
 
 
 </dd>
-<a id="match,Node,Rune,Rune"></a>
-<dt><pre><span class="Keyword">func</span> <a href="#match%2CNode%2CRune%2CRune"><span class="Identifier">match</span></a><span class="Other">(</span><span class="Identifier">n</span><span class="Other">:</span> <a href="nodetype.html#Node"><span class="Identifier">Node</span></a><span class="Other">;</span> <span class="Identifier">r</span><span class="Other">:</span> <span class="Identifier">Rune</span><span class="Other">;</span> <span class="Identifier">nxt</span><span class="Other">:</span> <span class="Identifier">Rune</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">bool</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">inline</span><span class="Other">,</span> <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
-<dd>
-
-match for <tt class="docutils literal"><span class="pre">Node</span></tt> of assertion kind. Return whether the node matches the current characters or not
-
-</dd>
-<a id="swapCase,Rune"></a>
-<dt><pre><span class="Keyword">func</span> <a href="#swapCase%2CRune"><span class="Identifier">swapCase</span></a><span class="Other">(</span><span class="Identifier">r</span><span class="Other">:</span> <span class="Identifier">Rune</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">Rune</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<a id="reCt,string"></a>
+<dt><pre><span class="Keyword">func</span> <a href="#reCt%2Cstring"><span class="Identifier">reCt</span></a><span class="Other">(</span><span class="Identifier">s</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">)</span><span class="Other">:</span> <a href="nfatype.html#Regex"><span class="Identifier">Regex</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">compileTime</span><span class="Other">,</span> <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RegexError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
 
 
-
-</dd>
-<a id="match,Node,Rune"></a>
-<dt><pre><span class="Keyword">func</span> <a href="#match%2CNode%2CRune"><span class="Identifier">match</span></a><span class="Other">(</span><span class="Identifier">n</span><span class="Other">:</span> <a href="nodetype.html#Node"><span class="Identifier">Node</span></a><span class="Other">;</span> <span class="Identifier">r</span><span class="Other">:</span> <span class="Identifier">Rune</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">bool</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">inline</span><span class="Other">,</span> <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
-<dd>
-
-match for <tt class="docutils literal"><span class="pre">Node</span></tt> of matchable kind. Return whether the node matches the current character or not
 
 </dd>
 

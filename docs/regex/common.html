@@ -112,16 +112,28 @@ function main() {
 <li>
   <a class="reference reference-toplevel" href="#12" id="62">Procs</a>
   <ul class="simple simple-toc-section">
+      <ul class="simple nested-toc-section"><=
+      <li><a class="reference" href="#%3C%3D%2CRune%2CRune"
+    title="`&lt;=`(x, y: Rune): bool"><=,Rune,Rune<span class="attachedType"></span></a></li>
+
+  </ul>
+  <ul class="simple nested-toc-section">toRune
       <li><a class="reference" href="#toRune%2Cstring"
-    title="toRune(s: string): Rune"><wbr />to<wbr />Rune<span class="attachedType"></span></a></li>
-  <li><a class="reference" href="#%3C%3D%2CRune%2CRune"
-    title="`&lt;=`(x, y: Rune): bool"><wbr />`&lt;=`<span class="attachedType"></span></a></li>
-  <li><a class="reference" href="#cmp%2CRune%2CRune"
-    title="cmp(x, y: Rune): int"><wbr />cmp<span class="attachedType"></span></a></li>
-  <li><a class="reference" href="#%25%25%2Cstring%2CopenArray%5Bstring%5D"
-    title="`%%`(formatstr: string; a: openArray[string]): string"><wbr />`%%`<span class="attachedType"></span></a></li>
+    title="toRune(s: string): Rune">toRune,string<span class="attachedType"></span></a></li>
+
+  </ul>
+  <ul class="simple nested-toc-section">cmp
+      <li><a class="reference" href="#cmp%2CRune%2CRune"
+    title="cmp(x, y: Rune): int">cmp,Rune,Rune<span class="attachedType"></span></a></li>
+
+  </ul>
+  <ul class="simple nested-toc-section">%%
+      <li><a class="reference" href="#%25%25%2Cstring%2CopenArray%5Bstring%5D"
+    title="`%%`(formatstr: string; a: openArray[string]): string">%%,string,openArray[string]<span class="attachedType"></span></a></li>
   <li><a class="reference" href="#%25%25%2Cstring%2Cstring"
-    title="`%%`(formatstr: string; a: string): string"><wbr />`%%`<span class="attachedType"></span></a></li>
+    title="`%%`(formatstr: string; a: string): string">%%,string,string<span class="attachedType"></span></a></li>
+
+  </ul>
 
   </ul>
 </li>
@@ -189,8 +201,8 @@ function main() {
 
 </dd>
 <a id="%%,string,openArray[string]"></a>
-<dt><pre><span class="Keyword">proc</span> <a href="#%25%25%2Cstring%2CopenArray%5Bstring%5D"><span class="Identifier">`%%`</span></a><span class="Other">(</span><span class="Identifier">formatstr</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">;</span> <span class="Identifier">a</span><span class="Other">:</span> <span class="Identifier">openArray</span><span class="Other">[</span><span class="Identifier">string</span><span class="Other">]</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">string</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">noSideEffect</span><span class="Other">,</span> <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span>
-    <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<dt><pre><span class="Keyword">proc</span> <a href="#%25%25%2Cstring%2CopenArray%5Bstring%5D"><span class="Identifier">`%%`</span></a><span class="Other">(</span><span class="Identifier">formatstr</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">;</span> <span class="Identifier">a</span><span class="Other">:</span> <span class="Identifier">openArray</span><span class="Other">[</span><span class="Identifier">string</span><span class="Other">]</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">string</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">noSideEffect</span><span class="Other">,</span>
+    <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
 
 same as <tt class="docutils literal"><span class="pre">&quot;$#&quot; % [&quot;foo&quot;]</span></tt> but returns empty string on error
@@ -213,7 +225,7 @@ same as <tt class="docutils literal"><span class="pre">&quot;$#&quot; % [&quot;f
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br/>
-        <small style="color: var(--hint);">Made with Nim. Generated: 2020-08-12 16:24:40 UTC</small>
+        <small style="color: var(--hint);">Made with Nim. Generated: 2020-10-19 06:46:09 UTC</small>
       </div>
     </div>
   </div>

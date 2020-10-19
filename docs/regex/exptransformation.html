@@ -110,10 +110,16 @@ function main() {
 <li>
   <a class="reference reference-toplevel" href="#13" id="63">Funcs</a>
   <ul class="simple simple-toc-section">
+      <ul class="simple nested-toc-section">toAtoms
       <li><a class="reference" href="#toAtoms%2Cseq%5BNode%5D%2CGroupsCapture"
-    title="toAtoms(exp: seq[Node]; groups: var GroupsCapture): seq[Node]"><wbr />to<wbr />Atoms<span class="attachedType">GroupsCapture</span></a></li>
-  <li><a class="reference" href="#transformExp%2Cseq%5BNode%5D%2CGroupsCapture"
-    title="transformExp(exp: seq[Node]; groups: var GroupsCapture): seq[Node]"><wbr />transform<wbr />Exp<span class="attachedType">GroupsCapture</span></a></li>
+    title="toAtoms(exp: seq[Node]; groups: var GroupsCapture): seq[Node]">toAtoms,seq[Node],GroupsCapture<span class="attachedType">GroupsCapture</span></a></li>
+
+  </ul>
+  <ul class="simple nested-toc-section">transformExp
+      <li><a class="reference" href="#transformExp%2Cseq%5BNode%5D%2CGroupsCapture"
+    title="transformExp(exp: seq[Node]; groups: var GroupsCapture): seq[Node]">transformExp,seq[Node],GroupsCapture<span class="attachedType">GroupsCapture</span></a></li>
+
+  </ul>
 
   </ul>
 </li>
@@ -157,8 +163,8 @@ function main() {
 
 </dd>
 <a id="transformExp,seq[Node],GroupsCapture"></a>
-<dt><pre><span class="Keyword">func</span> <a href="#transformExp%2Cseq%5BNode%5D%2CGroupsCapture"><span class="Identifier">transformExp</span></a><span class="Other">(</span><span class="Identifier">exp</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><a href="nodetype.html#Node"><span class="Identifier">Node</span></a><span class="Other">]</span><span class="Other">;</span> <span class="Identifier">groups</span><span class="Other">:</span> <span class="Keyword">var</span> <a href="exptransformation.html#GroupsCapture"><span class="Identifier">GroupsCapture</span></a><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><a href="nodetype.html#Node"><span class="Identifier">Node</span></a><span class="Other">]</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">inline</span><span class="Other">,</span>
-    <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RegexError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<dt><pre><span class="Keyword">func</span> <a href="#transformExp%2Cseq%5BNode%5D%2CGroupsCapture"><span class="Identifier">transformExp</span></a><span class="Other">(</span><span class="Identifier">exp</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><a href="nodetype.html#Node"><span class="Identifier">Node</span></a><span class="Other">]</span><span class="Other">;</span> <span class="Identifier">groups</span><span class="Other">:</span> <span class="Keyword">var</span> <a href="exptransformation.html#GroupsCapture"><span class="Identifier">GroupsCapture</span></a><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><a href="nodetype.html#Node"><span class="Identifier">Node</span></a><span class="Other">]</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma">
+    <span class="Identifier">inline</span><span class="Other">,</span> <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RegexError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
 
 
@@ -174,7 +180,7 @@ function main() {
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br/>
-        <small style="color: var(--hint);">Made with Nim. Generated: 2020-08-12 16:24:40 UTC</small>
+        <small style="color: var(--hint);">Made with Nim. Generated: 2020-10-19 06:46:09 UTC</small>
       </div>
     </div>
   </div>

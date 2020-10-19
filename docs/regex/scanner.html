@@ -111,32 +111,56 @@ function main() {
 <li>
   <a class="reference reference-toplevel" href="#12" id="62">Procs</a>
   <ul class="simple simple-toc-section">
-      <li><a class="reference" href="#newScanner%2Cseq%5BT%5D"
-    title="newScanner[T](s: seq[T]): Scanner[T]"><wbr />new<wbr />Scanner<span class="attachedType">Scanner</span></a></li>
-  <li><a class="reference" href="#scan%2Cseq%5BT%5D"
-    title="scan[T](s: seq[T]): Scanner[T]"><wbr />scan<span class="attachedType">Scanner</span></a></li>
+      <ul class="simple nested-toc-section">scan
+      <li><a class="reference" href="#scan%2Cseq%5BT%5D"
+    title="scan[T](s: seq[T]): Scanner[T]">scan,seq[T]<span class="attachedType">Scanner</span></a></li>
   <li><a class="reference" href="#scan%2Cstring"
-    title="scan(raw: string): Scanner[Rune]"><wbr />scan<span class="attachedType">Scanner</span></a></li>
+    title="scan(raw: string): Scanner[Rune]">scan,string<span class="attachedType">Scanner</span></a></li>
+
+  </ul>
+  <ul class="simple nested-toc-section">newScanner
+      <li><a class="reference" href="#newScanner%2Cseq%5BT%5D"
+    title="newScanner[T](s: seq[T]): Scanner[T]">newScanner,seq[T]<span class="attachedType">Scanner</span></a></li>
+
+  </ul>
 
   </ul>
 </li>
 <li>
   <a class="reference reference-toplevel" href="#13" id="63">Funcs</a>
   <ul class="simple simple-toc-section">
-      <li><a class="reference" href="#finished%2CScanner%5BT%5D"
-    title="finished[T](sc: Scanner[T]): bool"><wbr />finished<span class="attachedType">Scanner</span></a></li>
-  <li><a class="reference" href="#prev%2CScanner%5BT%5D"
-    title="prev[T](sc: Scanner[T]): T"><wbr />prev<span class="attachedType">Scanner</span></a></li>
-  <li><a class="reference" href="#curr%2CScanner%5BT%5D"
-    title="curr[T](sc: Scanner[T]): T"><wbr />curr<span class="attachedType">Scanner</span></a></li>
-  <li><a class="reference" href="#next%2CScanner%5BT%5D"
-    title="next[T](sc: Scanner[T]): T"><wbr />next<span class="attachedType">Scanner</span></a></li>
-  <li><a class="reference" href="#peek%2CScanner%5BRune%5D"
-    title="peek(sc: Scanner[Rune]): Rune"><wbr />peek<span class="attachedType">Scanner</span></a></li>
+      <ul class="simple nested-toc-section">peek
+      <li><a class="reference" href="#peek%2CScanner%5BRune%5D"
+    title="peek(sc: Scanner[Rune]): Rune">peek,Scanner[Rune]<span class="attachedType">Scanner</span></a></li>
   <li><a class="reference" href="#peek%2CScanner%5BNode%5D"
-    title="peek(sc: Scanner[Node]): Node"><wbr />peek<span class="attachedType">Scanner</span></a></li>
-  <li><a class="reference" href="#find%2CScanner%5BRune%5D%2CRune"
-    title="find(sc: Scanner[Rune]; r: Rune): int"><wbr />find<span class="attachedType">Scanner</span></a></li>
+    title="peek(sc: Scanner[Node]): Node">peek,Scanner[Node]<span class="attachedType">Scanner</span></a></li>
+
+  </ul>
+  <ul class="simple nested-toc-section">next
+      <li><a class="reference" href="#next%2CScanner%5BT%5D"
+    title="next[T](sc: Scanner[T]): T">next,Scanner[T]<span class="attachedType">Scanner</span></a></li>
+
+  </ul>
+  <ul class="simple nested-toc-section">curr
+      <li><a class="reference" href="#curr%2CScanner%5BT%5D"
+    title="curr[T](sc: Scanner[T]): T">curr,Scanner[T]<span class="attachedType">Scanner</span></a></li>
+
+  </ul>
+  <ul class="simple nested-toc-section">find
+      <li><a class="reference" href="#find%2CScanner%5BRune%5D%2CRune"
+    title="find(sc: Scanner[Rune]; r: Rune): int">find,Scanner[Rune],Rune<span class="attachedType">Scanner</span></a></li>
+
+  </ul>
+  <ul class="simple nested-toc-section">finished
+      <li><a class="reference" href="#finished%2CScanner%5BT%5D"
+    title="finished[T](sc: Scanner[T]): bool">finished,Scanner[T]<span class="attachedType">Scanner</span></a></li>
+
+  </ul>
+  <ul class="simple nested-toc-section">prev
+      <li><a class="reference" href="#prev%2CScanner%5BT%5D"
+    title="prev[T](sc: Scanner[T]): T">prev,Scanner[T]<span class="attachedType">Scanner</span></a></li>
+
+  </ul>
 
   </ul>
 </li>
@@ -295,7 +319,7 @@ the yielded item gets consumed
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br/>
-        <small style="color: var(--hint);">Made with Nim. Generated: 2020-08-12 16:24:40 UTC</small>
+        <small style="color: var(--hint);">Made with Nim. Generated: 2020-10-19 06:46:09 UTC</small>
       </div>
     </div>
   </div>

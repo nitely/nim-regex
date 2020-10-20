@@ -396,7 +396,7 @@ ms_perkins@continental.com
 <p>A <tt class="docutils literal"><span class="pre">matches: seq[string]</span></tt> variable is injected into the scope, and it contains the submatches for every capture group.</p>
 <pre class="listing"><span class="Keyword">var</span> <span class="Identifier">matched</span> <span class="Operator">=</span> <span class="Identifier">false</span>
 <span class="Keyword">let</span> <span class="Identifier">text</span> <span class="Operator">=</span> <span class="StringLit">&quot;[my link](https://example.com)&quot;</span>
-<span class="Identifier">match</span> <span class="Identifier">text</span><span class="Punctuation">,</span> <span class="RawData">rex&quot;\[([a-z ]*)\]\((https?://[^)]+)\)&quot;</span><span class="Punctuation">:</span>
+<span class="Identifier">match</span> <span class="Identifier">text</span><span class="Punctuation">,</span> <span class="RawData">rex&quot;\[([^\]]+)\]\((https?://[^)]+)\)&quot;</span><span class="Punctuation">:</span>
   <span class="Identifier">doAssert</span> <span class="Identifier">matches</span> <span class="Operator">==</span> <span class="Operator">@</span><span class="Punctuation">[</span><span class="StringLit">&quot;my link&quot;</span><span class="Punctuation">,</span> <span class="StringLit">&quot;https://example.com&quot;</span><span class="Punctuation">]</span>
   <span class="Identifier">matched</span> <span class="Operator">=</span> <span class="Identifier">true</span>
 <span class="Identifier">doAssert</span> <span class="Identifier">matched</span></pre></p>
@@ -845,7 +845,7 @@ return not matched substrings
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br/>
-        <small style="color: var(--hint);">Made with Nim. Generated: 2020-10-19 06:46:16 UTC</small>
+        <small style="color: var(--hint);">Made with Nim. Generated: 2020-10-20 16:55:48 UTC</small>
       </div>
     </div>
   </div>

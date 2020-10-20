@@ -237,7 +237,7 @@ the scope, and it contains the submatches for every capture group.
     :test:
     var matched = false
     let text = "[my link](https://example.com)"
-    match text, rex"\[([a-z ]*)\]\((https?://[^)]+)\)":
+    match text, rex"\[([^\]]+)\]\((https?://[^)]+)\)":
       doAssert matches == @["my link", "https://example.com"]
       matched = true
     doAssert matched

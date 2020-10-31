@@ -148,7 +148,12 @@ func initSkipNode*(next: openArray[int16]): Node =
   result = Node(
     kind: reSkip,
     cp: "#".toRune)
-  result.next.add next
+  when false:
+    # pending https://github.com/nim-lang/Nim/issues/15511#issuecomment-719952709
+    result.next.add next
+  else:
+    for ai in next:
+      result.next.add ai
 
 func isEmpty*(n: Node): bool =
   ## check if a set ``Node`` is empty

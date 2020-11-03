@@ -2198,6 +2198,8 @@ test "tmisc2_5":
     check match("11", re1)
     check(not match("111", re1))
     check match("11111", re1)
+
+test "tmisc2_6":
   block:
     const re1 = re"(aabb)(ab)*"
     check match("aabb", re1)

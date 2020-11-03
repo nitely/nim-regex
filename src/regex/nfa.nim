@@ -176,13 +176,6 @@ func teClosure(
     # Enter loops only once. "a", re"(a*)*" -> ["a", ""]
     if enfa[state].kind in repetitionKind:
       if s in visited and i == int(not enfa[state].isGreedy):
-        when false:
-          # fix nonsense regexes like "($)*\w*" and "$($)*\w*"
-          # XXX this won't work for findAll opt
-          keepItIf(
-            zTransitionsCurr,
-            enfa[it].kind in groupKind or
-            enfa[it].uid < enfa[s].uid)
         continue
       # XXX s/visited/processing
       visited.add s

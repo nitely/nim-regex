@@ -91,6 +91,7 @@ when (NimMajor, NimMinor) >= (1, 1):
       c
 
   test "tmatch_macro":
+    doAssert false
     block hasOwnScope:
       var m = false
       var matches: seq[string]

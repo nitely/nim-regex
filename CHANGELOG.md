@@ -1,3 +1,10 @@
+v0.17.1
+==================
+
+* Fix: regression related to repetitions,
+  and lonely assertions; issue #83
+* Fix: make it compile with ARC; thanks to @timotheecour
+
 v0.17.0
 ==================
 
@@ -64,7 +71,7 @@ v0.13
 ==================
 
 * Add `groupFirstCapture`, `groupLastCapture`, and
-  `group(1): seq[string]` (thaks to @xmonader)
+  `group(1): seq[string]` (thanks to @xmonader)
 * Add Nim 1.0.0 to CI
 * Drop Nim 0.18 support
 * Fix nested captures with repetition range; issue #46

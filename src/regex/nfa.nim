@@ -163,7 +163,7 @@ func teClosure(
   result: var TeClosure,
   enfa: Enfa,
   state: int16,
-  visited: var set[int16],
+  visited: var seq[int16],
   zTransitions: Zclosure
 ) =
   var zTransitionsCurr = zTransitions
@@ -175,19 +175,28 @@ func teClosure(
   for i, s in pairs enfa[state].next:
     # Enter loops only once. "a", re"(a*)*" -> ["a", ""]
     if enfa[state].kind in repetitionKind:
-      if s in visited:  # loop
-        keepItIf(zTransitionsCurr, enfa[it].kind in groupKind)
-        if i == int(not enfa[state].isGreedy):
-          continue
-      visited.incl s
-    teClosure(result, enfa, s, visited, zTransitionsCurr)
+      if s in visited and i == int(not enfa[state].isGreedy):
+        when false:
+          # fix nonsense regexes like "($)*\w*" and "$($)*\w*"
+          # XXX this won't work for findAll opt
+          keepItIf(
+            zTransitionsCurr,
+            enfa[it].kind in groupKind or
+            enfa[it].uid < enfa[s].uid)
+        continue
+      # XXX s/visited/processing
+      visited.add s
+      teClosure(result, enfa, s, visited, zTransitionsCurr)
+      discard visited.pop()
+    else:
+      teClosure(result, enfa, s, visited, zTransitionsCurr)
 
 func teClosure(
   result: var TeClosure,
   enfa: Enfa,
   state: int16
 ) =
-  var visited: set[int16]
+  var visited: seq[int16]  # XXX move to eRemoval
   var zclosure: Zclosure
   for s in enfa[state].next:
     teClosure(result, enfa, s, visited, zclosure)

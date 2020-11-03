@@ -1,0 +1,21 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+
+jobs:
+  test:
+    name: Nim ${{ matrix.nim }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        nim: [0.19.6, 0.20.0, 0.20.2, 1.0.0, 1.0.2, 1.0.4, 1.2.0, 1.2.2, 1.2.4, 1.2.6]
+    steps:
+    - uses: actions/checkout@v2
+    - name: Run Tests
+      run: |
+        docker pull nimlang/nim:${{ matrix.nim }}
+        docker run --rm -v `pwd`:/usr/src/app -w /usr/src/app nimlang/nim:${{ matrix.nim }} /bin/bash -c "nimble install -y; nimble test"

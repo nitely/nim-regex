@@ -2390,45 +2390,11 @@ test "fix#83":
     check findAllBounds("aaaxaaa", re"$(a*)") == @[7 .. 6]
     check findAllBounds("aaaxaaa", re"($|^)(a*)") == @[0 .. 2, 7 .. 6]
     check findAllBounds("aaaxaaa", re"(^|$)(a*)") == @[0 .. 2, 7 .. 6]
-  block:
-    var matched = false
-    match "foo", rex"($*?)(\w*)":
-      check matches == @["", "foo"]
-      matched = true
-    check matched
-  block:
-    var matched = false
-    match "foo", rex"($*)(\w*)":
-      check matches == @["", "foo"]
-      matched = true
-    check matched
-  block:
-    var matched = false
-    match "foox", rex"($*)(\w*)x":
-      check matches == @["", "foo"]
-      matched = true
-    check matched
-  block:
-    var matched = false
-    match "foo", rex"(a*?$*?)*?(\w*)":
-      check matches == @["", "foo"]
-      matched = true
-    check matched
-  block:
-    var matched = false
-    match "foox", rex"(a*$*)*(\w*)x":
-      check matches == @["", "foo"]
-      matched = true
-    check matched
-  block:
-    var matched = false
-    match "aaa", rex"($|^)(a*)":
-      check matches == @["", "aaa"]
-      matched = true
-    check matched
-  block:
-    var matched = false
-    match "aaa", rex"(^|$)(a*)":
-      check matches == @["", "aaa"]
-      matched = true
-    check matched
+  when (NimMajor, NimMinor) >= (1, 1):
+    check matchMacroCapt("foo", rex"($*?)(\w*)") == @["", "foo"]
+    check matchMacroCapt("foo", rex"($*)(\w*)") == @["", "foo"]
+    check matchMacroCapt("foox", rex"($*)(\w*)x") == @["", "foo"]
+    check matchMacroCapt("foo", rex"(a*?$*?)*?(\w*)") == @["", "foo"]
+    check matchMacroCapt("foox", rex"(a*$*)*(\w*)x") == @["", "foo"]
+    check matchMacroCapt("aaa", rex"($|^)(a*)") == @["", "aaa"]
+    check matchMacroCapt("aaa", rex"(^|$)(a*)") == @["", "aaa"]

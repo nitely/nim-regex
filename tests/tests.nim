@@ -2198,6 +2198,8 @@ test "tmisc2_5":
     check match("11", re1)
     check(not match("111", re1))
     check match("11111", re1)
+
+test "tmisc2_6":
   block:
     const re1 = re"(aabb)(ab)*"
     check match("aabb", re1)
@@ -2357,3 +2359,44 @@ test "tmisc3":
   check findAndCaptureAll(
     "He was carefully disguised but captured quickly by police.",
     re"\w+ly") == @["carefully", "quickly"]
+
+test "fix#83":
+  block:
+    let pattern = "^src/(?:[^\\/]*(?:\\/|$))*[^/]*\\.nim$"
+    check "src/dir/foo.nim".match(pattern.re)
+  check match("foo", re"(?:$)*\w*")
+  check match("foo", re"($)*\w*")
+  check match("foo", re"^*\w*")
+  check match("foo", re"([^/]*$)*\w*")
+  check match("src/dir/foo.nim", re"^src/(?:[^/]*(?:/|$))*[^/]*\.nim$")
+  check(not match("foo", re"$($*)*(\w*)"))
+  check(not match("foo", re"$($$*$*)*(\w*)"))
+  check(not match("foo", re"($|$)($*)*(\w*)"))
+  check(not match("foo", re"($|$$)($*)*(\w*)"))
+  check(not match("foo", re"($$|$)($*)*(\w*)"))
+  check(not match("foo", re"($|$)(\w*)"))
+  check(not match("foo", re"($|$$)(\w*)"))
+  check(not match("foo", re"($$|$)(\w*)"))
+  check(not match("foo", re"(^$|$)(\w*)"))
+  check(not match("foo", re"($|^$)(\w*)"))
+  check match("", re"$*\w*")
+  check match("foo", re"($*?)(\w*)")
+  check match("foo", re"($*)(\w*)")
+  check match("foox", re"($*)(\w*)x")
+  check match("foo", re"(a*?$*?)*?(\w*)")
+  check match("foox", re"(a*$*)*(\w*)x")
+  check match("aaa", re"($|^)(a*)")
+  check match("aaa", re"(^|$)(a*)")
+  block:
+    check findAllBounds("aaaxaaa", re"^(a*)") == @[0 .. 2]
+    check findAllBounds("aaaxaaa", re"$(a*)") == @[7 .. 6]
+    check findAllBounds("aaaxaaa", re"($|^)(a*)") == @[0 .. 2, 7 .. 6]
+    check findAllBounds("aaaxaaa", re"(^|$)(a*)") == @[0 .. 2, 7 .. 6]
+  when (NimMajor, NimMinor) >= (1, 1):
+    check matchMacroCapt("foo", rex"($*?)(\w*)") == @["", "foo"]
+    check matchMacroCapt("foo", rex"($*)(\w*)") == @["", "foo"]
+    check matchMacroCapt("foox", rex"($*)(\w*)x") == @["", "foo"]
+    check matchMacroCapt("foo", rex"(a*?$*?)*?(\w*)") == @["", "foo"]
+    check matchMacroCapt("foox", rex"(a*$*)*(\w*)x") == @["", "foo"]
+    check matchMacroCapt("aaa", rex"($|^)(a*)") == @["", "aaa"]
+    check matchMacroCapt("aaa", rex"(^|$)(a*)") == @["", "aaa"]

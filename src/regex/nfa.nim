@@ -162,7 +162,7 @@ func teClosure(
   result: var TeClosure,
   enfa: Enfa,
   state: int16,
-  visited: var set[int16],
+  processing: var seq[int16],
   zTransitions: Zclosure
 ) =
   var zTransitionsCurr = zTransitions
@@ -172,22 +172,26 @@ func teClosure(
     result.add((state, zTransitionsCurr))
     return
   for i, s in pairs enfa[state].next:
-    # Enter loops only once. Allows: "(a*)*" -> ["a", ""] 
+    # Enter loops only once. "a", re"(a*)*" -> ["a", ""]
     if enfa[state].kind in repetitionKind:
-      if s in visited and i == int(not enfa[state].isGreedy):
-        continue
-      visited.incl s
-    teClosure(result, enfa, s, visited, zTransitionsCurr)
+      if s notin processing or i == int(enfa[state].isGreedy):
+        processing.add s
+        teClosure(result, enfa, s, processing, zTransitionsCurr)
+        discard processing.pop()
+      # else skip loop
+    else:
+      teClosure(result, enfa, s, processing, zTransitionsCurr)
 
 func teClosure(
   result: var TeClosure,
   enfa: Enfa,
-  state: int16
+  state: int16,
+  processing: var seq[int16]
 ) =
-  var visited: set[int16]
+  doAssert processing.len == 0
   var zclosure: Zclosure
   for s in enfa[state].next:
-    teClosure(result, enfa, s, visited, zclosure)
+    teClosure(result, enfa, s, processing, zclosure)
 
 type
   TransitionsAll* = seq[seq[int16]]
@@ -221,13 +225,14 @@ func eRemoval*(
   var qu: set[int16]
   qu.incl start
   var qa: int16
+  var processing = newSeqOfCap[int16](8)
   while qw.len > 0:
     try:
       qa = qw.popLast()
     except IndexError:
       doAssert false
     closure.setLen 0
-    teClosure(closure, eNfa, qa)
+    teClosure(closure, eNfa, qa, processing)
     result[statesMap[qa]].next.setLen 0
     for qb, zclosure in closure.items:
       if statesMap[qb] == -1:

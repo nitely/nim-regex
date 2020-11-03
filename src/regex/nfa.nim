@@ -188,6 +188,7 @@ func teClosure(
   state: int16,
   processing: var seq[int16]
 ) =
+  doAssert processing.len == 0
   var zclosure: Zclosure
   for s in enfa[state].next:
     teClosure(result, enfa, s, processing, zclosure)

@@ -2368,6 +2368,15 @@ test "fix#83":
   check match("foo", re"([^/]*$)*\w*")
   check match("src/dir/foo.nim", re"^src/(?:[^/]*(?:/|$))*[^/]*\.nim$")
   check(not match("foo", re"$($*)*(\w*)"))
+  check(not match("foo", re"$($$*$*)*(\w*)"))
+  check(not match("foo", re"($|$)($*)*(\w*)"))
+  check(not match("foo", re"($|$$)($*)*(\w*)"))
+  check(not match("foo", re"($$|$)($*)*(\w*)"))
+  check(not match("foo", re"($|$)(\w*)"))
+  check(not match("foo", re"($|$$)(\w*)"))
+  check(not match("foo", re"($$|$)(\w*)"))
+  check(not match("foo", re"(^$|$)(\w*)"))
+  check(not match("foo", re"($|^$)(\w*)"))
   check match("", re"$*\w*")
   check match("foo", re"($*?)(\w*)")
   check match("foo", re"($*)(\w*)")
@@ -2376,3 +2385,50 @@ test "fix#83":
   check match("foox", re"(a*$*)*(\w*)x")
   check match("aaa", re"($|^)(a*)")
   check match("aaa", re"(^|$)(a*)")
+  block:
+    check findAllBounds("aaaxaaa", re"^(a*)") == @[0 .. 2]
+    check findAllBounds("aaaxaaa", re"$(a*)") == @[7 .. 6]
+    check findAllBounds("aaaxaaa", re"($|^)(a*)") == @[0 .. 2, 7 .. 6]
+    check findAllBounds("aaaxaaa", re"(^|$)(a*)") == @[0 .. 2, 7 .. 6]
+  block:
+    var matched = false
+    match "foo", rex"($*?)(\w*)":
+      check matches == @["", "foo"]
+      matched = true
+    check matched
+  block:
+    var matched = false
+    match "foo", rex"($*)(\w*)":
+      check matches == @["", "foo"]
+      matched = true
+    check matched
+  block:
+    var matched = false
+    match "foox", rex"($*)(\w*)x":
+      check matches == @["", "foo"]
+      matched = true
+    check matched
+  block:
+    var matched = false
+    match "foo", rex"(a*?$*?)*?(\w*)":
+      check matches == @["", "foo"]
+      matched = true
+    check matched
+  block:
+    var matched = false
+    match "foox", rex"(a*$*)*(\w*)x":
+      check matches == @["", "foo"]
+      matched = true
+    check matched
+  block:
+    var matched = false
+    match "aaa", rex"($|^)(a*)":
+      check matches == @["", "aaa"]
+      matched = true
+    check matched
+  block:
+    var matched = false
+    match "aaa", rex"(^|$)(a*)":
+      check matches == @["", "aaa"]
+      matched = true
+    check matched

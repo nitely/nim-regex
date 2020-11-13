@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        nim: [0.19.6, 0.20.0, 0.20.2, 1.0.0, 1.0.2, 1.0.4, 1.2.0, 1.2.2, 1.2.4, 1.2.6, 1.2.8, 1.4.0]
+        nim: [0.19.6, 0.20.0, 0.20.2, 1.0.0, 1.0.2, 1.0.4, 1.2.0, 1.2.2, 1.2.4, 1.2.6, 1.4.0]
     steps:
     - uses: actions/checkout@v2
     - name: Run Tests

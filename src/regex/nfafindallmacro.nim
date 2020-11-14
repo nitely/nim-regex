@@ -47,17 +47,36 @@ func genMatchedBody(
   return newStmtList matchedBody
 
 func genMatchedBody2(
-  smA, smB, ntLit, capt, bounds, matched, captx,
+  smA, smB, m, ntLit, capt, bounds,
+  matched, captx, eoeFound, smi,
   capts, charIdx, cPrev, c: NimNode,
-  i, nti: int,
+  i, nti, nt: int,
   regex: Regex
 ): NimNode =
+  template nfa: untyped = regex.nfa
   template tns: untyped = regex.transitions
-
+  let eoeStmt = case nfa[nt].kind:
+    of reEoe:
+      quote do:
+        `m`.add (`captx`, `bounds`.a .. `i`-1)
+        `smA`.clear()
+        if not `eoeFound`:
+          `eoeFound` = true
+          `smA`.add (0'i16, -1'i32, `i` .. `i`-1)
+        `smi` = 0
+        continue
+    else: newEmptyNode()
+  if tns.allZ[i][nti] == -1'i16:
+    if nfa[nt].kind == reEoe:
+      return eoeStmt
+    else:
+      return quote do:
+        add(`smB`, (`ntLit`, `capt`, `bounds`.a .. `charIdx`-1))
 
 
 func genSubmatch2(
-  n, capt, bounds, smA, smB, c, matched, captx,
+  n, capt, bounds, smA, smB, m, c,
+  matched, captx, eoeFound, smi,
   capts, charIdx, cPrev: NimNode,
   regex: Regex
 ): NimNode =
@@ -83,10 +102,11 @@ func genSubmatch2(
           let m = genMatch(c, nfa[nt])
           quote do: `c` >= 0'i32 and `m`
       let ntLit = newLit nt
-      let matchedBodyStmt = genMatchedBody(
-        smA, smB, ntLit, capt, bounds, matched, captx,
+      let matchedBodyStmt = genMatchedBody2(
+        smA, smB, m, ntLit, capt, bounds,
+        matched, captx, eoeFound, smi,
         capts, charIdx, cPrev, c,
-        i, nti, regex)
+        i, nti, nt, regex)
       branchBodyN.add quote do:
         if not hasState(`smB`, `ntLit`) and `matchCond`:
           `matchedBodyStmt`
@@ -110,11 +130,13 @@ func submatch(
   let smA = quote do: `ms`.a
   let smB = quote do: `ms`.b
   let capts = quote do: `ms`.c
+  let m = quote do: `ms`.m
   let n = quote do: `ms`.a[`smi`].ni
   let capt = quote do: `ms`.a[`smi`].ci
   let bounds = quote do: `ms`.a[`smi`].bounds
   let genSubmatch2Body = genSubmatch2(
-    n, capt, bounds, smA, smB, c, matched, captx,
+    n, capt, bounds, smA, smB, m, c,
+    matched, captx, eoeFound, smi,
     capts, charIdx, cPrev: NimNode,
     regex: Regex)
   result = quote do:

@@ -10,42 +10,6 @@ import ./compiler
 import ./nfafindalltype
 
 
-func genMatchedBody(
-  smB, ntLit, capt, bounds, matched, captx,
-  capts, charIdx, cPrev, c: NimNode,
-  i, nti: int,
-  regex: Regex
-): NimNode =
-  if regex.transitions.allZ[i][nti] == -1'i16:
-    return quote do:
-      add(`smB`, (`ntLit`, `capt`, `bounds`.a .. `charIdx`-1))
-  var matchedBody: seq[NimNode]
-  matchedBody.add quote do:
-    `matched` = true
-    `captx` = `capt`
-  for z in regex.transitions.z[regex.transitions.allZ[i][nti]]:
-    case z.kind
-    of groupKind:
-      let zIdx = newLit z.idx
-      matchedBody.add quote do:
-        add(`capts`, CaptNode(
-          parent: `captx`,
-          bound: `charIdx`,
-          idx: `zIdx`))
-        `captx` = (len(`capts`) - 1).int32
-    of assertionKind:
-      # https://github.com/nim-lang/Nim/issues/13266
-      #let zLit = newLit z
-      let matchCond = genMatch(`z`, `cPrev`, `c`)
-      matchedBody.add quote do:
-        `matched` = `matched` and `matchCond`
-    else:
-      doAssert false
-  matchedBody.add quote do:
-    if `matched`:
-      add(`smB`, (`ntLit`, `captx`, `bounds`.a .. `charIdx`-1))
-  return newStmtList matchedBody
-
 func genMatchedBody2(
   smA, smB, m, ntLit, capt, bounds,
   matched, captx, eoeFound, smi,
@@ -72,7 +36,33 @@ func genMatchedBody2(
     else:
       return quote do:
         add(`smB`, (`ntLit`, `capt`, `bounds`.a .. `charIdx`-1))
-
+  var matchedBody: seq[NimNode]
+  matchedBody.add quote do:
+    `matched` = true
+    `captx` = `capt`
+  for z in tns.z[tns.allZ[i][nti]]:
+    case z.kind
+    of groupKind:
+      let zIdx = newLit z.idx
+      matchedBody.add quote do:
+        add(`capts`, CaptNode(
+          parent: `captx`,
+          bound: `charIdx`,
+          idx: `zIdx`))
+        `captx` = (len(`capts`) - 1).int32
+    of assertionKind:
+      # https://github.com/nim-lang/Nim/issues/13266
+      #let zLit = newLit z
+      let matchCond = genMatch(`z`, `cPrev`, `c`)
+      matchedBody.add quote do:
+        `matched` = `matched` and `matchCond`
+    else:
+      doAssert false
+  matchedBody.add quote do:
+    if `matched`:
+      `eoeStmt`
+      add(`smB`, (`ntLit`, `captx`, `bounds`.a .. `charIdx`-1))
+  return newStmtList matchedBody
 
 func genSubmatch2(
   n, capt, bounds, smA, smB, m, c,

@@ -9,8 +9,7 @@ import ./nfatype
 import ./compiler
 import ./nfafindalltype
 
-
-func genMatchedBody2(
+func genMatchedBody(
   smA, smB, m, ntLit, capt, bounds,
   matched, captx, eoeFound, smi,
   capts, charIdx, cPrev, c: NimNode,
@@ -64,7 +63,7 @@ func genMatchedBody2(
       add(`smB`, (`ntLit`, `captx`, `bounds`.a .. `charIdx`-1))
   return newStmtList matchedBody
 
-func genSubmatch2(
+func genSubmatch(
   n, capt, bounds, smA, smB, m, c,
   matched, captx, eoeFound, smi,
   capts, charIdx, cPrev: NimNode,
@@ -92,7 +91,7 @@ func genSubmatch2(
           let m = genMatch(c, nfa[nt])
           quote do: `c` >= 0'i32 and `m`
       let ntLit = newLit nt
-      let matchedBodyStmt = genMatchedBody2(
+      let matchedBodyStmt = genMatchedBody(
         smA, smB, m, ntLit, capt, bounds,
         matched, captx, eoeFound, smi,
         capts, charIdx, cPrev, c,
@@ -124,7 +123,7 @@ func submatch(
   let n = quote do: `ms`.a[`smi`].ni
   let capt = quote do: `ms`.a[`smi`].ci
   let bounds = quote do: `ms`.a[`smi`].bounds
-  let genSubmatch2Body = genSubmatch2(
+  let submatchStmt = genSubmatch(
     n, capt, bounds, smA, smB, m, c,
     matched, captx, eoeFound, smi,
     capts, charIdx, cPrev: NimNode,
@@ -136,6 +135,110 @@ func submatch(
     var `eoeFound` = false
     var `smi` = 0
     while `smi` < `smA`.len:
-      `genSubmatch2Body`
+      `submatchStmt`
       `smi` += 1
     swap `smA`, `smB`
+
+func genSubmatchEoe(
+  n, capt, bounds, smA, smB, m,
+  matched, captx, eoeFound, smi,
+  capts, charIdx, cPrev: NimNode,
+  regex: Regex
+): NimNode =
+  template nfa: untyped = regex.nfa
+  result = newStmtList()
+  var caseStmtN: seq[NimNode]
+  caseStmtN.add n
+  for i in 0 .. nfa.len-1:
+    if nfa[i].kind == reEoe:
+      continue
+    var branchBodyN: seq[NimNode]
+    for nti, nt in nfa[i].next.pairs:
+      if regex.nfa[nt].kind == reEoe:
+        let ntLit = newLit nt
+        let cLit = newLit -1'i32
+        let matchedBodyStmt = genMatchedBody(
+          smA, smB, m, ntLit, capt, bounds,
+          matched, captx, eoeFound, smi,
+          capts, charIdx, cPrev, cLit,
+          i, nti, nt, regex)
+        branchBodyN.add quote do:
+          if not hasState(`smB`, `ntLit`):
+            `matchedBodyStmt`
+    doAssert branchBodyN.len > 0
+    caseStmtN.add newTree(nnkOfBranch,
+      newLit i.int16,
+      newStmtList(
+        branchBodyN))
+  doAssert caseStmtN.len > 1
+  caseStmtN.add newTree(nnkElse,
+    quote do:
+      doAssert false
+      discard)
+  result.add newTree(nnkCaseStmt, caseStmtN)
+
+func submatchEoe(
+  regex: Regex,
+  ms, charIdx, cPrev: NimNode
+): NimNode =
+  defVars captx, matched, eoeFound, smi
+  let smA = quote do: `ms`.a
+  let smB = quote do: `ms`.b
+  let capts = quote do: `ms`.c
+  let m = quote do: `ms`.m
+  let n = quote do: `ms`.a[`smi`].ni
+  let capt = quote do: `ms`.a[`smi`].ci
+  let bounds = quote do: `ms`.a[`smi`].bounds
+  let submatchStmt = genSubmatchEoe(
+    n, capt, bounds, smA, smB, m,
+    matched, captx, eoeFound, smi,
+    capts, charIdx, cPrev: NimNode,
+    regex: Regex)
+  result = quote do:
+    `smB`.clear()
+    var `captx`: int32
+    var `matched` = true
+    var `eoeFound` = false
+    var `smi` = 0
+    while `smi` < `smA`.len:
+      `submatchStmt`
+      `smi` += 1
+    swap `smA`, `smB`
+
+proc findSomeImpl*(
+  text, expLit, ms, isOpt: NimNode
+): NimNode =
+  defVars c, i, cPrev
+  let exp = expLit[1]
+  let regex = reCt(exp.strVal)
+  let nfaLenLit = newLit regex.nfa.len
+  let smA = quote do: `ms`.a
+  let c2 = quote do: int32(`c`)
+  let submatchStmt = submatch(regex, ms, i, cPrev, c2)
+  let submatchEoeStmt = submatchEoe(regex, ms, i, cPrev)
+  return quote do:
+    initMaybeImpl(`ms`, `nfaLenLit`)
+    `ms`.clear()
+    var
+      `c` = Rune(-1)
+      `cPrev` = -1'i32
+      `i` = 0
+      iPrev = 0
+    `smA`.add (0'i16, -1'i32, `i` .. `i`-1)
+    while `i` < len(`text`):
+      fastRuneAt(`text`, `i`, `c`, true)
+      `submatchStmt`
+      if `smA`.len == 0:
+        if `i` < len(`text`):
+          if `ms`.hasMatches():
+            return `i`
+          if `isOpt`:
+            return `i`
+      `smA`.add (0'i16, -1'i32, `i` .. `i`-1)
+      iPrev = `i`
+      `cPrev` = `c`.int32
+    `submatchEoeStmt`
+    doAssert `smA`.len == 0
+    if `ms`.hasMatches():
+      return `i`
+    return -1

@@ -52,14 +52,14 @@ func clear*(ms: var Matches) {.inline.} =
 
 template initMaybeImpl*(
   ms: var RegexMatches,
-  regex: Regex
+  size: int
 ) =
   if ms.a == nil:
     assert ms.b == nil
-    ms.a = newSubmatches(regex.nfa.len)
-    ms.b = newSubmatches(regex.nfa.len)
-  doAssert ms.a.cap >= regex.nfa.len and
-    ms.b.cap >= regex.nfa.len
+    ms.a = newSubmatches(size)
+    ms.b = newSubmatches(size)
+  doAssert ms.a.cap >= size and
+    ms.b.cap >= size
 
 func hasMatches*(ms: RegexMatches): bool {.inline.} =
   return ms.m.len > 0

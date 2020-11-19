@@ -889,7 +889,7 @@ func escapeRe*(s: string): string {.raises: [].} =
       result.add '\\'
       result.add c.char
     else:
-      if c.int < char.high.int:
+      if c.int < 128:
         result.add c.char
       else:
         # XXX add openArray of s

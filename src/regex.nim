@@ -881,11 +881,11 @@ func escapeRe*(s: string): string {.raises: [].} =
   result = ""
   for c in s.runes:
     case c
-    of u' ', u'$', u'&', u'(', u')',
-        u'*', u'+', u'-', u'.', u'?',
-        u'[', u'\\', u']', u'^', u'{',
-        u'|', u'}', u'~', Rune(9), Rune(10),
-        Rune(11), Rune(12), Rune(13):
+    of u' ', u'#', u'$', u'&', u'(',
+        u')', u'*', u'+', u'-', u'.',
+        u'?', u'[', u'\\', u']', u'^',
+        u'{', u'|', u'}', u'~', Rune(9),
+        Rune(10), Rune(11), Rune(12), Rune(13):
       result.add '\\'
       result.add c.char
     else:

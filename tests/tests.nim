@@ -2406,8 +2406,8 @@ test "escapeRe":
   check escapeRe("123") == "123"
   check escapeRe("!") == "!"
   check escapeRe("*") == r"\*"
-  check escapeRe" $&()*+-.?[\]^{|}~" ==
-    r"\ \$\&\(\)\*\+\-\.\?\[\\\]\^\{\|\}\~"
+  check escapeRe" #$&()*+-.?[\]^{|}~" ==
+    r"\ \#\$\&\(\)\*\+\-\.\?\[\\\]\^\{\|\}\~"
   check escapeRe("\L") == "\\\L"
   check escapeRe"aΪⒶ弢" == "aΪⒶ弢"
   check escapeRe"$Ϊ$Ⓐ$弢$" == r"\$Ϊ\$Ⓐ\$弢\$"

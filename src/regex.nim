@@ -872,6 +872,29 @@ func isInitialized*(re: Regex): bool {.inline, raises: [].} =
 
   re.nfa.len > 0
 
+func escapeRe*(s: string): string {.raises: [].} =
+  ## Escape special regex characters in ``s``
+  ## so that it can be matched verbatim
+  # The special char list is the same as re.escape
+  # in Python 3.7
+  template u(x: char): untyped = Rune(x.int32)
+  result = ""
+  for c in s.runes:
+    case c
+    of u' ', u'$', u'&', u'(', u')',
+        u'*', u'+', u'-', u'.', u'?',
+        u'[', u'\\', u']', u'^', u'{',
+        u'|', u'}', u'~', Rune(9), Rune(10),
+        Rune(11), Rune(12), Rune(13):
+      result.add '\\'
+      result.add c.char
+    else:
+      if c.int < 128:
+        result.add c.char
+      else:
+        # XXX add openArray of s
+        result.add $c
+
 proc toString(
   pattern: Regex,
   nIdx: int16,

@@ -2400,3 +2400,20 @@ test "fix#83":
     check matchMacroCapt("foox", rex"(a*$*)*(\w*)x") == @["", "foo"]
     check matchMacroCapt("aaa", rex"($|^)(a*)") == @["", "aaa"]
     check matchMacroCapt("aaa", rex"(^|$)(a*)") == @["", "aaa"]
+
+test "escapeRe":
+  check escapeRe("abc") == "abc"
+  check escapeRe("123") == "123"
+  check escapeRe("!") == "!"
+  check escapeRe("*") == r"\*"
+  check escapeRe" $&()*+-.?[\]^{|}~" ==
+    r"\ \$\&\(\)\*\+\-\.\?\[\\\]\^\{\|\}\~"
+  check escapeRe("\L") == "\\\L"
+  check escapeRe"aΪⒶ弢" == "aΪⒶ弢"
+  check escapeRe"$Ϊ$Ⓐ$弢$" == r"\$Ϊ\$Ⓐ\$弢\$"
+  check match("$", re(escapeRe"$"))
+  block:
+    var s = ""
+    for c in 0 .. 255:
+      s.add c.char
+    discard re(escapeRe(s))

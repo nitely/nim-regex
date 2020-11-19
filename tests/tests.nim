@@ -2410,6 +2410,7 @@ test "escapeRe":
     r"\ \$\&\(\)\*\+\-\.\?\[\\\]\^\{\|\}\~"
   check escapeRe("\L") == "\\\L"
   check escapeRe"aΪⒶ弢" == "aΪⒶ弢"
+  check escapeRe"$Ϊ$Ⓐ$弢$" == r"\$Ϊ\$Ⓐ\$弢\$"
   check match("$", re(escapeRe"$"))
   block:
     var s = ""

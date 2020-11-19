@@ -263,6 +263,7 @@ const canUseMacro = (NimMajor, NimMinor) >= (1, 1)
 
 when canUseMacro:
   import ./regex/nfamacro
+  import ./regex/nfafindallmacro
   export RegexLit
 
 export
@@ -492,6 +493,14 @@ when canUseMacro:
         doAssert matches == @["abc", "b"]
 
     matchImpl(text, regex, body)
+
+  when false:
+    macro findAll*(
+      text: string,
+      regex: RegexLit,
+      body: untyped
+    ): untyped =
+      findSomeImpl(text, regex, body)
 
 func match*(
   s: string,

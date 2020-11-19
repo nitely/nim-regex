@@ -256,9 +256,7 @@ func genMatchedBody(
           idx: `zIdx`))
         `captx` = (len(`capts`) - 1).int32
     of assertionKind:
-      # https://github.com/nim-lang/Nim/issues/13266
-      #let zLit = newLit z
-      let matchCond = genMatch(`z`, `cPrev`, `c`)
+      let matchCond = genMatch(z, cPrev, c)
       matchedBody.add quote do:
         `matched` = `matched` and `matchCond`
     else:

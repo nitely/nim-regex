@@ -8,6 +8,7 @@ import ./nodetype
 import ./nfatype
 import ./compiler
 import ./nfafindalltype
+import ./nodematchmacro
 
 func genMatchedBody(
   smA, smB, m, ntLit, capt, bounds,
@@ -50,9 +51,7 @@ func genMatchedBody(
           idx: `zIdx`))
         `captx` = (len(`capts`) - 1).int32
     of assertionKind:
-      # https://github.com/nim-lang/Nim/issues/13266
-      #let zLit = newLit z
-      let matchCond = genMatch(`z`, `cPrev`, `c`)
+      let matchCond = genMatch(z, cPrev, c)
       matchedBody.add quote do:
         `matched` = `matched` and `matchCond`
     else:
@@ -206,7 +205,7 @@ func submatchEoe(
     swap `smA`, `smB`
 
 proc findSomeImpl*(
-  text, expLit, ms, isOpt: NimNode
+  text, expLit, ms, pos, isOpt: NimNode
 ): NimNode =
   defVars c, i, cPrev
   let exp = expLit[1]
@@ -230,15 +229,15 @@ proc findSomeImpl*(
       `submatchStmt`
       if `smA`.len == 0:
         if `i` < len(`text`):
-          if `ms`.hasMatches():
-            return `i`
-          if `isOpt`:
-            return `i`
+          if `ms`.hasMatches() or `isOpt`:
+            break
       `smA`.add (0'i16, -1'i32, `i` .. `i`-1)
       iPrev = `i`
       `cPrev` = `c`.int32
-    `submatchEoeStmt`
-    doAssert `smA`.len == 0
+    if `i` >= len(`text`):
+      `submatchEoeStmt`
+      doAssert `smA`.len == 0
     if `ms`.hasMatches():
-      return `i`
-    return -1
+      `pos` = `i`
+    else:
+      `pos` = -1

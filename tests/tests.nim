@@ -2414,6 +2414,6 @@ test "escapeRe":
   check match("$", re(escapeRe"$"))
   block:
     var s = ""
-    for c in 0 .. char.high.int:
+    for c in 0 .. 256:
       s.add c.char
     discard re(escapeRe(s))

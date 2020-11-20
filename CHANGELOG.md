@@ -1,3 +1,9 @@
+v0.18.0
+==================
+
+* Adds `escapeRe(string): string` function
+* Removed `unicodeplus` dependency
+
 v0.17.1
 ==================
 

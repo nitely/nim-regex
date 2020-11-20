@@ -3,13 +3,15 @@ import std/sets
 
 import pkg/unicodedb/properties
 import pkg/unicodedb/types
-import pkg/unicodeplus
 
 import ./nodetype
 import ./common
 
-func isWord*(r: Rune): bool {.inline.} =
+func isWord(r: Rune): bool {.inline.} =
   utmWord in unicodeTypes(r)
+
+func isDecimal(r: Rune): bool {.inline.} =
+  utmDecimal in unicodeTypes(r)
 
 func isWordAscii(r: Rune): bool {.inline.} =
   ## return ``true`` if the given

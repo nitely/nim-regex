@@ -9,7 +9,6 @@ skipDirs = @["tests", "bench", "docs"]
 
 requires "nim >= 0.19.6"
 requires "unicodedb >= 0.7.2"
-requires "unicodeplus >= 0.5.0"
 
 task test, "Test":
   exec "nim c -r -o:bin/regex src/regex.nim"

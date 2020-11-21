@@ -27,6 +27,13 @@ benchRelative(regex_sol, m):
     discard regex.match(text, pattern4, m2)
   doNotOptimizeAway(m2)
 
+benchRelative(regex_macro_sol, m):
+  var d: bool
+  for i in 0 ..< m:
+    regex.match text, regex.rex"\w*sol\w*":
+      d = true
+  doNotOptimizeAway(d)
+
 var dummyTextNums = """650-253-0001"""
 
 var pattern_nums = re.re"^[0-9]+-[0-9]+-[0-9]+$"
@@ -45,6 +52,13 @@ benchRelative(regex_nums, m):
     discard regex.match(dummyTextNums, n_pattern_nums, m2)
   doNotOptimizeAway(m2)
 
+benchRelative(regex_macro_nums, m):
+  var d: bool
+  for i in 0 ..< m:
+    regex.match text, regex.rex"[0-9]+-[0-9]+-[0-9]+":
+      d = true
+  doNotOptimizeAway(d)
+
 var pattern_nums2 = re.re"^[0-9]+..*$"
 
 bench(re_nums2, m):
@@ -61,15 +75,22 @@ benchRelative(regex_nums2, m):
     discard regex.match(dummyTextNums, n_pattern_nums2, m3)
   doNotOptimizeAway(m3)
 
-var lits_find_re = re.re"do|re|mi|fa|sol"
-
-bench(re_lits_find, m):
-  var d: int
+benchRelative(regex_macro_nums2, m):
+  var d: bool
   for i in 0 ..< m:
-    d = re.find(text, lits_find_re)
+    regex.match text, regex.rex"[0-9]+..*":
+      d = true
   doNotOptimizeAway(d)
 
 when false:  # XXX remove
+  var lits_find_re = re.re"do|re|mi|fa|sol"
+
+  bench(re_lits_find, m):
+    var d: int
+    for i in 0 ..< m:
+      d = re.find(text, lits_find_re)
+    doNotOptimizeAway(d)
+
   const lits_find = regex.re"do|re|mi|fa|sol"
 
   benchRelative(regex_lits_find, m):
@@ -92,7 +113,7 @@ bench(re_email_find_all, m):
 
 const email_find_all = regex.re"[\w\.+-]+@[\w\.-]+\.[\w\.-]+"
 
-benchRelative(email_find_all, m):
+benchRelative(regex_email_find_all, m):
   var d = 0
   for i in 0 ..< m:
     for _ in regex.findAll(bench_text, email_find_all):
@@ -112,7 +133,7 @@ bench(re_uri_find_all, m):
 
 const uri_find_all = regex.re"[\w]+://[^/\s?#]+[^\s?#]+(?:\?[^\s#]*)?(?:#[^\s]*)?"
 
-benchRelative(uri_find_all, m):
+benchRelative(regex_uri_find_all, m):
   var d = 0
   for i in 0 ..< m:
     for _ in regex.findAll(bench_text, uri_find_all):
@@ -132,7 +153,7 @@ bench(re_ip_find_all, m):
 
 const ip_find_all = regex.re"(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9])\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9])"
 
-benchRelative(ip_find_all, m):
+benchRelative(regex_ip_find_all, m):
   var d = 0
   for i in 0 ..< m:
     for _ in regex.findAll(bench_text, ip_find_all):

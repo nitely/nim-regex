@@ -104,7 +104,7 @@ function main() {
     title="Flag = enum
   flagCaseInsensitive, flagNotCaseInsensitive, flagMultiLine, flagNotMultiLine,
   flagAnyMatchNewLine, flagNotAnyMatchNewLine, flagUnGreedy, flagNotUnGreedy,
-  flagUnicode, flagNotUnicode, flagVerbose, flagNotVerbose"><wbr />Flag<span class="attachedType"></span></a></li>
+  flagUnicode, flagNotUnicode, flagVerbose, flagNotVerbose">Flag</a></li>
   <li><a class="reference" href="#NodeKind"
     title="NodeKind = enum
   reChar, reCharCi, reJoiner, reGroupStart, reGroupEnd, reOr, reZeroOrMore,
@@ -115,9 +115,9 @@ function main() {
   reWordAscii, reDigitAscii, reWhiteSpaceAscii, reNotAlphaNumAscii,
   reNotDigitAscii, reNotWhiteSpaceAscii, reAnyAscii, reAnyNlAscii, reInSet,
   reNotSet, reLookahead, reLookbehind, reNotLookahead, reNotLookbehind, reSkip,
-  reEoe"><wbr />Node<wbr />Kind<span class="attachedType"></span></a></li>
+  reEoe">NodeKind</a></li>
   <li><a class="reference" href="#NodeUid"
-    title="NodeUid = int16"><wbr />Node<wbr />Uid<span class="attachedType"></span></a></li>
+    title="NodeUid = int16">NodeUid</a></li>
   <li><a class="reference" href="#Node"
     title="Node = object
   kind*: NodeKind
@@ -133,7 +133,7 @@ function main() {
   cps*: HashSet[Rune]
   ranges*: seq[Slice[Rune]]
   shorthands*: seq[Node]
-  cc*: UnicodeCategorySet"><wbr />Node<span class="attachedType"></span></a></li>
+  cc*: UnicodeCategorySet">Node</a></li>
 
   </ul>
 </li>
@@ -141,27 +141,27 @@ function main() {
   <a class="reference reference-toplevel" href="#10" id="60">Consts</a>
   <ul class="simple simple-toc-section">
       <li><a class="reference" href="#opKind"
-    title="opKind = {reJoiner, reOr, reZeroOrMore, reOneOrMore, reZeroOrOne, reRepRange}"><wbr />op<wbr />Kind<span class="attachedType"></span></a></li>
+    title="opKind = {reJoiner, reOr, reZeroOrMore, reOneOrMore, reZeroOrOne, reRepRange}">opKind</a></li>
   <li><a class="reference" href="#assertionKind"
     title="assertionKind = {reStartSym, reEndSym, reStartSymML, reEndSymML, reStart, reEnd,
                  reWordBoundary, reNotWordBoundary, reWordBoundaryAscii,
                  reNotWordBoundaryAscii, reLookahead, reLookbehind,
-                 reNotLookahead, reNotLookbehind}"><wbr />assertion<wbr />Kind<span class="attachedType"></span></a></li>
+                 reNotLookahead, reNotLookbehind}">assertionKind</a></li>
   <li><a class="reference" href="#shorthandKind"
     title="shorthandKind = {reWord, reDigit, reWhiteSpace, reUCC, reNotAlphaNum,
                  reNotDigit, reNotWhiteSpace, reNotUCC, reWordAscii,
                  reDigitAscii, reWhiteSpaceAscii, reNotAlphaNumAscii,
-                 reNotDigitAscii, reNotWhiteSpaceAscii}"><wbr />shorthand<wbr />Kind<span class="attachedType"></span></a></li>
+                 reNotDigitAscii, reNotWhiteSpaceAscii}">shorthandKind</a></li>
   <li><a class="reference" href="#matchableKind"
     title="matchableKind = {reChar, reCharCi, reWord, reDigit, reWhiteSpace, reUCC,
                  reNotAlphaNum, reNotDigit, reNotWhiteSpace, reNotUCC, reAny,
                  reAnyNl, reInSet, reNotSet, reWordAscii, reDigitAscii,
                  reWhiteSpaceAscii, reNotAlphaNumAscii, reNotDigitAscii,
-                 reNotWhiteSpaceAscii, reAnyAscii, reAnyNlAscii}"><wbr />matchable<wbr />Kind<span class="attachedType"></span></a></li>
+                 reNotWhiteSpaceAscii, reAnyAscii, reAnyNlAscii}">matchableKind</a></li>
   <li><a class="reference" href="#repetitionKind"
-    title="repetitionKind = {reZeroOrMore, reOneOrMore, reRepRange}"><wbr />repetition<wbr />Kind<span class="attachedType"></span></a></li>
+    title="repetitionKind = {reZeroOrMore, reOneOrMore, reRepRange}">repetitionKind</a></li>
   <li><a class="reference" href="#groupKind"
-    title="groupKind = {reGroupStart, reGroupEnd}"><wbr />group<wbr />Kind<span class="attachedType"></span></a></li>
+    title="groupKind = {reGroupStart, reGroupEnd}">groupKind</a></li>
 
   </ul>
 </li>
@@ -170,49 +170,49 @@ function main() {
   <ul class="simple simple-toc-section">
       <ul class="simple nested-toc-section">initNotSetNode
       <li><a class="reference" href="#initNotSetNode"
-    title="initNotSetNode(): Node">initNotSetNode<span class="attachedType">Node</span></a></li>
+    title="initNotSetNode(): Node">initNotSetNode</a></li>
 
   </ul>
   <ul class="simple nested-toc-section">initEoeNode
       <li><a class="reference" href="#initEoeNode"
-    title="initEoeNode(): Node">initEoeNode<span class="attachedType">Node</span></a></li>
+    title="initEoeNode(): Node">initEoeNode</a></li>
 
   </ul>
   <ul class="simple nested-toc-section">initSkipNode
       <li><a class="reference" href="#initSkipNode%2CopenArray%5Bint16%5D"
-    title="initSkipNode(next: openArray[int16]): Node">initSkipNode,openArray[int16]<span class="attachedType">Node</span></a></li>
+    title="initSkipNode(next: openArray[int16]): Node">initSkipNode,<wbr>openArray[int16]</a></li>
 
   </ul>
   <ul class="simple nested-toc-section">initGroupStart
       <li><a class="reference" href="#initGroupStart%2Cstring%2Cseq%5BFlag%5D"
-    title="initGroupStart(name: string = &quot;&quot;; flags: seq[Flag] = @[]; isCapturing = true): Node">initGroupStart,string,seq[Flag]<span class="attachedType">Node</span></a></li>
+    title="initGroupStart(name: string = &quot;&quot;; flags: seq[Flag] = @[]; isCapturing = true): Node">initGroupStart,<wbr>string,<wbr>seq[Flag]</a></li>
 
   </ul>
   <ul class="simple nested-toc-section">initJoinerNode
       <li><a class="reference" href="#initJoinerNode"
-    title="initJoinerNode(): Node">initJoinerNode<span class="attachedType">Node</span></a></li>
+    title="initJoinerNode(): Node">initJoinerNode</a></li>
 
   </ul>
   <ul class="simple nested-toc-section">initSetNode
       <li><a class="reference" href="#initSetNode"
-    title="initSetNode(): Node">initSetNode<span class="attachedType">Node</span></a></li>
+    title="initSetNode(): Node">initSetNode</a></li>
 
   </ul>
   <ul class="simple nested-toc-section">toString
       <li><a class="reference" href="#toString%2CNode"
-    title="toString(n: Node): string">toString,Node<span class="attachedType">Node</span></a></li>
+    title="toString(n: Node): string">toString,<wbr>Node</a></li>
   <li><a class="reference" href="#toString%2Cseq%5BNode%5D"
-    title="toString(n: seq[Node]): string">toString,seq[Node]<span class="attachedType">Node</span></a></li>
+    title="toString(n: seq[Node]): string">toString,<wbr>seq[Node]</a></li>
 
   </ul>
   <ul class="simple nested-toc-section">isEmpty
       <li><a class="reference" href="#isEmpty%2CNode"
-    title="isEmpty(n: Node): bool">isEmpty,Node<span class="attachedType">Node</span></a></li>
+    title="isEmpty(n: Node): bool">isEmpty,<wbr>Node</a></li>
 
   </ul>
   <ul class="simple nested-toc-section">toCharNode
       <li><a class="reference" href="#toCharNode%2CRune"
-    title="toCharNode(r: Rune): Node">toCharNode,Rune<span class="attachedType">Node</span></a></li>
+    title="toCharNode(r: Rune): Node">toCharNode,<wbr>Rune</a></li>
 
   </ul>
 
@@ -222,6 +222,7 @@ function main() {
 </ul>
 
   </div>
+  
   <div class="nine columns" id="content">
   <div id="tocRoot"></div>
   
@@ -432,7 +433,7 @@ return the string representation of a <tt class="docutils literal"><span class="
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br/>
-        <small style="color: var(--hint);">Made with Nim. Generated: 2020-10-20 16:55:42 UTC</small>
+        <small style="color: var(--hint);">Made with Nim. Generated: 2020-11-22 06:24:09 UTC</small>
       </div>
     </div>
   </div>

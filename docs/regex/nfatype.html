@@ -101,46 +101,46 @@ function main() {
   <a class="reference reference-toplevel" href="#7" id="57">Types</a>
   <ul class="simple simple-toc-section">
       <li><a class="reference" href="#CaptIdx"
-    title="CaptIdx = int32"><wbr />Capt<wbr />Idx<span class="attachedType"></span></a></li>
+    title="CaptIdx = int32">CaptIdx</a></li>
   <li><a class="reference" href="#CaptNode"
     title="CaptNode = object
   parent*: CaptIdx
   bound*: int
-  idx*: int16"><wbr />Capt<wbr />Node<span class="attachedType"></span></a></li>
+  idx*: int16">CaptNode</a></li>
   <li><a class="reference" href="#Capts"
-    title="Capts = seq[CaptNode]"><wbr />Capts<span class="attachedType"></span></a></li>
+    title="Capts = seq[CaptNode]">Capts</a></li>
   <li><a class="reference" href="#Captures"
-    title="Captures = seq[seq[Slice[int]]]"><wbr />Captures<span class="attachedType"></span></a></li>
+    title="Captures = seq[seq[Slice[int]]]">Captures</a></li>
   <li><a class="reference" href="#RegexLit"
-    title="RegexLit = distinct string"><wbr />Regex<wbr />Lit<span class="attachedType"></span></a></li>
+    title="RegexLit = distinct string">RegexLit</a></li>
   <li><a class="reference" href="#Regex"
     title="Regex = object
   nfa*: Nfa
   transitions*: Transitions
   groupsCount*: int16
   namedGroups*: OrderedTable[string, int16]
-  litOpt*: LitOpt"><wbr />Regex<span class="attachedType"></span></a></li>
+  litOpt*: LitOpt">Regex</a></li>
   <li><a class="reference" href="#MatchFlag"
     title="MatchFlag = enum
-  mfShortestMatch, mfNoCaptures, mfFindMatch, mfFindMatchOpt"><wbr />Match<wbr />Flag<span class="attachedType"></span></a></li>
+  mfShortestMatch, mfNoCaptures, mfFindMatch, mfFindMatchOpt">MatchFlag</a></li>
   <li><a class="reference" href="#MatchFlags"
-    title="MatchFlags = set[MatchFlag]"><wbr />Match<wbr />Flags<span class="attachedType"></span></a></li>
+    title="MatchFlags = set[MatchFlag]">MatchFlags</a></li>
   <li><a class="reference" href="#RegexMatch"
     title="RegexMatch = object
   captures*: Captures
   namedGroups*: OrderedTable[string, int16]
-  boundaries*: Slice[int]"><wbr />Regex<wbr />Match<span class="attachedType"></span></a></li>
+  boundaries*: Slice[int]">RegexMatch</a></li>
   <li><a class="reference" href="#NodeIdx"
-    title="NodeIdx = int16"><wbr />Node<wbr />Idx<span class="attachedType"></span></a></li>
+    title="NodeIdx = int16">NodeIdx</a></li>
   <li><a class="reference" href="#Bounds"
-    title="Bounds = Slice[int]"><wbr />Bounds<span class="attachedType"></span></a></li>
+    title="Bounds = Slice[int]">Bounds</a></li>
   <li><a class="reference" href="#PState"
-    title="PState = tuple[ni: NodeIdx, ci: CaptIdx, bounds: Bounds]"><wbr />PState<span class="attachedType"></span></a></li>
+    title="PState = tuple[ni: NodeIdx, ci: CaptIdx, bounds: Bounds]">PState</a></li>
   <li><a class="reference" href="#Submatches"
     title="Submatches = ref object
   sx: seq[PState]
   ss: seq[int16]
-  si: int16"><wbr />Submatches<span class="attachedType"></span></a></li>
+  si: int16">Submatches</a></li>
 
   </ul>
 </li>
@@ -149,44 +149,44 @@ function main() {
   <ul class="simple simple-toc-section">
       <ul class="simple nested-toc-section">constructSubmatches
       <li><a class="reference" href="#constructSubmatches%2CCaptures%2CCapts%2Cint%2Cint"
-    title="constructSubmatches(captures: var Captures; capts: Capts; capt, size: int)">constructSubmatches,Captures,Capts,int,int<span class="attachedType">Captures</span></a></li>
+    title="constructSubmatches(captures: var Captures; capts: Capts; capt, size: int)">constructSubmatches,<wbr>Captures,<wbr>Capts,<wbr>int,<wbr>int</a></li>
 
   </ul>
   <ul class="simple nested-toc-section">len
       <li><a class="reference" href="#len%2CSubmatches"
-    title="len(sm: Submatches): int">len,Submatches<span class="attachedType">Submatches</span></a></li>
+    title="len(sm: Submatches): int">len,<wbr>Submatches</a></li>
 
   </ul>
   <ul class="simple nested-toc-section">add
       <li><a class="reference" href="#add%2CSubmatches%2CPState"
-    title="add(sm: var Submatches; item: PState)">add,Submatches,PState<span class="attachedType">Submatches</span></a></li>
+    title="add(sm: var Submatches; item: PState)">add,<wbr>Submatches,<wbr>PState</a></li>
 
   </ul>
   <ul class="simple nested-toc-section">hasState
       <li><a class="reference" href="#hasState%2CSubmatches%2Cint16"
-    title="hasState(sm: Submatches; n: int16): bool">hasState,Submatches,int16<span class="attachedType">Submatches</span></a></li>
+    title="hasState(sm: Submatches; n: int16): bool">hasState,<wbr>Submatches,<wbr>int16</a></li>
 
   </ul>
   <ul class="simple nested-toc-section">clear
       <li><a class="reference" href="#clear%2CRegexMatch"
-    title="clear(m: var RegexMatch)">clear,RegexMatch<span class="attachedType">RegexMatch</span></a></li>
+    title="clear(m: var RegexMatch)">clear,<wbr>RegexMatch</a></li>
   <li><a class="reference" href="#clear%2CSubmatches"
-    title="clear(sm: var Submatches)">clear,Submatches<span class="attachedType">Submatches</span></a></li>
+    title="clear(sm: var Submatches)">clear,<wbr>Submatches</a></li>
 
   </ul>
   <ul class="simple nested-toc-section">cap
       <li><a class="reference" href="#cap%2CSubmatches"
-    title="cap(sm: Submatches): int">cap,Submatches<span class="attachedType">Submatches</span></a></li>
+    title="cap(sm: Submatches): int">cap,<wbr>Submatches</a></li>
 
   </ul>
   <ul class="simple nested-toc-section">[]
       <li><a class="reference" href="#%5B%5D%2CSubmatches%2Cint"
-    title="`[]`(sm: Submatches; i: int): PState">[],Submatches,int<span class="attachedType">Submatches</span></a></li>
+    title="`[]`(sm: Submatches; i: int): PState">[],<wbr>Submatches,<wbr>int</a></li>
 
   </ul>
   <ul class="simple nested-toc-section">newSubmatches
       <li><a class="reference" href="#newSubmatches%2Cint"
-    title="newSubmatches(size: int): Submatches">newSubmatches,int<span class="attachedType">Submatches</span></a></li>
+    title="newSubmatches(size: int): Submatches">newSubmatches,<wbr>int</a></li>
 
   </ul>
 
@@ -196,7 +196,7 @@ function main() {
   <a class="reference reference-toplevel" href="#15" id="65">Iterators</a>
   <ul class="simple simple-toc-section">
       <li><a class="reference" href="#items.i%2CSubmatches"
-    title="items(sm: Submatches): PState"><wbr />items<span class="attachedType">Submatches</span></a></li>
+    title="items(sm: Submatches): PState">items</a></li>
 
   </ul>
 </li>
@@ -204,6 +204,7 @@ function main() {
 </ul>
 
   </div>
+  
   <div class="nine columns" id="content">
   <div id="tocRoot"></div>
   
@@ -417,7 +418,7 @@ Parallel states would be a better name. This is a sparse set
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br/>
-        <small style="color: var(--hint);">Made with Nim. Generated: 2020-10-20 16:55:43 UTC</small>
+        <small style="color: var(--hint);">Made with Nim. Generated: 2020-11-22 06:24:09 UTC</small>
       </div>
     </div>
   </div>

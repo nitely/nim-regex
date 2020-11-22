@@ -48,3 +48,4 @@ endsWith	regex.html#endsWith,string,Regex	regex: endsWith(s: string; pattern: Re
 replace	regex.html#replace,string,Regex,string,int	regex: replace(s: string; pattern: Regex; by: string; limit = 0): string	
 replace	regex.html#replace,string,Regex,proc(RegexMatch,string),int	regex: replace(s: string; pattern: Regex; by: proc (m: RegexMatch; s: string): string;\n        limit = 0): string	
 isInitialized	regex.html#isInitialized,Regex	regex: isInitialized(re: Regex): bool	
+escapeRe	regex.html#escapeRe,string	regex: escapeRe(s: string): string	

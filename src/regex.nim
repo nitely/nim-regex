@@ -877,23 +877,21 @@ func escapeRe*(s: string): string {.raises: [].} =
   ## so that it can be matched verbatim
   # The special char list is the same as re.escape
   # in Python 3.7
-  template u(x: char): untyped = Rune(x.int32)
+  #
+  # utf-8 ascii code-points cannot be part of multi-byte
+  # code-points, so we can read/match byte by byte
   result = ""
-  for c in s.runes:
+  for c in s:
     case c
-    of u' ', u'#', u'$', u'&', u'(',
-        u')', u'*', u'+', u'-', u'.',
-        u'?', u'[', u'\\', u']', u'^',
-        u'{', u'|', u'}', u'~', Rune(9),
-        Rune(10), Rune(11), Rune(12), Rune(13):
+    of ' ', '#', '$', '&', '(',
+        ')', '*', '+', '-', '.',
+        '?', '[', '\\', ']', '^',
+        '{', '|', '}', '~', char(9),
+        char(10), char(11), char(12), char(13):
       result.add '\\'
-      result.add c.char
+      result.add c
     else:
-      if c.int < 128:
-        result.add c.char
-      else:
-        # XXX add openArray of s
-        result.add $c
+      result.add c
 
 proc toString(
   pattern: Regex,

@@ -28,11 +28,12 @@ func genMatchedBody(
   let eoeStmt = case nfa[nt].kind:
     of reEoe:
       quote do:
-        `m`.add (`captx`, `bounds`.a .. `i`-1)
+        #debugEcho "end ", `m`.len
+        `m`.add (`captx`, `bounds`.a .. `charIdx`-1)
         `smA`.clear()
         if not `eoeFound`:
           `eoeFound` = true
-          `smA`.add (0'i16, -1'i32, `i` .. `i`-1)
+          `smA`.add (0'i16, -1'i32, `charIdx` .. `charIdx`-1)
         `smi` = 0
         continue
     else: newEmptyNode()
@@ -209,14 +210,14 @@ func submatchEoe(
 proc findSomeImpl*(
   text, expLit, ms, i, isOpt: NimNode
 ): NimNode =
-  defVars c, cPrev
+  defVars c, cPrev, iPrev
   let exp = expLit[1]
   let regex = reCt(exp.strVal)
   let nfaLenLit = newLit regex.nfa.len
   let smA = quote do: `ms`.a
   let c2 = quote do: int32(`c`)
-  let submatchStmt = submatch(regex, ms, i, cPrev, c2)
-  let submatchEoeStmt = submatchEoe(regex, ms, i, cPrev)
+  let submatchStmt = submatch(regex, ms, iPrev, cPrev, c2)
+  let submatchEoeStmt = submatchEoe(regex, ms, iPrev, cPrev)
   return quote do:
     #block:
     initMaybeImpl(`ms`, `nfaLenLit`)
@@ -224,19 +225,23 @@ proc findSomeImpl*(
     var
       `c` = Rune(-1)
       `cPrev` = -1'i32
-      iPrev = 0
+      `iPrev` = `i`
     `smA`.add (0'i16, -1'i32, `i` .. `i`-1)
     if 0 <= `i`-1 and `i`-1 <= len(`text`)-1:
       `cPrev` = bwRuneAt(`text`, `i`-1).int32
     while `i` < len(`text`):
+      #debugEcho "i ", `i`
       fastRuneAt(`text`, `i`, `c`, true)
       `submatchStmt`
+      #debugEcho "ms.len ", `ms`.m.len
       if `smA`.len == 0:
         if `i` < len(`text`):
           if hasMatches(`ms`) or `isOpt`:
             break
+            #discard
+      #debugEcho "smA.len ", `smA`.len
       `smA`.add (0'i16, -1'i32, `i` .. `i`-1)
-      iPrev = `i`
+      `iPrev` = `i`
       `cPrev` = `c`.int32
     if `i` >= len(`text`):
       `submatchEoeStmt`
@@ -244,6 +249,7 @@ proc findSomeImpl*(
     if not hasMatches(`ms`):
       `i` = -1
 
+# XXX declare text as const if it's a lit
 proc findAllItImpl*(fr: NimNode): NimNode =
   expectKind fr, nnkForStmt
   doAssert fr[^2].len == 3, "Expected two parameters"
@@ -266,6 +272,8 @@ proc findAllItImpl*(fr: NimNode): NimNode =
       while `i` <= len(`txt`):
         doAssert(`i` > i2); i2 = `i`
         `findSomeStmt`
+        #debugEcho `i`
+        #debugEcho `ms`.m.len
         if `i` < 0: break
         for mi in items(`ms`):
           #fillMatchImpl(m, mi, `ms`, pattern)

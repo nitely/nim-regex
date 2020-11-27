@@ -905,7 +905,7 @@ proc toString(pattern: Regex): string {.used.} =
 
 when true:
   proc main =
-    for x in findAllIt("aaaa", rex"a"):
+    for x in findAllIt("aaaaa", rex"a"):
       echo "foobar"
   main()
 

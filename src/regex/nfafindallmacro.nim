@@ -1,14 +1,20 @@
 import std/macros
 import std/unicode
 import std/tables
-from std/strutils import find
+#from std/strutils import find
 
-import ./nodemacro
 import ./nodetype
 import ./nfatype
 import ./compiler
 import ./nfafindalltype
 import ./nodematchmacro
+
+macro defVars(idns: varargs[untyped]): untyped =
+  var lets = newNimNode nnkLetSection
+  for idn in idns:
+    lets.add newIdentDefs(
+      idn, newEmptyNode(), newCall("genSym", newLit nskVar, newLit $idn))
+  return newStmtList lets
 
 func genMatchedBody(
   smA, smB, m, ntLit, capt, bounds,
@@ -125,8 +131,7 @@ func submatch(
   let submatchStmt = genSubmatch(
     n, capt, bounds, smA, smB, m, c,
     matched, captx, eoeFound, smi,
-    capts, charIdx, cPrev: NimNode,
-    regex: Regex)
+    capts, charIdx, cPrev, regex)
   result = quote do:
     `smB`.clear()
     var `captx`: int32
@@ -153,7 +158,7 @@ func genSubmatchEoe(
       continue
     var branchBodyN: seq[NimNode]
     for nti, nt in nfa[i].next.pairs:
-      if regex.nfa[nt].kind == reEoe:
+      if nfa[nt].kind == reEoe:
         let ntLit = newLit nt
         let cLit = newLit -1'i32
         let matchedBodyStmt = genMatchedBody(
@@ -164,16 +169,14 @@ func genSubmatchEoe(
         branchBodyN.add quote do:
           if not hasState(`smB`, `ntLit`):
             `matchedBodyStmt`
-    doAssert branchBodyN.len > 0
-    caseStmtN.add newTree(nnkOfBranch,
-      newLit i.int16,
-      newStmtList(
-        branchBodyN))
+    if branchBodyN.len > 0:
+      caseStmtN.add newTree(nnkOfBranch,
+        newLit i.int16,
+        newStmtList(
+          branchBodyN))
   doAssert caseStmtN.len > 1
   caseStmtN.add newTree(nnkElse,
-    quote do:
-      doAssert false
-      discard)
+    quote do: discard)
   result.add newTree(nnkCaseStmt, caseStmtN)
 
 func submatchEoe(
@@ -191,8 +194,7 @@ func submatchEoe(
   let submatchStmt = genSubmatchEoe(
     n, capt, bounds, smA, smB, m,
     matched, captx, eoeFound, smi,
-    capts, charIdx, cPrev: NimNode,
-    regex: Regex)
+    capts, charIdx, cPrev, regex)
   result = quote do:
     `smB`.clear()
     var `captx`: int32
@@ -205,9 +207,9 @@ func submatchEoe(
     swap `smA`, `smB`
 
 proc findSomeImpl*(
-  text, expLit, ms, pos, isOpt: NimNode
+  text, expLit, ms, i, isOpt: NimNode
 ): NimNode =
-  defVars c, i, cPrev
+  defVars c, cPrev
   let exp = expLit[1]
   let regex = reCt(exp.strVal)
   let nfaLenLit = newLit regex.nfa.len
@@ -216,20 +218,22 @@ proc findSomeImpl*(
   let submatchStmt = submatch(regex, ms, i, cPrev, c2)
   let submatchEoeStmt = submatchEoe(regex, ms, i, cPrev)
   return quote do:
+    #block:
     initMaybeImpl(`ms`, `nfaLenLit`)
     `ms`.clear()
     var
       `c` = Rune(-1)
       `cPrev` = -1'i32
-      `i` = 0
       iPrev = 0
     `smA`.add (0'i16, -1'i32, `i` .. `i`-1)
+    if 0 <= `i`-1 and `i`-1 <= len(`text`)-1:
+      `cPrev` = bwRuneAt(`text`, `i`-1).int32
     while `i` < len(`text`):
       fastRuneAt(`text`, `i`, `c`, true)
       `submatchStmt`
       if `smA`.len == 0:
         if `i` < len(`text`):
-          if `ms`.hasMatches() or `isOpt`:
+          if hasMatches(`ms`) or `isOpt`:
             break
       `smA`.add (0'i16, -1'i32, `i` .. `i`-1)
       iPrev = `i`
@@ -237,7 +241,33 @@ proc findSomeImpl*(
     if `i` >= len(`text`):
       `submatchEoeStmt`
       doAssert `smA`.len == 0
-    if `ms`.hasMatches():
-      `pos` = `i`
-    else:
-      `pos` = -1
+    if not hasMatches(`ms`):
+      `i` = -1
+
+proc findAllItImpl*(fr: NimNode): NimNode =
+  expectKind fr, nnkForStmt
+  doAssert fr[^2].len == 3, "Expected two parameters"
+  #result = newStmtList()
+  #result.add newVarStmt(fr[0], countStart)
+  var body = fr[^1]
+  if body.kind != nnkStmtList:
+    body = newTree(nnkStmtList, body)
+  defVars ms, i
+  let txt = fr[^2][1]
+  let exp = fr[^2][2]
+  let isOpt = quote do: false
+  let findSomeStmt = findSomeImpl(txt, exp, ms, i, isOpt)
+  echo repr(findSomeStmt)
+  result = quote do:
+    block:
+      var `i` = 0
+      var i2 = -1
+      var `ms`: RegexMatches
+      while `i` <= len(`txt`):
+        doAssert(`i` > i2); i2 = `i`
+        `findSomeStmt`
+        if `i` < 0: break
+        for mi in items(`ms`):
+          #fillMatchImpl(m, mi, `ms`, pattern)
+          `body`
+        if `i` == len(`txt`): break

@@ -494,13 +494,9 @@ when canUseMacro:
 
     matchImpl(text, regex, body)
 
-  when false:
-    macro findAll*(
-      text: string,
-      regex: RegexLit,
-      body: untyped
-    ): untyped =
-      findSomeImpl(text, regex, body)
+  when true:
+    macro findAllIt(x: ForLoopStmt): untyped =
+      findAllItImpl(x)
 
 func match*(
   s: string,
@@ -907,7 +903,13 @@ proc toString(pattern: Regex): string {.used.} =
   var visited: set[int16]
   result = pattern.toString(0, visited)
 
-when isMainModule:
+when true:
+  proc main =
+    for x in findAllIt("aaaa", rex"a"):
+      echo "foobar"
+  main()
+
+when false:
   import ./regex/parser
   import ./regex/exptransformation
 

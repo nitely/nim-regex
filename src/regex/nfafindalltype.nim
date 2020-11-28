@@ -68,6 +68,9 @@ func clear*(ms: var RegexMatches) {.inline.} =
   ms.m.clear()
   ms.c.setLen 0
 
+func len*(ms: var RegexMatches): int {.inline.} =
+  ms.m.len
+
 iterator bounds*(ms: RegexMatches): Slice[int] {.inline.} =
   for i in 0 .. ms.m.len-1:
     yield ms.m.s[i].bounds

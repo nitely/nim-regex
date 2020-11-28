@@ -905,8 +905,17 @@ proc toString(pattern: Regex): string {.used.} =
 
 when true:
   proc main =
-    for x in findAllIt("aaaaa", rex"a"):
-      echo "foobar"
+    block:
+      var s: seq[Slice[int]]
+      for x in findAllIt("aaa", rex"a"):
+        s.add x
+      doAssert s == @[0 .. 0, 1 .. 1, 2 .. 2]
+    block:
+      var i = 0
+      for x in findAllIt("ababab", rex"a"):
+        inc i
+        break
+      doAssert i == 1
   main()
 
 when false:

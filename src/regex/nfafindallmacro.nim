@@ -258,16 +258,18 @@ proc findAllItImpl*(fr: NimNode): NimNode =
   var body = fr[^1]
   if body.kind != nnkStmtList:
     body = newTree(nnkStmtList, body)
+  let bs = fr[0]
   defVars ms, i
   let txt = fr[^2][1]
   let exp = fr[^2][2]
   let isOpt = quote do: false
   let findSomeStmt = findSomeImpl(txt, exp, ms, i, isOpt)
-  echo repr(findSomeStmt)
   result = quote do:
     block:
+      var `bs` = -1 .. 0
       var `i` = 0
       var i2 = -1
+      var mi = 0
       var `ms`: RegexMatches
       while `i` <= len(`txt`):
         doAssert(`i` > i2); i2 = `i`
@@ -275,7 +277,10 @@ proc findAllItImpl*(fr: NimNode): NimNode =
         #debugEcho `i`
         #debugEcho `ms`.m.len
         if `i` < 0: break
-        for mi in items(`ms`):
-          #fillMatchImpl(m, mi, `ms`, pattern)
+        mi = 0
+        while mi < len(`ms`):
+          `bs` = `ms`.m.s[mi].bounds
           `body`
+          mi += 1
+        if mi < len(`ms`): break
         if `i` == len(`txt`): break

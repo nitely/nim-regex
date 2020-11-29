@@ -205,11 +205,10 @@ func submatchEoe(
     swap `smA`, `smB`
 
 proc findSomeImpl(
-  text, expLit, ms, i, isOpt: NimNode
+  text, ms, i, isOpt: NimNode,
+  regex: Regex
 ): NimNode =
   defVars c, cPrev, iPrev
-  let exp = expLit[1]
-  let regex = reCt(exp.strVal)
   let nfaLenLit = newLit regex.nfa.len
   let smA = quote do: `ms`.a
   let c2 = quote do: int32(`c`)
@@ -265,8 +264,9 @@ proc findAllItImpl*(fr: NimNode): NimNode =
   if body.kind != nnkStmtList:
     body = newTree(nnkStmtList, body)
   defVars ms, i
+  let regex = reCt(exp[1].strVal)
   let isOpt = quote do: false
-  let findSomeStmt = findSomeImpl(txt, exp, ms, i, isOpt)
+  let findSomeStmt = findSomeImpl(txt, ms, i, isOpt, regex)
   result = quote do:
     block:
       var `x` = -1 .. 0
@@ -489,11 +489,30 @@ func submatchEoe2(
       `smi` += 1
     swap `smA`, `smB`
 
+# XXX move
+template bwFastRuneAt(
+  s: string, n: var int, result: var Rune
+) =
+  ## Take rune ending at ``n``
+  doAssert n > 0
+  doAssert n <= s.len-1
+  dec n
+  while n > 0 and s[n].ord shr 6 == 0b10:
+    dec n
+  fastRuneAt(s, n, result, false)
+
 func matchPrefixImpl(
   text, ms, i, limit: NimNode,
   regex: Regex
 ): NimNode =
+  template nfa: untyped = regex.litOpt.nfa
   defVars c, cPrev, iPrev
+  var eoe = -1
+  for i in 0 .. nfa.len-1:
+    if nfa[i].kind == reEoe:
+      doAssert eoe == -1
+      eoe = i
+  let eoeLit = newLit eoe
   let smA = quote do: `ms`.a
   let smB = quote do: `ms`.b
   let c2 = quote do: int32(`c`)
@@ -514,7 +533,7 @@ func matchPrefixImpl(
       `submatchStmt`
       if `smA`.len == 0:
         break
-      if nfa[smA[0].ni].kind == reEoe: # XXX fix
+      if `smA`[0].ni == `eoeLit`:
         break
       `iPrev` = `i`
       `cPrev` = `c`.int32
@@ -524,7 +543,46 @@ func matchPrefixImpl(
       `c` = Rune(-1)
     `submatchEoeStmt`
     `i` = -1
-    for n, capt, bounds in `smA`.items:
-      if nfa[n].kind == reEoe:  # XXX fix
+    for n, capt, bounds in items `smA`:
+      if n == `eoeLit`:
         `i` = bounds.a
         break
+
+func findSomeOptImpl(
+  text, ms, i: NimNode,
+  regex: Regex
+): NimNode =
+  doAssert regex.litOpt.nfa.len > 0
+  defVars limit
+  let matchPrefixStmt = matchPrefixImpl(
+    text, ms, i, limit, regex)
+  let isOpt = quote do: true
+  let findSomeStmt = findSomeImpl(
+    text, ms, i, isOpt, regex)
+  let regexLenLit = newLit max(
+    regex.litOpt.nfa.len,
+    regex.nfa.len)
+  let charLit = newLit regex.litOpt.lit.char
+  result = quote do:
+    initMaybeImpl(`ms`, `regexLenLit`)
+    `ms`.clear()
+    var `limit` = `i`
+    var i2 = -1
+    while `i` < len(`text`):
+      doAssert `i` > i2; i2 = `i`
+      let litIdx = find(`text`, `charLit`, `i`)
+      if litIdx == -1:
+        `i` = -1
+        break
+      doAssert litIdx >= `i`
+      `i` = litIdx
+      `matchPrefixStmt`
+      if `i` == -1:
+        `i` = litIdx+1
+      else:
+        doAssert `i` <= litIdx
+        `findSomeStmt`
+        if `ms`.hasMatches:
+          break
+        if `i` == -1:
+          break

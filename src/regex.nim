@@ -916,6 +916,18 @@ when true:
         inc i
         break
       doAssert i == 1
+    block:
+      var s: seq[Slice[int]]
+      var txt = "aba"
+      for x in findAllIt(txt, rex"a"):
+        s.add x
+      doAssert s == @[0 .. 0, 2 .. 2]
+    block:
+      proc txt(): string = "aba"
+      var s: seq[Slice[int]]
+      for x in findAllIt(txt(), rex"a"):
+        s.add x
+      doAssert s == @[0 .. 0, 2 .. 2]
   main()
 
 when false:

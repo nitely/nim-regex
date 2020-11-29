@@ -252,21 +252,27 @@ proc findSomeImpl*(
 # XXX declare text as const if it's a lit
 proc findAllItImpl*(fr: NimNode): NimNode =
   expectKind fr, nnkForStmt
-  doAssert fr[^2].len == 3, "Expected two parameters"
-  #result = newStmtList()
-  #result.add newVarStmt(fr[0], countStart)
-  var body = fr[^1]
+  if fr.len != 3:
+    error "expected <for x in call(string, RegexLit): stmt>", fr
+  let x = fr[0]
+  if x.kind != nnkIdent:
+    error "expected an identifier as for-loop variable", x
+  if fr[1].len != 3:
+    error "expected <string, RegexLit> parameters", fr
+  let txt = fr[1][1]
+  let exp = fr[1][2]
+  # XXX can txt be checked somehow?
+  if not (exp.kind == nnkCallStrLit and $exp[0] == "rex"):
+    error "second parameter must be a <RegexLit>; ex: rex\"regex\"", exp
+  var body = fr[2]
   if body.kind != nnkStmtList:
     body = newTree(nnkStmtList, body)
-  let bs = fr[0]
   defVars ms, i
-  let txt = fr[^2][1]
-  let exp = fr[^2][2]
   let isOpt = quote do: false
   let findSomeStmt = findSomeImpl(txt, exp, ms, i, isOpt)
   result = quote do:
     block:
-      var `bs` = -1 .. 0
+      var `x` = -1 .. 0
       var `i` = 0
       var i2 = -1
       var mi = 0
@@ -279,7 +285,7 @@ proc findAllItImpl*(fr: NimNode): NimNode =
         if `i` < 0: break
         mi = 0
         while mi < len(`ms`):
-          `bs` = `ms`.m.s[mi].bounds
+          `x` = `ms`.m.s[mi].bounds
           `body`
           mi += 1
         if mi < len(`ms`): break

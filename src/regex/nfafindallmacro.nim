@@ -25,7 +25,7 @@ func genMatchedBody(
 ): NimNode =
   template nfa: untyped = regex.nfa
   template tns: untyped = regex.transitions
-  let eoeStmt = case nfa[nt].kind:
+  let matchedStmt = case nfa[nt].kind:
     of reEoe:
       quote do:
         #debugEcho "end ", `m`.len
@@ -36,13 +36,11 @@ func genMatchedBody(
           `smA`.add (0'i16, -1'i32, `charIdx` .. `charIdx`-1)
         `smi` = 0
         continue
-    else: newEmptyNode()
-  if tns.allZ[i][nti] == -1'i16:
-    if nfa[nt].kind == reEoe:
-      return eoeStmt
     else:
-      return quote do:
-        add(`smB`, (`ntLit`, `capt`, `bounds`.a .. `charIdx`-1))
+      quote do:
+        add(`smB`, (`ntLit`, `captx`, `bounds`.a .. `charIdx`-1))
+  if tns.allZ[i][nti] == -1'i16:
+    return matchedStmt
   var matchedBody: seq[NimNode]
   matchedBody.add quote do:
     `matched` = true
@@ -65,8 +63,7 @@ func genMatchedBody(
       doAssert false
   matchedBody.add quote do:
     if `matched`:
-      `eoeStmt`
-      add(`smB`, (`ntLit`, `captx`, `bounds`.a .. `charIdx`-1))
+      `matchedStmt`
   return newStmtList matchedBody
 
 func genSubmatch(
@@ -207,7 +204,7 @@ func submatchEoe(
       `smi` += 1
     swap `smA`, `smB`
 
-proc findSomeImpl*(
+proc findSomeImpl(
   text, expLit, ms, i, isOpt: NimNode
 ): NimNode =
   defVars c, cPrev, iPrev
@@ -290,3 +287,244 @@ proc findAllItImpl*(fr: NimNode): NimNode =
           mi += 1
         if mi < len(`ms`): break
         if `i` == len(`txt`): break
+
+func genMatchedBody2(
+  smA, smB, m, ntLit, capt, bounds,
+  matched, smi,
+  capts, charIdx, cPrev, c: NimNode,
+  i, nti, nt: int,
+  regex: Regex
+): NimNode =
+  template nfa: untyped = regex.litOpt.nfa
+  template tns: untyped = regex.litOpt.tns
+  let matchedStmt = case nfa[nt].kind:
+    of reEoe:
+      quote do:
+        add(`smB`, (`ntLit`, `capt`, `charIdx` .. `bounds`.b))
+        break
+    else:
+      quote do:
+        add(`smB`, (`ntLit`, `capt`, `charIdx` .. `bounds`.b))
+  if tns.allZ[i][nti] == -1'i16:
+    return matchedStmt
+  var matchedBody: seq[NimNode]
+  matchedBody.add quote do:
+    `matched` = true
+  for z in tns.z[tns.allZ[i][nti]]:
+    case z.kind
+    of assertionKind:
+      let matchCond = genMatch(z, c, cPrev)
+      matchedBody.add quote do:
+        `matched` = `matched` and `matchCond`
+    else:
+      doAssert false
+  matchedBody.add quote do:
+    if `matched`:
+      `matchedStmt`
+  return newStmtList matchedBody
+
+func genEoeBailOut(
+  n, capt, bounds, smB: NimNode,
+  regex: Regex
+): NimNode =
+  template nfa: untyped = regex.litOpt.nfa
+  result = newStmtList()
+  # XXX can there be more than one eoe?
+  var caseStmtN: seq[NimNode]
+  caseStmtN.add n
+  for i in 0 .. nfa.len-1:
+    if nfa[i].kind != reEoe:
+      continue
+    var branchBodyN = quote do:
+      `smB`.add (`n`, `capt`, `bounds`)
+      break
+    caseStmtN.add newTree(nnkOfBranch,
+      newLit i.int16,
+      newStmtList(
+        branchBodyN))
+  doAssert caseStmtN.len > 1
+  caseStmtN.add newTree(nnkElse,
+    quote do: discard)
+  result.add newTree(nnkCaseStmt, caseStmtN)
+
+func genSubmatch2(
+  n, capt, bounds, smA, smB, m, c,
+  matched, smi,
+  capts, charIdx, cPrev: NimNode,
+  regex: Regex
+): NimNode =
+  template nfa: untyped = regex.litOpt.nfa
+  result = newStmtList()
+  var caseStmtN: seq[NimNode]
+  caseStmtN.add n
+  for i in 0 .. nfa.len-1:
+    if nfa[i].kind == reEoe:
+      continue
+    var branchBodyN: seq[NimNode]
+    for nti, nt in nfa[i].next.pairs:
+      let matchCond = case nfa[nt].kind
+        of reEoe:
+          quote do: true
+        of reInSet:
+          let m = genSetMatch(c, nfa[nt])
+          quote do: `c` >= 0'i32 and `m`
+        of reNotSet:
+          let m = genSetMatch(c, nfa[nt])
+          quote do: `c` >= 0'i32 and not `m`
+        else:
+          let m = genMatch(c, nfa[nt])
+          quote do: `c` >= 0'i32 and `m`
+      let ntLit = newLit nt
+      let matchedBodyStmt = genMatchedBody2(
+        smA, smB, m, ntLit, capt, bounds,
+        matched, smi,
+        capts, charIdx, cPrev, c,
+        i, nti, nt, regex)
+      branchBodyN.add quote do:
+        if not hasState(`smB`, `ntLit`) and `matchCond`:
+          `matchedBodyStmt`
+    doAssert branchBodyN.len > 0
+    caseStmtN.add newTree(nnkOfBranch,
+      newLit i.int16,
+      newStmtList(
+        branchBodyN))
+  doAssert caseStmtN.len > 1
+  caseStmtN.add newTree(nnkElse,
+    quote do:
+      doAssert false
+      discard)
+  result.add newTree(nnkCaseStmt, caseStmtN)
+
+func submatch2(
+  regex: Regex,
+  ms, charIdx, cPrev, c: NimNode
+): NimNode =
+  defVars matched, smi
+  let smA = quote do: `ms`.a
+  let smB = quote do: `ms`.b
+  let capts = quote do: `ms`.c
+  let m = quote do: `ms`.m
+  let n = quote do: `ms`.a[`smi`].ni
+  let capt = quote do: `ms`.a[`smi`].ci
+  let bounds = quote do: `ms`.a[`smi`].bounds
+  let submatchStmt = genSubmatch2(
+    n, capt, bounds, smA, smB, m, c,
+    matched, smi,
+    capts, charIdx, cPrev, regex)
+  let eoeBailOutStmt = genEoeBailOut(
+    n, capt, bounds, smB, regex)
+  result = quote do:
+    `smB`.clear()
+    var `matched` = true
+    var `smi` = 0
+    while `smi` < `smA`.len:
+      `eoeBailOutStmt`
+      `submatchStmt`
+      `smi` += 1
+    swap `smA`, `smB`
+
+func genSubmatchEoe2(
+  n, capt, bounds, smA, smB, m,
+  matched, smi,
+  capts, charIdx, cPrev: NimNode,
+  regex: Regex
+): NimNode =
+  template nfa: untyped = regex.litOpt.nfa
+  result = newStmtList()
+  var caseStmtN: seq[NimNode]
+  caseStmtN.add n
+  for i in 0 .. nfa.len-1:
+    if nfa[i].kind == reEoe:
+      continue
+    var branchBodyN: seq[NimNode]
+    for nti, nt in nfa[i].next.pairs:
+      if nfa[nt].kind == reEoe:
+        let ntLit = newLit nt
+        let cLit = newLit -1'i32
+        let matchedBodyStmt = genMatchedBody2(
+          smA, smB, m, ntLit, capt, bounds,
+          matched, smi,
+          capts, charIdx, cPrev, cLit,
+          i, nti, nt, regex)
+        branchBodyN.add quote do:
+          if not hasState(`smB`, `ntLit`):
+            `matchedBodyStmt`
+    doAssert branchBodyN.len > 0
+    caseStmtN.add newTree(nnkOfBranch,
+      newLit i.int16,
+      newStmtList(
+        branchBodyN))
+  doAssert caseStmtN.len > 1
+  caseStmtN.add newTree(nnkElse,
+    quote do:
+      doAssert false
+      discard)
+  result.add newTree(nnkCaseStmt, caseStmtN)
+
+func submatchEoe2(
+  regex: Regex,
+  ms, charIdx, cPrev: NimNode
+): NimNode =
+  defVars matched, smi
+  let smA = quote do: `ms`.a
+  let smB = quote do: `ms`.b
+  let capts = quote do: `ms`.c
+  let m = quote do: `ms`.m
+  let n = quote do: `ms`.a[`smi`].ni
+  let capt = quote do: `ms`.a[`smi`].ci
+  let bounds = quote do: `ms`.a[`smi`].bounds
+  let submatchStmt = genSubmatchEoe2(
+    n, capt, bounds, smA, smB, m,
+    matched, smi,
+    capts, charIdx, cPrev, regex)
+  let eoeBailOutStmt = genEoeBailOut(
+    n, capt, bounds, smB, regex)
+  result = quote do:
+    `smB`.clear()
+    var `matched` = true
+    var `smi` = 0
+    while `smi` < `smA`.len:
+      `eoeBailOutStmt`
+      `submatchStmt`
+      `smi` += 1
+    swap `smA`, `smB`
+
+func matchPrefixImpl(
+  text, ms, i, limit: NimNode,
+  regex: Regex
+): NimNode =
+  defVars c, cPrev, iPrev
+  let smA = quote do: `ms`.a
+  let smB = quote do: `ms`.b
+  let c2 = quote do: int32(`c`)
+  let submatchStmt = submatch2(regex, ms, iPrev, cPrev, c2)
+  let submatchEoeStmt = submatchEoe2(regex, ms, iPrev, cPrev)
+  return quote do:
+    doAssert `i` < len(`text`)
+    doAssert `i` >= `limit`
+    `smA`.clear()
+    `smB`.clear()
+    var
+      `c` = Rune(-1)
+      `cPrev` = runeAt(`text`, `i`).int32
+      `iPrev` = `i`
+    `smA`.add (0'i16, -1'i32, `i` .. `i`-1)
+    while `i` > `limit`:
+      bwFastRuneAt(`text`, `i`, `c`)
+      `submatchStmt`
+      if `smA`.len == 0:
+        break
+      if nfa[smA[0].ni].kind == reEoe: # XXX fix
+        break
+      `iPrev` = `i`
+      `cPrev` = `c`.int32
+    if `i` > 0:
+      bwFastRuneAt(`text`, `i`, `c`)
+    else:
+      `c` = Rune(-1)
+    `submatchEoeStmt`
+    `i` = -1
+    for n, capt, bounds in `smA`.items:
+      if nfa[n].kind == reEoe:  # XXX fix
+        `i` = bounds.a
+        break

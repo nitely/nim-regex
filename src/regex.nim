@@ -263,6 +263,7 @@ const canUseMacro = (NimMajor, NimMinor) >= (1, 1)
 
 when canUseMacro:
   import ./regex/nfamacro
+  import ./regex/nfafindallmacro
   export RegexLit
 
 export
@@ -492,6 +493,10 @@ when canUseMacro:
         doAssert matches == @["abc", "b"]
 
     matchImpl(text, regex, body)
+
+  when true:
+    macro findAllIt*(x: ForLoopStmt): untyped =
+      findAllItImpl(x)
 
 func match*(
   s: string,
@@ -920,6 +925,33 @@ proc toString(pattern: Regex): string {.used.} =
   result = pattern.toString(0, visited)
 
 when isMainModule:
+  proc main =
+    block:
+      var s: seq[Slice[int]]
+      for x in findAllIt("aaa", rex"a"):
+        s.add x
+      doAssert s == @[0 .. 0, 1 .. 1, 2 .. 2]
+    block:
+      var i = 0
+      for x in findAllIt("ababab", rex"a"):
+        inc i
+        break
+      doAssert i == 1
+    block:
+      var s: seq[Slice[int]]
+      var txt = "aba"
+      for x in findAllIt(txt, rex"a"):
+        s.add x
+      doAssert s == @[0 .. 0, 2 .. 2]
+    block:
+      proc txt(): string = "aba"
+      var s: seq[Slice[int]]
+      for x in findAllIt(txt(), rex"a"):
+        s.add x
+      doAssert s == @[0 .. 0, 2 .. 2]
+  main()
+
+when false:
   import ./regex/parser
   import ./regex/exptransformation
 

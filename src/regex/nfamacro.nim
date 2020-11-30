@@ -256,9 +256,7 @@ func genMatchedBody(
           idx: `zIdx`))
         `captx` = (len(`capts`) - 1).int32
     of assertionKind:
-      # https://github.com/nim-lang/Nim/issues/13266
-      #let zLit = newLit z
-      let matchCond = genMatch(`z`, `cPrev`, `c`)
+      let matchCond = genMatch(z, cPrev, c)
       matchedBody.add quote do:
         `matched` = `matched` and `matchCond`
     else:
@@ -434,7 +432,7 @@ proc matchImpl*(text, expLit, body: NimNode): NimNode =
   let exp = expLit[1]
   defVars smA, smB, c, capts, iPrev, cPrev, captx, matched
   let c2 = quote do: int32(`c`)
-  let regex = reCt(exp.strVal)
+  let regex = reCt(exp.strVal)  # XXX disable unneeded litOpt
   let submatchCall = submatch(
     smA, smB, c2, capts, iPrev, cPrev, captx, matched, regex)
   let submatchEoeCall = submatchEoe(

@@ -1,7 +1,7 @@
 import std/macros
 import std/unicode
 import std/tables
-#from std/strutils import find
+from std/strutils import find
 
 import ./nodetype
 import ./nfatype
@@ -215,7 +215,6 @@ proc findSomeImpl(
   let submatchStmt = submatch(regex, ms, iPrev, cPrev, c2)
   let submatchEoeStmt = submatchEoe(regex, ms, iPrev, cPrev)
   return quote do:
-    #block:
     initMaybeImpl(`ms`, `nfaLenLit`)
     `ms`.clear()
     var
@@ -226,67 +225,20 @@ proc findSomeImpl(
     if 0 <= `i`-1 and `i`-1 <= len(`text`)-1:
       `cPrev` = bwRuneAt(`text`, `i`-1).int32
     while `i` < len(`text`):
-      #debugEcho "i ", `i`
       fastRuneAt(`text`, `i`, `c`, true)
       `submatchStmt`
-      #debugEcho "ms.len ", `ms`.m.len
       if `smA`.len == 0:
         if `i` < len(`text`):
           if hasMatches(`ms`) or `isOpt`:
             break
-            #discard
-      #debugEcho "smA.len ", `smA`.len
       `smA`.add (0'i16, -1'i32, `i` .. `i`-1)
       `iPrev` = `i`
       `cPrev` = `c`.int32
     if `i` >= len(`text`):
       `submatchEoeStmt`
       doAssert `smA`.len == 0
-    if not hasMatches(`ms`):
-      `i` = -1
-
-# XXX declare text as const if it's a lit
-proc findAllItImpl*(fr: NimNode): NimNode =
-  expectKind fr, nnkForStmt
-  if fr.len != 3:
-    error "expected <for x in call(string, RegexLit): stmt>", fr
-  let x = fr[0]
-  if x.kind != nnkIdent:
-    error "expected an identifier as for-loop variable", x
-  if fr[1].len != 3:
-    error "expected <string, RegexLit> parameters", fr
-  let txt = fr[1][1]
-  let exp = fr[1][2]
-  # XXX can txt be checked somehow?
-  if not (exp.kind == nnkCallStrLit and $exp[0] == "rex"):
-    error "second parameter must be a <RegexLit>; ex: rex\"regex\"", exp
-  var body = fr[2]
-  if body.kind != nnkStmtList:
-    body = newTree(nnkStmtList, body)
-  defVars ms, i
-  let regex = reCt(exp[1].strVal)
-  let isOpt = quote do: false
-  let findSomeStmt = findSomeImpl(txt, ms, i, isOpt, regex)
-  result = quote do:
-    block:
-      var `x` = -1 .. 0
-      var `i` = 0
-      var i2 = -1
-      var mi = 0
-      var `ms`: RegexMatches
-      while `i` <= len(`txt`):
-        doAssert(`i` > i2); i2 = `i`
-        `findSomeStmt`
-        #debugEcho `i`
-        #debugEcho `ms`.m.len
-        if `i` < 0: break
-        mi = 0
-        while mi < len(`ms`):
-          `x` = `ms`.m.s[mi].bounds
-          `body`
-          mi += 1
-        if mi < len(`ms`): break
-        if `i` == len(`txt`): break
+      if not hasMatches(`ms`):
+        `i` = -1
 
 func genMatchedBody2(
   smA, smB, m, ntLit, capt, bounds,
@@ -424,7 +376,7 @@ func submatch2(
     swap `smA`, `smB`
 
 func genSubmatchEoe2(
-  n, capt, bounds, smA, smB, m,
+  n, capt, bounds, smA, smB, m, c,
   matched, smi,
   capts, charIdx, cPrev: NimNode,
   regex: Regex
@@ -434,36 +386,31 @@ func genSubmatchEoe2(
   var caseStmtN: seq[NimNode]
   caseStmtN.add n
   for i in 0 .. nfa.len-1:
-    if nfa[i].kind == reEoe:
-      continue
     var branchBodyN: seq[NimNode]
     for nti, nt in nfa[i].next.pairs:
       if nfa[nt].kind == reEoe:
         let ntLit = newLit nt
-        let cLit = newLit -1'i32
         let matchedBodyStmt = genMatchedBody2(
           smA, smB, m, ntLit, capt, bounds,
           matched, smi,
-          capts, charIdx, cPrev, cLit,
+          capts, charIdx, cPrev, c,
           i, nti, nt, regex)
         branchBodyN.add quote do:
           if not hasState(`smB`, `ntLit`):
             `matchedBodyStmt`
-    doAssert branchBodyN.len > 0
-    caseStmtN.add newTree(nnkOfBranch,
-      newLit i.int16,
-      newStmtList(
-        branchBodyN))
+    if branchBodyN.len > 0:
+      caseStmtN.add newTree(nnkOfBranch,
+        newLit i.int16,
+        newStmtList(
+          branchBodyN))
   doAssert caseStmtN.len > 1
   caseStmtN.add newTree(nnkElse,
-    quote do:
-      doAssert false
-      discard)
+    quote do: discard)
   result.add newTree(nnkCaseStmt, caseStmtN)
 
 func submatchEoe2(
   regex: Regex,
-  ms, charIdx, cPrev: NimNode
+  ms, charIdx, cPrev, c: NimNode
 ): NimNode =
   defVars matched, smi
   let smA = quote do: `ms`.a
@@ -474,7 +421,7 @@ func submatchEoe2(
   let capt = quote do: `ms`.a[`smi`].ci
   let bounds = quote do: `ms`.a[`smi`].bounds
   let submatchStmt = genSubmatchEoe2(
-    n, capt, bounds, smA, smB, m,
+    n, capt, bounds, smA, smB, m, c,
     matched, smi,
     capts, charIdx, cPrev, regex)
   let eoeBailOutStmt = genEoeBailOut(
@@ -512,12 +459,13 @@ func matchPrefixImpl(
     if nfa[i].kind == reEoe:
       doAssert eoe == -1
       eoe = i
+  doAssert eoe > -1
   let eoeLit = newLit eoe
   let smA = quote do: `ms`.a
   let smB = quote do: `ms`.b
   let c2 = quote do: int32(`c`)
   let submatchStmt = submatch2(regex, ms, iPrev, cPrev, c2)
-  let submatchEoeStmt = submatchEoe2(regex, ms, iPrev, cPrev)
+  let submatchEoeStmt = submatchEoe2(regex, ms, iPrev, cPrev, c2)
   return quote do:
     doAssert `i` < len(`text`)
     doAssert `i` >= `limit`
@@ -572,7 +520,6 @@ func findSomeOptImpl(
       doAssert `i` > i2; i2 = `i`
       let litIdx = find(`text`, `charLit`, `i`)
       if litIdx == -1:
-        `i` = -1
         break
       doAssert litIdx >= `i`
       `i` = litIdx
@@ -582,7 +529,62 @@ func findSomeOptImpl(
       else:
         doAssert `i` <= litIdx
         `findSomeStmt`
-        if `ms`.hasMatches:
+        if hasMatches(`ms`):
           break
         if `i` == -1:
           break
+    if not hasMatches(`ms`):
+      `i` = -1
+
+when defined(noRegexOpt):
+  template findSomeOptTpl(txt, ms, i, regex): untyped =
+    let isOpt = quote do: false
+    findSomeImpl(txt, ms, i, isOpt, regex)
+else:
+  template findSomeOptTpl(txt, ms, i, regex): untyped =
+    if regex.litOpt.nfa.len > 0:
+      findSomeOptImpl(txt, ms, i, regex)
+    else:
+      let isOpt = quote do: false
+      findSomeImpl(txt, ms, i, isOpt, regex)
+
+# XXX declare text as const if it's a lit
+proc findAllItImpl*(fr: NimNode): NimNode =
+  expectKind fr, nnkForStmt
+  if fr.len != 3:
+    error "expected <for x in call(string, RegexLit): stmt>", fr
+  let x = fr[0]
+  if x.kind != nnkIdent:
+    error "expected an identifier as for-loop variable", x
+  if fr[1].len != 3:
+    error "expected <string, RegexLit> parameters", fr
+  let txt = fr[1][1]
+  let exp = fr[1][2]
+  # XXX can txt be checked somehow?
+  if not (exp.kind == nnkCallStrLit and $exp[0] == "rex"):
+    error "second parameter must be a <RegexLit>; ex: rex\"regex\"", exp
+  var body = fr[2]
+  if body.kind != nnkStmtList:
+    body = newTree(nnkStmtList, body)
+  defVars ms, i
+  let regex = reCt(exp[1].strVal)
+  let findSomeStmt = findSomeOptTpl(txt, ms, i, regex)
+  result = quote do:
+    block:
+      var `x` = -1 .. 0
+      var `i` = 0
+      var i2 = -1
+      var mi = 0
+      var `ms`: RegexMatches
+      while `i` <= len(`txt`):
+        doAssert(`i` > i2); i2 = `i`
+        `findSomeStmt`
+        #debugEcho `i`
+        if `i` < 0: break
+        mi = 0
+        while mi < len(`ms`):
+          `x` = `ms`.m.s[mi].bounds
+          `body`
+          mi += 1
+        if mi < len(`ms`): break
+        if `i` == len(`txt`): break

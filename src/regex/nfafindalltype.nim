@@ -56,8 +56,8 @@ template initMaybeImpl*(
     assert ms.b == nil
     ms.a = newSubmatches(size)
     ms.b = newSubmatches(size)
-  doAssert ms.a.cap >= size and
-    ms.b.cap >= size
+  doAssert cap(ms.a) >= size and
+    cap(ms.b) >= size
 
 func hasMatches*(ms: RegexMatches): bool {.inline.} =
   return ms.m.len > 0

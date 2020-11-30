@@ -495,7 +495,7 @@ when canUseMacro:
     matchImpl(text, regex, body)
 
   when true:
-    macro findAllIt(x: ForLoopStmt): untyped =
+    macro findAllIt*(x: ForLoopStmt): untyped =
       findAllItImpl(x)
 
 func match*(
@@ -903,7 +903,7 @@ proc toString(pattern: Regex): string {.used.} =
   var visited: set[int16]
   result = pattern.toString(0, visited)
 
-when true:
+when isMainModule:
   proc main =
     block:
       var s: seq[Slice[int]]

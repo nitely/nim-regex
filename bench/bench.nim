@@ -1,7 +1,7 @@
 import nimbench
 import unicode
 from re import nil
-from regex import nil
+import regex
 
 var text = ""
 for _ in 0 .. 100000:
@@ -100,6 +100,15 @@ benchRelative(email_find_all, m):
   doAssert d == 92
   doNotOptimizeAway(d)
 
+benchRelative(email_find_all_macro, m):
+  var d = 0
+  for i in 0 ..< m:
+    for x in findAllIt(
+        bench_text, rex"[\w\.+-]+@[\w\.-]+\.[\w\.-]+"):
+      d += 1
+  doAssert d == 92, "found " & $d
+  doNotOptimizeAway(d)
+
 var uri_find_all_re = re.re"[\w]+://[^/\s?#]+[^\s?#]+(?:\?[^\s#]*)?(?:#[^\s]*)?"
 
 bench(re_uri_find_all, m):
@@ -120,6 +129,15 @@ benchRelative(uri_find_all, m):
   doAssert d == 5301
   doNotOptimizeAway(d)
 
+benchRelative(uri_find_all_macro, m):
+  var d = 0
+  for i in 0 ..< m:
+    for x in findAllIt(
+        bench_text, rex"[\w]+://[^/\s?#]+[^\s?#]+(?:\?[^\s#]*)?(?:#[^\s]*)?"):
+      d += 1
+  doAssert d == 5301, "found " & $d
+  doNotOptimizeAway(d)
+
 var ip_find_all_re = re.re"(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9])\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9])"
 
 bench(re_ip_find_all, m):
@@ -138,6 +156,15 @@ benchRelative(ip_find_all, m):
     for _ in regex.findAll(bench_text, ip_find_all):
       d += 1
   doAssert d == 5
+  doNotOptimizeAway(d)
+
+benchRelative(ip_find_all_macro, m):
+  var d = 0
+  for i in 0 ..< m:
+    for x in findAllIt(
+        bench_text, rex"(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9])\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9])"):
+      d += 1
+  doAssert d == 5, "found " & $d
   doNotOptimizeAway(d)
 
 when true:

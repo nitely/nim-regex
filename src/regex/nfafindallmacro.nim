@@ -28,7 +28,6 @@ func genMatchedBody(
   let matchedStmt = case nfa[nt].kind:
     of reEoe:
       quote do:
-        #debugEcho "end ", `m`.len
         `m`.add (`captx`, `bounds`.a .. `charIdx`-1)
         `smA`.clear()
         if not `eoeFound`:

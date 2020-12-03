@@ -15,15 +15,15 @@ match taking priority according to PCRE rules
 (longest-left match wins).
 
 This algorithm works the same way as calling
-nfamatch find repeatedly would, except it keeps
+nfamatch find repeatedly, except it keeps
 all possible matches and returns them as soon
 as the current character cannot match the regex,
 i.e: it's a safe point to return. This is just
 to avoid consuming too much memory if possible.
 
-The downside is it takes linear time in the length
-of the text to match + the regex. In most cases it
-should take less space, since the matches are index ranges.
+The downside is it takes linear space in the length
+of the text to match + the regex. In practice it almost always
+takes little space, since the matches are index ranges.
 
 The tricky part is to replace all overlapped
 temporary matches every time an Eoe is found,
@@ -31,6 +31,10 @@ then prune the next states (as they're overlapped),
 then try to match the initial state to the
 current character (next possible match). Other than
 that is the same algorithm as nfamatch.
+
+The "literals optimization" is also implemented here,
+see https://nitely.github.io/2020/11/30/regex-literals-optimization.html
+for the algorithm description
 ]#
 
 import std/unicode

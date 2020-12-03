@@ -4,16 +4,11 @@
 ## within the input string. See issue #59.
 
 #[
-Only optimizations that are
-guaranteed to run in linear
-time are implemented.
-We must also ensure the matches
+Only optimizations that are guaranteed to run in linear
+time are implemented. We must also ensure the matches
 are not overlapped.
-I think the best way to understand
-how the current implementation works
-is by example. However, I'll describe
-some parts of the algorithm that
-may be useful to grasp first:
+
+Here’s a high-level description of the algorithm:
   * we pick a literal that is memchr'ed
     to skip parts of the text
   * the prefix is the regex part before
@@ -44,139 +39,9 @@ How is quadratic runtime avoided?
   * The `overlapTests` in tests.nim are good examples
     of this
 
-------------------------------------
-Examples
-
-Most of the optimizations for these examples
-are not implemented, may not get implemented,
-or are already part of the more general implemented
-optimization
-
-re"(?ms)^.+abc"
-can be optimized by running the match
-at every \n. We can do a quick memchr to find
-every \n.
-
-There is a gotcha, though. If we do this on
-an input such as `\n\n\n\n\n` the matcher will
-consume the whole string for every `\n`, hence
-runtime is quadratic.
-
-The solution is to run a special kind of find,
-instead of a regular match. We need a special find,
-because the regular find will always consume the
-whole string, so we'd only be able to skip the first
-part of the input until the first `\n`, instead
-of skipping multiple parts of the input.
-
-The special find works just like the regular one,
-except it stops when the current character of the
-input cannot be matched by the Regular Expression (RE).
-Once the special find stops, we can run a memchr from
-the index where the find stopped.
-
-Notice find returns non-overlapping matches,
-hence the next search must not process
-characters that are part of a previous matched string.
-The start of text cannot be within the boundaries
-of the previous match.
-
-^ There is a bunch of possible literal optimizations,
-  but this is the meat of it.
-
-re"\d\w+x"
-text: "xxxxxxxxxxx"
-This would take quadratic time,
-as the prefix matcher will match until
-the start of the string every time.
-The solution is disallow the optimization in
-cases where the literal can be matched by the
-prefix. Hence the literal becomes a delimiter
-for the prefix matcher.
-
-re"\wabc"
-This can be optimized the same way as
-the first example, except going back
-one character after running memchr.
-
-The runtime is again linear, every
-character can be consumed at most 2 times:
-one fordward (memchr), and one fordward
-(special find). The "go back" operation does
-not consumes characters, it just does
-index - len(prefix).
-
-The prefix may be longer than just one
-character, as long as the lenght of it
-is fixed we can just go back the lenght of
-the prefix and run a find. We can do
-this even when the prefix contain alternations
-as long as they have the same lenght, for
-example re"(x|y)abc".
-
-The alternative to going back X chars
-is to run the regex prefix in reverse, and
-then run the special find for the full regex.
-This would support prefixes with mixed
-alternation lengths (i.e: re"(\w\w|\d)foo").
-Since this is needed, the going back X
-chars may just be an optimal optimization
-(meaning I may not implement it).
-
-re"\d+abc"
-This can be optimized by doing a memchr
-for "a", running a special match for the
-regex prefix ("\d+") in reverse, and running
-the special find for the full regex.
-
-The special match is a regular match that returns
-the longest match.
-
-We cannot divide the regex in a prefix and suffix
-of "a", and just run that because that would
-run in cuadratic time (see the first "\n\n\n" input example).
-Also, we need to support captures.
-
-re"\w(a|b)"
-This can be optimized by running two scans,
-one for "a" and one for "b" at the start and
-after each match, and then trying to match the one
-with smaller char index first (i.e: the one
-that we found first).
-
-My experiments show PCRE do this with up to
-two literal alternations. When there are more
-than two alternations, it's likely better to
-generate a DFA. For example:
-re"foo|bar|baz|quz" would generate a DFA
-that matches re"f|b|q". We'd use the DFA
-instead of memchr.
-
-Single literals should be preferred over
-alternations. For example: re"\w(a|b)c" would
-memchr the "c" character. Meaning other listed
-optimizations are preferred.
-
----------------------------
-
-We should try to match the larger
-amount of literals and try to fail
-early. Let's say we have re"\d+abc",
-trying to match "a" and then an unbounded
-amount of chars at the left will likely take
-more time than trying to match "c", then
-"ab" at the left, since "a" will appear
-at least the same amount of times as "abc",
-but possibly more times.
-
-This translates to finding the largest amount
-of contiguous lits and picking the right most
-lit to memchr.
-
-However, this has the cost of potentially
-requiring a larger left part of the regex (to match the left side),
-so it may be better to find the first lit in the regex and then
-pick the last lit of its contiguous lits (if any).
+There used to be a list of regex examples here, but
+I wrote a blog post explaining things better, see
+https://nitely.github.io/2020/11/30/regex-literals-optimization.html
 
 ]#
 

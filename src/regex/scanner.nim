@@ -3,43 +3,47 @@ import std/unicode
 import ./nodetype
 import ./common
 
+# XXX remove Scanner[Node]
+
 type
   Scanner*[T: Rune|Node] = ref object
     ## A scanner is a common
     ## construct for reading data
     raw*: string
     s*: seq[T]
-    pos*: int
+    pos*, limit: int
 
 proc newScanner*[T](s: seq[T]): Scanner[T] =
-  Scanner[T](s: s, pos: 0)
+  Scanner[T](s: s, pos: 0, limit: s.len-1)
 
 proc scan*[T](s: seq[T]): Scanner[T] =
   newScanner(s)
 
-proc scan*(raw: string): Scanner[Rune] =
-  Scanner[Rune](
+proc scan*(raw: string, first, last: int): Scanner[Rune] =
+  let s = raw.toRunes
+  result = Scanner[Rune](
     raw: raw,
-    s: raw.toRunes,
-    pos: 0)
+    s: s,
+    pos: first,
+    limit: min(last, s.len-1))
 
 iterator items*[T](sc: Scanner[T]): T =
   ## the yielded item gets consumed
-  while sc.pos <= sc.s.high:
+  while sc.pos <= sc.limit:
     inc sc.pos
-    yield sc.s[sc.pos - 1]
+    yield sc.s[sc.pos-1]
 
 iterator mitems*[T](sc: var Scanner[T]): var T =
   ## the yielded item gets consumed
-  while sc.pos <= sc.s.high:
+  while sc.pos <= sc.limit:
     inc sc.pos
-    yield sc.s[sc.pos - 1]
+    yield sc.s[sc.pos-1]
 
 func finished*[T](sc: Scanner[T]): bool =
-  sc.pos > sc.s.high
+  sc.pos > sc.limit
 
 func prev*[T](sc: Scanner[T]): T =
-  sc.s[sc.pos - 1]
+  sc.s[sc.pos-1]
 
 func curr*[T](sc: Scanner[T]): T =
   sc.s[sc.pos]
@@ -53,7 +57,7 @@ func peekImpl[T](sc: Scanner[T], default: T): T {.inline.} =
   ## same as ``curr`` except it
   ## returns a default/invalid value when
   ## the data is fully consumed
-  if sc.pos > sc.s.high:
+  if sc.pos > sc.limit:
     default
   else:
     sc.s[sc.pos]

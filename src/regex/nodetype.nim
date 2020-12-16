@@ -154,6 +154,16 @@ func initGroupStart*(
     flags: flags,
     isCapturing: isCapturing)
 
+func initLookaround(kind: NodeKind, ab: Slice[int]): Node =
+  doAssert kind in {
+    reLookahead,
+    reLookbehind,
+    reNotLookahead,
+    reNotLookbehind}
+  result = Node(
+    kind: kind,
+    subExp: new SubExp(ab: ab))
+
 func initSkipNode*(next: openArray[int16]): Node =
   ## Return a dummy node that should be skipped
   ## while traversing the NFA

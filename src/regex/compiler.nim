@@ -12,7 +12,7 @@ when false:
     ## Resolve lookarounds
     for n in mitems nodes:
       if n.kind in lookaroundKind:
-        var nodes2 = s[n.ab].parse
+        var nodes2 = s.parse(n.ab.a, n.ab.b)
         pass2(s, nodes2)
         var groups: GroupsCapture
         let rpn = nodes2.transformExp(groups)

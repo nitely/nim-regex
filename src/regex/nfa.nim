@@ -14,10 +14,10 @@ type
 
 type
   End = seq[int16]
-    ## store all the last
+    ## store the last
     ## states of a given state.
     ## Avoids having to recurse
-    ## a state to find its ends,
+    ## a state to find its end,
     ## but have to keep them up-to-date
 
 type

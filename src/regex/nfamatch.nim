@@ -62,8 +62,10 @@ func submatch(
             bound: i,
             idx: z.idx)
           captx = (capts.len-1).int32
-        of assertionKind:
+        of assertionKind - {reLookahead}:
           matched = match(z, cPrev.Rune, c.Rune)
+        of reLookahead:
+          discard
         else:
           assert false
           discard
@@ -142,3 +144,29 @@ func matchImpl*(
     m.namedGroups = regex.namedGroups
   m.boundaries = smA[0].bounds
   return true
+
+when false:
+  # XXX lookaround can capture, so take capts and capt index
+  #     or return allocated capts
+  func matchImpl2*(
+    text: string,
+    nfa: Nfa,
+    start = 0
+  ): bool =
+    var
+      c = Rune(-1)
+      cPrev = -1'i32
+      i = start
+      smA = newSubmatches(nfa.len)
+      smB = newSubmatches(nfa.len)
+    smA.add (0'i16, -1'i32, start .. start-1)
+    if 0 <= start-1 and start-1 <= len(text)-1:
+      cPrev = bwRuneAt(text, start-1).int32
+    while i < len(text):
+      fastRuneAt(text, i, c, true)
+      submatch(smA, smB, regex, iPrev, cPrev, c.int32)
+      if smA.len == 0:
+        return false
+      cPrev = c.int32
+    submatch(smA, smB, regex, iPrev, cPrev, -1'i32)
+    return smA.len > 0

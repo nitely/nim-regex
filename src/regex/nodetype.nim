@@ -91,6 +91,18 @@ type
     shorthands*: seq[Node]
     # reUCC, reNotUCC
     cc*: UnicodeCategorySet
+    # reLookahead, reLookbehind,
+    # reNotLookahead, reNotLookbehind
+    subExp*: SubExp
+  # XXX move nfa/Transitions here?
+  Nfa = seq[Node]
+  Transitions = object
+    allZ*: seq[seq[int16]]
+    z*: seq[seq[Node]]
+  SubExp = ref object
+    nfa: Nfa
+    tns: Transitions
+    ab: Slice[int]  # start..end in raw regex
 
 func toCharNode*(r: Rune): Node =
   ## return a ``Node`` that is meant to be matched
@@ -182,6 +194,11 @@ const
     reNotWordBoundary,
     reWordBoundaryAscii,
     reNotWordBoundaryAscii,
+    reLookahead,
+    reLookbehind,
+    reNotLookahead,
+    reNotLookbehind}
+  lookaroundKind* = {
     reLookahead,
     reLookbehind,
     reNotLookahead,

@@ -54,7 +54,7 @@ func fillGroups(
   var gs = newSeq[int]()
   for i, n in mpairs result.s:
     case n.kind
-    of reGroupStart:
+    of reGroupStart, lookaroundKind:
       gs.add i
       if n.isCapturing:
         n.idx = groups.count
@@ -438,10 +438,14 @@ func toAtoms*(
     .populateUid
     .joinAtoms
 
+func lookaroundsToRpn() =
+  discard
+
 func transformExp*(
   exp: Exp,
   groups: var GroupsCapture
 ): RpnExp {.inline.} =
   result = exp
     .toAtoms(groups)
+    #.lookaroundsToRpn
     .rpn

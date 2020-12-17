@@ -8,7 +8,7 @@ when defined(regexDotDir):
   import ./dotgraph
 
 when false:
-  func pass2(s: string, nodes: var seq[Node]) =
+  func pass2(s: string, nodes: var seq[Node]) =  # XXX remove
     ## Resolve lookarounds
     for n in mitems nodes:
       if n.kind in lookaroundKind:

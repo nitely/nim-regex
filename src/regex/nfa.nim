@@ -258,6 +258,9 @@ func eRemoval*(eNfa: Enfa): Nfa {.raises: [].} =
         qw.addFirst qb
   result.t.allZ.setLen result.s.len
 
+func lookaroundsToNfa() =
+  discard
+
 # XXX rename to nfa when Nim v0.19 is dropped
 func nfa2*(exp: RpnExp): Nfa {.raises: [RegexError].} =
   exp.eNfa.eRemoval

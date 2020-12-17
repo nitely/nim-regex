@@ -93,7 +93,7 @@ type
     cc*: UnicodeCategorySet
     # reLookahead, reLookbehind,
     # reNotLookahead, reNotLookbehind
-    subExp*: SubExp
+    #subExp*: SubExp
   # XXX move nfa/Transitions here?
   Nfa = seq[Node]
   Transitions = object
@@ -102,7 +102,6 @@ type
   SubExp = ref object
     nfa: Nfa
     tns: Transitions
-    ab: Slice[int]  # start..end in raw regex
 
 func toCharNode*(r: Rune): Node =
   ## return a ``Node`` that is meant to be matched
@@ -153,16 +152,6 @@ func initGroupStart*(
     name: name,
     flags: flags,
     isCapturing: isCapturing)
-
-func initLookaround(kind: NodeKind, ab: Slice[int]): Node =
-  doAssert kind in {
-    reLookahead,
-    reLookbehind,
-    reNotLookahead,
-    reNotLookbehind}
-  result = Node(
-    kind: kind,
-    subExp: new SubExp(ab: ab))
 
 func initSkipNode*(next: openArray[int16]): Node =
   ## Return a dummy node that should be skipped

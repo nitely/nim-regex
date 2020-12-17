@@ -644,29 +644,7 @@ func parseGroupTag(sc: Scanner[Rune]): Node =
       doAssert false
     doAssert sc.peek in ['='.Rune, '!'.Rune]
     discard sc.next
-    var first = sc.pos
-    var last = sc.pos
-    var found = false
-    var parens: seq[bool]
-    for c in sc:
-      case c
-      of '\\'.Rune:
-        discard sc.next
-      of '('.Rune:
-        parens.add true
-      of ')':
-        if parens.len > 0:
-          parens.pop()
-        else:
-          found = true
-          break
-      else:
-        discard
-      inc last
-    prettyCheck(
-      not found,
-      "Invalid lookaround. End paren is missing")
-    result = initLookaround(lookAroundKind, first .. last)
+    result = Ńode(kind: lookAroundKind)
   else:
     prettyCheck(
       false,

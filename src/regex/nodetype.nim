@@ -93,15 +93,15 @@ type
     cc*: UnicodeCategorySet
     # reLookahead, reLookbehind,
     # reNotLookahead, reNotLookbehind
-    #subExp*: SubExp
+    subExp*: SubExp
   # XXX move nfa/Transitions here?
   Nfa = seq[Node]
   Transitions = object
     allZ*: seq[seq[int16]]
     z*: seq[seq[Node]]
-  SubExp = ref object
-    nfa: Nfa
-    tns: Transitions
+  SubExp = object
+    nfa*: Nfa
+    tns*: Transitions
 
 func toCharNode*(r: Rune): Node =
   ## return a ``Node`` that is meant to be matched
@@ -247,6 +247,7 @@ const
   groupKind* = {
     reGroupStart,
     reGroupEnd}
+  groupStartKind* = {reGroupStart} + lookaroundKind
 
 func `$`*(n: Node): string =
   ## return the string representation

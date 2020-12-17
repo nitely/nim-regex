@@ -644,7 +644,10 @@ func parseGroupTag(sc: Scanner[Rune]): Node =
       doAssert false
     doAssert sc.peek in ['='.Rune, '!'.Rune]
     discard sc.next
-    result = Ńode(kind: lookAroundKind)
+    prettyCheck(
+      sc.peek != ')'.Rune,
+      "Empty lookaround is not allowed")
+    result = Node(kind: lookAroundKind)
   else:
     prettyCheck(
       false,

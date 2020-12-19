@@ -9,7 +9,7 @@ import std/unicode
 import std/tables
 
 import ./nodematch
-import ./nodetype
+import ./types
 import ./nfatype
 
 template findMatchBailOut: untyped {.dirty.} =

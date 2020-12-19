@@ -5,8 +5,12 @@ import std/parseutils
 
 import pkg/unicodedb/properties
 
+<<<<<<< HEAD
 import ./exptype
 import ./nodetype
+=======
+import ./types
+>>>>>>> wip
 import ./common
 import ./scanner
 

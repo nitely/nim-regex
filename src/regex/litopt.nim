@@ -49,8 +49,12 @@ import std/algorithm
 import std/sets
 import std/unicode
 
+<<<<<<< HEAD
 import ./exptype
 import ./nodetype
+=======
+import ./types
+>>>>>>> wip
 import ./nodematch
 import ./nfa
 

@@ -42,7 +42,7 @@ import std/tables
 from std/strutils import find
 
 import ./nodematch
-import ./nodetype
+import ./types
 import ./nfatype
 
 func bwRuneAt(s: string, n: int): Rune =

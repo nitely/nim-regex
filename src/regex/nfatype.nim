@@ -4,7 +4,7 @@ import std/tables
 import std/sets
 import std/algorithm
 
-import ./nfa
+import ./types
 import ./litopt
 
 type

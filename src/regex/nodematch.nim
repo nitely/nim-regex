@@ -2,9 +2,9 @@ import std/unicode
 import std/sets
 
 import pkg/unicodedb/properties
-import pkg/unicodedb/types
+import pkg/unicodedb/types as utypes
 
-import ./nodetype
+import ./types
 import ./common
 
 func isWord(r: Rune): bool {.inline.} =

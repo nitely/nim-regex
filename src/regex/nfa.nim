@@ -1,7 +1,11 @@
 import std/deques
 
+<<<<<<< HEAD
 import ./exptype
 import ./nodetype
+=======
+import ./types
+>>>>>>> wip
 import ./common
 
 func check(cond: bool, msg: string) =
@@ -9,10 +13,13 @@ func check(cond: bool, msg: string) =
     raise newException(RegexError, msg)
 
 type
+<<<<<<< HEAD
   Enfa* = object
     s*: seq[Node]
 
 type
+=======
+>>>>>>> wip
   End = seq[int16]
     ## store the last
     ## states of a given state.
@@ -207,7 +214,14 @@ func teClosure(
   for s in eNfa.s[state].next:
     teClosure(result, eNfa, s, processing, zclosure)
 
+<<<<<<< HEAD
 func eRemoval*(eNfa: Enfa): Nfa {.raises: [].} =
+=======
+func eRemoval*(
+  eNfa: Enfa,
+  transitions: var Transitions
+): Nfa {.raises: [].} =
+>>>>>>> wip
   ## Remove e-transitions and return
   ## remaining state transtions and
   ## submatches, and zero matches.
@@ -258,9 +272,26 @@ func eRemoval*(eNfa: Enfa): Nfa {.raises: [].} =
         qw.addFirst qb
   result.t.allZ.setLen result.s.len
 
-func lookaroundsToNfa() =
-  discard
+func subExps(exp: seq[Node]): seq[Node] =
+  result = exp
+  for n in mitems result:
+    if n.kind in lookaroundKind:
+      n.subExp.nfa = n.subExp.nfa
+        .subExps
+        .eNfa
+        .eRemoval(n.subExp.tns)
 
 # XXX rename to nfa when Nim v0.19 is dropped
+<<<<<<< HEAD
 func nfa2*(exp: RpnExp): Nfa {.raises: [RegexError].} =
   exp.eNfa.eRemoval
+=======
+func nfa2*(
+  exp: seq[Node],
+  transitions: var Transitions
+): Nfa {.raises: [RegexError].} =
+  result = exp
+    .subExps
+    .eNfa
+    .eRemoval(transitions)
+>>>>>>> wip

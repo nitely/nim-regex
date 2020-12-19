@@ -249,7 +249,7 @@ import std/sequtils
 import std/unicode
 from std/strutils import addf
 
-import ./regex/nodetype
+import ./regex/types
 import ./regex/common
 import ./regex/compiler
 import ./regex/nfatype

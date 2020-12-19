@@ -10,7 +10,20 @@ import pkg/unicodedb/properties
 
 import ./common
 
+# XXX split nfatype.nim and nodetype.nim
+#     once acyclic imports are supported
+
 type
+  # nfatype.nim
+  Enfa* = seq[Node]
+  Nfa* = seq[Node]
+  TransitionsAll* = seq[seq[int16]]
+  ZclosureStates* = seq[seq[Node]]
+  Transitions* = object
+    allZ*: TransitionsAll
+    z*: ZclosureStates
+
+  # nodetype.nim
   Flag* = enum
     flagCaseInsensitive,  # i
     flagNotCaseInsensitive,  # -i
@@ -94,11 +107,6 @@ type
     # reLookahead, reLookbehind,
     # reNotLookahead, reNotLookbehind
     subExp*: SubExp
-  # XXX move nfa/Transitions here?
-  Nfa = seq[Node]
-  Transitions = object
-    allZ*: seq[seq[int16]]
-    z*: seq[seq[Node]]
   SubExp = object
     nfa*: Nfa
     tns*: Transitions

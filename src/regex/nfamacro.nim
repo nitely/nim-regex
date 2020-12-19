@@ -6,9 +6,9 @@ import std/tables
 import std/sets
 
 import pkg/unicodedb/properties
-import pkg/unicodedb/types
+import pkg/unicodedb/types as utypes
 
-import ./nodetype
+import ./types
 import ./nfatype
 import ./compiler
 

@@ -4,7 +4,7 @@ import std/tables
 import std/algorithm
 
 import ./exptype
-import ./nodetype
+import ./types
 import ./common
 import ./scanner
 

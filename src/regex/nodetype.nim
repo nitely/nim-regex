@@ -232,38 +232,41 @@ const
     reGroupStart,
     reGroupEnd}
 
-func toString*(n: Node): string =
+func `$`*(n: Node): string =
   ## return the string representation
   ## of a `Node`. The string is always
   ## equivalent to the original
   ## expression but not necessarily equal
-  # Note this is not complete. Just
-  # what's needed for debugging so far
   case n.kind
-  of reZeroOrMore,
-      reOneOrMore,
-      reZeroOrOne:
-    if not n.isGreedy:
-      n.cp.toUTF8 & "?"
-    else:
-      n.cp.toUTF8
-  of reRepRange:
-    "#"  # Invalid
-  of reStart:
-    "\\A"
-  of reEnd:
-    "\\z"
-  of reWordBoundary:
-    "\\b"
-  of reNotWordBoundary:
-    "\\B"
-  of shorthandKind:
-    '\\' & n.cp.toUTF8
+  of reChar, reCharCi: $n.cp
+  of reJoiner: "~"
+  of reGroupStart: "("
+  of reGroupEnd: ")"
+  of reOr: "|"
+  of reZeroOrMore: "*" & (if n.isGreedy: "" else: "?")
+  of reOneOrMore: "+" & (if n.isGreedy: "" else: "?")
+  of reZeroOrOne: "?" & (if n.isGreedy: "" else: "?")
+  of reRepRange: "{" & $n.min & "," & $n.max & "}"
+  of reStartSym, reStartSymML: "^"
+  of reEndSym, reEndSymML: "$"
+  of reStart: r"\A"
+  of reEnd: r"\z"
+  of reWordBoundary, reWordBoundaryAscii: r"\b"
+  of reNotWordBoundary, reNotWordBoundaryAscii: r"\B"
+  of reWord, reWordAscii: r"\w"
+  of reDigit, reDigitAscii: r"\d"
+  of reWhiteSpace, reWhiteSpaceAscii: r"\s"
+  of reUCC: r"\pN"
+  of reNotAlphaNum, reNotAlphaNumAscii: r"\W"
+  of reNotDigit, reNotDigitAscii: r"\D"
+  of reNotWhiteSpace, reNotWhiteSpaceAscii: r"\S"
+  of reNotUCC: r"\PN"
+  of reAny, reAnyNl, reAnyAscii, reAnyNlAscii: "."
   of reInSet, reNotSet:
     var str = ""
-    str.add('[')
+    str.add '['
     if n.kind == reNotSet:
-      str.add('^')
+      str.add '^'
     var
       cps = newSeq[Rune](n.cps.len)
       i = 0
@@ -271,21 +274,21 @@ func toString*(n: Node): string =
       cps[i] = cp
       inc i
     for cp in cps.sorted(cmp):
-      str.add(cp.toUTF8)
+      str.add $cp
     for sl in n.ranges:
-      str.add(sl.a.toUTF8 & '-' & sl.b.toUTF8)
+      str.add($sl.a & '-' & $sl.b)
     for nn in n.shorthands:
-      str.add(nn.toString)
-    str.add(']')
+      str.add $nn
+    str.add ']'
     str
-  of reSkip:
-    "SKIP"
-  of reEOE:
-    "EOE"
-  else:
-    n.cp.toUTF8
+  of reLookahead: "(?=...)"
+  of reLookbehind: "(?<=...)"
+  of reNotLookahead: "(?!...)"
+  of reNotLookbehind: "(?<!...)"
+  of reSkip: r"{skip}"
+  of reEoe: r"{eoe}"
 
 func toString*(n: seq[Node]): string =
   result = newStringOfCap(n.len)
   for nn in n:
-    result.add(nn.toString)
+    result.add $nn

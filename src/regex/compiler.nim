@@ -3,6 +3,8 @@ import ./exptransformation
 import ./nfatype
 import ./nfa
 import ./litopt
+when defined(regexDotDir):
+  import ./dotgraph
 
 func reImpl*(s: string): Regex {.inline.} =
   var groups: GroupsCapture
@@ -18,6 +20,9 @@ func reImpl*(s: string): Regex {.inline.} =
     groupsCount: groups.count,
     namedGroups: groups.names,
     litOpt: opt)
+  when defined(regexDotDir):
+    const regexDotDir {.strdefine.} = ""
+    graphToFile(result, regexDotDir)
 
 func reCt*(s: string): Regex {.compileTime.} =
   reImpl(s)

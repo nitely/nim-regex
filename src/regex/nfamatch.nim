@@ -29,7 +29,7 @@ template notEoe: untyped {.dirty.} =
 func submatch(
   smA, smB: var Submatches,
   capts: var Capts,
-  regex: Regex,
+  regex: Regex or SubExp,
   i: int,
   cPrev, c, c2: int32,
   flags: static MatchFlags,
@@ -146,27 +146,32 @@ func matchImpl*(
   return true
 
 when false:
-  # XXX lookaround can capture, so take capts and capt index
-  #     or return allocated capts
+  # XXX lookbehind needs to run backwards, find
+  #     the start position and match forward (with limit)
+  #     to capture
   func matchImpl2*(
     text: string,
-    nfa: Nfa,
-    start = 0
+    regex: SubExp,
+    start: int,
+    capts: var Capts,
+    captsIdx: int32
   ): bool =
+    template nfa: untyped = regex.nfa
+    const f: MatchFlags = {}
     var
       c = Rune(-1)
       cPrev = -1'i32
       i = start
       smA = newSubmatches(nfa.len)
       smB = newSubmatches(nfa.len)
-    smA.add (0'i16, -1'i32, start .. start-1)
+    smA.add (0'i16, captsIdx, start .. start-1)
     if 0 <= start-1 and start-1 <= len(text)-1:
       cPrev = bwRuneAt(text, start-1).int32
     while i < len(text):
       fastRuneAt(text, i, c, true)
-      submatch(smA, smB, regex, iPrev, cPrev, c.int32)
+      submatch(smA, smB, capts, regex, 0, cPrev, c.int32, c.int32, f)
       if smA.len == 0:
         return false
       cPrev = c.int32
-    submatch(smA, smB, regex, iPrev, cPrev, -1'i32)
+    submatch(smA, smB, capts, regex, 0, cPrev, -1'i32, -1'i32, f)
     return smA.len > 0

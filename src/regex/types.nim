@@ -107,9 +107,9 @@ type
     # reLookahead, reLookbehind,
     # reNotLookahead, reNotLookbehind
     subExp*: SubExp
-  SubExp = object
+  SubExp* = object
     nfa*: Nfa
-    tns*: Transitions
+    transitions*: Transitions
 
 func toCharNode*(r: Rune): Node =
   ## return a ``Node`` that is meant to be matched

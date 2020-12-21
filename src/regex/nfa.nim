@@ -279,7 +279,7 @@ func subExps(exp: seq[Node]): seq[Node] =
       n.subExp.nfa = n.subExp.nfa
         .subExps
         .eNfa
-        .eRemoval(n.subExp.tns)
+        .eRemoval(n.subExp.transitions)
 
 # XXX rename to nfa when Nim v0.19 is dropped
 <<<<<<< HEAD

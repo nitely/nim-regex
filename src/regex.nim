@@ -922,6 +922,7 @@ proc toString(pattern: Regex): string {.used.} =
 when isMainModule:
   import ./regex/parser
   import ./regex/exptransformation
+  import ./regex/dotgraph
 
   func toAtoms(s: string): string =
     var groups: GroupsCapture
@@ -1105,6 +1106,15 @@ when isMainModule:
 
   doAssert match("abcabcabc", re"(?:(?:abc)){3}")
   doAssert match("abcabcabc", re"((abc)){3}")
+
+  doAssert graph(re"^a+$") == """digraph graphname {
+    0 [label="q0";color=blue];
+    1 [label="q1";color=black];
+    2 [label="q2";color=blue];
+    0 -> 1 [label="a, {^}, i=0"];
+    1 -> 1 [label="a, i=0"];1 -> 2 [label="{eoe}, {$}, i=1"];
+}
+"""
 
   # subset of tests.nim
   proc raisesMsg(pattern: string): string =

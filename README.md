@@ -34,6 +34,10 @@ Nim +0.19.0
 nimble test
 ```
 
+## Debugging
+
+Compile with `-d:regexDotDir:.` to generate [dot files](https://en.wikipedia.org/wiki/DOT_(graph_description_language)) of the regexes (NFAs) within the nim file. A dot file can be viewed in [Graphviz](https://dreampuf.github.io/GraphvizOnline/). Requires Nim +1.2.
+
 ## LICENSE
 
 MIT

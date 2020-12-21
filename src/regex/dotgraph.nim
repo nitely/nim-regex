@@ -37,12 +37,13 @@ func graph*(nfa: Nfa, tns: Transitions): string =
 func graph*(regex: Regex): string =
   result = graph(regex.nfa, regex.transitions)
 
-func graphToFile*(regex: Regex, dir: string) =
-  {.noSideEffect.}:
-    if dir.len > 0:
-      let content = graph(regex)
-      let fname = $hash(content) & ".dot"
-      try:
-        writeFile(dir / fname, content)
-      except IOError:
-        debugEcho "write file error"
+when (NimMajor, NimMinor) >= (1, 2):
+  func graphToFile*(regex: Regex, dir: string) =
+    {.noSideEffect.}:
+      if dir.len > 0:
+        let content = graph(regex)
+        let fname = $hash(content) & ".dot"
+        try:
+          writeFile(dir / fname, content)
+        except IOError:
+          debugEcho "write file error"

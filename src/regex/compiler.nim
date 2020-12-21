@@ -20,7 +20,7 @@ func reImpl*(s: string): Regex {.inline.} =
     groupsCount: groups.count,
     namedGroups: groups.names,
     litOpt: opt)
-  when defined(regexDotDir):
+  when defined(regexDotDir) and (NimMajor, NimMinor) >= (1, 2):
     const regexDotDir {.strdefine.} = ""
     graphToFile(result, regexDotDir)
 

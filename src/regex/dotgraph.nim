@@ -37,8 +37,7 @@ func graph*(nfa: Nfa, tns: Transitions): string =
 func graph*(regex: Regex): string =
   result = graph(regex.nfa, regex.transitions)
 
-# cast(noSideEffect) only works in recent Nim's versions
-when defined(regexDotDir):
+when (NimMajor, NimMinor) >= (1, 4):
   func graphToFile*(regex: Regex, dir: string) =
     {.cast(noSideEffect).}:
       if dir.len > 0:

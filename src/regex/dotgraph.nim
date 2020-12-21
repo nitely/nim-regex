@@ -37,9 +37,9 @@ func graph*(nfa: Nfa, tns: Transitions): string =
 func graph*(regex: Regex): string =
   result = graph(regex.nfa, regex.transitions)
 
-when (NimMajor, NimMinor) >= (1, 4):
+when defined(regexDotDir):
   func graphToFile*(regex: Regex, dir: string) =
-    {.cast(noSideEffect).}:
+    {.noSideEffect.}:
       if dir.len > 0:
         let content = graph(regex)
         let fname = $hash(content) & ".dot"

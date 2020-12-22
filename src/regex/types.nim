@@ -12,6 +12,12 @@ import ./common
 
 # XXX split nfatype.nim and nodetype.nim
 #     once acyclic imports are supported
+# XXX refactor transitions, add tIdx: int16
+#     to Node, make TransitionsAll dense;
+#     remove z and store transition Nodes in
+#     the NFA; flatten TransitionsAll to seq[int16]
+#     + delimiter (-1'i16) or set first bit of
+#     every last tn idx
 
 type
   # nfatype.nim

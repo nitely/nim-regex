@@ -272,6 +272,31 @@ func eRemoval*(
         qw.addFirst qb
   result.t.allZ.setLen result.s.len
 
+func reverse*(eNfa: Enfa): Enfa =
+  template state0: untyped = int16(eNfa.len-1)
+  result = eNfa
+  for i in 0 .. result.len-1:
+    result[i].next.setLen 0
+    case result[i]
+    of reGroupStart:
+      result[i].kind = reGroupEnd
+    of reGroupEnd:
+      result[i].kind = reGroupStart
+    else: 
+      discard
+  var stack = @[(state0, -1'i16)]
+  var visited: set[int16]
+  template state: untyped = eNfa[ni]
+  while stack.len > 0:
+    let (ni, pi) = stack.pop()
+    if pi > -1:
+      result[ni].next.add pi
+    if ni in visited:
+      continue
+    visited.incl ni
+    for mi in state.next:
+      stack.add (mi, ni)
+
 func subExps(exp: seq[Node]): seq[Node] =
   result = exp
   for n in mitems result:

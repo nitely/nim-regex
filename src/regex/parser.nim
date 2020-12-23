@@ -427,6 +427,14 @@ func parseSet(sc: Scanner[Rune]): Node =
     hasEnd,
     "Invalid set. Missing `]`")
 
+func noRepeatCheck(sc: Scanner[Rune]) =
+  ## Check next symbol is not a repetition
+  let startPos = sc.pos
+  let hasDoubleQ = sc.peek == '?'.Rune and sc.peek(1) == '?'.Rune
+  prettyCheck(
+    sc.peek notin ['*'.Rune, '+'.Rune] and not hasDoubleQ,
+    "Invalid repetition. There's nothing to repeat")
+
 func parseRepRange(sc: Scanner[Rune]): Node =
   ## parse a repetition range ``{n,m}``
   # This is not PCRE compatible. PCRE allows
@@ -494,6 +502,7 @@ func parseRepRange(sc: Scanner[Rune]): Node =
     kind: reRepRange,
     min: firstNum.int16,
     max: lastNum.int16)
+  noRepeatCheck sc
 
 func toFlag(r: Rune): Flag =
   result = case r
@@ -660,13 +669,6 @@ func parseGroupTag(sc: Scanner[Rune]): Node =
     prettyCheck(
       false,
       "Invalid group. Unknown group type")
-
-func noRepeatCheck(sc: Scanner[Rune]) =
-  ## Check next symbol is not a repetition
-  let startPos = sc.pos
-  prettyCheck(
-    sc.peek notin ['*'.Rune, '+'.Rune],
-    "Invalid repetition. There's nothing to repeat")
 
 func subParse(sc: Scanner[Rune]): Node =
   let r = sc.prev

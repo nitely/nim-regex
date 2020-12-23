@@ -427,31 +427,51 @@ func parseSet(sc: Scanner[Rune]): Node =
     hasEnd,
     "Invalid set. Missing `]`")
 
+func noRepeatCheck(sc: Scanner[Rune]) =
+  ## Check next symbol is not a repetition
+  let startPos = sc.pos
+  let hasDoubleQ = sc.peek == '?'.Rune and sc.peek(1) == '?'.Rune
+  prettyCheck(
+    sc.peek notin ['*'.Rune, '+'.Rune] and not hasDoubleQ,
+    "Invalid repetition. There's nothing to repeat")
+
 func parseRepRange(sc: Scanner[Rune]): Node =
   ## parse a repetition range ``{n,m}``
+  # This is not PCRE compatible. PCRE allows
+  # {,} and {,1} to be parsed as chars instead of a
+  # repetition range, we raise an error instead.
+  if sc.peek.int != ','.ord and
+      sc.peek.int notin '0'.ord .. '9'.ord:
+    return Node(kind: reChar, cp: '{'.Rune)
   let startPos = sc.pos
   var
     first, last: string
     hasFirst = false
     curr = ""
   for cp in sc:
-    if cp == "}".toRune:
+    if cp == '}'.Rune:
       last = curr
       break
-    if cp == ",".toRune:
+    if cp == ','.Rune:
       first = curr
       curr = ""
+      prettyCheck(
+        not hasFirst, "Invalid repetition range. Expected {n,m}")
       hasFirst = true
       continue
     prettyCheck(
       cp.int in '0'.ord .. '9'.ord,
       "Invalid repetition range. Range can only contain digits")
-    curr.add(char(cp.int))
+    curr.add char(cp.int)
+  prettyCheck(
+    sc.prev == '}'.Rune,
+    "Invalid repetition range. Missing closing symbol `}`")
   if not hasFirst:  # {n}
     first = curr
-  if first.len == 0:  # {,m} or {,}
-    first.add('0')
-  if last.len == 0:  # {n,} or {,}
+  prettyCheck(
+    first.len > 0,
+    "Invalid repetition range. Expected {n}, {n,m}, or {n,}")
+  if last.len == 0:  # {n,}
     last = "-1"
   var
     firstNum: int
@@ -482,6 +502,7 @@ func parseRepRange(sc: Scanner[Rune]): Node =
     kind: reRepRange,
     min: firstNum.int16,
     max: lastNum.int16)
+  noRepeatCheck sc
 
 func toFlag(r: Rune): Flag =
   result = case r
@@ -663,10 +684,13 @@ func subParse(sc: Scanner[Rune]): Node =
   of "|".toRune:
     Node(kind: reOr, cp: r)
   of "*".toRune:
+    noRepeatCheck sc
     Node(kind: reZeroOrMore, cp: r)
   of "+".toRune:
+    noRepeatCheck sc
     Node(kind: reOneOrMore, cp: r)
   of "?".toRune:
+    noRepeatCheck sc
     Node(kind: reZeroOrOne, cp: r)
   of ")".toRune:
     Node(kind: reGroupEnd, cp: r)

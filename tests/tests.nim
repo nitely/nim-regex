@@ -405,6 +405,19 @@ test "trepetition_cycle":
   check findAllBounds("@", re"(a*?)+@") == @[0 .. 0]
   check findAllBounds("@", re"(a*?)+?@") == @[0 .. 0]
 
+test "talternations":
+  check raises(r"a|?")
+  check raises(r"a|?b")
+  check raises(r"?|?")
+  check raises(r"a|*")
+  check raises(r"a|*b")
+  check raises(r"a|+")
+  check raises(r"a|+b")
+  # XXX these work on PCRE
+  check raises(r"(a|)")
+  check raises(r"(|)")
+  check raises(r"|")
+
 test "tcaptures":
   check "ab".matchWithCapt(re"(a)b") == @[@["a"]]
   check "aa".matchWithCapt(re"(a)*") == @[@["a", "a"]]

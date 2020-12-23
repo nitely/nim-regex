@@ -967,9 +967,7 @@ when isMainModule:
   doAssert r"a{0,0}".toNfaStr == r"a".toNfaStr
   doAssert r"a{1,2}".toNfaStr == r"aa?".toNfaStr
   doAssert r"a{2,4}".toNfaStr == r"aaa?a?".toNfaStr
-  doAssert r"a{,10}".toNfaStr == r"a?a?a?a?a?a?a?a?a?a?".toNfaStr
   doAssert r"a{0,10}".toNfaStr == r"a?a?a?a?a?a?a?a?a?a?".toNfaStr
-  doAssert r"a{,}".toNfaStr == r"a*".toNfaStr
   doAssert r"(a(b)){2}".toNfaStr == r"(a(b))(a(b))".toNfaStr
 
   # tascii_set

@@ -205,16 +205,12 @@ when (NimMajor, NimMinor) >= (1, 1):
     check(not matchMacro("a", rex"b"))
     check(not matchMacro("a", rex""))
     check matchMacro(" \"word\" ", rex"\s"".*""\s")
-    check matchMacro("aaa", rex"a**")
     check matchMacro("aaa", rex"(a*)*")
     check matchMacro("aaabbbaaa", rex"((a*|b*))*")
-    check matchMacro("aaa", rex"a*****")
     check matchMacro("aaa", rex"(a?)*")
     check matchMacro("aaaa", rex"((a)*(a)*)*")
-    check matchMacro("aaa", rex"a**")
     check matchMacro("aaa", rex"(a*)*")
     check matchMacro("aaabbbaaa", rex"((a*|b*))*")
-    check matchMacro("aaa", rex"a*****")
     check matchMacro("aaa", rex"(a?)*")
     check matchMacro("aaaa", rex"((a)*(a)*)*")
     check matchMacro("<TAG>two</TAG>", rex"<TAG>.*?</TAG>")
@@ -252,13 +248,13 @@ when (NimMajor, NimMinor) >= (1, 1):
     check matchMacro("650-253-0001", rex"[0-9]+..*")
     check(not matchMacro("abc-253-0001", rex"[0-9]+..*"))
     check(not matchMacro("6", rex"[0-9]+..*"))
-    check matchMacro("", rex"(11)*+(111)*")
-    check matchMacro("11", rex"(11)*+(111)*")
-    check matchMacro("111", rex"(11)*+(111)*")
-    check matchMacro("11111", rex"(11)*+(111)*")
-    check matchMacro("1111111", rex"(11)*+(111)*")
-    check matchMacro("1111111111", rex"(11)*+(111)*")
-    check(not matchMacro("1", rex"(11)*+(111)*"))
+    check matchMacro("", rex"((11)*)+(111)*")
+    check matchMacro("11", rex"((11)*)+(111)*")
+    check matchMacro("111", rex"((11)*)+(111)*")
+    check matchMacro("11111", rex"((11)*)+(111)*")
+    check matchMacro("1111111", rex"((11)*)+(111)*")
+    check matchMacro("1111111111", rex"((11)*)+(111)*")
+    check(not matchMacro("1", rex"((11)*)+(111)*"))
     check(not matchMacro("", rex"(11)+(111)*"))
     check matchMacro("11", rex"(11)+(111)*")
     check(not matchMacro("111", rex"(11)+(111)*"))
@@ -301,10 +297,21 @@ test "tfull_match":
   check " \"word\" ".isMatch(re"\s"".*""\s")
 
 test "trepetition_cycle":
-  check "aaa".isMatch(re"a**")
+  check "**".isMatch(re"\**")
+  check "++".isMatch(re"\++")
+  check "??".isMatch(re"\?+")
+  check "??".isMatch(re"\?*")
+  check raises(r"a**")
+  check raises(r"a++")
+  check raises(r"a*+")
+  check raises(r"a+*")
+  check raises(r"a?+")
+  check raises(r"a?*")
+  check raises(r"a??+")
+  check raises(r"a??*")
   check "aaa".isMatch(re"(a*)*")
   check "aaabbbaaa".isMatch(re"((a*|b*))*")
-  check "aaa".isMatch(re"a*****")
+  check raises(r"a*****")
   check raises(r"a*{,}")
   check "aaa".isMatch(re"(a?)*")
   check "aaaa".isMatch(re"((a)*(a)*)*")
@@ -654,11 +661,9 @@ test "tnot_set":
 test "trepetition_range":
   check(not "".isMatch(re"a{0}"))
   check(not "".isMatch(re"a{0,0}"))
-  check(not "".isMatch(re"a{,0}"))
-  check "".isMatch(re"a{,2}")
+  check "".isMatch(re"a{0,2}")
   check "a".isMatch(re"a{0}")
   check "a".isMatch(re"a{0,0}")
-  check "a".isMatch(re"a{,0}")
   check "a".isMatch(re"a{1}")
   check "aa".isMatch(re"a{2}")
   check "aaa".isMatch(re"a{3}")
@@ -674,47 +679,49 @@ test "trepetition_range":
   check "aaa".isMatch(re"a{1,}")
   check "aaaaaaaaaa".isMatch(re"a{1,}")
   check "aa".isMatch(re"a{2,}")
-  check "a".isMatch(re"a{,}")
-  check "aa".isMatch(re"a{,}")
-  check "aaaaaaaaaa".isMatch(re"a{,}")
-  check "".isMatch(re"a{,}")
   check "aaaaaaaaaa".isMatch(re"a{0,}")
   check "".isMatch(re"a{0,}")
   check(not "a".isMatch(re"a{2,}"))
+  check "a{a,1}".isMatch(re"a{a,1}")
+  check(not "a".isMatch(re"a{a,1}"))
+  check(not "a1".isMatch(re"a{a,1}"))
+  check "a{".isMatch(re"a{")
+  check "a{{".isMatch(re"a{{")
+  check "a{}".isMatch(re"a{}")
   check raises(r"a*{,}")
   check raises(r"a*{0}")
   check raises(r"a*{1}")
-  check "aaa".matchWithCapt(re"(a){,}") ==
+  check "aaa".matchWithCapt(re"(a){0,}") ==
     @[@["a", "a", "a"]]
-  check "aaa".matchWithCapt(re"(a{,}){,}") == @[@["aaa", ""]]
+  check "aaa".matchWithCapt(re"(a{0,}){0,}") == @[@["aaa", ""]]
   check "aaaaa".matchWithCapt(re"(a){5}") ==
     @[@["a", "a", "a", "a", "a"]]
   check "a".matchWithCapt(re"(a){1,5}") == @[@["a"]]
   check "aaa".matchWithCapt(re"(a){1,5}") ==
     @[@["a", "a", "a"]]
-  check "".matchWithCapt(re"(a){,}") ==
+  check "".matchWithCapt(re"(a){0,}") ==
     @[newSeq[string]()]
-  check "aaa".matchWithCapt(re"(a{,}){,}") == @[@["aaa", ""]]
-  check "aaa".matchWithCapt(re"(a{1}){,}") ==
+  check "aaa".matchWithCapt(re"(a{0,}){0,}") == @[@["aaa", ""]]
+  check "aaa".matchWithCapt(re"(a{1}){0,}") ==
     @[@["a", "a", "a"]]
-  check "aaaa".matchWithCapt(re"(a{2}){,}") ==
+  check "aaaa".matchWithCapt(re"(a{2}){0,}") ==
     @[@["aa", "aa"]]
-  check "aaaa".matchWithCapt(re"(a{,3}){,}") ==
+  check "aaaa".matchWithCapt(re"(a{0,3}){0,}") ==
     @[@["aaa", "a", ""]]
-  check "".matchWithCapt(re"(a{,3}){,}") ==
+  check "".matchWithCapt(re"(a{0,3}){0,}") ==
     @[@[""]]
-  check "aaa".matchWithCapt(re"(a{1,}){,}") ==
+  check "aaa".matchWithCapt(re"(a{1,}){0,}") ==
     @[@["aaa"]]
-  check "".matchWithCapt(re"(a{1,}){,}") ==
+  check "".matchWithCapt(re"(a{1,}){0,}") ==
     @[newSeq[string]()]
   check(not "".isMatch(re"(a{1,})"))
   check "a".matchWithCapt(re"(a{1,})") == @[@["a"]]
   check "aaa".matchWithCapt(re"(a{1,})") == @[@["aaa"]]
   check "abab".matchWithCapt(re"(a(b)){2}") ==
     @[@["ab", "ab"], @["b", "b"]]
-  check raisesMsg(r"a{bad}") ==
+  check raisesMsg(r"a{0,bad}") ==
     "Invalid repetition range. Range can only contain digits\n" &
-    "a{bad}\n" &
+    "a{0,bad}\n" &
     " ^"
   check raisesMsg(r"a{1111111111}") ==
     "Invalid repetition range. Max value is 32767\n" &
@@ -727,8 +734,15 @@ test "trepetition_range":
     " ^"
   check(not raises(r"a{1,101}"))
   check raises(r"a{0,a}")
-  check raises(r"a{a,1}")
-  check raises(r"a{-1}")
+  check raises(r"a{,}")
+  check raises(r"a{,1}")
+  check raises(r"a{1x}")
+  check raises(r"a{1,x}")
+  check raises(r"a{1")
+  check raises(r"a{1,")
+  check raises(r"a{1,,}")
+  check raises(r"a{1,,2}")
+  check raises(r"a{1,,,2}")
   check raisesMsg(r"{10}") ==
     "Invalid repeition range, " &
     "nothing to repeat"
@@ -771,13 +785,13 @@ test "tgreediness":
     @[@["a"], @["a", "a"], @[]]
   check "aaa".matchWithCapt(re"(a)+?(a)+?(a)?") ==
     @[@["a"], @["a"], @["a"]]
-  check "aaa".matchWithCapt(re"(a){,}(a){,}(a){,}") ==
+  check "aaa".matchWithCapt(re"(a){0,}(a){0,}(a){0,}") ==
     @[@["a", "a", "a"], @[], @[]]
-  check "aaa".matchWithCapt(re"(a){,}?(a){,}(a){,}?") ==
+  check "aaa".matchWithCapt(re"(a){0,}?(a){0,}(a){0,}?") ==
     @[@[], @["a", "a", "a"], @[]]
-  check "aaa".matchWithCapt(re"(a){,}?(a){,}?(a){,}") ==
+  check "aaa".matchWithCapt(re"(a){0,}?(a){0,}?(a){0,}") ==
     @[@[], @[], @["a", "a", "a"]]
-  check "aaa".matchWithCapt(re"(a){,}?(a){,}?(a){,}?") ==
+  check "aaa".matchWithCapt(re"(a){0,}?(a){0,}?(a){0,}?") ==
     @[@[], @[], @["a", "a", "a"]]
   check "aaa".matchWithCapt(re"(a){1,}(a){1,}(a)?") ==
     @[@["a", "a"], @["a"], @[]]
@@ -2184,7 +2198,7 @@ test "tmisc2_5":
   check(not match("abc-253-0001", re"[0-9]+..*", m))
   check(not match("6", re"[0-9]+..*", m))
   block:
-    const re1 = re"(11)*+(111)*"
+    const re1 = re"((11)*)+(111)*"
     check match("", re1)
     check match("11", re1)
     check match("111", re1)

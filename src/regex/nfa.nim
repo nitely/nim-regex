@@ -1,4 +1,5 @@
 import std/deques
+import std/algorithm
 
 <<<<<<< HEAD
 import ./exptype
@@ -275,15 +276,8 @@ func eRemoval*(
 func reverse*(eNfa: Enfa): Enfa =
   template state0: untyped = int16(eNfa.len-1)
   result = eNfa
-  for i in 0 .. result.len-1:
-    result[i].next.setLen 0
-    case result[i]
-    of reGroupStart:
-      result[i].kind = reGroupEnd
-    of reGroupEnd:
-      result[i].kind = reGroupStart
-    else: 
-      discard
+  for n in mitems result:
+    n.next.setLen 0
   var stack = @[(state0, -1'i16)]
   var visited: set[int16]
   template state: untyped = eNfa[ni]
@@ -296,10 +290,40 @@ func reverse*(eNfa: Enfa): Enfa =
     visited.incl ni
     for mi in state.next:
       stack.add (mi, ni)
+  for n in mitems result:
+    n.next.reverse
+  # fix loops greediness
+  for i, n in pairs eNfa:
+    case n.kind:
+    of reZeroOrMore:
+      if not n.isGreedy:
+        result[i].next.reverse
+    of reOneOrMore:
+      if not n.isGreedy:
+        result[n.next[1]].next.reverse
+    else:
+      discard
+  # Swap initial state by eoe
+  var eoeIdx = -1'i16
+  for i, n in pairs result:
+    if n.kind == reEoe:
+      doAssert eoeIdx == -1
+      eoeIdx = i.int16
+  doAssert eoeIdx != -1
+  for i in eNfa[state0].next:
+    for j in 0 .. result[i].next.len-1:
+      if result[i].next[j] == state0:
+        result[i].next[j] = eoeIdx
+  swap result[state0].next, result[eoeIdx].next
+  doAssert result[state0].kind == reSkip
+  doAssert result[eoeIdx].kind == reEoe
+  doAssert result[state0].next.len > 0
+  doAssert result[eoeIdx].next.len == 0
 
 func subExps(exp: seq[Node]): seq[Node] =
   result = exp
   for n in mitems result:
+    # XXX reverse lookbehind
     if n.kind in lookaroundKind:
       n.subExp.nfa = n.subExp.nfa
         .subExps

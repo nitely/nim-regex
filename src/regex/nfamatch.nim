@@ -146,9 +146,6 @@ func matchImpl*(
   return true
 
 when false:
-  # XXX lookbehind needs to run backwards, find
-  #     the start position and match forward (with limit)
-  #     to capture
   func matchImpl2*(
     text: string,
     regex: SubExp,

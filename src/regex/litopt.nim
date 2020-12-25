@@ -174,18 +174,18 @@ func lonelyLit(exp: RpnExp): NodeIdx =
     litsTmp.setLen 0
 
 func prefix(eNfa: Enfa, uid: NodeUid): Enfa =
-  template state0: untyped = eNfa.len.int16-1
+  template state0: untyped = eNfa.s.len.int16-1
   result = eNfa
-  for n in result.mitems:
+  for n in result.s.mitems:
     n.next.setLen 0
   # reverse transitions; DFS
   var stack = @[(state0, -1'i16)]
   var visited: set[int16]
-  template state: untyped = eNfa[ni]
+  template state: untyped = eNfa.s[ni]
   while stack.len > 0:
     let (ni, pi) = stack.pop()
     if pi > -1:
-      result[ni].next.add pi
+      result.s[ni].next.add pi
     if ni in visited:
       continue
     visited.incl ni
@@ -194,32 +194,32 @@ func prefix(eNfa: Enfa, uid: NodeUid): Enfa =
       continue
     for mi in state.next:
       stack.add (mi, ni)
-  for n in result.mitems:
+  for n in mitems result.s:
     n.next.reverse
     n.isGreedy = true
   # Swap initial state by eoe
   var eoeIdx = -1'i16
-  for ni, n in result.pairs:
+  for ni, n in pairs result.s:
     if n.kind == reEoe:
       doAssert eoeIdx == -1
       eoeIdx = ni.int16
   doAssert eoeIdx != -1
-  for ni in eNfa[state0].next:
-    for i in 0 .. result[ni].next.len-1:
-      if result[ni].next[i] == state0:
-        result[ni].next[i] = eoeIdx
-  doAssert result[eoeIdx].kind == reEoe
-  doAssert result[state0].kind == reSkip
-  swap result[state0].kind, result[eoeIdx].kind
-  swap result[state0], result[eoeIdx]
+  for ni in eNfa.s[state0].next:
+    for i in 0 .. result.s[ni].next.len-1:
+      if result.s[ni].next[i] == state0:
+        result.s[ni].next[i] = eoeIdx
+  doAssert result.s[eoeIdx].kind == reEoe
+  doAssert result.s[state0].kind == reSkip
+  swap result.s[state0].kind, result.s[eoeIdx].kind
+  swap result.s[state0], result.s[eoeIdx]
   # cut
   var nIdx = -1
-  for ni, n in eNfa.pairs:
+  for ni, n in pairs eNfa.s:
     if n.uid == uid:
       doAssert nIdx == -1
       nIdx = ni
   doAssert nIdx != -1
-  result[state0].next = result[nIdx].next
+  result.s[state0].next = result.s[nIdx].next
 
 type
   LitOpt* = object

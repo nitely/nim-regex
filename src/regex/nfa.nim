@@ -8,7 +8,8 @@ func check(cond: bool, msg: string) =
     raise newException(RegexError, msg)
 
 type
-  Enfa* = seq[Node]
+  Enfa* = object
+    s*: seq[Node]
   Nfa* = seq[Node]
   End = seq[int16]
     ## store all the last
@@ -18,16 +19,16 @@ type
     ## but have to keep them up-to-date
 
 func combine(
-  nfa: var seq[Node],
+  eNfa: var Enfa,
   ends: var seq[End],
   org, target: int16
 ) =
   ## combine ends of ``org``
   ## with ``target``
   for e in ends[org]:
-    for i, ni in nfa[e].next.mpairs:
-      if nfa[ni].kind == reEOE:
-        ni = target
+    for i in mitems eNfa.s[e].next:
+      if eNfa.s[i].kind == reEOE:
+        i = target
   ends[org] = ends[target]
 
 const eoe = 0'i16
@@ -41,17 +42,17 @@ func update(
   ## to point to the end of the nodes in next.
   ## If a node in next is Eoe,
   ## the end of ``ni`` will point to itself
-  ends[ni].setLen(0)
+  ends[ni].setLen 0
   for n in next:
     if n == eoe:
-        ends[ni].add ni 
+      ends[ni].add ni 
     else:
-        ends[ni].add ends[n]
+      ends[ni].add ends[n]
 
 func eNfa*(expression: seq[Node]): Enfa {.raises: [RegexError].} =
   ## Thompson's construction
-  result = newSeqOfCap[Node](expression.len + 2)
-  result.add initEOENode()
+  result.s = newSeqOfCap[Node](expression.len + 2)
+  result.s.add initEOENode()
   var
     ends = newSeq[End](expression.len + 1)
     states = newSeq[int16]()
@@ -61,15 +62,15 @@ func eNfa*(expression: seq[Node]): Enfa {.raises: [RegexError].} =
     var n = n
     doAssert n.next.len == 0
     check(
-      result.high < int16.high,
+      result.s.high < int16.high,
       ("The expression is too long, " &
        "limit is ~$#") %% $int16.high)
-    let ni = result.len.int16
+    let ni = result.s.len.int16
     case n.kind
     of matchableKind, assertionKind:
       n.next.add eoe
       ends.update(ni, [eoe])
-      result.add n
+      result.s.add n
       states.add ni
     of reJoiner:
       let
@@ -87,7 +88,7 @@ func eNfa*(expression: seq[Node]): Enfa {.raises: [RegexError].} =
         stateA = states.pop()
       n.next.add [stateA, stateB]
       ends.update(ni, n.next)
-      result.add n
+      result.s.add n
       states.add ni
     of reZeroOrMore:
       check(
@@ -98,10 +99,10 @@ func eNfa*(expression: seq[Node]): Enfa {.raises: [RegexError].} =
       n.next.add [stateA, eoe]
       ends.update(ni, n.next)
       result.combine(ends, stateA, ni)
-      result.add n
+      result.s.add n
       states.add ni
       if not n.isGreedy:
-        swap(result[^1].next[0], result[^1].next[1])
+        swap(result.s[^1].next[0], result.s[^1].next[1])
     of reOneOrMore:
       check(
         states.len >= 1,
@@ -111,10 +112,10 @@ func eNfa*(expression: seq[Node]): Enfa {.raises: [RegexError].} =
       n.next.add [stateA, eoe]
       ends.update(ni, n.next)
       result.combine(ends, stateA, ni)
-      result.add n
+      result.s.add n
       states.add stateA
       if not n.isGreedy:
-        swap(result[^1].next[0], result[^1].next[1])
+        swap(result.s[^1].next[0], result.s[^1].next[1])
     of reZeroOrOne:
       check(
         states.len >= 1,
@@ -123,27 +124,27 @@ func eNfa*(expression: seq[Node]): Enfa {.raises: [RegexError].} =
       let stateA = states.pop()
       n.next.add [stateA, eoe]
       ends.update(ni, n.next)
-      result.add n
+      result.s.add n
       states.add ni
       if not n.isGreedy:
-        swap(result[^1].next[0], result[^1].next[1])
+        swap(result.s[^1].next[0], result.s[^1].next[1])
     of reGroupStart:
       let stateA = states.pop()
       n.next.add stateA
       ends.update(ni, n.next)
-      result.add n
+      result.s.add n
       states.add ni
     of reGroupEnd:
       n.next.add eoe
       ends.update(ni, n.next)
       let stateA = states.pop()
       result.combine(ends, stateA, ni)
-      result.add n
+      result.s.add n
       states.add stateA
     else:
       doAssert(false, "Unhandled node: $#" %% $n.kind)
   doAssert states.len == 1
-  result.add initSkipNode(states)
+  result.s.add initSkipNode(states)
 
 type
   Zclosure = seq[int16]
@@ -160,38 +161,38 @@ func isTransitionZ(n: Node): bool {.inline.} =
 
 func teClosure(
   result: var TeClosure,
-  enfa: Enfa,
+  eNfa: Enfa,
   state: int16,
   processing: var seq[int16],
   zTransitions: Zclosure
 ) =
   var zTransitionsCurr = zTransitions
-  if isTransitionZ(enfa[state]):
+  if isTransitionZ(eNfa.s[state]):
     zTransitionsCurr.add state
-  if enfa[state].kind in matchableKind + {reEOE}:
+  if eNfa.s[state].kind in matchableKind + {reEOE}:
     result.add((state, zTransitionsCurr))
     return
-  for i, s in pairs enfa[state].next:
+  for i, s in pairs eNfa.s[state].next:
     # Enter loops only once. "a", re"(a*)*" -> ["a", ""]
-    if enfa[state].kind in repetitionKind:
-      if s notin processing or i == int(enfa[state].isGreedy):
+    if eNfa.s[state].kind in repetitionKind:
+      if s notin processing or i == int(eNfa.s[state].isGreedy):
         processing.add s
-        teClosure(result, enfa, s, processing, zTransitionsCurr)
+        teClosure(result, eNfa, s, processing, zTransitionsCurr)
         discard processing.pop()
       # else skip loop
     else:
-      teClosure(result, enfa, s, processing, zTransitionsCurr)
+      teClosure(result, eNfa, s, processing, zTransitionsCurr)
 
 func teClosure(
   result: var TeClosure,
-  enfa: Enfa,
+  eNfa: Enfa,
   state: int16,
   processing: var seq[int16]
 ) =
   doAssert processing.len == 0
   var zclosure: Zclosure
-  for s in enfa[state].next:
-    teClosure(result, enfa, s, processing, zclosure)
+  for s in eNfa.s[state].next:
+    teClosure(result, eNfa, s, processing, zclosure)
 
 type
   TransitionsAll* = seq[seq[int16]]
@@ -210,13 +211,13 @@ func eRemoval*(
   ## Transitions are added in matching order (BFS),
   ## which may help matching performance
   #echo eNfa
-  result = newSeqOfCap[Node](eNfa.len)
-  transitions.allZ.setLen eNfa.len
-  var statesMap = newSeq[int16](eNfa.len)
+  result = newSeqOfCap[Node](eNfa.s.len)
+  transitions.allZ.setLen eNfa.s.len
+  var statesMap = newSeq[int16](eNfa.s.len)
   for i in 0 .. statesMap.len-1:
     statesMap[i] = -1
-  let start = int16(eNfa.len-1)
-  result.add eNfa[start]
+  let start = int16(eNfa.s.len-1)
+  result.add eNfa.s[start]
   statesMap[start] = 0'i16
   var closure: TeClosure
   var zc: seq[Node]
@@ -236,7 +237,7 @@ func eRemoval*(
     result[statesMap[qa]].next.setLen 0
     for qb, zclosure in closure.items:
       if statesMap[qb] == -1:
-        result.add eNfa[qb]
+        result.add eNfa.s[qb]
         statesMap[qb] = result.len.int16-1
       doAssert statesMap[qb] > -1
       doAssert statesMap[qa] > -1
@@ -244,7 +245,7 @@ func eRemoval*(
       transitions.allZ[statesMap[qa]].add -1'i16
       zc.setLen 0
       for z in zclosure:
-        zc.add eNfa[z]
+        zc.add eNfa.s[z]
       if zc.len > 0:
         transitions.z.add zc
         transitions.allZ[statesMap[qa]][^1] = int16(transitions.z.len-1)

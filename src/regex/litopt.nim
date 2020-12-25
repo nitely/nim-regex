@@ -353,9 +353,9 @@ when isMainModule:
   doAssert r"(a|ab)\w@&%".prefix.toString ==
     "[#, [&, [@, [w, [a, eoe], [b, [a, eoe]]]]]]"
   doAssert r"a?b".prefix.toString == r"a?".toNfa.toString
-  doAssert r"".prefix.len == 0
-  doAssert r"a?".prefix.len == 0
-  doAssert r"\w".prefix.len == 0
+  doAssert r"".prefix.s.len == 0
+  doAssert r"a?".prefix.s.len == 0
+  doAssert r"\w".prefix.s.len == 0
   doAssert r"(\w\d)*@".prefix.toString == r"(\d\w)*".toNfa.toString
   doAssert r"(\w\d)+@".prefix.toString == r"(\d\w)+".toNfa.toString
   # We search the start of the match, so greeddiness

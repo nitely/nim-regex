@@ -10,13 +10,24 @@ func check(cond: bool, msg: string) =
 type
   Enfa* = object
     s*: seq[Node]
-  Nfa* = seq[Node]
+
+type
   End = seq[int16]
     ## store all the last
     ## states of a given state.
     ## Avoids having to recurse
     ## a state to find its ends,
     ## but have to keep them up-to-date
+
+type
+  TransitionsAll* = seq[seq[int16]]
+  ZclosureStates* = seq[seq[Node]]
+  Transitions* = object
+    allZ*: TransitionsAll
+    z*: ZclosureStates
+  Nfa* = object
+    s*: seq[Node]
+    t*: Transitions
 
 func combine(
   eNfa: var Enfa,
@@ -103,7 +114,7 @@ func eNfa*(expression: seq[Node]): Enfa {.raises: [RegexError].} =
       result.s.add n
       states.add ni
       if not n.isGreedy:
-        swap(result.s[^1].next[0], result.s[^1].next[1])
+        swap result.s[^1].next[0], result.s[^1].next[1]
     of reOneOrMore:
       check(
         states.len >= 1,
@@ -116,7 +127,7 @@ func eNfa*(expression: seq[Node]): Enfa {.raises: [RegexError].} =
       result.s.add n
       states.add stateA
       if not n.isGreedy:
-        swap(result.s[^1].next[0], result.s[^1].next[1])
+        swap result.s[^1].next[0], result.s[^1].next[1]
     of reZeroOrOne:
       check(
         states.len >= 1,
@@ -128,7 +139,7 @@ func eNfa*(expression: seq[Node]): Enfa {.raises: [RegexError].} =
       result.s.add n
       states.add ni
       if not n.isGreedy:
-        swap(result.s[^1].next[0], result.s[^1].next[1])
+        swap result.s[^1].next[0], result.s[^1].next[1]
     of reGroupStart:
       let stateA = states.pop()
       n.next.add stateA
@@ -195,30 +206,21 @@ func teClosure(
   for s in eNfa.s[state].next:
     teClosure(result, eNfa, s, processing, zclosure)
 
-type
-  TransitionsAll* = seq[seq[int16]]
-  ZclosureStates* = seq[seq[Node]]
-  Transitions* = object
-    allZ*: TransitionsAll
-    z*: ZclosureStates
-
-func eRemoval*(
-  eNfa: Enfa,
-  transitions: var Transitions
-): Nfa {.raises: [].} =
+func eRemoval*(eNfa: Enfa): Nfa {.raises: [].} =
   ## Remove e-transitions and return
   ## remaining state transtions and
   ## submatches, and zero matches.
   ## Transitions are added in matching order (BFS),
   ## which may help matching performance
   #echo eNfa
-  result = newSeqOfCap[Node](eNfa.s.len)
-  transitions.allZ.setLen eNfa.s.len
+  result.s = newSeq[Node](eNfa.s.len)
+  result.s.setLen 0
+  result.t.allZ.setLen eNfa.s.len
   var statesMap = newSeq[int16](eNfa.s.len)
   for i in 0 .. statesMap.len-1:
     statesMap[i] = -1
   let start = int16(eNfa.s.len-1)
-  result.add eNfa.s[start]
+  result.s.add eNfa.s[start]
   statesMap[start] = 0'i16
   var closure: TeClosure
   var zc: seq[Node]
@@ -235,29 +237,26 @@ func eRemoval*(
       doAssert false
     closure.setLen 0
     teClosure(closure, eNfa, qa, processing)
-    result[statesMap[qa]].next.setLen 0
+    result.s[statesMap[qa]].next.setLen 0
     for qb, zclosure in closure.items:
       if statesMap[qb] == -1:
-        result.add eNfa.s[qb]
-        statesMap[qb] = result.len.int16-1
+        result.s.add eNfa.s[qb]
+        statesMap[qb] = result.s.len.int16-1
       doAssert statesMap[qb] > -1
       doAssert statesMap[qa] > -1
-      result[statesMap[qa]].next.add statesMap[qb]
-      transitions.allZ[statesMap[qa]].add -1'i16
+      result.s[statesMap[qa]].next.add statesMap[qb]
+      result.t.allZ[statesMap[qa]].add -1'i16
       zc.setLen 0
       for z in zclosure:
         zc.add eNfa.s[z]
       if zc.len > 0:
-        transitions.z.add zc
-        transitions.allZ[statesMap[qa]][^1] = int16(transitions.z.len-1)
+        result.t.z.add zc
+        result.t.allZ[statesMap[qa]][^1] = int16(result.t.z.len-1)
       if qb notin qu:
         qu.incl qb
         qw.addFirst qb
-  transitions.allZ.setLen result.len
+  result.t.allZ.setLen result.s.len
 
 # XXX rename to nfa when Nim v0.19 is dropped
-func nfa2*(
-  exp: seq[Node],
-  transitions: var Transitions
-): Nfa {.raises: [RegexError].} =
-  result = exp.eNfa.eRemoval(transitions)
+func nfa2*(exp: seq[Node]): Nfa {.raises: [RegexError].} =
+  exp.eNfa.eRemoval

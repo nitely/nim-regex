@@ -58,18 +58,18 @@ when (NimMajor, NimMinor, NimPatch) < (0, 20, 0):
 
 type
   RpnExp = seq[Node]
-  LitNfa = Nfa
+  LitNfa = Enfa
   End = seq[int16]
 
 func combine(
-  nfa: var seq[Node],
+  eNfa: var Enfa,
   ends: var seq[End],
   org, target: int16
 ) =
   for e in ends[org]:
-    for i, ni in nfa[e].next.mpairs:
-      if nfa[ni].kind == reEoe:
-        ni = target
+    for i in mitems eNfa.s[e].next:
+      if eNfa.s[i].kind == reEoe:
+        i = target
   ends[org] = ends[target]
 
 const eoe = 0'i16
@@ -79,7 +79,7 @@ func update(
   ni: int16,
   next: openArray[int16]
 ) =
-  ends[ni].setLen(0)
+  ends[ni].setLen 0
   for n in next:
     if n == eoe:
         ends[ni].add ni
@@ -91,8 +91,9 @@ func update(
 # and (...|...) by skip nodes.
 # Based on Thompson's construction
 func toLitNfa(exp: RPNExp): LitNfa =
-  result = newSeqOfCap[Node](exp.len + 2)
-  result.add initEoeNode()
+  result.s = newSeq[Node](exp.len + 2)
+  result.s.setLen 0
+  result.s.add initEoeNode()
   var
     ends = newSeq[End](exp.len + 1)
     states = newSeq[int16]()
@@ -101,12 +102,12 @@ func toLitNfa(exp: RPNExp): LitNfa =
   for n in exp:
     var n = n
     doAssert n.next.len == 0
-    let ni = result.len.int16
+    let ni = result.s.len.int16
     case n.kind
     of matchableKind, assertionKind:
       n.next.add eoe
       ends.update(ni, [eoe])
-      result.add n
+      result.s.add n
       states.add ni
     of reJoiner:
       let
@@ -118,12 +119,12 @@ func toLitNfa(exp: RPNExp): LitNfa =
       discard states.pop()
       discard states.pop()
       ends.update(ni, [eoe])
-      result.add initSkipNode([eoe])
+      result.s.add initSkipNode([eoe])
       states.add ni
     of reZeroOrMore, reZeroOrOne, reOneOrMore:
       discard states.pop()
       ends.update(ni, [eoe])
-      result.add initSkipNode([eoe])
+      result.s.add initSkipNode([eoe])
       states.add ni
     of reGroupStart:
       discard
@@ -132,18 +133,18 @@ func toLitNfa(exp: RPNExp): LitNfa =
     else:
       doAssert false
   doAssert states.len == 1
-  result.add initSkipNode(states)
+  result.s.add initSkipNode(states)
 
 type
   NodeIdx = int16
 
 func lonelyLit(exp: RpnExp): NodeIdx =
-  template state: untyped = litNfa[stateIdx]
+  template state: untyped = litNfa.s[stateIdx]
   result = -1
   let litNfa = exp.toLitNfa()
   var cpSeen = initHashSet[Rune](16)
   var lits = newSeq[int16]()
-  var stateIdx = litNfa.len.int16-1
+  var stateIdx = litNfa.s.len.int16-1
   while state.kind != reEoe:
     if state.kind == reChar and
         state.cp.int <= 127:  # XXX support unicode
@@ -164,11 +165,11 @@ func lonelyLit(exp: RpnExp): NodeIdx =
     if n.kind notin matchableKind:
       continue
     for nlit in lits:
-      doAssert n.uid <= litNfa[nlit].uid
-      if n.uid == litNfa[nlit].uid:
+      doAssert n.uid <= litNfa.s[nlit].uid
+      if n.uid == litNfa.s[nlit].uid:
         result = ni.NodeIdx
         #return
-      if not match(n, litNfa[nlit].cp):
+      if not match(n, litNfa.s[nlit].cp):
         litsTmp.add nlit
     swap lits, litsTmp
     litsTmp.setLen 0
@@ -225,10 +226,9 @@ type
   LitOpt* = object
     lit*: Rune
     nfa*: Nfa
-    tns*: Transitions
 
 func canOpt*(litOpt: LitOpt): bool =
-  return litOpt.nfa.len > 0
+  return litOpt.nfa.s.len > 0
 
 func litopt2*(exp: RpnExp): LitOpt =
   template litNode: untyped = exp[litIdx]
@@ -239,7 +239,7 @@ func litopt2*(exp: RpnExp): LitOpt =
   result.nfa = exp
     .eNfa
     .prefix(litNode.uid)
-    .eRemoval(result.tns)
+    .eRemoval
 
 when isMainModule:
   from unicode import toUtf8, `$`
@@ -266,10 +266,9 @@ when isMainModule:
 
   func toNfa(s: string): Nfa =
     var groups: GroupsCapture
-    var transitions: Transitions
     result = s
       .rpn(groups)
-      .nfa2(transitions)
+      .nfa2
 
   proc toString(
     nfa: Nfa,
@@ -277,14 +276,14 @@ when isMainModule:
     visited: var set[int16]
   ): string =
     # XXX zero-match transitions are missing
-    if nfa[nIdx].kind == reEoe:
+    if nfa.s[nIdx].kind == reEoe:
       result = "eoe"
       return
     if nIdx in visited:
       result = "[...]"
       return
     visited.incl nIdx
-    let n = nfa[nIdx]
+    let n = nfa.s[nIdx]
     result = "["
     result.add $n.cp
     for nn in n.next:

@@ -3,6 +3,7 @@ import std/sets
 import std/tables
 import std/algorithm
 
+import ./exptype
 import ./nodetype
 import ./common
 import ./scanner
@@ -23,10 +24,11 @@ func check(cond: bool, msg: string) =
   if not cond:
     raise newException(RegexError, msg)
 
-func greediness(expression: seq[Node]): seq[Node] =
+func greediness(exp: Exp): Exp =
   ## apply greediness to an expression
-  result = newSeqOfCap[Node](expression.len)
-  var sc = expression.scan()
+  result.s = newSeq[Node](exp.s.len)
+  result.s.setLen 0
+  var sc = exp.s.scan()
   for n in sc.mitems():
     if n.kind in repetitionKind or
         n.kind == reZeroOrOne:
@@ -34,7 +36,7 @@ func greediness(expression: seq[Node]): seq[Node] =
       if sc.peek.kind == reZeroOrOne:
         n.isGreedy = false
         discard sc.next
-    result.add(n)
+    result.s.add n
 
 type
   GroupsCapture* = object
@@ -42,18 +44,18 @@ type
     names*: OrderedTable[string, int16]
 
 func fillGroups(
-  exp: seq[Node],
+  exp: Exp,
   groups: var GroupsCapture
-): seq[Node] =
+): Exp =
   ## populate group indices, names and capturing mark
   result = exp
   groups.names = initOrderedTable[string, int16](2)
   groups.count = 0'i16
   var gs = newSeq[int]()
-  for i, n in result.mpairs:
+  for i, n in mpairs result.s:
     case n.kind
     of reGroupStart:
-      gs.add(i)
+      gs.add i
       if n.isCapturing:
         n.idx = groups.count
         inc groups.count
@@ -66,8 +68,8 @@ func fillGroups(
         "Invalid capturing group. " &
         "Found too many closing symbols")
       let start = gs.pop()
-      n.isCapturing = result[start].isCapturing
-      n.idx = result[start].idx
+      n.isCapturing = result.s[start].isCapturing
+      n.idx = result.s[start].idx
     else:
       discard
     check(
@@ -192,28 +194,29 @@ func applyFlag(n: var Node, f: Flag) =
       flagVerbose,
       flagNotVerbose}
 
-func applyFlags(expression: seq[Node]): seq[Node] =
+func applyFlags(exp: Exp): Exp =
   ## apply flags to each group
-  result = newSeqOfCap[Node](expression.len)
+  result.s = newSeq[Node](exp.s.len)
+  result.s.setLen 0
   var flags = newSeq[seq[Flag]]()
-  var sc = expression.scan()
+  var sc = exp.s.scan()
   for n in sc.mitems():
     # (?flags)
     # Orphan flags are added to current group
     case n.kind
     of reGroupStart:
       if n.flags.len == 0:
-        flags.add(@[])
-        result.add(n)
+        flags.add @[]
+        result.s.add n
         continue
       if sc.peek.kind == reGroupEnd:  # (?flags)
         discard sc.next()
         if flags.len > 0:
-          flags[flags.len - 1].add(n.flags)
+          flags[flags.len - 1].add n.flags
         else:
-          flags.add(n.flags)
+          flags.add n.flags
         continue  # skip (
-      flags.add(n.flags)
+      flags.add n.flags
     of reGroupEnd:
       discard flags.pop()
     else:
@@ -221,7 +224,7 @@ func applyFlags(expression: seq[Node]): seq[Node] =
       for f in Flag.low .. Flag.high:
         if ff[f]:
           applyFlag(n, f)
-    result.add(n)
+    result.s.add n
 
 func expandOneRepRange(subExpr: seq[Node], n: Node): seq[Node] =
   ## expand a repetition-range expression
@@ -255,24 +258,25 @@ func expandOneRepRange(subExpr: seq[Node], n: Node): seq[Node] =
       cp: "?".toRune,
       isGreedy: n.isGreedy))
 
-func expandRepRange(expression: seq[Node]): seq[Node] =
+func expandRepRange(exp: Exp): Exp =
   ## expand every repetition range
-  result = newSeqOfCap[Node](expression.len)
+  result.s = newSeq[Node](exp.s.len)
+  result.s.setLen 0
   var i: int
   var gi: int
-  for n in expression:
+  for n in exp.s:
     if n.kind != reRepRange:
-      result.add(n)
+      result.s.add n
       continue
     check(
-      result.len > 0,
+      result.s.len > 0,
       "Invalid repeition range, " &
       "nothing to repeat")
-    case result[^1].kind
+    case result.s[^1].kind
     of reGroupEnd:
       i = 0
       gi = 0
-      for ne in result.reversed:
+      for ne in result.s.reversed:
         inc i
         if ne.kind == reGroupEnd:
           inc gi
@@ -282,10 +286,10 @@ func expandRepRange(expression: seq[Node]): seq[Node] =
           break
         doAssert gi >= 0
       doAssert gi == 0
-      assert result[result.len-i].kind == reGroupStart
-      result.add(result[result.len-i .. result.len-1].expandOneRepRange(n))
+      assert result.s[result.s.len-i].kind == reGroupStart
+      result.s.add result.s[result.s.len-i .. result.s.len-1].expandOneRepRange(n)
     of matchableKind:
-      result.add(result[result.len-1 .. result.len-1].expandOneRepRange(n))
+      result.s.add result.s[result.s.len-1 .. result.s.len-1].expandOneRepRange(n)
     else:
       check(
         false, 
@@ -293,33 +297,34 @@ func expandRepRange(expression: seq[Node]): seq[Node] =
          "char, shorthand (i.e: \\w), group, or set " &
          "expected before repetition range"))
 
-func populateUid(exp: seq[Node]): seq[Node] =
+func populateUid(exp: Exp): Exp =
   check(
-    exp.high < NodeUid.high,
+    exp.s.high < NodeUid.high,
     ("The expression is too long, " &
      "limit is ~$#") %% $NodeUid.high)
   result = exp
   var uid = 1.NodeUid
-  for n in result.mitems:
+  for n in mitems result.s:
     n.uid = uid
     inc uid
 
-func joinAtoms(expression: seq[Node]): seq[Node] =
+func joinAtoms(exp: Exp): AtomsExp =
   ## Put a ``~`` joiner between atoms. An atom is
   ## a piece of expression that would loose
   ## meaning when breaking it up (i.e.: ``a~(b|c)*~d``)
-  result = newSeqOfCap[Node](expression.len * 2)
+  result.s = newSeq[Node](exp.s.len * 2)
+  result.s.setLen 0
   var atomsCount = 0
-  for n in expression:
+  for n in exp.s:
     case n.kind
     of matchableKind, assertionKind:
       inc atomsCount
       if atomsCount > 1:
         atomsCount = 1
-        result.add(initJoinerNode())
+        result.s.add initJoinerNode()
     of reGroupStart:
       if atomsCount > 0:
-        result.add(initJoinerNode())
+        result.s.add initJoinerNode()
       atomsCount = 0
     of reOr:
       atomsCount = 0
@@ -331,7 +336,7 @@ func joinAtoms(expression: seq[Node]): seq[Node] =
       inc atomsCount
     else:
       doAssert false
-    result.add(n)
+    result.s.add n
 
 type
   Associativity = enum
@@ -391,7 +396,7 @@ func popUntilGroupStart(ops: var seq[Node]): seq[Node] =
     if op.kind == reGroupStart:
       break
 
-func rpn(expression: seq[Node]): seq[Node] =
+func rpn(exp: AtomsExp): RpnExp =
   ## An adaptation of the Shunting-yard algorithm
   ## for producing `Reverse Polish Notation` out of
   ## an expression specified in infix notation.
@@ -400,30 +405,31 @@ func rpn(expression: seq[Node]): seq[Node] =
   ## the parsing of the regular expression into an NFA.
   ## Suffix notation removes nesting and so it can
   ## be parsed in a linear way instead of recursively
-  result = newSeqOfCap[Node](expression.len)
+  result.s = newSeq[Node](exp.s.len)
+  result.s.setLen 0
   var ops = newSeq[Node]()
-  for n in expression:
+  for n in exp.s:
     case n.kind
     of matchableKind, assertionKind:
-      result.add(n)
+      result.s.add n
     of reGroupStart:
-      ops.add(n)
+      ops.add n
     of reGroupEnd:
-      result.add(ops.popUntilGroupStart())
-      result.add(n)
+      result.s.add ops.popUntilGroupStart()
+      result.s.add n
     of opKind:
-      result.add(ops.popGreaterThan(n))
-      ops.add(n)
+      result.s.add ops.popGreaterThan(n)
+      ops.add n
     else:
       doAssert false
   # reverse ops
   for i in 1 .. ops.len:
-    result.add(ops[ops.len - i])
+    result.s.add ops[ops.len-i]
 
 func toAtoms*(
-  exp: seq[Node],
+  exp: Exp,
   groups: var GroupsCapture
-): seq[Node] {.inline.} =
+): AtomsExp {.inline.} =
   result = exp
     .fillGroups(groups)
     .greediness
@@ -433,9 +439,9 @@ func toAtoms*(
     .joinAtoms
 
 func transformExp*(
-  exp: seq[Node],
+  exp: Exp,
   groups: var GroupsCapture
-): seq[Node] {.inline.} =
+): RpnExp {.inline.} =
   result = exp
     .toAtoms(groups)
     .rpn

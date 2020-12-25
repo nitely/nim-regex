@@ -11,12 +11,10 @@ func reImpl*(s: string): Regex {.inline.} =
   let rpn = s
     .parse
     .transformExp(groups)
-  var transitions: Transitions
-  let nfa = rpn.nfa2(transitions)
+  let nfa = rpn.nfa2()
   let opt = rpn.litopt2()
   result = Regex(
     nfa: nfa,
-    transitions: transitions,
     groupsCount: groups.count,
     namedGroups: groups.names,
     litOpt: opt)

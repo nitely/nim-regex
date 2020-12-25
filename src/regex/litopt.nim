@@ -49,6 +49,7 @@ import std/algorithm
 import std/sets
 import std/unicode
 
+import ./exptype
 import ./nodetype
 import ./nodematch
 import ./nfa
@@ -57,19 +58,18 @@ when (NimMajor, NimMinor, NimPatch) < (0, 20, 0):
   import common
 
 type
-  RpnExp = seq[Node]
-  LitNfa = Nfa
+  LitNfa = Enfa
   End = seq[int16]
 
 func combine(
-  nfa: var seq[Node],
+  eNfa: var Enfa,
   ends: var seq[End],
   org, target: int16
 ) =
   for e in ends[org]:
-    for i, ni in nfa[e].next.mpairs:
-      if nfa[ni].kind == reEoe:
-        ni = target
+    for i in mitems eNfa.s[e].next:
+      if eNfa.s[i].kind == reEoe:
+        i = target
   ends[org] = ends[target]
 
 const eoe = 0'i16
@@ -79,7 +79,7 @@ func update(
   ni: int16,
   next: openArray[int16]
 ) =
-  ends[ni].setLen(0)
+  ends[ni].setLen 0
   for n in next:
     if n == eoe:
         ends[ni].add ni
@@ -90,23 +90,24 @@ func update(
 # replace (...)+, (...)*, (...)?,
 # and (...|...) by skip nodes.
 # Based on Thompson's construction
-func toLitNfa(exp: RPNExp): LitNfa =
-  result = newSeqOfCap[Node](exp.len + 2)
-  result.add initEoeNode()
+func toLitNfa(exp: RpnExp): LitNfa =
+  result.s = newSeq[Node](exp.s.len + 2)
+  result.s.setLen 0
+  result.s.add initEoeNode()
   var
-    ends = newSeq[End](exp.len + 1)
+    ends = newSeq[End](exp.s.len + 1)
     states = newSeq[int16]()
-  if exp.len == 0:
+  if exp.s.len == 0:
     states.add eoe
-  for n in exp:
+  for n in exp.s:
     var n = n
     doAssert n.next.len == 0
-    let ni = result.len.int16
+    let ni = result.s.len.int16
     case n.kind
     of matchableKind, assertionKind:
       n.next.add eoe
       ends.update(ni, [eoe])
-      result.add n
+      result.s.add n
       states.add ni
     of reJoiner:
       let
@@ -118,12 +119,12 @@ func toLitNfa(exp: RPNExp): LitNfa =
       discard states.pop()
       discard states.pop()
       ends.update(ni, [eoe])
-      result.add initSkipNode([eoe])
+      result.s.add initSkipNode([eoe])
       states.add ni
     of reZeroOrMore, reZeroOrOne, reOneOrMore:
       discard states.pop()
       ends.update(ni, [eoe])
-      result.add initSkipNode([eoe])
+      result.s.add initSkipNode([eoe])
       states.add ni
     of reGroupStart:
       discard
@@ -132,18 +133,18 @@ func toLitNfa(exp: RPNExp): LitNfa =
     else:
       doAssert false
   doAssert states.len == 1
-  result.add initSkipNode(states)
+  result.s.add initSkipNode(states)
 
 type
   NodeIdx = int16
 
 func lonelyLit(exp: RpnExp): NodeIdx =
-  template state: untyped = litNfa[stateIdx]
+  template state: untyped = litNfa.s[stateIdx]
   result = -1
   let litNfa = exp.toLitNfa()
   var cpSeen = initHashSet[Rune](16)
   var lits = newSeq[int16]()
-  var stateIdx = litNfa.len.int16-1
+  var stateIdx = litNfa.s.len.int16-1
   while state.kind != reEoe:
     if state.kind == reChar and
         state.cp.int <= 127:  # XXX support unicode
@@ -157,35 +158,35 @@ func lonelyLit(exp: RpnExp): NodeIdx =
   # time, it seems sensible to limit the lits
   lits.setLen min(lits.len, 128)
   var litsTmp = newSeq[int16]()
-  for ni, n in exp.pairs:
+  for ni, n in pairs exp.s:
     # break after last lit of first lits sequence
-    if result > -1 and exp[result].uid+1 < n.uid:
+    if result > -1 and exp.s[result].uid+1 < n.uid:
       break
     if n.kind notin matchableKind:
       continue
     for nlit in lits:
-      doAssert n.uid <= litNfa[nlit].uid
-      if n.uid == litNfa[nlit].uid:
+      doAssert n.uid <= litNfa.s[nlit].uid
+      if n.uid == litNfa.s[nlit].uid:
         result = ni.NodeIdx
         #return
-      if not match(n, litNfa[nlit].cp):
+      if not match(n, litNfa.s[nlit].cp):
         litsTmp.add nlit
     swap lits, litsTmp
     litsTmp.setLen 0
 
 func prefix(eNfa: Enfa, uid: NodeUid): Enfa =
-  template state0: untyped = eNfa.len.int16-1
+  template state0: untyped = eNfa.s.len.int16-1
   result = eNfa
-  for n in result.mitems:
+  for n in result.s.mitems:
     n.next.setLen 0
   # reverse transitions; DFS
   var stack = @[(state0, -1'i16)]
   var visited: set[int16]
-  template state: untyped = eNfa[ni]
+  template state: untyped = eNfa.s[ni]
   while stack.len > 0:
     let (ni, pi) = stack.pop()
     if pi > -1:
-      result[ni].next.add pi
+      result.s[ni].next.add pi
     if ni in visited:
       continue
     visited.incl ni
@@ -194,44 +195,43 @@ func prefix(eNfa: Enfa, uid: NodeUid): Enfa =
       continue
     for mi in state.next:
       stack.add (mi, ni)
-  for n in result.mitems:
+  for n in mitems result.s:
     n.next.reverse
     n.isGreedy = true
   # Swap initial state by eoe
   var eoeIdx = -1'i16
-  for ni, n in result.pairs:
+  for ni, n in pairs result.s:
     if n.kind == reEoe:
       doAssert eoeIdx == -1
       eoeIdx = ni.int16
   doAssert eoeIdx != -1
-  for ni in eNfa[state0].next:
-    for i in 0 .. result[ni].next.len-1:
-      if result[ni].next[i] == state0:
-        result[ni].next[i] = eoeIdx
-  doAssert result[eoeIdx].kind == reEoe
-  doAssert result[state0].kind == reSkip
-  swap result[state0].kind, result[eoeIdx].kind
-  swap result[state0], result[eoeIdx]
+  for ni in eNfa.s[state0].next:
+    for i in 0 .. result.s[ni].next.len-1:
+      if result.s[ni].next[i] == state0:
+        result.s[ni].next[i] = eoeIdx
+  doAssert result.s[eoeIdx].kind == reEoe
+  doAssert result.s[state0].kind == reSkip
+  swap result.s[state0].kind, result.s[eoeIdx].kind
+  swap result.s[state0], result.s[eoeIdx]
   # cut
   var nIdx = -1
-  for ni, n in eNfa.pairs:
+  for ni, n in pairs eNfa.s:
     if n.uid == uid:
       doAssert nIdx == -1
       nIdx = ni
   doAssert nIdx != -1
-  result[state0].next = result[nIdx].next
+  result.s[state0].next = result.s[nIdx].next
 
 type
   LitOpt* = object
     lit*: Rune
     nfa*: Nfa
-    tns*: Transitions
 
 func canOpt*(litOpt: LitOpt): bool =
-  return litOpt.nfa.len > 0
+  return litOpt.nfa.s.len > 0
 
 func litopt2*(exp: RpnExp): LitOpt =
-  template litNode: untyped = exp[litIdx]
+  template litNode: untyped = exp.s[litIdx]
   let litIdx = exp.lonelyLit()
   if litIdx == -1:
     return
@@ -239,7 +239,7 @@ func litopt2*(exp: RpnExp): LitOpt =
   result.nfa = exp
     .eNfa
     .prefix(litNode.uid)
-    .eRemoval(result.tns)
+    .eRemoval
 
 when isMainModule:
   from unicode import toUtf8, `$`
@@ -266,10 +266,9 @@ when isMainModule:
 
   func toNfa(s: string): Nfa =
     var groups: GroupsCapture
-    var transitions: Transitions
     result = s
       .rpn(groups)
-      .nfa2(transitions)
+      .nfa2
 
   proc toString(
     nfa: Nfa,
@@ -277,14 +276,14 @@ when isMainModule:
     visited: var set[int16]
   ): string =
     # XXX zero-match transitions are missing
-    if nfa[nIdx].kind == reEoe:
+    if nfa.s[nIdx].kind == reEoe:
       result = "eoe"
       return
     if nIdx in visited:
       result = "[...]"
       return
     visited.incl nIdx
-    let n = nfa[nIdx]
+    let n = nfa.s[nIdx]
     result = "["
     result.add $n.cp
     for nn in n.next:
@@ -354,9 +353,9 @@ when isMainModule:
   doAssert r"(a|ab)\w@&%".prefix.toString ==
     "[#, [&, [@, [w, [a, eoe], [b, [a, eoe]]]]]]"
   doAssert r"a?b".prefix.toString == r"a?".toNfa.toString
-  doAssert r"".prefix.len == 0
-  doAssert r"a?".prefix.len == 0
-  doAssert r"\w".prefix.len == 0
+  doAssert r"".prefix.s.len == 0
+  doAssert r"a?".prefix.s.len == 0
+  doAssert r"\w".prefix.s.len == 0
   doAssert r"(\w\d)*@".prefix.toString == r"(\d\w)*".toNfa.toString
   doAssert r"(\w\d)+@".prefix.toString == r"(\d\w)+".toNfa.toString
   # We search the start of the match, so greeddiness

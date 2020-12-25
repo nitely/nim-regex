@@ -238,14 +238,15 @@ func genMatchedBody(
   i, nti: int,
   regex: Regex
 ): NimNode =
-  if regex.transitions.allZ[i][nti] == -1'i16:
+  template t: untyped = regex.nfa.t
+  if t.allZ[i][nti] == -1'i16:
     return quote do:
       add(`smB`, (`ntLit`, `capt`, `bounds`.a .. `charIdx`-1))
   var matchedBody: seq[NimNode]
   matchedBody.add quote do:
     `matched` = true
     `captx` = `capt`
-  for z in regex.transitions.z[regex.transitions.allZ[i][nti]]:
+  for z in t.z[t.allZ[i][nti]]:
     case z.kind
     of groupKind:
       let zIdx = newLit z.idx
@@ -290,22 +291,22 @@ func genSubmatch(
   result = newStmtList()
   var caseStmtN: seq[NimNode]
   caseStmtN.add n
-  for i in 0 .. regex.nfa.len-1:
-    if regex.nfa[i].kind == reEoe:
+  for i in 0 .. regex.nfa.s.len-1:
+    if regex.nfa.s[i].kind == reEoe:
       continue
     var branchBodyN: seq[NimNode]
-    for nti, nt in regex.nfa[i].next.pairs:
-      let matchCond = case regex.nfa[nt].kind
+    for nti, nt in regex.nfa.s[i].next.pairs:
+      let matchCond = case regex.nfa.s[nt].kind
         of reEoe:
           quote do: `c` == -1'i32
         of reInSet:
-          let m = genSetMatch(c, regex.nfa[nt])
+          let m = genSetMatch(c, regex.nfa.s[nt])
           quote do: `c` >= 0'i32 and `m`
         of reNotSet:
-          let m = genSetMatch(c, regex.nfa[nt])
+          let m = genSetMatch(c, regex.nfa.s[nt])
           quote do: `c` >= 0'i32 and not `m`
         else:
-          let m = genMatch(c, regex.nfa[nt])
+          let m = genMatch(c, regex.nfa.s[nt])
           quote do: `c` >= 0'i32 and `m`
       let ntLit = newLit nt
       let matchedBodyStmt = genMatchedBody(
@@ -367,12 +368,12 @@ func genSubmatchEoe(
   result = newStmtList()
   var caseStmtN: seq[NimNode]
   caseStmtN.add n
-  for i in 0 .. regex.nfa.len-1:
-    if regex.nfa[i].kind == reEoe:
+  for i in 0 .. regex.nfa.s.len-1:
+    if regex.nfa.s[i].kind == reEoe:
       continue
     var branchBodyN: seq[NimNode]
-    for nti, nt in regex.nfa[i].next.pairs:
-      if regex.nfa[nt].kind == reEoe:
+    for nti, nt in regex.nfa.s[i].next.pairs:
+      if regex.nfa.s[nt].kind == reEoe:
         let ntLit = newLit nt
         let cLit = newLit -1'i32
         let matchedBodyStmt = genMatchedBody(
@@ -439,7 +440,7 @@ proc matchImpl*(text, expLit, body: NimNode): NimNode =
     smA, smB, c2, capts, iPrev, cPrev, captx, matched, regex)
   let submatchEoeCall = submatchEoe(
     smA, smB, capts, iPrev, cPrev, captx, matched, regex)
-  let nfaLenLit = newLit regex.nfa.len
+  let nfaLenLit = newLit regex.nfa.s.len
   let nfaGroupsLen = regex.groupsCount
   result = quote do:
     block:

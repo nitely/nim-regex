@@ -95,10 +95,10 @@ template initMaybeImpl(
 ) =
   if ms.a == nil:
     assert ms.b == nil
-    ms.a = newSubmatches(regex.nfa.len)
-    ms.b = newSubmatches(regex.nfa.len)
-  doAssert ms.a.cap >= regex.nfa.len and
-    ms.b.cap >= regex.nfa.len
+    ms.a = newSubmatches(regex.nfa.s.len)
+    ms.b = newSubmatches(regex.nfa.s.len)
+  doAssert ms.a.cap >= regex.nfa.s.len and
+    ms.b.cap >= regex.nfa.s.len
 
 func hasMatches(ms: RegexMatches): bool {.inline.} =
   return ms.m.len > 0
@@ -144,8 +144,8 @@ func submatch(
   i: int,
   cPrev, c: int32
 ) {.inline.} =
-  template tns: untyped = regex.transitions
-  template nfa: untyped = regex.nfa
+  template tns: untyped = regex.nfa.t
+  template nfa: untyped = regex.nfa.s
   template smA: untyped = ms.a
   template smB: untyped = ms.b
   template capts: untyped = ms.c
@@ -273,8 +273,8 @@ func submatch2(
   i: int,
   cPrev, c: int32
 ) =
-  template nfa: untyped = regex.litOpt.nfa
-  template tns: untyped = regex.litOpt.tns
+  template nfa: untyped = regex.litOpt.nfa.s
+  template tns: untyped = regex.litOpt.nfa.t
   smB.clear()
   var matched = true
   for n, capt, bounds in smA.items:
@@ -328,7 +328,7 @@ func matchPrefixImpl(
     submatch2(smA, smB, regex, iPrev, cPrev, c.int32)
     if smA.len == 0:
       return -1
-    if nfa[smA[0].ni].kind == reEoe:
+    if nfa.s[smA[0].ni].kind == reEoe:
       return smA[0].bounds.a
     iPrev = i
     cPrev = c.int32
@@ -340,7 +340,7 @@ func matchPrefixImpl(
     c = Rune(-1)
   submatch2(smA, smB, regex, iPrev, cPrev, c.int32)
   for n, capt, bounds in smA.items:
-    if nfa[n].kind == reEoe:
+    if nfa.s[n].kind == reEoe:
       return bounds.a
   return -1
 
@@ -351,11 +351,11 @@ func findSomeOptImpl*(
   start: Natural
 ): int =
   template regexSize: untyped =
-    max(regex.litOpt.nfa.len, regex.nfa.len)
+    max(regex.litOpt.nfa.s.len, regex.nfa.s.len)
   template opt: untyped = regex.litOpt
   template smA: untyped = ms.a
   template smB: untyped = ms.b
-  doAssert opt.nfa.len > 0
+  doAssert opt.nfa.s.len > 0
   initMaybeImpl(ms, regexSize)
   ms.clear()
   var limit = start.int

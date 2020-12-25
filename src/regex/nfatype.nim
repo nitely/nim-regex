@@ -47,7 +47,6 @@ type
   Regex* = object
     ## a compiled regular expression
     nfa*: Nfa
-    transitions*: Transitions
     groupsCount*: int16
     namedGroups*: OrderedTable[string, int16]
     #flags*: set[RegexFlag]

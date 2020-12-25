@@ -34,8 +34,8 @@ func submatch(
   cPrev, c, c2: int32,
   flags: static MatchFlags,
 ) {.inline.} =
-  template t: untyped = regex.transitions
-  template nfa: untyped = regex.nfa
+  template nfa: untyped = regex.nfa.s
+  template t: untyped = regex.nfa.t
   smB.clear()
   var captx: int32
   var matched = true
@@ -84,7 +84,7 @@ template findMatch: untyped {.dirty.} =
       m.boundaries = i .. i-1
       return false
   smA.add((0'i16, -1'i32, i .. i-1))
-  if regex.nfa[smA[0][0]].kind == reEoe:
+  if regex.nfa.s[smA[0][0]].kind == reEoe:
     constructSubmatches(m.captures, capts, smA[0][1], regex.groupsCount)
     if regex.namedGroups.len > 0:
       m.namedGroups = regex.namedGroups
@@ -115,8 +115,8 @@ func matchImpl*(
     cPrev = -1'i32
     i = start
     iPrev = start
-  smA = newSubmatches(regex.nfa.len)
-  smB = newSubmatches(regex.nfa.len)
+  smA = newSubmatches(regex.nfa.s.len)
+  smB = newSubmatches(regex.nfa.s.len)
   smA.add (0'i16, -1'i32, start .. start-1)
   when mfFindMatch in flags:
     if 0 <= start-1 and start-1 <= len(text)-1:

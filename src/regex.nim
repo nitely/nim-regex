@@ -870,7 +870,7 @@ func isInitialized*(re: Regex): bool {.inline, raises: [].} =
     re = re"foo"
     doAssert re.isInitialized
 
-  re.nfa.len > 0
+  re.nfa.s.len > 0
 
 func escapeRe*(s: string): string {.raises: [].} =
   ## Escape special regex characters in ``s``
@@ -905,7 +905,7 @@ proc toString(
     result = "[...]"
     return
   visited.incl(nIdx)
-  let n = pattern.nfa[nIdx]
+  let n = pattern.nfa.s[nIdx]
   result = "["
   result.add($n)
   for nn in n.next:
@@ -929,7 +929,7 @@ when isMainModule:
     let atoms = s
       .parse
       .toAtoms(groups)
-    result = atoms.toString
+    result = atoms.s.toString
 
   func toNfaStr(s: string): string =
     result = re(s).toString

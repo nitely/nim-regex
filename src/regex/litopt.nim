@@ -49,6 +49,7 @@ import std/algorithm
 import std/sets
 import std/unicode
 
+import ./exptype
 import ./nodetype
 import ./nodematch
 import ./nfa
@@ -57,7 +58,6 @@ when (NimMajor, NimMinor, NimPatch) < (0, 20, 0):
   import common
 
 type
-  RpnExp = seq[Node]
   LitNfa = Enfa
   End = seq[int16]
 
@@ -90,16 +90,16 @@ func update(
 # replace (...)+, (...)*, (...)?,
 # and (...|...) by skip nodes.
 # Based on Thompson's construction
-func toLitNfa(exp: RPNExp): LitNfa =
-  result.s = newSeq[Node](exp.len + 2)
+func toLitNfa(exp: RpnExp): LitNfa =
+  result.s = newSeq[Node](exp.s.len + 2)
   result.s.setLen 0
   result.s.add initEoeNode()
   var
-    ends = newSeq[End](exp.len + 1)
+    ends = newSeq[End](exp.s.len + 1)
     states = newSeq[int16]()
-  if exp.len == 0:
+  if exp.s.len == 0:
     states.add eoe
-  for n in exp:
+  for n in exp.s:
     var n = n
     doAssert n.next.len == 0
     let ni = result.s.len.int16
@@ -158,9 +158,9 @@ func lonelyLit(exp: RpnExp): NodeIdx =
   # time, it seems sensible to limit the lits
   lits.setLen min(lits.len, 128)
   var litsTmp = newSeq[int16]()
-  for ni, n in exp.pairs:
+  for ni, n in pairs exp.s:
     # break after last lit of first lits sequence
-    if result > -1 and exp[result].uid+1 < n.uid:
+    if result > -1 and exp.s[result].uid+1 < n.uid:
       break
     if n.kind notin matchableKind:
       continue
@@ -231,7 +231,7 @@ func canOpt*(litOpt: LitOpt): bool =
   return litOpt.nfa.s.len > 0
 
 func litopt2*(exp: RpnExp): LitOpt =
-  template litNode: untyped = exp[litIdx]
+  template litNode: untyped = exp.s[litIdx]
   let litIdx = exp.lonelyLit()
   if litIdx == -1:
     return

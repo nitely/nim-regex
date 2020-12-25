@@ -5,6 +5,7 @@ import std/parseutils
 
 import pkg/unicodedb/properties
 
+import ./exptype
 import ./nodetype
 import ./common
 import ./scanner
@@ -757,13 +758,14 @@ func verbosity(
   else:
     discard
 
-func parse*(expression: string): seq[Node] =
+func parse*(expression: string): Exp =
   ## convert a ``string`` regex expression
   ## into a ``Node`` expression
-  result = newSeqOfCap[Node](expression.len)
+  result.s = newSeq[Node](expression.len)
+  result.s.setLen 0
   var vb = newSeq[bool]()
   let sc = expression.scan()
   for _ in sc:
     if sc.skipWhiteSpace(vb): continue
-    result.add(sc.subParse())
-    vb.verbosity(sc, result[^1])
+    result.s.add sc.subParse()
+    vb.verbosity(sc, result.s[^1])

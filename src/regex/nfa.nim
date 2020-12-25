@@ -1,5 +1,6 @@
 import std/deques
 
+import ./exptype
 import ./nodetype
 import ./common
 
@@ -60,17 +61,17 @@ func update(
     else:
       ends[ni].add ends[n]
 
-func eNfa*(expression: seq[Node]): Enfa {.raises: [RegexError].} =
+func eNfa*(exp: RpnExp): Enfa {.raises: [RegexError].} =
   ## Thompson's construction
-  result.s = newSeq[Node](expression.len + 2)
+  result.s = newSeq[Node](exp.s.len + 2)
   result.s.setLen 0
   result.s.add initEOENode()
   var
-    ends = newSeq[End](expression.len + 1)
+    ends = newSeq[End](exp.s.len + 1)
     states = newSeq[int16]()
-  if expression.len == 0:
+  if exp.s.len == 0:
     states.add eoe
-  for n in expression:
+  for n in exp.s:
     var n = n
     doAssert n.next.len == 0
     check(
@@ -258,5 +259,5 @@ func eRemoval*(eNfa: Enfa): Nfa {.raises: [].} =
   result.t.allZ.setLen result.s.len
 
 # XXX rename to nfa when Nim v0.19 is dropped
-func nfa2*(exp: seq[Node]): Nfa {.raises: [RegexError].} =
+func nfa2*(exp: RpnExp): Nfa {.raises: [RegexError].} =
   exp.eNfa.eRemoval

@@ -929,7 +929,7 @@ when isMainModule:
     let atoms = s
       .parse
       .toAtoms(groups)
-    result = atoms.toString
+    result = atoms.s.toString
 
   func toNfaStr(s: string): string =
     result = re(s).toString

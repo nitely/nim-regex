@@ -51,7 +51,8 @@ func update(
 
 func eNfa*(expression: seq[Node]): Enfa {.raises: [RegexError].} =
   ## Thompson's construction
-  result.s = newSeqOfCap[Node](expression.len + 2)
+  result.s = newSeq[Node](expression.len + 2)
+  result.s.setLen 0
   result.s.add initEOENode()
   var
     ends = newSeq[End](expression.len + 1)
@@ -167,10 +168,10 @@ func teClosure(
   zTransitions: Zclosure
 ) =
   var zTransitionsCurr = zTransitions
-  if isTransitionZ(eNfa.s[state]):
+  if isTransitionZ eNfa.s[state]:
     zTransitionsCurr.add state
   if eNfa.s[state].kind in matchableKind + {reEOE}:
-    result.add((state, zTransitionsCurr))
+    result.add (state, zTransitionsCurr)
     return
   for i, s in pairs eNfa.s[state].next:
     # Enter loops only once. "a", re"(a*)*" -> ["a", ""]

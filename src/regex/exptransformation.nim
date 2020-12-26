@@ -426,19 +426,20 @@ func rpn(exp: AtomsExp): RpnExp =
   for i in 1 .. ops.len:
     result.s.add ops[ops.len-i]
 
-func subExps(exp: seq[Node]): seq[Node] =
+func subExps(exp: AtomsExp): AtomsExp =
   ## Collect and convert lookaround sub-expressions to RPN
-  result = newSeqOfCap[Node](exp.len)
+  result.s = newSeq[Node](exp.s.len)
+  result.s.setLen 0
   var i = 0
   var parens = newSeq[bool]()
-  while i < exp.len:
-    if exp[i].kind in lookaroundKind:
-      result.add exp[i]
+  while i < exp.s.len:
+    if exp.s[i].kind in lookaroundKind:
+      result.s.add exp.s[i]
       inc i
       parens.setLen 0
       let i0 = i
-      while i < exp.len:
-        case exp[i].kind
+      while i < exp.s.len:
+        case exp.s[i].kind
         of groupStartKind:
           parens.add true
         of reGroupEnd:
@@ -449,11 +450,12 @@ func subExps(exp: seq[Node]): seq[Node] =
         else:
           discard
         inc i
-      doAssert exp[i].kind == reGroupEnd
-      result[^1].subExp.nfa = subExps(exp[i0 .. i-1]).rpn
+      doAssert exp.s[i].kind == reGroupEnd
+      let atoms = AtomsExp(s: exp.s[i0 .. i-1])
+      result.s[^1].subExp.rpn = atoms.subExps.rpn
       inc i
     else:
-      result.add exp[i]
+      result.s.add exp.s[i]
       inc i
 
 func toAtoms*(

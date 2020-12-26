@@ -1,12 +1,7 @@
 import std/deques
 import std/algorithm
 
-<<<<<<< HEAD
-import ./exptype
-import ./nodetype
-=======
 import ./types
->>>>>>> wip
 import ./common
 
 func check(cond: bool, msg: string) =
@@ -14,29 +9,12 @@ func check(cond: bool, msg: string) =
     raise newException(RegexError, msg)
 
 type
-<<<<<<< HEAD
-  Enfa* = object
-    s*: seq[Node]
-
-type
-=======
->>>>>>> wip
   End = seq[int16]
     ## store the last
     ## states of a given state.
     ## Avoids having to recurse
     ## a state to find its end,
     ## but have to keep them up-to-date
-
-type
-  TransitionsAll* = seq[seq[int16]]
-  ZclosureStates* = seq[seq[Node]]
-  Transitions* = object
-    allZ*: TransitionsAll
-    z*: ZclosureStates
-  Nfa* = object
-    s*: seq[Node]
-    t*: Transitions
 
 func combine(
   eNfa: var Enfa,
@@ -215,14 +193,7 @@ func teClosure(
   for s in eNfa.s[state].next:
     teClosure(result, eNfa, s, processing, zclosure)
 
-<<<<<<< HEAD
 func eRemoval*(eNfa: Enfa): Nfa {.raises: [].} =
-=======
-func eRemoval*(
-  eNfa: Enfa,
-  transitions: var Transitions
-): Nfa {.raises: [].} =
->>>>>>> wip
   ## Remove e-transitions and return
   ## remaining state transtions and
   ## submatches, and zero matches.
@@ -274,73 +245,63 @@ func eRemoval*(
   result.t.allZ.setLen result.s.len
 
 func reverse*(eNfa: Enfa): Enfa =
-  template state0: untyped = int16(eNfa.len-1)
+  template state0: untyped = int16(eNfa.s.len-1)
   result = eNfa
-  for n in mitems result:
+  for n in mitems result.s:
     n.next.setLen 0
   var stack = @[(state0, -1'i16)]
   var visited: set[int16]
-  template state: untyped = eNfa[ni]
+  template state: untyped = eNfa.s[ni]
   while stack.len > 0:
     let (ni, pi) = stack.pop()
     if pi > -1:
-      result[ni].next.add pi
+      result.s[ni].next.add pi
     if ni in visited:
       continue
     visited.incl ni
     for mi in state.next:
       stack.add (mi, ni)
-  for n in mitems result:
+  for n in mitems result.s:
     n.next.reverse
   # fix loops greediness
-  for i, n in pairs eNfa:
+  for i, n in pairs eNfa.s:
     case n.kind:
     of reZeroOrMore:
       if not n.isGreedy:
-        result[i].next.reverse
+        result.s[i].next.reverse
     of reOneOrMore:
       if not n.isGreedy:
-        result[n.next[1]].next.reverse
+        result.s[n.next[1]].next.reverse
     else:
       discard
   # Swap initial state by eoe
   var eoeIdx = -1'i16
-  for i, n in pairs result:
+  for i, n in pairs result.s:
     if n.kind == reEoe:
       doAssert eoeIdx == -1
       eoeIdx = i.int16
   doAssert eoeIdx != -1
-  for i in eNfa[state0].next:
-    for j in 0 .. result[i].next.len-1:
-      if result[i].next[j] == state0:
-        result[i].next[j] = eoeIdx
-  swap result[state0].next, result[eoeIdx].next
-  doAssert result[state0].kind == reSkip
-  doAssert result[eoeIdx].kind == reEoe
-  doAssert result[state0].next.len > 0
-  doAssert result[eoeIdx].next.len == 0
+  for i in eNfa.s[state0].next:
+    for j in 0 .. result.s[i].next.len-1:
+      if result.s[i].next[j] == state0:
+        result.s[i].next[j] = eoeIdx
+  swap result.s[state0].next, result.s[eoeIdx].next
+  doAssert result.s[state0].kind == reSkip
+  doAssert result.s[eoeIdx].kind == reEoe
+  doAssert result.s[state0].next.len > 0
+  doAssert result.s[eoeIdx].next.len == 0
 
-func subExps(exp: seq[Node]): seq[Node] =
+func subExps(exp: RpnExp): RpnExp =
   result = exp
-  for n in mitems result:
+  for n in mitems result.s:
     # XXX reverse lookbehind
     if n.kind in lookaroundKind:
-      n.subExp.nfa = n.subExp.nfa
+      n.subExp.nfa = n.subExp.rpn
         .subExps
         .eNfa
-        .eRemoval(n.subExp.transitions)
+        .eRemoval
+      n.subExp.rpn.s = newSeq[Node]()  # nullify
 
 # XXX rename to nfa when Nim v0.19 is dropped
-<<<<<<< HEAD
 func nfa2*(exp: RpnExp): Nfa {.raises: [RegexError].} =
-  exp.eNfa.eRemoval
-=======
-func nfa2*(
-  exp: seq[Node],
-  transitions: var Transitions
-): Nfa {.raises: [RegexError].} =
-  result = exp
-    .subExps
-    .eNfa
-    .eRemoval(transitions)
->>>>>>> wip
+  exp.subExps.eNfa.eRemoval

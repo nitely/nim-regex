@@ -3,9 +3,8 @@ when (NimMajor, NimMinor) >= (1, 2):
   import std/hashes
   import std/os
 
-import ./nfa
 import ./nfatype
-import ./nodetype
+import ./types
 
 func color(n: Node): string =
   case n.kind

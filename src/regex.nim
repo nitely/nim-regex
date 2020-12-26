@@ -253,7 +253,6 @@ import ./regex/types
 import ./regex/common
 import ./regex/compiler
 import ./regex/nfatype
-import ./regex/nfa
 import ./regex/nfafindall
 import ./regex/nfamatch
 when not defined(noRegexOpt):

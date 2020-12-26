@@ -20,14 +20,21 @@ import ./common
 #     every last tn idx
 
 type
+  # exptype.nim
+  RpnExp* = object
+    s*: seq[Node]
+
   # nfatype.nim
-  Enfa* = seq[Node]
-  Nfa* = seq[Node]
+  Enfa* = object
+    s*: seq[Node]
   TransitionsAll* = seq[seq[int16]]
   ZclosureStates* = seq[seq[Node]]
   Transitions* = object
     allZ*: TransitionsAll
     z*: ZclosureStates
+  Nfa* = object
+    s*: seq[Node]
+    t*: Transitions
 
   # nodetype.nim
   Flag* = enum
@@ -115,7 +122,7 @@ type
     subExp*: SubExp
   SubExp* = object
     nfa*: Nfa
-    transitions*: Transitions
+    rpn*: RpnExp
 
 func toCharNode*(r: Rune): Node =
   ## return a ``Node`` that is meant to be matched

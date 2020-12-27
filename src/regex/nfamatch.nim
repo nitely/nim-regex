@@ -146,29 +146,158 @@ func matchImpl*(
   return true
 
 when false:
-  func matchImpl2*(
-    text: string,
-    regex: SubExp,
-    start: int,
+  type
+    MatchSig = func (
+      smA, smB: var Submatches,
+      capts: var Capts,
+      captIdx: int32,
+      text: string,
+      nfa: Nfa,
+      look: Lookaround,
+      start = 0
+    ): bool
+    Lookaround = object
+      ahead, behind: MatchSig
+
+  template nextStateTpl: {.dirty.} =
+    smB.clear()
+    for n, capt, bounds in smA.items:
+      if anchored and
+          nfa.s[n].kind == reEoe:
+        smB.add (n, capt, bounds)
+        break
+      for nti, nt in nfa.s[n].next.pairs:
+        if smB.hasState nt:
+          continue
+        if not match(nfa.s[nt], c.Rune):
+          continue
+        if nfa.t.allZ[n][nti] == -1'i16:
+          smB.add (nt, captx, bounds.a .. i-1)
+          continue
+        matched = true
+        captx = capt
+        for z in nfa.t.z[nfa.t.allZ[n][nti]]:
+          if not matched:
+            break
+          case z.kind
+          of groupKind:
+            capts.add CaptNode(
+              parent: captx,
+              bound: i,
+              idx: z.idx)
+            captx = (capts.len-1).int32
+          of assertionKind:
+            matched = match(z, cPrev.Rune, c.Rune)
+          else:
+            assert false
+            discard
+        if matched:
+          smB.add (nt, captx, bounds.a .. i-1)
+    swap smA, smB
+
+  func matchImpl(
+    smA, smB: var Submatches,
     capts: var Capts,
-    captsIdx: int32
+    captIdx: int32,
+    text: string,
+    nfa: Nfa,
+    look: Lookaround,
+    start = 0
   ): bool =
-    template nfa: untyped = regex.nfa
-    const f: MatchFlags = {}
     var
       c = Rune(-1)
       cPrev = -1'i32
       i = start
-      smA = newSubmatches(nfa.len)
-      smB = newSubmatches(nfa.len)
-    smA.add (0'i16, captsIdx, start .. start-1)
-    if 0 <= start-1 and start-1 <= len(text)-1:
-      cPrev = bwRuneAt(text, start-1).int32
+      iPrev = start
+      captx: int32
+      matched = false
+      anchored = false  # XXX take from flag
+    smA.clear()
+    smA.add (0'i16, captIdx, start .. start-1)
     while i < len(text):
       fastRuneAt(text, i, c, true)
-      submatch(smA, smB, capts, regex, 0, cPrev, c.int32, c.int32, f)
+      nextStateTpl()
       if smA.len == 0:
         return false
+      if anchored and
+          nfa[smA[0].ni].kind == reEoe:
+        return true
+      iPrev = i
       cPrev = c.int32
-    submatch(smA, smB, capts, regex, 0, cPrev, -1'i32, -1'i32, f)
+    nextStateTpl()
     return smA.len > 0
+
+  func reversedMatchImpl(
+    smA, smB: var Submatches,
+    capts: var Capts,
+    captIdx: int32,
+    text: string,
+    nfa: Nfa,
+    look: Lookaround,
+    start = 0
+  ): bool =
+    doAssert start < len(text)
+    var
+      c = Rune(-1)
+      cPrev = text.runeAt(start).int32
+      i = start
+      iPrev = start
+      captx: int32
+      matched = false
+    smA.clear()
+    smA.add (0'i16, captIdx, i .. i-1)
+    while i > 0:
+      bwFastRuneAt(text, i, c)
+      nextStateTpl()
+      if smA.len == 0:
+        return false
+      if nfa[smA[0].ni].kind == reEoe:
+        return true
+      iPrev = i
+      cPrev = c.int32
+    if i > 0:
+      bwFastRuneAt(text, i, c)
+    else:
+      c = Rune(-1)
+    nextStateTpl()
+    for n, capt, bounds in smA.items:
+      if nfa.s[n].kind == reEoe:
+        return true
+    return false
+
+  func matchImpl*(
+    text: string,
+    regex: Regex,
+    m: var RegexMatch,
+    start = 0
+  ): bool {.inline.} =
+    m.clear()
+    let look = Lookaround(
+      ahead: matchImpl,
+      behind: reversedMatchImpl)
+    var
+      smA = newSubmatches(regex.nfa.len)
+      smB = newSubmatches(regex.nfa.len)
+      capts: Capts
+    result = matchImpl(
+      smA, smB, capts, -1'i32, text, regex.nfa, look, start)
+    if result:
+      constructSubmatches(
+        m.captures, capts, smA[0].ci, regex.groupsCount)
+      if regex.namedGroups.len > 0:
+        m.namedGroups = regex.namedGroups
+      m.boundaries = smA[0].bounds
+
+  func reversedMatchImpl*(
+    smA, smB: var Submatches,
+    capts: var Capts,
+    captIdx: int32,
+    text: string,
+    nfa: Nfa,
+    start = 0
+  ): bool {.inline.} =
+    let look = Lookaround(
+      ahead: matchImpl,
+      behind: reversedMatchImpl)
+    result = reversedMatchImpl(
+      smA, smB, capts, captIdx, text, nfa, look, start)

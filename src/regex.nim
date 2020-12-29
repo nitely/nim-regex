@@ -514,44 +514,6 @@ func match*(s: string, pattern: Regex): bool {.inline, raises: [].} =
   var m: RegexMatch
   result = matchImpl(s, pattern, m, {mfNoCaptures})
 
-template containsImpl: untyped {.dirty.} =
-  const f = {mfShortestMatch, mfFindMatch, mfNoCaptures}
-  var m: RegexMatch
-  result = matchImpl(s, pattern, m, f)
-
-func contains*(s: string, pattern: Regex): bool {.inline, raises: [].} =
-  ##  search for the pattern anywhere
-  ##  in the string. It returns as soon
-  ##  as there is a match, even when the
-  ##  expression has repetitions
-  runnableExamples:
-    doAssert re"bc" in "abcd"
-    doAssert re"(23)+" in "23232"
-    doAssert re"^(23)+$" notin "23232"
-
-  containsImpl()
-
-template findImpl: untyped {.dirty.} =
-  matchImpl(s, pattern, m, {mfFindMatch}, start)
-
-func find*(
-  s: string,
-  pattern: Regex,
-  m: var RegexMatch,
-  start = 0
-): bool {.inline, raises: [].} =
-  ## search through the string looking for the first
-  ## location where there is a match
-  runnableExamples:
-    var m: RegexMatch
-    doAssert "abcd".find(re"bc", m) and
-      m.boundaries == 1 .. 2
-    doAssert not "abcd".find(re"de", m)
-    doAssert "2222".find(re"(22)*", m) and
-      m.group(0) == @[0 .. 1, 2 .. 3]
-
-  findImpl()
-
 template runeIncAt(s: string, n: var int) =
   ## increment ``n`` up to
   ## next rune's index
@@ -659,6 +621,42 @@ func findAndCaptureAll*(
   for m in s.findAll(pattern):
     result.add s[m.boundaries]
 
+# XXX find shortest match; disable captures
+func contains*(s: string, pattern: Regex): bool {.inline, raises: [].} =
+  ##  search for the pattern anywhere in the string
+  runnableExamples:
+    doAssert re"bc" in "abcd"
+    doAssert re"(23)+" in "23232"
+    doAssert re"^(23)+$" notin "23232"
+
+  for _ in findAllBounds(s, pattern):
+    return true
+  return false
+
+func find*(
+  s: string,
+  pattern: Regex,
+  m: var RegexMatch,
+  start = 0
+): bool {.inline, raises: [].} =
+  ## search through the string looking for the first
+  ## location where there is a match
+  runnableExamples:
+    var m: RegexMatch
+    doAssert "abcd".find(re"bc", m) and
+      m.boundaries == 1 .. 2
+    doAssert not "abcd".find(re"de", m)
+    doAssert "2222".find(re"(22)*", m) and
+      m.group(0) == @[0 .. 1, 2 .. 3]
+
+  m.clear()
+  for m2 in findAll(s, pattern, start):
+    m.captures.add m2.captures
+    m.namedGroups = m2.namedGroups
+    m.boundaries = m2.boundaries
+    return true
+  return false
+
 iterator split*(s: string, sep: Regex): string {.inline, raises: [].} =
   ## return not matched substrings
   runnableExamples:
@@ -730,26 +728,27 @@ func startsWith*(
   runnableExamples:
     doAssert "abc".startsWith(re"\w")
     doAssert not "abc".startsWith(re"\d")
-  var m: RegexMatch
-  result = matchImpl(s, pattern, m, {mfShortestMatch, mfNoCaptures}, start)
 
-template endsWithImpl: untyped {.dirty.} =
-  result = false
-  var
-    m: RegexMatch
-    i = 0
-  while i < s.len:
-    result = matchImpl(s, pattern, m, {mfNoCaptures}, i)
-    if result: return
-    s.runeIncAt(i)
+  for bounds in findAllBounds(s, pattern):
+    return bounds.a == start
+  return false
 
+# XXX use findAll and check last match bounds
 func endsWith*(s: string, pattern: Regex): bool {.inline, raises: [].} =
   ## return whether the string
   ## ends with the pattern or not
   runnableExamples:
     doAssert "abc".endsWith(re"\w")
     doAssert not "abc".endsWith(re"\d")
-  endsWithImpl()
+
+  result = false
+  var
+    m: RegexMatch
+    i = 0
+  while i < s.len:
+    result = match(s, pattern, m, i)
+    if result: return
+    s.runeIncAt(i)
 
 func flatCaptures(
   result: var seq[string],

@@ -147,7 +147,7 @@ func matchImpl*(
 
 when false:
   type
-    MatchSig = func (
+    MatchSig = proc (
       smA, smB: var Submatches,
       capts: var Capts,
       captIdx: int32,

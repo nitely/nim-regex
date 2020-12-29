@@ -159,7 +159,7 @@ when false:
     Lookaround = object
       ahead, behind: MatchSig
 
-  template nextStateTpl: {.dirty.} =
+  template nextStateTpl: untyped {.dirty.} =
     smB.clear()
     for n, capt, bounds in smA.items:
       if anchored and
@@ -224,6 +224,7 @@ when false:
         return true
       iPrev = i
       cPrev = c.int32
+    c = Rune(-1)
     nextStateTpl()
     return smA.len > 0
 
@@ -255,15 +256,9 @@ when false:
         return true
       iPrev = i
       cPrev = c.int32
-    if i > 0:
-      bwFastRuneAt(text, i, c)
-    else:
-      c = Rune(-1)
+    c = Rune(-1)
     nextStateTpl()
-    for n, capt, bounds in smA.items:
-      if nfa.s[n].kind == reEoe:
-        return true
-    return false
+    return smA.len > 0
 
   func matchImpl*(
     text: string,

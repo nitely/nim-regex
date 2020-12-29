@@ -56,6 +56,7 @@ type
     mfNoCaptures
     mfFindMatch
     mfFindMatchOpt
+    mfAnchored
   MatchFlags* = set[MatchFlag]
   RegexMatch* = object
     ## result from matching operations

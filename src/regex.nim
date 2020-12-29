@@ -507,12 +507,11 @@ func match*(
     doAssert "abcd".match(re"abcd", m)
     doAssert not "abcd".match(re"abc", m)
 
-  const f: MatchFlags = {}
-  result = matchImpl(s, pattern, m, f, start)
+  result = matchImpl(s, pattern, m, start)
 
 func match*(s: string, pattern: Regex): bool {.inline, raises: [].} =
   var m: RegexMatch
-  result = matchImpl(s, pattern, m, {mfNoCaptures})
+  result = matchImpl(s, pattern, m)
 
 template runeIncAt(s: string, n: var int) =
   ## increment ``n`` up to
@@ -1102,6 +1101,29 @@ when isMainModule:
 
   doAssert match("abcabcabc", re"(?:(?:abc)){3}")
   doAssert match("abcabcabc", re"((abc)){3}")
+
+  doAssert match("ab", re"a(?=b)\w")
+  doAssert(not match("ab", re"a(?=x)\w"))
+  doAssert match("ab", re"\w(?<=a)b")
+  doAssert(not match("ab", re"\w(?<=x)b"))
+
+  block:
+    doAssert match("弢b", re"弢(?=b)\w")
+    doAssert match("a弢", re"a(?=弢)\w")
+    doAssert match("Ⓐb", re"Ⓐ(?=b)\w")
+    doAssert match("aⒶ", re"a(?=Ⓐ)\w")
+    doAssert match("Ⓐb", re"Ⓐ(?=b)\w")
+    doAssert match("aΪ", re"a(?=Ϊ)\w")
+    doAssert match("Ϊb", re"Ϊ(?=b)\w")
+    doAssert match("弢Ⓐ", re"弢(?=Ⓐ)\w")
+  block:
+    doAssert match("a弢", re"\w(?<=a)弢")
+    doAssert match("弢b", re"\w(?<=弢)b")
+    doAssert match("aⒶ", re"\w(?<=a)Ⓐ")
+    doAssert match("Ⓐb", re"\w(?<=Ⓐ)b")
+    doAssert match("aΪ", re"\w(?<=a)Ϊ")
+    doAssert match("Ϊb", re"\w(?<=Ϊ)b")
+    doAssert match("弢Ⓐ", re"\w(?<=弢)Ⓐ")
 
   doAssert graph(re"^a+$") == """digraph graphname {
     0 [label="q0";color=blue];

@@ -295,12 +295,22 @@ func subExps(exp: RpnExp): RpnExp =
   result = exp
   for n in mitems result.s:
     # XXX reverse lookbehind
-    if n.kind in lookaroundKind:
+    case n.kind
+    of reLookahead, reNotLookahead:
       n.subExp.nfa = n.subExp.rpn
         .subExps
         .eNfa
         .eRemoval
       n.subExp.rpn.s = newSeq[Node]()  # nullify
+    of reLookbehind, reNotLookbehind:
+      n.subExp.nfa = n.subExp.rpn
+        .subExps
+        .eNfa
+        .reverse
+        .eRemoval
+      n.subExp.rpn.s = newSeq[Node]()  # nullify
+    else:
+      discard
 
 # XXX rename to nfa when Nim v0.19 is dropped
 func nfa2*(exp: RpnExp): Nfa {.raises: [RegexError].} =

@@ -1104,8 +1104,17 @@ when isMainModule:
 
   doAssert match("ab", re"a(?=b)\w")
   doAssert(not match("ab", re"a(?=x)\w"))
+  doAssert match("abc", re"a(?=b)\w+")
+  doAssert match("abc", re"a(?=(bc))\w+", m) and
+    m.captures == @[@[1 .. 2]]
   doAssert match("ab", re"\w(?<=a)b")
   doAssert(not match("ab", re"\w(?<=x)b"))
+  doAssert match("abc", re"\w\w(?<=(b))c")
+  doAssert match("abc", re"\w\w(?<=(b))c", m) and
+    m.captures == @[@[1 .. 1]]
+  doAssert match("abc", re"\w\w(?<=(ab))c")
+  doAssert match("abc", re"\w\w(?<=(ab))c", m) and
+    m.captures == @[@[0 .. 1]]
 
   block:
     doAssert match("弢b", re"弢(?=b)\w")

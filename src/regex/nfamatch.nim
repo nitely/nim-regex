@@ -79,7 +79,8 @@ when true:
         if smB.hasState nt:
           continue
         if not match(nfa.s[nt], c):
-          continue
+          if not (anchored and nfa.s[nt].kind == reEoe):
+            continue
         if nfa.t.allZ[n][nti] == -1'i16:
           smB.add (nt, capt, bounds.a .. i-1)
           continue
@@ -96,6 +97,7 @@ when true:
               idx: z.idx)
             captx = (capts.len-1).int32
           of assertionKind - lookaroundKind:
+            # XXX reverse params in reversedMatchImpl
             matched = match(z, cPrev.Rune, c)
           of lookaroundKind:
             # XXX optimize using a seq[SubMatches] of lookAround size
@@ -135,8 +137,7 @@ when true:
       if smA.len == 0:
         return false
       if anchored and nfa.s[smA[0].ni].kind == reEoe:
-        captIdx = smA[0].ci
-        return true
+        break
       i = iNext
       cPrev = c.int32
     c = Rune(-1)
@@ -144,6 +145,18 @@ when true:
     if smA.len > 0:
       captIdx = smA[0].ci
     return smA.len > 0
+
+  func reverse(capts: var Capts, a, b: int32): int32 =
+    ## reverse capture indices from a to b; return head
+    doAssert a > b
+    var capt = a
+    var parent = b
+    while capt != b:
+      let p = capts[capt].parent
+      capts[capt].parent = parent
+      parent = capt
+      capt = p
+    return parent
 
   func reversedMatchImpl(
     smA, smB: var Submatches,
@@ -163,25 +176,26 @@ when true:
       iNext = start
       captx: int32
       matched = false
-      anchored = false
+      anchored = true
     #debugEcho start
     smA.clear()
     smA.add (0'i16, captIdx, i .. i-1)
-    while i > 0:
+    while iNext > 0:
       bwFastRuneAt(text, iNext, c)
       #debugEcho $c
+      #debugEcho $iNext
       nextStateTpl()
       if smA.len == 0:
         return false
       if nfa.s[smA[0].ni].kind == reEoe:
-        captIdx = smA[0].ci
-        return true
+        break
       i = iNext
       cPrev = c.int32
     c = Rune(-1)
     nextStateTpl()
     if smA.len > 0:
-      captIdx = smA[0].ci
+      if captIdx != smA[0].ci:
+        captIdx = reverse(capts, smA[0].ci, captIdx)
     return smA.len > 0
 
   const look = Lookaround(

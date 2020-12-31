@@ -291,10 +291,9 @@ func reverse*(eNfa: Enfa): Enfa =
   doAssert result.s[state0].next.len > 0
   doAssert result.s[eoeIdx].next.len == 0
 
-func subExps(exp: RpnExp): RpnExp =
+func subExps*(exp: RpnExp): RpnExp =
   result = exp
   for n in mitems result.s:
-    # XXX reverse lookbehind
     case n.kind
     of reLookahead, reNotLookahead:
       n.subExp.nfa = n.subExp.rpn

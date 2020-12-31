@@ -236,6 +236,7 @@ func litopt2*(exp: RpnExp): LitOpt =
     return
   result.lit = litNode.cp
   result.nfa = exp
+    .subExps
     .eNfa
     .prefix(litNode.uid)
     .eRemoval

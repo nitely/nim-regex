@@ -26,210 +26,266 @@ template bwFastRuneAt(
 ) =
   ## Take rune ending at ``n``
   doAssert n > 0
-  doAssert n <= s.len-1
+  doAssert n <= s.len
   dec n
   while n > 0 and s[n].ord shr 6 == 0b10:
     dec n
   fastRuneAt(s, n, result, false)
 
-when true:
-  type
-    MatchSig = proc (
-      smA, smB: var Submatches,
-      capts: var Capts,
-      captIdx: var int32,
-      text: string,
-      nfa: Nfa,
-      look: Lookaround,
-      start: int,
-      flags: set[MatchFlag]
-    ): bool {.noSideEffect, raises: [].}
-    Lookaround = object
-      ahead, behind: MatchSig
-  
-  template lookAroundTpl: untyped {.dirty.} =
-    case z.kind
-    of reLookahead:
-      look.ahead(
-        smAl, smBl, capts, captx,
-        text, z.subExp.nfa, look, i, {mfAnchored})
-    of reNotLookahead:
-      not look.ahead(
-        smAl, smBl, capts, captx,
-        text, z.subExp.nfa, look, i, {mfAnchored})
-    of reLookbehind:
-      look.behind(
-        smAl, smBl, capts, captx,
-        text, z.subExp.nfa, look, i, {mfAnchored})
-    of reNotLookbehind:
-      not look.behind(
-        smAl, smBl, capts, captx,
-        text, z.subExp.nfa, look, i, {mfAnchored})
-    else:
-      doAssert false
-      false
+type
+  AheadSig = proc (
+    smA, smB: var Submatches,
+    capts: var Capts,
+    captIdx: var int32,
+    text: string,
+    nfa: Nfa,
+    look: Lookaround,
+    start: int,
+    flags: set[MatchFlag]
+  ): bool {.noSideEffect, raises: [].}
+  BehindSig = proc (
+    smA, smB: var Submatches,
+    capts: var Capts,
+    captIdx: var int32,
+    text: string,
+    nfa: Nfa,
+    look: Lookaround,
+    start, limit: int
+  ): int {.noSideEffect, raises: [].}
+  Lookaround = object
+    ahead*: AheadSig
+    behind*: BehindSig
 
-  template nextStateTpl: untyped {.dirty.} =
-    smB.clear()
-    for n, capt, bounds in items smA:
-      if anchored and nfa.s[n].kind == reEoe:
+template lookAroundTpl*: untyped {.dirty.} =
+  case z.kind
+  of reLookahead:
+    look.ahead(
+      smAl, smBl, capts, captx,
+      text, z.subExp.nfa, look, i, {mfAnchored})
+  of reNotLookahead:
+    not look.ahead(
+      smAl, smBl, capts, captx,
+      text, z.subExp.nfa, look, i, {mfAnchored})
+  of reLookbehind:
+    look.behind(
+      smAl, smBl, capts, captx,
+      text, z.subExp.nfa, look, i, 0) != -1
+  of reNotLookbehind:
+    look.behind(
+      smAl, smBl, capts, captx,
+      text, z.subExp.nfa, look, i, 0) == -1
+  else:
+    doAssert false
+    false
+
+template nextStateTpl: untyped {.dirty.} =
+  smB.clear()
+  for n, capt, bounds in items smA:
+    if anchored and nfa.s[n].kind == reEoe:
+      if not smB.hasState n:
         smB.add (n, capt, bounds)
-        break
-      for nti, nt in pairs nfa.s[n].next:
-        if smB.hasState nt:
+      break
+    for nti, nt in pairs nfa.s[n].next:
+      if smB.hasState nt:
+        continue
+      if not match(nfa.s[nt], c):
+        if not (anchored and nfa.s[nt].kind == reEoe):
           continue
-        if not match(nfa.s[nt], c):
-          if not (anchored and nfa.s[nt].kind == reEoe):
-            continue
-        if nfa.t.allZ[n][nti] == -1'i16:
-          smB.add (nt, capt, bounds.a .. i-1)
+      if nfa.t.allZ[n][nti] == -1'i16:
+        smB.add (nt, capt, bounds.a .. i-1)
+        continue
+      matched = true
+      captx = capt
+      for z in nfa.t.z[nfa.t.allZ[n][nti]]:
+        if not matched:
+          break
+        case z.kind
+        of groupKind:
+          capts.add CaptNode(
+            parent: captx,
+            bound: i,
+            idx: z.idx)
+          captx = (capts.len-1).int32
+        of assertionKind - lookaroundKind:
+          matched = match(z, cPrev.Rune, c)
+        of lookaroundKind:
+          # XXX optimize using a seq[SubMatches] of lookAround size
+          var smAl = newSubmatches(z.subExp.nfa.s.len)
+          var smBl = newSubmatches(z.subExp.nfa.s.len)
+          matched = lookAroundTpl()
+        else:
+          doAssert false
+          discard
+      if matched:
+        smB.add (nt, captx, bounds.a .. i-1)
+  swap smA, smB
+
+func matchImpl(
+  smA, smB: var Submatches,
+  capts: var Capts,
+  captIdx: var int32,
+  text: string,
+  nfa: Nfa,
+  look: Lookaround,
+  start = 0,
+  flags: set[MatchFlag] = {}
+): bool =
+  var
+    c = Rune(-1)
+    cPrev = -1'i32
+    i = start
+    iNext = start
+    captx = -1'i32
+    matched = false
+    anchored = mfAnchored in flags
+  if start-1 in 0 .. text.len-1:  # XXX anchored only?
+    cPrev = bwRuneAt(text, start-1).int32
+  smA.clear()
+  smA.add (0'i16, captIdx, i .. i-1)
+  while i < text.len:
+    fastRuneAt(text, iNext, c, true)
+    nextStateTpl()
+    if smA.len == 0:
+      return false
+    if anchored and nfa.s[smA[0].ni].kind == reEoe:
+      break
+    i = iNext
+    cPrev = c.int32
+  c = Rune(-1)
+  nextStateTpl()
+  if smA.len > 0:
+    captIdx = smA[0].ci
+  return smA.len > 0
+
+template nextState2Tpl: untyped {.dirty.} =
+  smB.clear()
+  for n, capt, bounds in items smA:
+    if nfa.s[n].kind == reEoe:
+      if not smB.hasState n:
+        smB.add (n, capt, bounds)
+      break
+    for nti, nt in pairs nfa.s[n].next:
+      if smB.hasState nt:
+        continue
+      if not match(nfa.s[nt], c):
+        if nfa.s[nt].kind != reEoe:
           continue
-        matched = true
-        captx = capt
-        for z in nfa.t.z[nfa.t.allZ[n][nti]]:
-          if not matched:
-            break
-          case z.kind
-          of groupKind:
-            capts.add CaptNode(
-              parent: captx,
-              bound: i,
-              idx: z.idx)
-            captx = (capts.len-1).int32
-          of assertionKind - lookaroundKind:
-            # XXX reverse params in reversedMatchImpl
-            matched = match(z, cPrev.Rune, c)
-          of lookaroundKind:
-            # XXX optimize using a seq[SubMatches] of lookAround size
-            var smAl = newSubmatches(z.subExp.nfa.s.len)
-            var smBl = newSubmatches(z.subExp.nfa.s.len)
-            matched = lookAroundTpl()
-          else:
-            doAssert false
-            discard
-        if matched:
-          smB.add (nt, captx, bounds.a .. i-1)
-    swap smA, smB
+      if nfa.t.allZ[n][nti] == -1'i16:
+        smB.add (nt, capt, i .. bounds.b)
+        continue
+      matched = true
+      captx = capt
+      for z in nfa.t.z[nfa.t.allZ[n][nti]]:
+        if not matched:
+          break
+        case z.kind
+        of groupKind:
+          capts.add CaptNode(
+            parent: captx,
+            bound: i,
+            idx: z.idx)
+          captx = (capts.len-1).int32
+        of assertionKind - lookaroundKind:
+          matched = match(z, c, cPrev.Rune)
+        of lookaroundKind:
+          # XXX optimize using a seq[SubMatches] of lookAround size
+          var smAl = newSubmatches(z.subExp.nfa.s.len)
+          var smBl = newSubmatches(z.subExp.nfa.s.len)
+          matched = lookAroundTpl()
+        else:
+          doAssert false
+          discard
+      if matched:
+        smB.add (nt, captx, i .. bounds.b)
+  swap smA, smB
 
-  func matchImpl(
-    smA, smB: var Submatches,
-    capts: var Capts,
-    captIdx: var int32,
-    text: string,
-    nfa: Nfa,
-    look: Lookaround,
-    start = 0,
-    flags: set[MatchFlag] = {}
-  ): bool =
-    var
-      c = Rune(-1)
-      cPrev = -1'i32
-      i = start
-      iNext = start
-      captx = -1'i32
-      matched = false
-      anchored = mfAnchored in flags
-    smA.clear()
-    smA.add (0'i16, captIdx, i .. i-1)
-    while i < text.len:
-      fastRuneAt(text, iNext, c, true)
-      nextStateTpl()
-      if smA.len == 0:
-        return false
-      if anchored and nfa.s[smA[0].ni].kind == reEoe:
-        break
-      i = iNext
-      cPrev = c.int32
+func reverse(capts: var Capts, a, b: int32): int32 =
+  ## reverse capture indices from a to b; return head
+  doAssert a > b
+  var capt = a
+  var parent = b
+  while capt != b:
+    let p = capts[capt].parent
+    capts[capt].parent = parent
+    parent = capt
+    capt = p
+  return parent
+
+func reversedMatchImpl(
+  smA, smB: var Submatches,
+  capts: var Capts,
+  captIdx: var int32,
+  text: string,
+  nfa: Nfa,
+  look: Lookaround,
+  start: int,
+  limit = 0
+): int =
+  #doAssert start < len(text)
+  doAssert start >= limit
+  var
     c = Rune(-1)
-    nextStateTpl()
-    if smA.len > 0:
-      captIdx = smA[0].ci
-    return smA.len > 0
+    cPrev = -1'i32
+    i = start
+    iNext = start
+    captx: int32
+    matched = false
+  if start in 0 .. text.len-1:
+    cPrev = text.runeAt(start).int32
+  smA.clear()
+  smA.add (0'i16, captIdx, i .. i-1)
+  while iNext > limit:
+    bwFastRuneAt(text, iNext, c)
+    nextState2Tpl()
+    if smA.len == 0:
+      return -1
+    if nfa.s[smA[0].ni].kind == reEoe:
+      break
+    i = iNext
+    cPrev = c.int32
+  c = Rune(-1)
+  if iNext > 0:
+    bwFastRuneAt(text, iNext, c)
+  nextState2Tpl()
+  for n, capt, bounds in items smA:
+    if nfa.s[n].kind == reEoe:
+      if captIdx != capt:
+        captIdx = reverse(capts, capt, captIdx)
+      return bounds.a
+  return -1
 
-  func reverse(capts: var Capts, a, b: int32): int32 =
-    ## reverse capture indices from a to b; return head
-    doAssert a > b
-    var capt = a
-    var parent = b
-    while capt != b:
-      let p = capts[capt].parent
-      capts[capt].parent = parent
-      parent = capt
-      capt = p
-    return parent
+const look* = Lookaround(
+  ahead: matchImpl,
+  behind: reversedMatchImpl)
 
-  func reversedMatchImpl(
-    smA, smB: var Submatches,
-    capts: var Capts,
-    captIdx: var int32,
-    text: string,
-    nfa: Nfa,
-    look: Lookaround,
-    start = 0,
-    flags: set[MatchFlag] = {}
-  ): bool =
-    doAssert start < len(text)
-    var
-      c = Rune(-1)
-      cPrev = text.runeAt(start).int32
-      i = start
-      iNext = start
-      captx: int32
-      matched = false
-      anchored = true
-    #debugEcho start
-    smA.clear()
-    smA.add (0'i16, captIdx, i .. i-1)
-    while iNext > 0:
-      bwFastRuneAt(text, iNext, c)
-      #debugEcho $c
-      #debugEcho $iNext
-      nextStateTpl()
-      if smA.len == 0:
-        return false
-      if nfa.s[smA[0].ni].kind == reEoe:
-        break
-      i = iNext
-      cPrev = c.int32
-    c = Rune(-1)
-    nextStateTpl()
-    if smA.len > 0:
-      if captIdx != smA[0].ci:
-        captIdx = reverse(capts, smA[0].ci, captIdx)
-    return smA.len > 0
+func matchImpl*(
+  text: string,
+  regex: Regex,
+  m: var RegexMatch,
+  start = 0
+): bool =
+  m.clear()
+  var
+    smA = newSubmatches(regex.nfa.s.len)
+    smB = newSubmatches(regex.nfa.s.len)
+    capts: Capts
+    capt = -1'i32
+  result = matchImpl(
+    smA, smB, capts, capt, text, regex.nfa, look, start)
+  if result:
+    constructSubmatches(
+      m.captures, capts, smA[0].ci, regex.groupsCount)
+    if regex.namedGroups.len > 0:
+      m.namedGroups = regex.namedGroups
+    m.boundaries = smA[0].bounds
 
-  const look = Lookaround(
-    ahead: matchImpl,
-    behind: reversedMatchImpl)
-
-  func matchImpl*(
-    text: string,
-    regex: Regex,
-    m: var RegexMatch,
-    start = 0
-  ): bool =
-    m.clear()
-    var
-      smA = newSubmatches(regex.nfa.s.len)
-      smB = newSubmatches(regex.nfa.s.len)
-      capts: Capts
-      capt = -1'i32
-    result = matchImpl(
-      smA, smB, capts, capt, text, regex.nfa, look, start)
-    if result:
-      constructSubmatches(
-        m.captures, capts, smA[0].ci, regex.groupsCount)
-      if regex.namedGroups.len > 0:
-        m.namedGroups = regex.namedGroups
-      m.boundaries = smA[0].bounds
-
-  func reversedMatchImpl*(
-    smA, smB: var Submatches,
-    capts: var Capts,
-    captIdx: var int32,
-    text: string,
-    nfa: Nfa,
-    start = 0
-  ): bool =
-    reversedMatchImpl(
-      smA, smB, capts, captIdx, text, nfa, look, start)
+func reversedMatchImpl*(
+  smA, smB: var Submatches,
+  text: string,
+  nfa: Nfa,
+  start, limit: int
+): int =
+  var capts: Capts
+  var captIdx = -1'i32
+  reversedMatchImpl(
+    smA, smB, capts, captIdx, text, nfa, look, start, limit)

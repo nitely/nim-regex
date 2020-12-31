@@ -44,6 +44,7 @@ from std/strutils import find
 import ./nodematch
 import ./types
 import ./nfatype
+import ./nfamatch
 
 func bwRuneAt(s: string, n: int): Rune =
   ## Take rune ending at ``n``
@@ -140,6 +141,7 @@ func dummyMatch*(ms: var RegexMatches, i: int) {.inline.} =
 
 func submatch(
   ms: var RegexMatches,
+  text: string,
   regex: Regex,
   i: int,
   cPrev, c: int32
@@ -176,8 +178,13 @@ func submatch(
               bound: i,
               idx: z.idx)
             captx = (capts.len-1).int32
-          of assertionKind:
+          of assertionKind - lookaroundKind:
             matched = match(z, cPrev.Rune, c.Rune)
+          of lookaroundKind:
+            # XXX optimize using a seq[SubMatches] of lookAround size
+            var smAl = newSubmatches(z.subExp.nfa.s.len)
+            var smBl = newSubmatches(z.subExp.nfa.s.len)
+            matched = lookAroundTpl()
           else:
             assert false
             discard
@@ -212,14 +219,14 @@ func findSomeImpl*(
     iPrev = start.int
     optFlag = mfFindMatchOpt in flags
   smA.add (0'i16, -1'i32, i .. i-1)
-  if 0 <= start-1 and start-1 <= len(text)-1:
+  if start-1 in 0 .. text.len-1:
     cPrev = bwRuneAt(text, start-1).int32
-  while i < len(text):
+  while i < text.len:
     #debugEcho "it= ", i, " ", cPrev
     fastRuneAt(text, i, c, true)
     #c = text[i].Rune
     #i += 1
-    submatch(ms, regex, iPrev, cPrev, c.int32)
+    submatch(ms, text, regex, iPrev, cPrev, c.int32)
     if smA.len == 0:
       # avoid returning right before final zero-match
       if i < len(text):
@@ -233,7 +240,7 @@ func findSomeImpl*(
     smA.add (0'i16, -1'i32, i .. i-1)
     iPrev = i
     cPrev = c.int32
-  submatch(ms, regex, iPrev, cPrev, -1'i32)
+  submatch(ms, text, regex, iPrev, cPrev, -1'i32)
   doAssert smA.len == 0
   if ms.hasMatches():
     #debugEcho "m= ", ms.m.s
@@ -267,83 +274,6 @@ template bwFastRuneAt(
     dec n
   fastRuneAt(s, n, result, false)
 
-func submatch2(
-  smA, smB: var Submatches,
-  regex: Regex,
-  i: int,
-  cPrev, c: int32
-) =
-  template nfa: untyped = regex.litOpt.nfa.s
-  template tns: untyped = regex.litOpt.nfa.t
-  smB.clear()
-  var matched = true
-  for n, capt, bounds in smA.items:
-    if nfa[n].kind == reEoe:
-      smB.add (n, capt, bounds)
-      break
-    for nti, nt in nfa[n].next.pairs:
-      if smB.hasState(nt):
-        continue
-      #debugEcho nfa[nt].kind
-      if nfa[nt].kind != reEoe and not match(nfa[nt], c.Rune):
-        continue
-      matched = true
-      if tns.allZ[n][nti] > -1:
-        for z in tns.z[tns.allZ[n][nti]]:
-          if z.kind in assertionKind:
-            matched = match(z, c.Rune, cPrev.Rune)
-          if not matched:
-            break
-      if matched:
-        smB.add (nt, capt, i .. bounds.b)
-        if nfa[nt].kind == reEoe:
-          swap smA, smB
-          return
-  swap smA, smB
-
-func matchPrefixImpl(
-  text: string,
-  regex: Regex,
-  smA, smB: var Submatches,
-  start, limit: Natural = 0
-): int {.inline.} =
-  template nfa: untyped = regex.litOpt.nfa
-  doAssert start < len(text)
-  doAssert start >= limit
-  smA.clear()
-  smB.clear()
-  var
-    c = Rune(-1)
-    cPrev = text.runeAt(start).int32
-    i = start.int
-    iPrev = start.int
-  #debugEcho cPrev.Rune
-  smA.add (0'i16, -1'i32, i .. i-1)
-  while i > limit:
-    bwFastRuneAt(text, i, c)
-    #i -= 1
-    #c = text[i].Rune
-    #debugEcho "txt.Rune=", c
-    #debugEcho "txt.i=", i
-    submatch2(smA, smB, regex, iPrev, cPrev, c.int32)
-    if smA.len == 0:
-      return -1
-    if nfa.s[smA[0].ni].kind == reEoe:
-      return smA[0].bounds.a
-    iPrev = i
-    cPrev = c.int32
-  if i > 0:
-    # limit can be part of the match, there is no overlap
-    bwFastRuneAt(text, i, c)
-    #debugEcho "c=", c, " limit=", limit
-  else:
-    c = Rune(-1)
-  submatch2(smA, smB, regex, iPrev, cPrev, c.int32)
-  for n, capt, bounds in smA.items:
-    if nfa.s[n].kind == reEoe:
-      return bounds.a
-  return -1
-
 func findSomeOptImpl*(
   text: string,
   regex: Regex,
@@ -371,7 +301,7 @@ func findSomeOptImpl*(
     #debugEcho "litIdx=", litIdx
     doAssert litIdx >= i
     i = litIdx
-    i = matchPrefixImpl(text, regex, smA, smB, i, limit)
+    i = reversedMatchImpl(smA, smB, text, opt.nfa, i, limit)
     if i == -1:
       #debugEcho "not.Match=", i
       i = litIdx+1

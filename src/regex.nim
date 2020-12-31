@@ -1115,6 +1115,25 @@ when isMainModule:
   doAssert match("abc", re"\w\w(?<=(ab))c")
   doAssert match("abc", re"\w\w(?<=(ab))c", m) and
     m.captures == @[@[0 .. 1]]
+  doAssert match("a", re"\w(?<=a)")
+  doAssert(not match("a", re"\w(?=a)"))
+  doAssert match("ab", re"\w(?<=a(?<=a))b")
+  doAssert match("ab", re"\w(?<=a(?<=a(?<=a)))b")
+  doAssert match("ab", re"\w(?<=a(?=b))b")
+  doAssert(not match("ab", re"\w(?=b(?=b))b"))  # JS
+  doAssert(not match("ab", re"\w(?<=a(?=b(?=b)))b"))  # JS
+  doAssert match("ab", re"\w(?<=a(?<=a)(?=b))b")
+  doAssert match("ab", re"\w(?<=a(?<=a(?=b)))b")
+  doAssert(not match("ab", re"\w(?<=a(?=b(?<=a)))b"))  # JS
+  doAssert(not match("ab", re"\w(?<=a(?<=a(?=b(?<=a))))b"))  # JS
+  doAssert(not match("ab", re"\w(?<=(?<=a)a)b"))  # JS
+
+  doAssert findAllBounds("foobarbaz", re"(?<=o)b") == @[3 .. 3]
+  doAssert findAllBounds("foobar", re"o(?=b)") == @[2 .. 2]
+  doAssert findAllBounds("100 in USD100", re"(?<=USD)\d{3}") ==
+    @[10 .. 12]
+  doAssert findAllBounds("100 in USD100", re"\d{3}(?<=USD\d{3})") ==
+    @[10 .. 12]
 
   block:
     doAssert match("弢b", re"弢(?=b)\w")

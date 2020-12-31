@@ -2227,21 +2227,23 @@ test "tmisc2_5":
   check match("650-253-0001", re"[0-9]+..*", m)
   check(not match("abc-253-0001", re"[0-9]+..*", m))
   check(not match("6", re"[0-9]+..*", m))
-  block:
-    const re1 = re"((11)*)+(111)*"
-    check match("", re1)
-    check match("11", re1)
-    check match("111", re1)
-    check match("11111", re1)
-    check match("1111111", re1)
-    check match("1111111111", re1)
-    check(not match("1", re1))
-  block:
-    const re1 = re"(11)+(111)*"
-    check(not match("", re1))
-    check match("11", re1)
-    check(not match("111", re1))
-    check match("11111", re1)
+  # VM registry error on Nim < 1.1 (devel)
+  when not defined(runTestAtCT) or (NimMajor, NimMinor) > (1, 0):
+    block:
+      const re1 = re"((11)*)+(111)*"
+      check match("", re1)
+      check match("11", re1)
+      check match("111", re1)
+      check match("11111", re1)
+      check match("1111111", re1)
+      check match("1111111111", re1)
+      check(not match("1", re1))
+    block:
+      const re1 = re"(11)+(111)*"
+      check(not match("", re1))
+      check match("11", re1)
+      check(not match("111", re1))
+      check match("11111", re1)
 
 test "tmisc2_6":
   block:

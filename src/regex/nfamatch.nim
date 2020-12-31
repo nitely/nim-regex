@@ -52,7 +52,7 @@ type
     look: Lookaround,
     start, limit: int
   ): int {.noSideEffect, raises: [].}
-  Lookaround = object
+  Lookaround* = object
     ahead*: AheadSig
     behind*: BehindSig
 
@@ -254,9 +254,10 @@ func reversedMatchImpl(
       return bounds.a
   return -1
 
-const look* = Lookaround(
-  ahead: matchImpl,
-  behind: reversedMatchImpl)
+template look*: Lookaround =
+  Lookaround(
+    ahead: matchImpl,
+    behind: reversedMatchImpl)
 
 func matchImpl*(
   text: string,

@@ -1120,13 +1120,25 @@ when isMainModule:
   doAssert match("ab", re"\w(?<=a(?<=a))b")
   doAssert match("ab", re"\w(?<=a(?<=a(?<=a)))b")
   doAssert match("ab", re"\w(?<=a(?=b))b")
-  doAssert(not match("ab", re"\w(?=b(?=b))b"))  # JS
-  doAssert(not match("ab", re"\w(?<=a(?=b(?=b)))b"))  # JS
+  doAssert(not match("ab", re"\w(?=b(?=b))b"))  # JS, D
+  doAssert(not match("ab", re"\w(?<=a(?=b(?=b)))b"))  # JS, D
   doAssert match("ab", re"\w(?<=a(?<=a)(?=b))b")
   doAssert match("ab", re"\w(?<=a(?<=a(?=b)))b")
-  doAssert(not match("ab", re"\w(?<=a(?=b(?<=a)))b"))  # JS
-  doAssert(not match("ab", re"\w(?<=a(?<=a(?=b(?<=a))))b"))  # JS
-  doAssert(not match("ab", re"\w(?<=(?<=a)a)b"))  # JS
+  doAssert(not match("ab", re"\w(?<=(?<=a)a)b"))  # JS, D
+  doAssert match("aab", re"\w\w(?<=aa(?=b))b")
+  block:
+    # There is a difference in how nesting is
+    # handled by JS vs D; in D all nested lookarounds start
+    # from the outermost lookaround, while in JS they
+    # start from the outer/parent. I think the JS way
+    # is less mind blending
+    #
+    # These 2 match in D, but not in JS
+    doAssert(not match("ab", re"\w(?<=a(?=b(?<=a)))b"))  # JS, !D
+    doAssert(not match("ab", re"\w(?<=a(?<=a(?=b(?<=a))))b"))  # JS, !D
+    # These 2 match in JS, but not in D
+    doAssert match("ab", re"\w(?<=a(?=b(?<=b)))b")  # JS, !D
+    doAssert match("ab", re"\w(?<=a(?<=a(?=b(?<=b))))b")  # JS, !D
 
   doAssert findAllBounds("foobarbaz", re"(?<=o)b") == @[3 .. 3]
   doAssert findAllBounds("foobar", re"o(?=b)") == @[2 .. 2]

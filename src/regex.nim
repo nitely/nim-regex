@@ -1140,13 +1140,24 @@ when isMainModule:
     doAssert match("ab", re"\w(?<=a(?=b(?<=b)))b")  # JS, !D
     doAssert match("ab", re"\w(?<=a(?<=a(?=b(?<=b))))b")  # JS, !D
   block:
-    let asterisks = re"(?<=(?<!\\)(?:\\\\)*)\*"
-    doAssert findAllBounds(r"*foo*", asterisks) ==
+    let asterisk = re"(?<=(?<!\\)(?:\\\\)*)\*"
+    doAssert findAllBounds(r"*foo*", asterisk) ==
       @[0 .. 0, 4 .. 4]
-    doAssert findAllBounds(r"\*foo\*", asterisks).len == 0
-    doAssert findAllBounds(r"\\*foo\\*", asterisks) ==
+    doAssert findAllBounds(r"\*foo\*", asterisk).len == 0
+    doAssert findAllBounds(r"\\*foo\\*", asterisk) ==
       @[2 .. 2, 8 .. 8]
-    doAssert findAllBounds(r"\\\*foo\\\*", asterisks).len == 0
+    doAssert findAllBounds(r"\\\*foo\\\*", asterisk).len == 0
+    doAssert findAllBounds(r"\\\\*foo\\\\*", asterisk) ==
+      @[4 .. 4, 12 .. 12]
+    doAssert findAllBounds(r"\\\\\*foo\\\\\*", asterisk).len == 0
+  block:
+    let asterisk = re".*(?<=(?<!\\)(?:\\\\)*)\*"
+    doAssert match(r"*", asterisk)
+    doAssert(not match(r"\*", asterisk))
+    doAssert match(r"\\*", asterisk)
+    doAssert(not match(r"\\\*", asterisk))
+    doAssert match(r"\\\\*", asterisk)
+    doAssert(not match(r"\\\\\*", asterisk))
 
   doAssert findAllBounds("foobarbaz", re"(?<=o)b") == @[3 .. 3]
   doAssert findAllBounds("foobar", re"o(?=b)") == @[2 .. 2]

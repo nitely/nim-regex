@@ -1128,10 +1128,10 @@ when isMainModule:
   doAssert match("aab", re"\w\w(?<=aa(?=b))b")
   block:
     # There is a difference in how nesting is
-    # handled by JS vs D; in D all nested lookarounds start
-    # from the outermost lookaround, while in JS they
-    # start from the outer/parent. I think the JS way
-    # is less mind blending
+    # handled by JS vs D; in D all of them start
+    # from the outermost one, while in JS they
+    # start from the outer one/parent. I think the JS way
+    # is less mind blending, and it makes more sense to me
     #
     # These 2 match in D, but not in JS
     doAssert(not match("ab", re"\w(?<=a(?=b(?<=a)))b"))  # JS, !D
@@ -1139,6 +1139,14 @@ when isMainModule:
     # These 2 match in JS, but not in D
     doAssert match("ab", re"\w(?<=a(?=b(?<=b)))b")  # JS, !D
     doAssert match("ab", re"\w(?<=a(?<=a(?=b(?<=b))))b")  # JS, !D
+  block:
+    let asterisks = re"(?<=(?<!\\)(?:\\\\)*)\*"
+    doAssert findAllBounds(r"*foo*", asterisks) ==
+      @[0 .. 0, 4 .. 4]
+    doAssert findAllBounds(r"\*foo\*", asterisks).len == 0
+    doAssert findAllBounds(r"\\*foo\\*", asterisks) ==
+      @[2 .. 2, 8 .. 8]
+    doAssert findAllBounds(r"\\\*foo\\\*", asterisks).len == 0
 
   doAssert findAllBounds("foobarbaz", re"(?<=o)b") == @[3 .. 3]
   doAssert findAllBounds("foobar", re"o(?=b)") == @[2 .. 2]

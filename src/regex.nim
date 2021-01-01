@@ -1126,6 +1126,20 @@ when isMainModule:
   doAssert match("ab", re"\w(?<=a(?<=a(?=b)))b")
   doAssert(not match("ab", re"\w(?<=(?<=a)a)b"))  # JS, D
   doAssert match("aab", re"\w\w(?<=aa(?=b))b")
+  doAssert findAllBounds(r"1abab", re"(?<=\d\w*)ab") ==
+    @[1 .. 2, 3 .. 4]
+  doAssert findAllBounds(r"abab", re"(?<=\d\w*)ab").len == 0
+  doAssert findAllBounds(r"abab1", re"ab(?=\w*\d)") ==
+    @[0 .. 1, 2 .. 3]
+  doAssert findAllBounds(r"abab", re"ab(?=\w*\d)").len == 0
+  doAssert findAllBounds("foo\nbar\nbar", re"bar(?=$)") ==
+    @[8 .. 10]
+  doAssert findAllBounds("foo\nbar\nbar", re"(?m)bar(?=$)") ==
+    @[4 .. 6, 8 .. 10]
+  doAssert findAllBounds("bar\nfoo\nbar", re"(?<=^)bar") ==
+    @[0 .. 2]
+  doAssert findAllBounds("bar\nfoo\nbar", re"(?m)(?<=^)bar") ==
+    @[0 .. 2, 8 .. 10]
   block:
     # There is a difference in how nesting is
     # handled by JS vs D; in D all of them start

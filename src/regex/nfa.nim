@@ -244,7 +244,7 @@ func eRemoval*(eNfa: Enfa): Nfa {.raises: [].} =
         qw.addFirst qb
   result.t.allZ.setLen result.s.len
 
-func reverse*(eNfa: Enfa): Enfa =
+func reverse(eNfa: Enfa): Enfa =
   template state0: untyped = int16(eNfa.s.len-1)
   result = eNfa
   for n in mitems result.s:

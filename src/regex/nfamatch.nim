@@ -157,7 +157,7 @@ func matchImpl(
     captIdx = smA[0].ci
   return smA.len > 0
 
-template nextState2Tpl: untyped {.dirty.} =
+template nextStateBwTpl: untyped {.dirty.} =
   smB.clear()
   for n, capt, bounds in items smA:
     if nfa.s[n].kind == reEoe:
@@ -236,7 +236,7 @@ func reversedMatchImpl(
   smA.add (0'i16, captIdx, i .. i-1)
   while iNext > limit:
     bwFastRuneAt(text, iNext, c)
-    nextState2Tpl()
+    nextStateBwTpl()
     if smA.len == 0:
       return -1
     if nfa.s[smA[0].ni].kind == reEoe:
@@ -246,7 +246,7 @@ func reversedMatchImpl(
   c = Rune(-1)
   if iNext > 0:
     bwFastRuneAt(text, iNext, c)
-  nextState2Tpl()
+  nextStateBwTpl()
   for n, capt, bounds in items smA:
     if nfa.s[n].kind == reEoe:
       if captIdx != capt:

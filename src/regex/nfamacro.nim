@@ -26,6 +26,32 @@ macro defForVars(idns: varargs[untyped]): untyped =
       idn, newEmptyNode(), newCall("genSym", newLit nskForVar, newLit $idn))
   return newStmtList lets
 
+type
+  AheadSig = proc (
+    smA, smB, capts, captIdx, matched, text, start: NimNode,
+    nfa: Nfa,
+    look: Lookaround,
+    flags: set[MatchFlag]
+  ): NimNode {.noSideEffect, raises: [].}
+  BehindSig = proc (
+    smA, smB, capts, captIdx, text, start: NimNode,
+    nfa: Nfa,
+    look: Lookaround,
+    flags: set[MatchFlag]
+  ): NimNode {.noSideEffect, raises: [].}
+  Lookaround = object
+    ahead: AheadSig
+    behind: BehindSig
+
+func bwRuneAt(s: string, n: int): Rune =
+  ## Take rune ending at ``n``
+  doAssert n >= 0
+  doAssert n <= s.len-1
+  var n = n
+  while n > 0 and s[n].ord shr 6 == 0b10:
+    dec n
+  fastRuneAt(s, n, result, false)
+
 # todo: can not use unicodeplus due to
 # https://github.com/nim-lang/Nim/issues/7059
 func swapCase(r: Rune): Rune =
@@ -236,9 +262,9 @@ func genMatchedBody(
   smB, ntLit, capt, bounds, matched, captx,
   capts, charIdx, cPrev, c: NimNode,
   i, nti: int,
-  regex: Regex
+  nfa: Nfa
 ): NimNode =
-  template t: untyped = regex.nfa.t
+  template t: untyped = nfa.t
   if t.allZ[i][nti] == -1'i16:
     return quote do:
       add(`smB`, (`ntLit`, `capt`, `bounds`.a .. `charIdx`-1))
@@ -269,10 +295,12 @@ func genMatchedBody(
       add(`smB`, (`ntLit`, `captx`, `bounds`.a .. `charIdx`-1))
   return newStmtList matchedBody
 
-func genSubmatch(
+func genNextState(
   n, capt, bounds, smB, c, matched, captx,
   capts, charIdx, cPrev: NimNode,
-  regex: Regex
+  nfa: Nfa,
+  flags: set[MatchFlag],
+  eoeOnly: bool
 ): NimNode =
   #[
     case n
@@ -288,128 +316,85 @@ func genSubmatch(
     else:
       error
   ]#
+  template s: untyped = nfa.s
   result = newStmtList()
   var caseStmtN: seq[NimNode]
   caseStmtN.add n
-  for i in 0 .. regex.nfa.s.len-1:
-    if regex.nfa.s[i].kind == reEoe:
+  for i in 0 .. s.len-1:
+    if s[i].kind == reEoe:
       continue
     var branchBodyN: seq[NimNode]
-    for nti, nt in regex.nfa.s[i].next.pairs:
-      let matchCond = case regex.nfa.s[nt].kind
+    for nti, nt in s[i].next.pairs:
+      if eoeOnly and s[nt].kind != reEoe:
+        continue
+      let matchCond = case s[nt].kind
         of reEoe:
           quote do: `c` == -1'i32
         of reInSet:
-          let m = genSetMatch(c, regex.nfa.s[nt])
+          let m = genSetMatch(c, s[nt])
           quote do: `c` >= 0'i32 and `m`
         of reNotSet:
-          let m = genSetMatch(c, regex.nfa.s[nt])
+          let m = genSetMatch(c, s[nt])
           quote do: `c` >= 0'i32 and not `m`
         else:
-          let m = genMatch(c, regex.nfa.s[nt])
+          let m = genMatch(c, s[nt])
           quote do: `c` >= 0'i32 and `m`
       let ntLit = newLit nt
       let matchedBodyStmt = genMatchedBody(
         smB, ntLit, capt, bounds, matched, captx,
         capts, charIdx, cPrev, c,
-        i, nti, regex)
-      branchBodyN.add quote do:
-        if not hasState(`smB`, `ntLit`) and `matchCond`:
-          `matchedBodyStmt`
-    doAssert branchBodyN.len > 0
-    caseStmtN.add newTree(nnkOfBranch,
-      newLit i.int16,
-      newStmtList(
-        branchBodyN))
-  doAssert caseStmtN.len > 1
-  caseStmtN.add newTree(nnkElse,
-    quote do:
-      doAssert false
-      discard)
-  result.add newTree(nnkCaseStmt, caseStmtN)
-  when defined(reDumpMacro):
-    echo "==== genSubmatch ===="
-    echo repr(result)
-
-func submatch(
-  smA, smB, c,
-  capts, charIdx, cPrev,
-  captx, matched: NimNode,
-  regex: Regex
-): NimNode =
-  defForVars n, capt, bounds
-  let genSubmatchCall = genSubmatch(
-    n, capt, bounds, smB, c, matched, captx,
-    capts, charIdx, cPrev, regex)
-  result = quote do:
-    `smB`.clear()
-    for `n`, `capt`, `bounds` in `smA`.items:
-      `genSubmatchCall`
-    swap `smA`, `smB`
-
-func genSubmatchEoe(
-  n, capt, bounds, smB, matched, captx,
-  capts, charIdx, cPrev: NimNode,
-  regex: Regex
-): NimNode =
-  # This is the same as genSubmatch
-  # but just for EOE states
-  #[
-    case n
-    of 0:
-      if not smB.hasState(1):
-        if c == -1:
-          smB.add((1, capt, bounds))
-    of 1:
-      ...
-    else:
-      discard
-  ]#
-  result = newStmtList()
-  var caseStmtN: seq[NimNode]
-  caseStmtN.add n
-  for i in 0 .. regex.nfa.s.len-1:
-    if regex.nfa.s[i].kind == reEoe:
-      continue
-    var branchBodyN: seq[NimNode]
-    for nti, nt in regex.nfa.s[i].next.pairs:
-      if regex.nfa.s[nt].kind == reEoe:
-        let ntLit = newLit nt
-        let cLit = newLit -1'i32
-        let matchedBodyStmt = genMatchedBody(
-          smB, ntLit, capt, bounds, matched, captx,
-          capts, charIdx, cPrev, cLit,
-          i, nti, regex)
+        i, nti, nfa)
+      if mfAnchored in flags and s[nt].kind == reEoe:
         branchBodyN.add quote do:
           if not hasState(`smB`, `ntLit`):
             `matchedBodyStmt`
+      else:
+        branchBodyN.add quote do:
+          if not hasState(`smB`, `ntLit`) and `matchCond`:
+            `matchedBodyStmt`
+    doAssert eoeOnly or branchBodyN.len > 0
     if branchBodyN.len > 0:
       caseStmtN.add newTree(nnkOfBranch,
         newLit i.int16,
         newStmtList(
           branchBodyN))
   doAssert caseStmtN.len > 1
+  let elseAssertion = if eoeOnly:
+    newEmptyNode()
+  else:
+    quote do: doAssert false
   caseStmtN.add newTree(nnkElse,
-    quote do: discard)
+    quote do:
+      `elseAssertion`
+      discard)
   result.add newTree(nnkCaseStmt, caseStmtN)
   when defined(reDumpMacro):
-    echo "==== genSubmatchEoe ===="
+    echo "==== genNextState ===="
     echo repr(result)
 
-func submatchEoe(
-  smA, smB,
+func nextState(
+  smA, smB, c,
   capts, charIdx, cPrev,
-  captx, matched: NimNode,
-  regex: Regex
+  captx, matched, eoe: NimNode,
+  nfa: Nfa,
+  flags: set[MatchFlag],
+  eoeOnly = false
 ): NimNode =
   defForVars n, capt, bounds
-  let genSubmatchEoeCall = genSubmatchEoe(
-    n, capt, bounds, smB, matched, captx,
-    capts, charIdx, cPrev, regex)
+  var eoeBailOut = newEmptyNode()
+  if mfAnchored in flags:
+    eoeBailOut = quote do:
+      if `n` == `eoe` and not hasState(`smB`, `n`):
+        add(`smB`, (`n`, `capt`, `bounds`))
+      break
+  let nextStateStmt = genNextState(
+    n, capt, bounds, smB, c, matched, captx,
+    capts, charIdx, cPrev, nfa, flags, eoeOnly)
   result = quote do:
     `smB`.clear()
     for `n`, `capt`, `bounds` in `smA`.items:
-      `genSubmatchEoeCall`
+      `eoeBailOut`
+      `nextStateStmt`
     swap `smA`, `smB`
 
 template constructSubmatches2(
@@ -429,44 +414,123 @@ template constructSubmatches2(
   for i in 0 .. bounds.len-1:
     captures[i] = txt[bounds[i]]
 
+func eoeIdx(nfa: Nfa): int16 =
+  for i in 0 .. nfa.s.len-1:
+    if nfa.s[i].kind == reEoe:
+      return i.int16
+  doAssert false
+
+func matchImpl(
+  smA, smB, capts, captIdx, matched, text, start: NimNode,
+  nfa: Nfa,
+  look: Lookaround,
+  flags: set[MatchFlag]
+): NimNode =
+  defVars c, iPrev, cPrev, captx
+  let eoe = newLit nfa.eoeIdx
+  let c2 = quote do: int32(`c`)
+  let nextStateStmt = nextState(
+    smA, smB, c2, capts, iPrev, cPrev, captx,
+    matched, eoe, nfa, flags)
+  let cEoe = newLit -1'i32
+  let nextStateEoeStmt = nextState(
+    smA, smB, cEoe, capts, iPrev, cPrev, captx,
+    matched, eoe, nfa, flags, eoeOnly = true)
+  result = quote do:
+    var
+      `c` = Rune(-1)
+      `cPrev` = -1'i32
+      `iPrev` = `start`
+      `captx` {.used.} = -1'i32
+      i = `start`
+    if `start`-1 in 0 .. `text`.len-1:  # XXX anchored only?
+      `cPrev` = bwRuneAt(`text`, `start`-1).int32
+    clear(`smA`)
+    add(`smA`, (0'i16, `captIdx`, i .. i-1))
+    while i < `text`.len:
+      fastRuneAt(`text`, i, `c`, true)
+      `nextStateStmt`
+      if `smA`.len == 0:
+        break
+      if `smA`[0].ni == `eoe`:
+        break
+      `iPrev` = i
+      `cPrev` = `c2`
+    `nextStateEoeStmt`
+    if `smA`.len > 0:
+      `captIdx` = `smA`[0].ci
+    `matched` = `smA`.len > 0
+
+when false:
+  func reversedMatchImpl(
+    smA, smB, capts, captIdx, text, start, limit: NimNode,
+    nfa: Nfa,
+    look: Lookaround
+  ): NimNode =
+    defVars c, iPrev, cPrev, captx
+    let c2 = quote do: int32(`c`)
+    let nextStateBwStmt = nextStateBw(
+      smA, smB, c2, capts, iPrev, cPrev, captx, matched, nfa)
+    let nextStateEoeStmt = nextStateEoe(
+      smA, smB, capts, iPrev, cPrev, captx, matched, nfa)
+    let nfaLenLit = newLit nfa.s.len
+    let eoe = newLit nfa.eoeIdx
+    result = quote do:
+      doAssert start >= limit
+      var
+        `c` = Rune(-1)
+        `cPrev` = -1'i32
+        `iPrev` = `start`
+        `captx` {.used.} = -1'i32
+        i = `start`
+      if `start` in 0 .. `text`.len-1:
+        `cPrev` = runeAt(`text`, `start`).int32
+      clear(`smA`)
+      add(`smA`, (0'i16, `captIdx`, i .. i-1))
+      while i > `limit`:
+        bwFastRuneAt(`text`, i, `c`)
+        `nextStateBwStmt`
+        if `smA`.len == 0:
+          break
+        if `smA`[0].ni == `eoe`:
+          break
+        `iPrev` = i
+        `cPrev` = `c2`
+      `nextStateEoeStmt`
+      if `smA`.len > 0:
+        `captIdx` = `smA`[0].ci
+      `matched` = `smA`.len > 0
+
+template look: untyped =
+  Lookaround(
+    ahead: matchImpl)#,
+    #behind: reversedMatchImpl)
+
 proc matchImpl*(text, expLit, body: NimNode): NimNode =
   if not (expLit.kind == nnkCallStrLit and $expLit[0] == "rex"):
     error "not a regex literal; only rex\"regex\" is allowed", expLit
   let exp = expLit[1]
-  defVars smA, smB, c, capts, iPrev, cPrev, captx, matched
-  let c2 = quote do: int32(`c`)
+  defVars smA, smB, capts, capt, matched
   let regex = reCt(exp.strVal)
-  let submatchCall = submatch(
-    smA, smB, c2, capts, iPrev, cPrev, captx, matched, regex)
-  let submatchEoeCall = submatchEoe(
-    smA, smB, capts, iPrev, cPrev, captx, matched, regex)
+  let startLit = newLit 0
+  let flags: set[MatchFlag] = {}
+  let matchImplStmt = matchImpl(
+    smA, smB, capts, capt, matched,
+    text, startLit, regex.nfa, look, flags)
   let nfaLenLit = newLit regex.nfa.s.len
   let nfaGroupsLen = regex.groupsCount
   result = quote do:
     block:
       var
-        `smA`, `smB`: Submatches
-        `c` = Rune(-1)
-        `cPrev` = -1'i32
-        `iPrev` = 0
-        `capts` {.used.}: Capts
-        `captx` {.used.}: int32
-        `matched` {.used.}: bool
-        i = 0
-      `smA` = newSubmatches `nfaLenLit`
-      `smB` = newSubmatches `nfaLenLit`
-      add(`smA`, (0'i16, -1'i32, 0 .. -1))
-      while i < len(`text`):
-        fastRuneAt(`text`, i, `c`, true)
-        `submatchCall`
-        if `smA`.len == 0:
-          break
-        `iPrev` = i
-        `cPrev` = `c2`
-      `submatchEoeCall`
-      if `smA`.len > 0:
+        `smA` = newSubmatches `nfaLenLit`
+        `smB` = newSubmatches `nfaLenLit`
+        `capts`: Capts
+        `capt` = -1'i32
+        `matched` = false
+      `matchImplStmt`
+      if `matched`:
         var matches {.used, inject.}: seq[string]
         when `nfaGroupsLen` > 0:
           constructSubmatches2(
-            matches, `text`, `capts`, `smA`[0].ci, `nfaGroupsLen`)
+            matches, `text`, `capts`, `capt`, `nfaGroupsLen`)
         `body`

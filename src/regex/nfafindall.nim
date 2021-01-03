@@ -67,6 +67,7 @@ type
     a, b: Submatches
     m: Matches
     c: Capts
+    look: Lookaround
 
 func len(ms: Matches): int {.inline.} =
   ms.i
@@ -92,14 +93,21 @@ func clear(ms: var Matches) {.inline.} =
 
 template initMaybeImpl(
   ms: var RegexMatches,
-  regex: Regex
+  size: int
 ) =
   if ms.a == nil:
     assert ms.b == nil
-    ms.a = newSubmatches(regex.nfa.s.len)
-    ms.b = newSubmatches(regex.nfa.s.len)
-  doAssert ms.a.cap >= regex.nfa.s.len and
-    ms.b.cap >= regex.nfa.s.len
+    ms.a = newSubmatches size
+    ms.b = newSubmatches size
+    ms.look = initLook()
+  doAssert ms.a.cap >= size and
+    ms.b.cap >= size
+
+template initMaybeImpl(
+  ms: var RegexMatches,
+  regex: Regex
+) =
+  initMaybeImpl(ms, regex.nfa.s.len)
 
 func hasMatches(ms: RegexMatches): bool {.inline.} =
   return ms.m.len > 0
@@ -154,6 +162,7 @@ func submatch(
   template n: untyped = ms.a[smi].ni
   template capt: untyped = ms.a[smi].ci
   template bounds: untyped = ms.a[smi].bounds
+  template look: untyped = ms.look
   smB.clear()
   var captx: int32
   var matched = true
@@ -181,10 +190,7 @@ func submatch(
           of assertionKind - lookaroundKind:
             matched = match(z, cPrev.Rune, c.Rune)
           of lookaroundKind:
-            # XXX optimize using a seq[SubMatches] of lookAround size
-            var smAl = newSubmatches(z.subExp.nfa.s.len)
-            var smBl = newSubmatches(z.subExp.nfa.s.len)
-            matched = lookAroundTpl()
+            lookAroundTpl()
           else:
             assert false
             discard
@@ -251,17 +257,6 @@ func findSomeImpl*(
 # findAll with literal optimization below,
 # there is an explanation of how this work
 # in litopt.nim, move this there?
-
-template initMaybeImpl(
-  ms: var RegexMatches,
-  size: int
-) =
-  if ms.a == nil:
-    assert ms.b == nil
-    ms.a = newSubmatches size
-    ms.b = newSubmatches size
-  doAssert ms.a.cap >= size and
-    ms.b.cap >= size
 
 func findSomeOptImpl*(
   text: string,

@@ -134,3 +134,37 @@ func setLen*(sm: Submatches, size: int) {.inline.} =
 
 when defined(release):
   {.pop.}
+
+type
+  SmLookaroundItem* = object
+    a, b: Submatches
+  SmLookaround* = object
+    s: seq[SmLookaroundItem]
+    i: int
+
+func setLen*(item: var SmLookaroundItem, size: int) {.inline.} =
+  if item.a == nil:
+    item.a = newSubmatches size
+    item.b = newSubmatches size
+  else:
+    item.a.setLen size
+    item.b.setLen size
+
+func lastA*(sm: var SmLookaround): var Submatches {.inline.} =
+  sm.s[sm.i-1].a
+
+func lastB*(sm: var SmLookaround): var Submatches {.inline.} =
+  sm.s[sm.i-1].b
+
+func last*(sm: var SmLookaround): var SmLookaroundItem {.inline.} =
+  sm.s[sm.i-1]
+
+func grow*(sm: var SmLookaround) {.inline.} =
+  assert sm.i <= sm.s.len
+  if sm.i == sm.s.len:
+    sm.s.setLen(max(1, sm.s.len) * 2)
+  sm.i += 1
+
+func removeLast*(sm: var SmLookaround) {.inline.} =
+  doAssert sm.i > 0
+  sm.i -= 1

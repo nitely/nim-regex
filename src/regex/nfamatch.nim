@@ -39,7 +39,7 @@ type
     captIdx: var int32,
     text: string,
     nfa: Nfa,
-    look: Lookaround,
+    look: var Lookaround,
     start: int,
     flags: set[MatchFlag]
   ): bool {.noSideEffect, raises: [].}
@@ -49,34 +49,40 @@ type
     captIdx: var int32,
     text: string,
     nfa: Nfa,
-    look: Lookaround,
+    look: var Lookaround,
     start, limit: int
   ): int {.noSideEffect, raises: [].}
   Lookaround* = object
     ahead*: AheadSig
     behind*: BehindSig
+    smL*: SmLookaround
 
 template lookAroundTpl*: untyped {.dirty.} =
-  case z.kind
+  template smL: untyped = look.smL
+  template zNfa: untyped = z.subExp.nfa
+  smL.grow()
+  smL.last.setLen zNfa.s.len
+  matched = case z.kind
   of reLookahead:
     look.ahead(
-      smAl, smBl, capts, captx,
-      text, z.subExp.nfa, look, i, {mfAnchored})
+      smL.lastA, smL.lastB, capts, captx,
+      text, zNfa, look, i, {mfAnchored})
   of reNotLookahead:
     not look.ahead(
-      smAl, smBl, capts, captx,
-      text, z.subExp.nfa, look, i, {mfAnchored})
+      smL.lastA, smL.lastB, capts, captx,
+      text, zNfa, look, i, {mfAnchored})
   of reLookbehind:
     look.behind(
-      smAl, smBl, capts, captx,
-      text, z.subExp.nfa, look, i, 0) != -1
+      smL.lastA, smL.lastB, capts, captx,
+      text, zNfa, look, i, 0) != -1
   of reNotLookbehind:
     look.behind(
-      smAl, smBl, capts, captx,
-      text, z.subExp.nfa, look, i, 0) == -1
+      smL.lastA, smL.lastB, capts, captx,
+      text, zNfa, look, i, 0) == -1
   else:
     doAssert false
     false
+  smL.removeLast()
 
 template nextStateTpl: untyped {.dirty.} =
   smB.clear()
@@ -109,10 +115,7 @@ template nextStateTpl: untyped {.dirty.} =
         of assertionKind - lookaroundKind:
           matched = match(z, cPrev.Rune, c)
         of lookaroundKind:
-          # XXX optimize using a seq[SubMatches] of lookAround size
-          var smAl = newSubmatches(z.subExp.nfa.s.len)
-          var smBl = newSubmatches(z.subExp.nfa.s.len)
-          matched = lookAroundTpl()
+          lookAroundTpl()
         else:
           doAssert false
           discard
@@ -126,7 +129,7 @@ func matchImpl(
   captIdx: var int32,
   text: string,
   nfa: Nfa,
-  look: Lookaround,
+  look: var Lookaround,
   start = 0,
   flags: set[MatchFlag] = {}
 ): bool =
@@ -188,10 +191,7 @@ template nextStateBwTpl: untyped {.dirty.} =
         of assertionKind - lookaroundKind:
           matched = match(z, c, cPrev.Rune)
         of lookaroundKind:
-          # XXX optimize using a seq[SubMatches] of lookAround size
-          var smAl = newSubmatches(z.subExp.nfa.s.len)
-          var smBl = newSubmatches(z.subExp.nfa.s.len)
-          matched = lookAroundTpl()
+          lookAroundTpl()
         else:
           doAssert false
           discard
@@ -217,7 +217,7 @@ func reversedMatchImpl(
   captIdx: var int32,
   text: string,
   nfa: Nfa,
-  look: Lookaround,
+  look: var Lookaround,
   start: int,
   limit = 0
 ): int =
@@ -253,7 +253,7 @@ func reversedMatchImpl(
       return bounds.a
   return -1
 
-template look*: Lookaround =
+template initLook*: Lookaround =
   Lookaround(
     ahead: matchImpl,
     behind: reversedMatchImpl)
@@ -270,6 +270,7 @@ func matchImpl*(
     smB = newSubmatches(regex.nfa.s.len)
     capts: Capts
     capt = -1'i32
+    look = initLook()
   result = matchImpl(
     smA, smB, capts, capt, text, regex.nfa, look, start)
   if result:
@@ -287,5 +288,6 @@ func reversedMatchImpl*(
 ): int =
   var capts: Capts
   var captIdx = -1'i32
+  var look = initLook()
   reversedMatchImpl(
     smA, smB, capts, captIdx, text, nfa, look, start, limit)

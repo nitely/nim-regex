@@ -1250,7 +1250,7 @@ when isMainModule:
       m.captures == @[@[0 .. 3]]
     doAssert match("aaab", re".*(?<=^(\w+|\w{4}|\w{4}|\w+)+?$)", m) and
       m.captures == @[@[0 .. 3]]
-  when true:
+  when false:
     var matched = false
     match "ab", rex"a(?=b)\w":
       matched = true

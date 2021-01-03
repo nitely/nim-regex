@@ -27,21 +27,14 @@ macro defForVars(idns: varargs[untyped]): untyped =
   return newStmtList lets
 
 type
-  AheadSig = proc (
+  Sig = proc (
     smA, smB, capts, captIdx, matched, text, start: NimNode,
     nfa: Nfa,
     look: Lookaround,
     flags: set[MatchFlag]
   ): NimNode {.noSideEffect, raises: [].}
-  BehindSig = proc (
-    smA, smB, capts, captIdx, matched, text, start, limit: NimNode,
-    nfa: Nfa,
-    look: Lookaround,
-    flags: set[MatchFlag]
-  ): NimNode {.noSideEffect, raises: [].}
   Lookaround = object
-    ahead: AheadSig
-    behind: BehindSig
+    ahead, behind: Sig
     smL: NimNode
   SmLookaroundItem = object
     a, b: Submatches
@@ -313,7 +306,7 @@ func genLookaroundMatch(
       doAssert n.kind in {reLookbehind, reNotLookbehind}
       look.behind(
         smlA, smlB, capts, captx, matched,
-        text, charIdx, newLit 0, nfa, look, {mfAnchored})
+        text, charIdx, nfa, look, {mfAnchored})
   if n.kind in {reNotLookahead, reNotLookbehind}:
     lookaroundStmt = quote do:
       `lookaroundStmt`
@@ -537,7 +530,7 @@ func matchImpl(
 # XXX move to nfatype
 func reverse(capts: var Capts, a, b: int32): int32 =
   ## reverse capture indices from a to b; return head
-  doAssert a > b
+  doAssert a >= b
   var capt = a
   var parent = b
   while capt != b:
@@ -548,7 +541,7 @@ func reverse(capts: var Capts, a, b: int32): int32 =
   return parent
 
 func reversedMatchImpl(
-  smA, smB, capts, captIdx, matched, text, start, limit: NimNode,
+  smA, smB, capts, captIdx, matched, text, start: NimNode,
   nfa: Nfa,
   look: Lookaround,
   flags: set[MatchFlag]
@@ -560,13 +553,13 @@ func reversedMatchImpl(
   let nextStateStmt = nextState(
     smA, smB, c2, capts, iPrev, cPrev, captx,
     matched, eoe, text, nfa, look, flags)
-  let limit0 = limit.kind in nnkLiterals and limit.intVal == 0
-  let cEoe = if limit0: newLit -1'i32 else: c2
+  #let limit0 = limit.kind in nnkLiterals and limit.intVal == 0
+  let cEoe = newLit -1'i32
   let nextStateEoeStmt = nextState(
     smA, smB, cEoe, capts, iPrev, cPrev, captx,
-    matched, eoe, text, nfa, look, flags, eoeOnly = limit0)
+    matched, eoe, text, nfa, look, flags, eoeOnly = true)
   result = quote do:
-    doAssert `start` >= `limit`
+    #doAssert `start` >= `limit`
     var
       `c` = Rune(-1)
       `cPrev` = -1'i32
@@ -577,7 +570,7 @@ func reversedMatchImpl(
       `cPrev` = runeAt(`text`, `start`).int32
     clear(`smA`)
     add(`smA`, (0'i16, `captIdx`, i .. i-1))
-    while i > `limit`:
+    while i > 0:
       bwFastRuneAt(`text`, i, `c`)
       `nextStateStmt`
       if `smA`.len == 0:
@@ -587,16 +580,10 @@ func reversedMatchImpl(
       `iPrev` = i
       `cPrev` = `c2`
     `c` = Rune(-1)
-    if i > 0:
-      bwFastRuneAt(`text`, i, `c`)
     `nextStateEoeStmt`
-    `matched` = false
-    for n, capt, bounds in items `smA`:
-      if n == `eoe`:
-        if `captIdx` != capt:
-          `captIdx` = reverse(`capts`, capt, `captIdx`)
-        `matched` = true
-        break
+    if `smA`.len > 0:
+      `captIdx` = reverse(`capts`, `smA`[0].ci, `captIdx`)
+    `matched` = `smA`.len > 0
 
 template look(smL: NimNode): untyped =
   Lookaround(

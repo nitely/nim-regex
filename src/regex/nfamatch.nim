@@ -201,7 +201,7 @@ template nextStateBwTpl: untyped {.dirty.} =
 
 func reverse(capts: var Capts, a, b: int32): int32 =
   ## reverse capture indices from a to b; return head
-  doAssert a > b
+  doAssert a >= b
   var capt = a
   var parent = b
   while capt != b:
@@ -249,8 +249,7 @@ func reversedMatchImpl(
   nextStateBwTpl()
   for n, capt, bounds in items smA:
     if nfa.s[n].kind == reEoe:
-      if captIdx != capt:
-        captIdx = reverse(capts, capt, captIdx)
+      captIdx = reverse(capts, capt, captIdx)
       return bounds.a
   return -1
 

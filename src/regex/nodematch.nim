@@ -62,14 +62,6 @@ func match*(n: Node, r: Rune, nxt: Rune): bool {.inline.} =
     isWordBoundaryAscii(r, nxt)
   of reNotWordBoundaryAscii:
     not isWordBoundaryAscii(r, nxt)
-  of reLookahead:
-    n.cp == nxt
-  of reNotLookahead:
-    n.cp != nxt
-  of reLookbehind:
-    n.cp == r
-  of reNotLookbehind:
-    n.cp != r
   else:
     assert false
     false

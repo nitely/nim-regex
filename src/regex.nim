@@ -1250,10 +1250,10 @@ when isMainModule:
       m.captures == @[@[0 .. 3]]
     doAssert match("aaab", re".*(?<=^(\w+|\w{4}|\w{4}|\w+)+?$)", m) and
       m.captures == @[@[0 .. 3]]
-  when false:
+  when true:
     var matched = false
-    match "aaab", rex".*(?<=^(\w)\w+|(\w)\w+$)":
-      doAssert matches == @["a", ""]
+    match "ab", rex"a(?=b)\w":
+      matched = true
     doAssert matched
   doAssert findAllBounds(r"1abab", re"(?<=\d\w*)ab") ==
     @[1 .. 2, 3 .. 4]

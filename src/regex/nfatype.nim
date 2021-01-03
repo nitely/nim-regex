@@ -128,5 +128,8 @@ iterator items*(sm: Submatches): PState {.inline.} =
 func cap*(sm: Submatches): int {.inline.} =
   sm.ss.len
 
+func setLen*(sm: Submatches, size: int) {.inline.} =
+  sm.ss.setLen size
+
 when defined(release):
   {.pop.}

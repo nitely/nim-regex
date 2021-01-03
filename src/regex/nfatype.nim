@@ -41,6 +41,18 @@ func constructSubmatches*(
   for c in captures.mitems:
     c.reverse()
 
+func reverse*(capts: var Capts, a, b: int32): int32 =
+  ## reverse capture indices from a to b; return head
+  doAssert a >= b
+  var capt = a
+  var parent = b
+  while capt != b:
+    let p = capts[capt].parent
+    capts[capt].parent = parent
+    parent = capt
+    capt = p
+  return parent
+
 type
   RegexLit* = distinct string
     ## raw regex literal string
@@ -152,7 +164,7 @@ func setLen*(item: var SmLookaroundItem, size: int) {.inline.} =
     item.a.setLen size
     item.b.setLen size
 
-func last*(sm: var SmLookaround): var SmLookaroundItem {.inline.} =
+template last*(sm: var SmLookaround): untyped =
   sm.s[sm.i-1]
 
 template lastA*(sm: var SmLookaround): untyped =

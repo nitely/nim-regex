@@ -35,6 +35,26 @@ proc `<=`*(x, y: Rune): bool =
 proc cmp*(x, y: Rune): int =
   x.int - y.int
 
+func bwRuneAt*(s: string, n: int): Rune =
+  ## Take rune ending at ``n``
+  doAssert n >= 0
+  doAssert n <= s.len-1
+  var n = n
+  while n > 0 and s[n].ord shr 6 == 0b10:
+    dec n
+  fastRuneAt(s, n, result, false)
+
+template bwFastRuneAt*(
+  s: string, n: var int, result: var Rune
+): untyped =
+  ## Take rune ending at ``n``
+  doAssert n > 0
+  doAssert n <= s.len
+  dec n
+  while n > 0 and s[n].ord shr 6 == 0b10:
+    dec n
+  fastRuneAt(s, n, result, false)
+
 proc `%%`*(
   formatstr: string,
   a: openArray[string]

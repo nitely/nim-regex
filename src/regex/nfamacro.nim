@@ -495,19 +495,6 @@ func matchImpl(
       `captIdx` = `smA`[0].ci
     `matched` = `smA`.len > 0
 
-# XXX move to nfatype
-func reverse(capts: var Capts, a, b: int32): int32 =
-  ## reverse capture indices from a to b; return head
-  doAssert a >= b
-  var capt = a
-  var parent = b
-  while capt != b:
-    let p = capts[capt].parent
-    capts[capt].parent = parent
-    parent = capt
-    capt = p
-  return parent
-
 func reversedMatchImpl(
   smA, smB, capts, captIdx, matched, text, start: NimNode,
   nfa: Nfa,

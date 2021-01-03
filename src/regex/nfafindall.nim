@@ -41,19 +41,11 @@ import std/unicode
 import std/tables
 from std/strutils import find
 
+import ./common
 import ./nodematch
 import ./types
 import ./nfatype
 import ./nfamatch
-
-func bwRuneAt(s: string, n: int): Rune =
-  ## Take rune ending at ``n``
-  doAssert n >= 0
-  doAssert n <= s.len-1
-  var n = n
-  while n > 0 and s[n].ord shr 6 == 0b10:
-    dec n
-  fastRuneAt(s, n, result, false)
 
 type
   MatchItemIdx = int

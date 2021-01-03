@@ -1255,6 +1255,10 @@ when isMainModule:
     match "ab", rex"a(?=b)\w":
       matched = true
     doAssert matched
+    matched = false
+    match "ab", rex"\w(?<=a)b":
+      matched = true
+    doAssert matched
   doAssert findAllBounds(r"1abab", re"(?<=\d\w*)ab") ==
     @[1 .. 2, 3 .. 4]
   doAssert findAllBounds(r"abab", re"(?<=\d\w*)ab").len == 0

@@ -34,7 +34,7 @@ type
     flags: set[MatchFlag]
   ): NimNode {.noSideEffect, raises: [].}
   BehindSig = proc (
-    smA, smB, capts, captIdx, text, start: NimNode,
+    smA, smB, capts, captIdx, matched, text, start, limit: NimNode,
     nfa: Nfa,
     look: Lookaround,
     flags: set[MatchFlag]
@@ -76,11 +76,24 @@ func removeLast(sm: var SmLookaround) {.inline.} =
   doAssert sm.i > 0
   sm.i -= 1
 
+# XXX move to common
 func bwRuneAt(s: string, n: int): Rune =
   ## Take rune ending at ``n``
   doAssert n >= 0
   doAssert n <= s.len-1
   var n = n
+  while n > 0 and s[n].ord shr 6 == 0b10:
+    dec n
+  fastRuneAt(s, n, result, false)
+
+# XXX move to common
+template bwFastRuneAt(
+  s: string, n: var int, result: var Rune
+) =
+  ## Take rune ending at ``n``
+  doAssert n > 0
+  doAssert n <= s.len
+  dec n
   while n > 0 and s[n].ord shr 6 == 0b10:
     dec n
   fastRuneAt(s, n, result, false)
@@ -298,9 +311,9 @@ func genLookaroundMatch(
         text, charIdx, nfa, look, {mfAnchored})
     else:
       doAssert n.kind in {reLookbehind, reNotLookbehind}
-      look.ahead(
+      look.behind(
         smlA, smlB, capts, captx, matched,
-        text, charIdx, nfa, look, {mfAnchored})
+        text, charIdx, newLit 0, nfa, look, {mfAnchored})
   if n.kind in {reNotLookahead, reNotLookbehind}:
     lookaroundStmt = quote do:
       `lookaroundStmt`
@@ -317,12 +330,17 @@ func genMatchedBody(
   capts, charIdx, cPrev, c, text: NimNode,
   i, nti: int,
   nfa: Nfa,
-  look: Lookaround
+  look: Lookaround,
+  flags: set[MatchFlag]
 ): NimNode =
   template t: untyped = nfa.t
+  let bounds2 = if mfBwMatch in flags:
+    quote do: `charIdx` .. `bounds`.b
+  else:
+    quote do: `bounds`.a .. `charIdx`-1
   if t.allZ[i][nti] == -1'i16:
     return quote do:
-      add(`smB`, (`ntLit`, `capt`, `bounds`.a .. `charIdx`-1))
+      add(`smB`, (`ntLit`, `capt`, `bounds2`))
   var matchedBody: seq[NimNode]
   matchedBody.add quote do:
     `matched` = true
@@ -338,7 +356,10 @@ func genMatchedBody(
           idx: `zIdx`))
         `captx` = (len(`capts`) - 1).int32
     of assertionKind - lookaroundKind:
-      let matchCond = genMatch(z, cPrev, c)
+      let matchCond = if mfBwMatch in flags:
+        genMatch(z, cPrev, c)
+      else:
+        genMatch(z, c, cPrev)
       matchedBody.add quote do:
         `matched` = `matched` and `matchCond`
     of lookaroundKind:
@@ -351,7 +372,7 @@ func genMatchedBody(
       doAssert false
   matchedBody.add quote do:
     if `matched`:
-      add(`smB`, (`ntLit`, `captx`, `bounds`.a .. `charIdx`-1))
+      add(`smB`, (`ntLit`, `captx`, `bounds2`))
   return newStmtList matchedBody
 
 func genNextState(
@@ -403,7 +424,7 @@ func genNextState(
       let matchedBodyStmt = genMatchedBody(
         smB, ntLit, capt, bounds, matched, captx,
         capts, charIdx, cPrev, c, text,
-        i, nti, nfa, look)
+        i, nti, nfa, look, flags)
       if mfAnchored in flags and s[nt].kind == reEoe:
         branchBodyN.add quote do:
           if not hasState(`smB`, `ntLit`):
@@ -441,13 +462,14 @@ func nextState(
   eoeOnly = false
 ): NimNode =
   defForVars n, capt, bounds
-  var eoeBailOut = newEmptyNode()
-  if mfAnchored in flags:
-    eoeBailOut = quote do:
+  let eoeBailOut = if mfAnchored in flags:
+    quote do:
       if `n` == `eoe`:
         if not hasState(`smB`, `n`):
           add(`smB`, (`n`, `capt`, `bounds`))
         break
+  else:
+    newEmptyNode()
   let nextStateStmt = genNextState(
     n, capt, bounds, smB, c, matched, captx,
     capts, charIdx, cPrev, text, nfa, look,
@@ -458,23 +480,6 @@ func nextState(
       `eoeBailOut`
       `nextStateStmt`
     swap `smA`, `smB`
-
-template constructSubmatches2(
-  captures, txt, capts, capt, size: untyped
-): untyped =
-  var bounds: array[size, Slice[int]]
-  for i in 0 .. bounds.len-1:
-    bounds[i] = -2 .. -3
-  var captx = capt
-  while captx != -1:
-    if bounds[capts[captx].idx].b == -3:
-      bounds[capts[captx].idx].b = capts[captx].bound-1
-    elif bounds[capts[captx].idx].a == -2:
-      bounds[capts[captx].idx].a = capts[captx].bound
-    captx = capts[captx].parent
-  captures.setLen size
-  for i in 0 .. bounds.len-1:
-    captures[i] = txt[bounds[i]]
 
 func eoeIdx(nfa: Nfa): int16 =
   for i in 0 .. nfa.s.len-1:
@@ -498,11 +503,12 @@ func matchImpl(
   let nextStateEoeStmt = nextState(
     smA, smB, cEoe, capts, iPrev, cPrev, captx,
     matched, eoe, text, nfa, look, flags, eoeOnly = true)
-  var eoeBailOutStmt = newEmptyNode()
-  if mfAnchored in flags:
-    eoeBailOutStmt = quote do:
+  let eoeBailOutStmt = if mfAnchored in flags:
+    quote do:
       if `smA`[0].ni == `eoe`:
         break
+  else:
+    newEmptyNode()
   result = quote do:
     var
       `c` = Rune(-1)
@@ -528,51 +534,92 @@ func matchImpl(
       `captIdx` = `smA`[0].ci
     `matched` = `smA`.len > 0
 
-when false:
-  func reversedMatchImpl(
-    smA, smB, capts, captIdx, text, start, limit: NimNode,
-    nfa: Nfa,
-    look: Lookaround
-  ): NimNode =
-    defVars c, iPrev, cPrev, captx
-    let c2 = quote do: int32(`c`)
-    let nextStateBwStmt = nextStateBw(
-      smA, smB, c2, capts, iPrev, cPrev, captx, matched, nfa)
-    let nextStateEoeStmt = nextStateEoe(
-      smA, smB, capts, iPrev, cPrev, captx, matched, nfa)
-    let nfaLenLit = newLit nfa.s.len
-    let eoe = newLit nfa.eoeIdx
-    result = quote do:
-      doAssert start >= limit
-      var
-        `c` = Rune(-1)
-        `cPrev` = -1'i32
-        `iPrev` = `start`
-        `captx` {.used.} = -1'i32
-        i = `start`
-      if `start` in 0 .. `text`.len-1:
-        `cPrev` = runeAt(`text`, `start`).int32
-      clear(`smA`)
-      add(`smA`, (0'i16, `captIdx`, i .. i-1))
-      while i > `limit`:
-        bwFastRuneAt(`text`, i, `c`)
-        `nextStateBwStmt`
-        if `smA`.len == 0:
-          break
-        if `smA`[0].ni == `eoe`:
-          break
-        `iPrev` = i
-        `cPrev` = `c2`
-      `nextStateEoeStmt`
-      if `smA`.len > 0:
-        `captIdx` = `smA`[0].ci
-      `matched` = `smA`.len > 0
+# XXX move to nfatype
+func reverse(capts: var Capts, a, b: int32): int32 =
+  ## reverse capture indices from a to b; return head
+  doAssert a > b
+  var capt = a
+  var parent = b
+  while capt != b:
+    let p = capts[capt].parent
+    capts[capt].parent = parent
+    parent = capt
+    capt = p
+  return parent
+
+func reversedMatchImpl(
+  smA, smB, capts, captIdx, matched, text, start, limit: NimNode,
+  nfa: Nfa,
+  look: Lookaround,
+  flags: set[MatchFlag]
+): NimNode =
+  defVars c, iPrev, cPrev, captx
+  let flags = flags + {mfAnchored, mfBwMatch}
+  let eoe = newLit nfa.eoeIdx
+  let c2 = quote do: int32(`c`)
+  let nextStateStmt = nextState(
+    smA, smB, c2, capts, iPrev, cPrev, captx,
+    matched, eoe, text, nfa, look, flags)
+  let limit0 = limit.kind in nnkLiterals and limit.intVal == 0
+  let cEoe = if limit0: newLit -1'i32 else: c2
+  let nextStateEoeStmt = nextState(
+    smA, smB, cEoe, capts, iPrev, cPrev, captx,
+    matched, eoe, text, nfa, look, flags, eoeOnly = limit0)
+  result = quote do:
+    doAssert `start` >= `limit`
+    var
+      `c` = Rune(-1)
+      `cPrev` = -1'i32
+      `iPrev` = `start`
+      `captx` {.used.} = -1'i32
+      i = `start`
+    if `start` in 0 .. `text`.len-1:
+      `cPrev` = runeAt(`text`, `start`).int32
+    clear(`smA`)
+    add(`smA`, (0'i16, `captIdx`, i .. i-1))
+    while i > `limit`:
+      bwFastRuneAt(`text`, i, `c`)
+      `nextStateStmt`
+      if `smA`.len == 0:
+        break
+      if `smA`[0].ni == `eoe`:
+        break
+      `iPrev` = i
+      `cPrev` = `c2`
+    `c` = Rune(-1)
+    if i > 0:
+      bwFastRuneAt(`text`, i, `c`)
+    `nextStateEoeStmt`
+    `matched` = false
+    for n, capt, bounds in items `smA`:
+      if n == `eoe`:
+        if `captIdx` != capt:
+          `captIdx` = reverse(`capts`, capt, `captIdx`)
+        `matched` = true
+        break
 
 template look(smL: NimNode): untyped =
   Lookaround(
     ahead: matchImpl,
-    smL: smL)#,
-    #behind: reversedMatchImpl)
+    behind: reversedMatchImpl,
+    smL: smL)
+
+template constructSubmatches2(
+  captures, txt, capts, capt, size: untyped
+): untyped =
+  var bounds: array[size, Slice[int]]
+  for i in 0 .. bounds.len-1:
+    bounds[i] = -2 .. -3
+  var captx = capt
+  while captx != -1:
+    if bounds[capts[captx].idx].b == -3:
+      bounds[capts[captx].idx].b = capts[captx].bound-1
+    elif bounds[capts[captx].idx].a == -2:
+      bounds[capts[captx].idx].a = capts[captx].bound
+    captx = capts[captx].parent
+  captures.setLen size
+  for i in 0 .. bounds.len-1:
+    captures[i] = txt[bounds[i]]
 
 proc matchImpl*(text, expLit, body: NimNode): NimNode =
   if not (expLit.kind == nnkCallStrLit and $expLit[0] == "rex"):

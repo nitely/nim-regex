@@ -129,7 +129,7 @@ iterator items*(sm: Submatches): PState {.inline.} =
 func cap*(sm: Submatches): int {.inline.} =
   sm.ss.len
 
-func setLen*(sm: Submatches, size: int) {.inline.} =
+func setLen*(sm: var Submatches, size: int) {.inline.} =
   sm.ss.setLen size
 
 when defined(release):
@@ -144,23 +144,25 @@ type
 
 func setLen*(item: var SmLookaroundItem, size: int) {.inline.} =
   if item.a == nil:
+    doAssert item.b == nil
     item.a = newSubmatches size
     item.b = newSubmatches size
   else:
+    doAssert item.b != nil
     item.a.setLen size
     item.b.setLen size
-
-func lastA*(sm: var SmLookaround): var Submatches {.inline.} =
-  sm.s[sm.i-1].a
-
-func lastB*(sm: var SmLookaround): var Submatches {.inline.} =
-  sm.s[sm.i-1].b
 
 func last*(sm: var SmLookaround): var SmLookaroundItem {.inline.} =
   sm.s[sm.i-1]
 
+template lastA*(sm: var SmLookaround): untyped =
+  sm.last.a
+
+template lastB*(sm: var SmLookaround): untyped =
+  sm.last.b
+
 func grow*(sm: var SmLookaround) {.inline.} =
-  assert sm.i <= sm.s.len
+  doAssert sm.i <= sm.s.len
   if sm.i == sm.s.len:
     sm.s.setLen(max(1, sm.s.len) * 2)
   sm.i += 1

@@ -269,6 +269,7 @@ func findSomeOptImpl*(
   template opt: untyped = regex.litOpt
   template smA: untyped = ms.a
   template smB: untyped = ms.b
+  template look: untyped = ms.look
   doAssert opt.nfa.s.len > 0
   initMaybeImpl(ms, regexSize)
   ms.clear()
@@ -285,7 +286,7 @@ func findSomeOptImpl*(
     #debugEcho "litIdx=", litIdx
     doAssert litIdx >= i
     i = litIdx
-    i = reversedMatchImpl(smA, smB, text, opt.nfa, i, limit)
+    i = reversedMatchImpl(smA, smB, text, opt.nfa, look, i, limit)
     if i == -1:
       #debugEcho "not.Match=", i
       i = litIdx+1

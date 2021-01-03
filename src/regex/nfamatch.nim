@@ -59,25 +59,27 @@ type
 
 template lookAroundTpl*: untyped {.dirty.} =
   template smL: untyped = look.smL
+  template smLa: untyped = smL.lastA
+  template smLb: untyped = smL.lastB
   template zNfa: untyped = z.subExp.nfa
   smL.grow()
   smL.last.setLen zNfa.s.len
   matched = case z.kind
   of reLookahead:
     look.ahead(
-      smL.lastA, smL.lastB, capts, captx,
+      smLa, smLb, capts, captx,
       text, zNfa, look, i, {mfAnchored})
   of reNotLookahead:
     not look.ahead(
-      smL.lastA, smL.lastB, capts, captx,
+      smLa, smLb, capts, captx,
       text, zNfa, look, i, {mfAnchored})
   of reLookbehind:
     look.behind(
-      smL.lastA, smL.lastB, capts, captx,
+      smLa, smLb, capts, captx,
       text, zNfa, look, i, 0) != -1
   of reNotLookbehind:
     look.behind(
-      smL.lastA, smL.lastB, capts, captx,
+      smLa, smLb, capts, captx,
       text, zNfa, look, i, 0) == -1
   else:
     doAssert false
@@ -284,10 +286,10 @@ func reversedMatchImpl*(
   smA, smB: var Submatches,
   text: string,
   nfa: Nfa,
+  look: var Lookaround,
   start, limit: int
 ): int =
   var capts: Capts
   var captIdx = -1'i32
-  var look = initLook()
   reversedMatchImpl(
     smA, smB, capts, captIdx, text, nfa, look, start, limit)

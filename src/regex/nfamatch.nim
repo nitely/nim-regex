@@ -231,13 +231,13 @@ func matchImpl*(
     m.boundaries = smA[0].bounds
 
 func startsWithImpl*(text: string, regex: Regex, start: int): bool =
+  # XXX optimize mfShortestMatch, mfNoCaptures
+  template flags: untyped = {mfAnchored, mfShortestMatch, mfNoCaptures}
   var
     smA = newSubmatches(regex.nfa.s.len)
     smB = newSubmatches(regex.nfa.s.len)
     capts: Capts
     capt = -1'i32
     look = initLook()
-  # XXX optimize mfShortestMatch, mfNoCaptures
-  const flags = {mfAnchored, mfShortestMatch, mfNoCaptures}
   result = matchImpl(
     smA, smB, capts, capt, text, regex.nfa, look, start, flags)

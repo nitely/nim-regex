@@ -44,28 +44,29 @@ template lookAroundTpl*: untyped {.dirty.} =
   template smLa: untyped = smL.lastA
   template smLb: untyped = smL.lastB
   template zNfa: untyped = z.subExp.nfa
-  var flags = {mfAnchored}
-  if z.subExp.reverseCapts:
-    flags.incl mfReverseCapts
+  let flags2 = if z.subExp.reverseCapts:
+    {mfAnchored, mfReverseCapts}
+  else:
+    {mfAnchored}
   smL.grow()
   smL.last.setLen zNfa.s.len
   matched = case z.kind
   of reLookahead:
     look.ahead(
       smLa, smLb, capts, captx,
-      text, zNfa, look, i, flags)
+      text, zNfa, look, i, flags2)
   of reNotLookahead:
     not look.ahead(
       smLa, smLb, capts, captx,
-      text, zNfa, look, i, flags)
+      text, zNfa, look, i, flags2)
   of reLookbehind:
     look.behind(
       smLa, smLb, capts, captx,
-      text, zNfa, look, i, 0, flags) != -1
+      text, zNfa, look, i, 0, flags2) != -1
   of reNotLookbehind:
     look.behind(
       smLa, smLb, capts, captx,
-      text, zNfa, look, i, 0, flags) == -1
+      text, zNfa, look, i, 0, flags2) == -1
   else:
     doAssert false
     false
@@ -236,7 +237,7 @@ func matchImpl*(
     smA, smB, capts, capt, text, regex.nfa, look, start)
   if result:
     constructSubmatches(
-      m.captures, capts, smA[0].ci, regex.groupsCount)
+      m.captures, capts, capt, regex.groupsCount)
     if regex.namedGroups.len > 0:
       m.namedGroups = regex.namedGroups
     m.boundaries = smA[0].bounds

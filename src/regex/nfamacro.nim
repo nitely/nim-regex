@@ -241,19 +241,22 @@ func genLookaroundMatch(
   look: Lookaround
 ): NimNode =
   template nfa: untyped = n.subExp.nfa
-  let smL = look.smL
+  template smL: untyped = look.smL
   let smlA = quote do: lastA(`smL`)
   let smlB = quote do: lastB(`smL`)
+  var flags = {mfAnchored}
+  if n.subExp.reverseCapts:
+    flags.incl mfReverseCapts
   var lookaroundStmt = case n.kind
     of reLookahead, reNotLookahead:
       look.ahead(
         smlA, smlB, capts, captx, matched,
-        text, charIdx, nfa, look, {mfAnchored})
+        text, charIdx, nfa, look, flags)
     else:
       doAssert n.kind in {reLookbehind, reNotLookbehind}
       look.behind(
         smlA, smlB, capts, captx, matched,
-        text, charIdx, nfa, look, {mfAnchored})
+        text, charIdx, nfa, look, flags)
   if n.kind in {reNotLookahead, reNotLookbehind}:
     lookaroundStmt = quote do:
       `lookaroundStmt`
@@ -433,15 +436,15 @@ func matchImpl(
   look: Lookaround,
   flags: set[MatchFlag]
 ): NimNode =
-  defVars c, iPrev, cPrev, captx
+  defVars c, i, cPrev, captx
   let eoe = newLit nfa.eoeIdx
   let c2 = quote do: int32(`c`)
   let nextStateStmt = nextState(
-    smA, smB, c2, capts, iPrev, cPrev, captx,
+    smA, smB, c2, capts, i, cPrev, captx,
     matched, eoe, text, nfa, look, flags)
   let cEoe = newLit -1'i32
   let nextStateEoeStmt = nextState(
-    smA, smB, cEoe, capts, iPrev, cPrev, captx,
+    smA, smB, cEoe, capts, i, cPrev, captx,
     matched, eoe, text, nfa, look, flags, eoeOnly = true)
   let eoeBailOutStmt = if mfAnchored in flags:
     quote do:
@@ -449,29 +452,36 @@ func matchImpl(
         break
   else:
     newEmptyNode()
+  let captsStmt = if mfReverseCapts in flags:
+    quote do:
+      `captIdx` = reverse(`capts`, `smA`[0].ci, `captIdx`)
+  else:
+    quote do:
+      `captIdx` = `smA`[0].ci
   result = quote do:
     var
       `c` = Rune(-1)
       `cPrev` = -1'i32
-      `iPrev` = `start`
+      `i` = `start`
+      iNext = `start`
       `captx` {.used.} = -1'i32
-      i = `start`
-    if `start`-1 in 0 .. `text`.len-1:  # XXX anchored only?
+    if `start`-1 in 0 .. `text`.len-1:
       `cPrev` = bwRuneAt(`text`, `start`-1).int32
     clear(`smA`)
-    add(`smA`, (0'i16, `captIdx`, i .. i-1))
-    while i < `text`.len:
-      fastRuneAt(`text`, i, `c`, true)
+    add(`smA`, (0'i16, `captIdx`, `i` .. `i`-1))
+    while `i` < `text`.len:
+      fastRuneAt(`text`, iNext, `c`, true)
       `nextStateStmt`
       if `smA`.len == 0:
         break
       `eoeBailOutStmt`
-      `iPrev` = i
+      `i` = iNext
       `cPrev` = `c2`
     `c` = Rune(-1)
     `nextStateEoeStmt`
     if `smA`.len > 0:
-      `captIdx` = `smA`[0].ci
+      doAssert `smA`[0].ni == `eoe`
+      `captsStmt`
     `matched` = `smA`.len > 0
 
 func reversedMatchImpl(
@@ -480,43 +490,50 @@ func reversedMatchImpl(
   look: Lookaround,
   flags: set[MatchFlag]
 ): NimNode =
-  defVars c, iPrev, cPrev, captx
+  defVars c, i, cPrev, captx
   let flags = flags + {mfAnchored, mfBwMatch}
   let eoe = newLit nfa.eoeIdx
   let c2 = quote do: int32(`c`)
   let nextStateStmt = nextState(
-    smA, smB, c2, capts, iPrev, cPrev, captx,
+    smA, smB, c2, capts, i, cPrev, captx,
     matched, eoe, text, nfa, look, flags)
   #let limit0 = limit.kind in nnkLiterals and limit.intVal == 0
   let cEoe = newLit -1'i32
   let nextStateEoeStmt = nextState(
-    smA, smB, cEoe, capts, iPrev, cPrev, captx,
+    smA, smB, cEoe, capts, i, cPrev, captx,
     matched, eoe, text, nfa, look, flags, eoeOnly = true)
+  let captsStmt = if mfReverseCapts in flags:
+    quote do:
+      `captIdx` = reverse(`capts`, `smA`[0].ci, `captIdx`)
+  else:
+    quote do:
+      `captIdx` = `smA`[0].ci
   result = quote do:
     #doAssert `start` >= `limit`
     var
       `c` = Rune(-1)
       `cPrev` = -1'i32
-      `iPrev` = `start`
+      `i` = `start`
+      iNext = `start`
       `captx` {.used.} = -1'i32
-      i = `start`
     if `start` in 0 .. `text`.len-1:
       `cPrev` = runeAt(`text`, `start`).int32
     clear(`smA`)
-    add(`smA`, (0'i16, `captIdx`, i .. i-1))
-    while i > 0:
-      bwFastRuneAt(`text`, i, `c`)
+    add(`smA`, (0'i16, `captIdx`, `i` .. `i`-1))
+    while iNext > 0:
+      bwFastRuneAt(`text`, iNext, `c`)
       `nextStateStmt`
       if `smA`.len == 0:
         break
       if `smA`[0].ni == `eoe`:
         break
-      `iPrev` = i
+      `i` = iNext
       `cPrev` = `c2`
     `c` = Rune(-1)
     `nextStateEoeStmt`
     if `smA`.len > 0:
-      `captIdx` = reverse(`capts`, `smA`[0].ci, `captIdx`)
+      doAssert `smA`[0].ni == `eoe`
+      `captsStmt`
     `matched` = `smA`.len > 0
 
 template look(smL: NimNode): untyped =

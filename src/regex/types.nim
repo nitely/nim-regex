@@ -123,6 +123,7 @@ type
   SubExp* = object
     nfa*: Nfa
     rpn*: RpnExp
+    reverseCapts*: bool
 
 func toCharNode*(r: Rune): Node =
   ## return a ``Node`` that is meant to be matched
@@ -222,6 +223,12 @@ const
     reLookahead,
     reLookbehind,
     reNotLookahead,
+    reNotLookbehind}
+  lookaheadKind* = {
+    reLookahead,
+    reNotLookahead}
+  lookbehindKind* = {
+    reLookbehind,
     reNotLookbehind}
   shorthandKind* = {
     reWord,

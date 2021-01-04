@@ -70,6 +70,7 @@ type
     mfFindMatchOpt
     mfAnchored
     mfBwMatch
+    mfReverseCapts
   MatchFlags* = set[MatchFlag]
   RegexMatch* = object
     ## result from matching operations
@@ -147,6 +148,8 @@ func setLen*(sm: var Submatches, size: int) {.inline.} =
 when defined(release):
   {.pop.}
 
+# XXX maybe store the lookaround number + count, and use a fixed
+#     size seq to reduce allocations
 type
   SmLookaroundItem* = object
     a, b: Submatches
@@ -168,10 +171,10 @@ template last*(sm: var SmLookaround): untyped =
   sm.s[sm.i-1]
 
 template lastA*(sm: var SmLookaround): untyped =
-  sm.last.a
+  last(sm).a
 
 template lastB*(sm: var SmLookaround): untyped =
-  sm.last.b
+  last(sm).b
 
 func grow*(sm: var SmLookaround) {.inline.} =
   doAssert sm.i <= sm.s.len

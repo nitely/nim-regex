@@ -31,7 +31,8 @@ type
     text: string,
     nfa: Nfa,
     look: var Lookaround,
-    start, limit: int
+    start, limit: int,
+    flags: set[MatchFlag]
   ): int {.noSideEffect, raises: [].}
   Lookaround* = object
     ahead*: AheadSig
@@ -43,25 +44,28 @@ template lookAroundTpl*: untyped {.dirty.} =
   template smLa: untyped = smL.lastA
   template smLb: untyped = smL.lastB
   template zNfa: untyped = z.subExp.nfa
+  var flags = {mfAnchored}
+  if z.subExp.reverseCapts:
+    flags.incl mfReverseCapts
   smL.grow()
   smL.last.setLen zNfa.s.len
   matched = case z.kind
   of reLookahead:
     look.ahead(
       smLa, smLb, capts, captx,
-      text, zNfa, look, i, {mfAnchored})
+      text, zNfa, look, i, flags)
   of reNotLookahead:
     not look.ahead(
       smLa, smLb, capts, captx,
-      text, zNfa, look, i, {mfAnchored})
+      text, zNfa, look, i, flags)
   of reLookbehind:
     look.behind(
       smLa, smLb, capts, captx,
-      text, zNfa, look, i, 0) != -1
+      text, zNfa, look, i, 0, flags) != -1
   of reNotLookbehind:
     look.behind(
       smLa, smLb, capts, captx,
-      text, zNfa, look, i, 0) == -1
+      text, zNfa, look, i, 0, flags) == -1
   else:
     doAssert false
     false
@@ -129,7 +133,7 @@ func matchImpl(
     captx = -1'i32
     matched = false
     anchored = mfAnchored in flags
-  if start-1 in 0 .. text.len-1:  # XXX anchored only?
+  if start-1 in 0 .. text.len-1:
     cPrev = bwRuneAt(text, start-1).int32
   smA.clear()
   smA.add (0'i16, captIdx, i .. i-1)
@@ -145,7 +149,10 @@ func matchImpl(
   c = Rune(-1)
   nextStateTpl()
   if smA.len > 0:
-    captIdx = smA[0].ci
+    if mfReverseCapts in flags:
+      captIdx = reverse(capts, smA[0].ci, captIdx)
+    else:
+      captIdx = smA[0].ci
   return smA.len > 0
 
 func reversedMatchImpl(
@@ -156,7 +163,8 @@ func reversedMatchImpl(
   nfa: Nfa,
   look: var Lookaround,
   start: int,
-  limit = 0
+  limit = 0,
+  flags: set[MatchFlag] = {}
 ): int =
   #doAssert start < len(text)
   doAssert start >= limit
@@ -187,7 +195,10 @@ func reversedMatchImpl(
   nextStateTpl(bwMatch = true)
   for n, capt, bounds in items smA:
     if nfa.s[n].kind == reEoe:
-      captIdx = reverse(capts, capt, captIdx)
+      if mfReverseCapts in flags:
+        captIdx = reverse(capts, capt, captIdx)
+      else:
+        captIdx = capt
       return bounds.a
   return -1
 

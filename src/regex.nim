@@ -1205,6 +1205,23 @@ when isMainModule:
     doAssert match("aΪ", re"\w(?<=a)Ϊ")
     doAssert match("Ϊb", re"\w(?<=Ϊ)b")
     doAssert match("弢Ⓐ", re"\w(?<=弢)Ⓐ")
+    block:  # Follows Nim re's behaviour
+      doAssert match("abc", re"(?<=a)bc", m, start = 1)
+      doAssert(not match("abc", re"(?<=x)bc", m, start = 1))
+      doAssert(not match("abc", re"^bc", m, start = 1))
+    doAssert startsWith("abc", re"b", start = 1)
+    doAssert startsWith("abc", re"(?<=a)b", start = 1)
+    doAssert startsWith("abc", re"b", start = 1)
+    doAssert(not startsWith("abc", re"(?<=x)b", start = 1))
+    doAssert(not startsWith("abc", re"^b", start = 1))
+    doAssert(not match("ab", re"ab(?=x)"))
+    doAssert(not match("ab", re"(?<=x)ab"))
+    doAssert match("ab", re"(?<=^)ab")
+    doAssert match("ab", re"ab(?=$)")
+    doAssert match("abcdefg", re"\w+(?<=(ab)(?=(cd)))\w+", m) and
+      m.captures == @[@[0 .. 1], @[2 .. 3]]
+    doAssert match("abcdefg", re"\w+(?<=(ab)(?=(cd)(?<=(cd))))\w+", m) and
+      m.captures == @[@[0 .. 1], @[2 .. 3], @[2 .. 3]]
     when canUseMacro:
       block:
         var m = false
@@ -1254,6 +1271,12 @@ when isMainModule:
         let text = "[my link](https://example.com)"
         match text, rex"\[([a-z ]*)\]\((https?://[^)]+)\)":
           doAssert matches == @["my link", "https://example.com"]
+          matched = true
+        doAssert matched
+      block:
+        var matched = false
+        match "abcdefg", rex"\w+(?<=(ab)(?=(cd)))\w+":
+          doAssert matches == @["ab", "cd"]
           matched = true
         doAssert matched
 

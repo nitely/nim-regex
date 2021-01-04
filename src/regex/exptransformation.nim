@@ -426,8 +426,9 @@ func rpn(exp: AtomsExp): RpnExp =
   for i in 1 .. ops.len:
     result.s.add ops[ops.len-i]
 
-func subExps(exp: AtomsExp): AtomsExp =
+func subExps(exp: AtomsExp, parentKind = reLookahead): AtomsExp =
   ## Collect and convert lookaround sub-expressions to RPN
+  template n: untyped = result.s[^1]
   result.s = newSeq[Node](exp.s.len)
   result.s.setLen 0
   var i = 0
@@ -452,7 +453,15 @@ func subExps(exp: AtomsExp): AtomsExp =
         inc i
       doAssert exp.s[i].kind == reGroupEnd
       let atoms = AtomsExp(s: exp.s[i0 .. i-1])
-      result.s[^1].subExp.rpn = atoms.subExps.rpn
+      n.subExp.rpn = atoms
+        .subExps(parentKind = n.kind)
+        .rpn
+      # Store whether the capts must be reversed
+      if parentKind in lookaheadKind:
+        n.subExp.reverseCapts = n.kind in lookbehindKind
+      else:
+        doAssert parentKind in lookbehindKind
+        n.subExp.reverseCapts = n.kind in lookaheadKind
       inc i
     else:
       result.s.add exp.s[i]

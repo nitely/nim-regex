@@ -16,8 +16,8 @@ template test(desc: string, body: untyped): untyped =
         echo "[CT/RT] " & desc
       body)()
 
-template check(conditions: bool) =
-  doAssert(conditions)
+template check(condition: bool) =
+  doAssert(condition)
 
 template expect(exception: typedesc, body: untyped): untyped =
   doAssertRaises(exception):
@@ -148,6 +148,12 @@ when (NimMajor, NimMinor) >= (1, 1):
         match txt, rex"(\w)+":
           m = true
         check m)()
+    block:
+      var m = false
+      match "abcdefg", rex"\w+(?<=(ab)(?=(cd)))\w+":
+        check matches == @["ab", "cd"]
+        m = true
+      check m
   
   test "tmatch_macro_captures":
     check matchMacroCapt("ab", rex"(a)b") == @["a"]
@@ -187,6 +193,24 @@ when (NimMajor, NimMinor) >= (1, 1):
     check matchMacroCapt("aaaa", rex"(a*)(a*)") == @["aaaa", ""]
     check matchMacroCapt("aaaa", rex"(a*?)(a*?)") == @["", "aaaa"]
     check matchMacroCapt("aaaa", rex"(a)*(a)") == @["a", "a"]
+    check matchMacroCapt("abcdefg", rex"\w+(?<=(ab))\w+") == @["ab"]
+    check matchMacroCapt("abcdefg", rex"\w+(?=(cd))\w+") == @["cd"]
+    check matchMacroCapt("abcdefg", rex"\w+(?<=(ab))\w+(?<=(fg))") ==
+      @["ab", "fg"]
+    check matchMacroCapt("abcdefg", rex"\w+(?=(cd))\w+(?=(ef))\w+") ==
+      @["cd", "ef"]
+    check matchMacroCapt("abcdefg", rex"\w+(?<=(ab))\w+(?=(ef))\w+") ==
+      @["ab", "ef"]
+    check matchMacroCapt("abcdefg", rex"\w+(?<=(ab)cd(?<=(cd)))\w+") ==
+      @["ab", "cd"]
+    check matchMacroCapt("abcdefg", rex"\w+(?<=(ab)(?<=(ab)))\w+") ==
+      @["ab", "ab"]
+    check matchMacroCapt("abcdefg", rex"\w+(?<=(ab)(?=(cd)))\w+") ==
+      @["ab", "cd"]
+    check matchMacroCapt("abcdefg", rex"\w+(?<=(ab)(?=(cd)(?<=(cd))))\w+") ==
+      @["ab", "cd", "cd"]
+    check matchMacroCapt("abcdefg", rex"\w+(?=(cd)(?<=(cd)))\w+") ==
+      @["cd", "cd"]
 
   test "tmatch_macro_misc":
     check matchMacro("abc", rex"\w+")
@@ -1351,6 +1375,10 @@ test "tstarts_with":
   check "abc".startsWith(re"(a|b)")
   check "bc".startsWith(re"(a|b)")
   check(not "c".startsWith(re"(a|b)"))
+  check startsWith("abc", re"b", start = 1)
+  check startsWith("abc", re"(?<=a)b", start = 1)
+  check(not startsWith("abc", re"(?<=x)b", start = 1))
+  check(not startsWith("abc", re"^b", start = 1))
 
 test "tends_with":
   check "abc".endsWith(re"bc")
@@ -1720,176 +1748,180 @@ test "tnegative_look_around":
 
 test "tfull_lookarounds":
   var m: RegexMatch
-  doAssert match("ab", re"a(?=b)\w")
-  doAssert(not match("ab", re"a(?=x)\w"))
-  doAssert match("abc", re"a(?=b)\w+")
-  doAssert match("abc", re"a(?=(bc))\w+", m) and
+  check match("ab", re"a(?=b)\w")
+  check(not match("ab", re"a(?=x)\w"))
+  check(not match("ab", re"ab(?=x)"))
+  check match("ab", re"ab(?=$)")
+  check match("abc", re"a(?=b)\w+")
+  check match("abc", re"a(?=(bc))\w+", m) and
     m.captures == @[@[1 .. 2]]
-  doAssert match("ab", re"\w(?<=a)b")
-  doAssert(not match("ab", re"\w(?<=x)b"))
-  doAssert match("abc", re"\w\w(?<=(b))c")
-  doAssert match("abc", re"\w\w(?<=(b))c", m) and
+  check match("ab", re"\w(?<=a)b")
+  check(not match("ab", re"\w(?<=x)b"))
+  check(not match("ab", re"(?<=x)ab"))
+  check match("ab", re"(?<=^)ab")
+  check match("abc", re"\w\w(?<=(b))c")
+  check match("abc", re"\w\w(?<=(b))c", m) and
     m.captures == @[@[1 .. 1]]
-  doAssert match("abc", re"\w\w(?<=(ab))c")
-  doAssert match("abc", re"\w\w(?<=(ab))c", m) and
+  check match("abc", re"\w\w(?<=(ab))c")
+  check match("abc", re"\w\w(?<=(ab))c", m) and
     m.captures == @[@[0 .. 1]]
-  doAssert match("a", re"\w(?<=a)")
-  doAssert(not match("a", re"\w(?=a)"))
-  doAssert match("ab", re"\w(?<=a(?<=a))b")
-  doAssert match("ab", re"\w(?<=a(?<=a(?<=a)))b")
-  doAssert match("ab", re"\w(?<=a(?=b))b")
-  doAssert(not match("ab", re"\w(?=b(?=b))b"))  # JS, D
-  doAssert(not match("ab", re"\w(?<=a(?=b(?=b)))b"))  # JS, D
-  doAssert match("ab", re"\w(?<=a(?<=a)(?=b))b")
-  doAssert match("ab", re"\w(?<=a(?<=a(?=b)))b")
-  doAssert(not match("ab", re"\w(?<=(?<=a)a)b"))  # JS, D
-  doAssert match("aab", re"\w\w(?<=aa(?=b))b")
+  check match("a", re"\w(?<=a)")
+  check(not match("a", re"\w(?=a)"))
+  check match("ab", re"\w(?<=a(?<=a))b")
+  check match("ab", re"\w(?<=a(?<=a(?<=a)))b")
+  check match("ab", re"\w(?<=a(?=b))b")
+  check(not match("ab", re"\w(?=b(?=b))b"))  # JS, D
+  check(not match("ab", re"\w(?<=a(?=b(?=b)))b"))  # JS, D
+  check match("ab", re"\w(?<=a(?<=a)(?=b))b")
+  check match("ab", re"\w(?<=a(?<=a(?=b)))b")
+  check(not match("ab", re"\w(?<=(?<=a)a)b"))  # JS, D
+  check match("aab", re"\w\w(?<=aa(?=b))b")
   block:
-    doAssert match("aaab", re"(\w*)(\w*?)", m) and
+    check match("aaab", re"(\w*)(\w*?)", m) and
       m.captures == @[@[0 .. 3], @[4 .. 3]]
-    doAssert match("aaab", re".*(?<=^(\w*)(\w*?)$)", m) and
+    check match("aaab", re".*(?<=^(\w*)(\w*?)$)", m) and
       m.captures == @[@[0 .. 3], @[4 .. 3]]
-    doAssert match("aaab", re".*(?<=^(\w*)(\w*)$)", m) and
+    check match("aaab", re".*(?<=^(\w*)(\w*)$)", m) and
       m.captures == @[@[0 .. -1], @[0 .. 3]]
-    doAssert match("aaab", re"(\w*?)(\w*)(\w*?)", m) and
+    check match("aaab", re"(\w*?)(\w*)(\w*?)", m) and
       m.captures == @[@[0 .. -1], @[0 .. 3], @[4 .. 3]]
-    doAssert match("aaab", re".*(?<=^(\w*?)(\w*)(\w*?)$)", m) and
+    check match("aaab", re".*(?<=^(\w*?)(\w*)(\w*?)$)", m) and
       m.captures == @[@[0 .. -1], @[0 .. 3], @[4 .. 3]]
-    doAssert match("aaab", re"(\w*)(\w??)", m) and
+    check match("aaab", re"(\w*)(\w??)", m) and
       m.captures == @[@[0 .. 3], @[4 .. 3]]
-    doAssert match("aaab", re".*(?<=^(\w*)(\w??)$)", m) and
+    check match("aaab", re".*(?<=^(\w*)(\w??)$)", m) and
       m.captures == @[@[0 .. 3], @[4 .. 3]]
-    doAssert match("aaab", re".*(?<=^(\w*)(\w?)$)", m) and
+    check match("aaab", re".*(?<=^(\w*)(\w?)$)", m) and
       m.captures == @[@[0 .. 2], @[3 .. 3]]
-    doAssert match("aaab", re".*(?<=^(\w*?)(\w?)(\w*?)$)", m) and
+    check match("aaab", re".*(?<=^(\w*?)(\w?)(\w*?)$)", m) and
       m.captures == @[@[0 .. 2], @[3 .. 3], @[4 .. 3]]
-    doAssert match("aaab", re".*(?<=^(\w*?)(\w??)(\w*?)$)", m) and
+    check match("aaab", re".*(?<=^(\w*?)(\w??)(\w*?)$)", m) and
       m.captures == @[@[0 .. 3], @[4 .. 3], @[4 .. 3]]
-    doAssert match("aaab", re".*(?<=^(\w??)(\w*?)$)", m) and
+    check match("aaab", re".*(?<=^(\w??)(\w*?)$)", m) and
       m.captures == @[@[0 .. 0], @[1 .. 3]]
-    doAssert match("aaab", re".*(?<=^(\w?)(\w*?)$)", m) and
+    check match("aaab", re".*(?<=^(\w?)(\w*?)$)", m) and
       m.captures == @[@[0 .. 0], @[1 .. 3]]
-    doAssert match("aaab", re".*(?<=^(\w*?)(\w??)$)", m) and
+    check match("aaab", re".*(?<=^(\w*?)(\w??)$)", m) and
       m.captures == @[@[0 .. 3], @[4 .. 3]]
-    doAssert match("aaab", re".*(?<=^(\w*)(\w??)$)", m) and
+    check match("aaab", re".*(?<=^(\w*)(\w??)$)", m) and
       m.captures == @[@[0 .. 3], @[4 .. 3]]
-    doAssert match("aaab", re".*(?<=^(\w*?)(\w?)$)", m) and
+    check match("aaab", re".*(?<=^(\w*?)(\w?)$)", m) and
       m.captures == @[@[0 .. 2], @[3 .. 3]]
-    doAssert match("aaab", re".*(?<=^(\w*)(\w?)$)", m) and
+    check match("aaab", re".*(?<=^(\w*)(\w?)$)", m) and
       m.captures == @[@[0 .. 2], @[3 .. 3]]
-    doAssert match("aaab", re".*(?<=^(\w*?)(\w*?)(\w??)$)", m) and
+    check match("aaab", re".*(?<=^(\w*?)(\w*?)(\w??)$)", m) and
       m.captures == @[@[0 .. 3], @[4 .. 3], @[4 .. 3]]
-    doAssert match("aaab", re".*(?<=^(\w*?)(\w*)(\w??)$)", m) and
+    check match("aaab", re".*(?<=^(\w*?)(\w*)(\w??)$)", m) and
       m.captures == @[@[0 .. -1], @[0 .. 3], @[4 .. 3]]
   block:
-    doAssert match("aaab", re".*(?<=^(\w)\w+|(\w)\w+$)", m) and
+    check match("aaab", re".*(?<=^(\w)\w+|(\w)\w+$)", m) and
       m.captures == @[@[0 .. 0], @[]]
-    doAssert match("aaab", re".*(?<=^(\d)\w+|(\w)\w+$)", m) and
+    check match("aaab", re".*(?<=^(\d)\w+|(\w)\w+$)", m) and
       m.captures == @[@[], @[0 .. 0]]
-    doAssert match("aaab", re".*(?<=^(\w)\w+|(\w)\w+|(\w)\w+$)", m) and
+    check match("aaab", re".*(?<=^(\w)\w+|(\w)\w+|(\w)\w+$)", m) and
       m.captures == @[@[0 .. 0], @[], @[]]
-    doAssert match("aaab", re".*(?<=^(\d)\w+|(\w)\w+|(\w)\w+$)", m) and
+    check match("aaab", re".*(?<=^(\d)\w+|(\w)\w+|(\w)\w+$)", m) and
       m.captures == @[@[], @[0 .. 0], @[]]
-    doAssert match("aaab", re".*(?<=^(\d)\w+|(\d)\w+|(\w)\w+$)", m) and
+    check match("aaab", re".*(?<=^(\d)\w+|(\d)\w+|(\w)\w+$)", m) and
       m.captures == @[@[], @[], @[0 .. 0]]
   block:
-    doAssert match("aaab", re".*(?<=^(?:(\w)\w+|(\w)\w+)+?$)", m) and
+    check match("aaab", re".*(?<=^(?:(\w)\w+|(\w)\w+)+?$)", m) and
       m.captures == @[@[0 .. 0], @[]]
-    doAssert match("aaab", re".*(?<=^(?:(\d)\w+|(\w)\w+)+?$)", m) and
+    check match("aaab", re".*(?<=^(?:(\d)\w+|(\w)\w+)+?$)", m) and
       m.captures == @[@[], @[0 .. 0]]
-    doAssert match("aaab", re".*(?<=^(?:(\w)\w+|(\w)\w+|(\w)\w+)+?$)", m) and
+    check match("aaab", re".*(?<=^(?:(\w)\w+|(\w)\w+|(\w)\w+)+?$)", m) and
       m.captures == @[@[0 .. 0], @[], @[]]
-    doAssert match("aaab", re".*(?<=^(?:(\d)\w+|(\w)\w+|(\w)\w+)+?$)", m) and
+    check match("aaab", re".*(?<=^(?:(\d)\w+|(\w)\w+|(\w)\w+)+?$)", m) and
       m.captures == @[@[], @[0 .. 0], @[]]
-    doAssert match("aaab", re".*(?<=^(?:(\d)\w+|(\d)\w+|(\w)\w+)+?$)", m) and
+    check match("aaab", re".*(?<=^(?:(\d)\w+|(\d)\w+|(\w)\w+)+?$)", m) and
       m.captures == @[@[], @[], @[0 .. 0]]
-    doAssert match("aaab", re".*(?<=^(?:(\w)\w+|(\w)\w+)*?$)", m) and
+    check match("aaab", re".*(?<=^(?:(\w)\w+|(\w)\w+)*?$)", m) and
       m.captures == @[@[0 .. 0], @[]]
-    doAssert match("aaab", re".*(?<=^(?:(\d)\w+|(\w)\w+)*?$)", m) and
+    check match("aaab", re".*(?<=^(?:(\d)\w+|(\w)\w+)*?$)", m) and
       m.captures == @[@[], @[0 .. 0]]
-    doAssert match("aaab", re".*(?<=^(?:(\w)\w+|(\w)\w+|(\w)\w+)*?$)", m) and
+    check match("aaab", re".*(?<=^(?:(\w)\w+|(\w)\w+|(\w)\w+)*?$)", m) and
       m.captures == @[@[0 .. 0], @[], @[]]
-    doAssert match("aaab", re".*(?<=^(?:(\d)\w+|(\w)\w+|(\w)\w+)*?$)", m) and
+    check match("aaab", re".*(?<=^(?:(\d)\w+|(\w)\w+|(\w)\w+)*?$)", m) and
       m.captures == @[@[], @[0 .. 0], @[]]
-    doAssert match("aaab", re".*(?<=^(?:(\d)\w+|(\d)\w+|(\w)\w+)*?$)", m) and
+    check match("aaab", re".*(?<=^(?:(\d)\w+|(\d)\w+|(\w)\w+)*?$)", m) and
       m.captures == @[@[], @[], @[0 .. 0]]
-    doAssert match("aaab", re".*(?<=^(?:(\w)\w+|(\w)\w+)??$)", m) and
+    check match("aaab", re".*(?<=^(?:(\w)\w+|(\w)\w+)??$)", m) and
       m.captures == @[@[0 .. 0], @[]]
-    doAssert match("aaab", re".*(?<=^(?:(\d)\w+|(\w)\w+)??$)", m) and
+    check match("aaab", re".*(?<=^(?:(\d)\w+|(\w)\w+)??$)", m) and
       m.captures == @[@[], @[0 .. 0]]
-    doAssert match("aaab", re".*(?<=^(?:(\w)\w+|(\w)\w+|(\w)\w+)??$)", m) and
+    check match("aaab", re".*(?<=^(?:(\w)\w+|(\w)\w+|(\w)\w+)??$)", m) and
       m.captures == @[@[0 .. 0], @[], @[]]
-    doAssert match("aaab", re".*(?<=^(?:(\d)\w+|(\w)\w+|(\w)\w+)??$)", m) and
+    check match("aaab", re".*(?<=^(?:(\d)\w+|(\w)\w+|(\w)\w+)??$)", m) and
       m.captures == @[@[], @[0 .. 0], @[]]
-    doAssert match("aaab", re".*(?<=^(?:(\d)\w+|(\d)\w+|(\w)\w+)??$)", m) and
+    check match("aaab", re".*(?<=^(?:(\d)\w+|(\d)\w+|(\w)\w+)??$)", m) and
       m.captures == @[@[], @[], @[0 .. 0]]
   block:
-    doAssert match("aaab", re".*(?<=^(\w)\w+?|(\w)\w+?$)", m) and
+    check match("aaab", re".*(?<=^(\w)\w+?|(\w)\w+?$)", m) and
       m.captures == @[@[0 .. 0], @[]]
-    doAssert match("aaab", re".*(?<=^(\w)\w+|(\w)\w+$)", m) and
+    check match("aaab", re".*(?<=^(\w)\w+|(\w)\w+$)", m) and
       m.captures == @[@[0 .. 0], @[]]
-    doAssert match("aaab", re".*(?<=^(\w)\w+?|(\w)\w+$)", m) and
+    check match("aaab", re".*(?<=^(\w)\w+?|(\w)\w+$)", m) and
       m.captures == @[@[0 .. 0], @[]]
-    doAssert match("aaab", re".*(?<=^(\w)\w+|(\w)\w+?$)", m) and
+    check match("aaab", re".*(?<=^(\w)\w+|(\w)\w+?$)", m) and
       m.captures == @[@[0 .. 0], @[]]
-    doAssert match("aaab", re".*(?<=^(\w+|\w{4}|\w{4}|\w+)*$)", m) and
+    check match("aaab", re".*(?<=^(\w+|\w{4}|\w{4}|\w+)*$)", m) and
       m.captures == @[@[0 .. 3]]
-    doAssert match("aaab", re"(\w*|\w{4}|\w{4}|\w*)*", m) and
+    check match("aaab", re"(\w*|\w{4}|\w{4}|\w*)*", m) and
       m.captures == @[@[0 .. 3, 4 .. 3]]
-    doAssert match("aaab", re".*(?<=^(\w*|\w{4}|\w{4}|\w*)*$)", m) and
+    check match("aaab", re".*(?<=^(\w*|\w{4}|\w{4}|\w*)*$)", m) and
       m.captures == @[@[0 .. -1, 0 .. 3]]
-    doAssert match("aaab", re".*(?<=^(\w+|\w{4}|\w{4}|\w+)+$)", m) and
+    check match("aaab", re".*(?<=^(\w+|\w{4}|\w{4}|\w+)+$)", m) and
       m.captures == @[@[0 .. 3]]
-    doAssert match("aaab", re".*(?<=^(\w)\w+|\w{4}|\w{4}|(\w)\w+$)", m) and
+    check match("aaab", re".*(?<=^(\w)\w+|\w{4}|\w{4}|(\w)\w+$)", m) and
       m.captures == @[@[0 .. 0], @[]]
-    doAssert match("aaab", re".*(?<=^(\d)\w+|(\w{4})|(\w{4})|(\w)\w+$)", m) and
+    check match("aaab", re".*(?<=^(\d)\w+|(\w{4})|(\w{4})|(\w)\w+$)", m) and
       m.captures == @[@[], @[0 .. 3], @[], @[]]
-    doAssert match("aaab", re".*(?<=^(\d)\w+|(\w)\w{3}|(\w)\w{3}|(\w)\w+$)", m) and
+    check match("aaab", re".*(?<=^(\d)\w+|(\w)\w{3}|(\w)\w{3}|(\w)\w+$)", m) and
       m.captures == @[@[], @[0 .. 0], @[], @[]]
-    doAssert match("aaab", re".*(?<=^(\d)\w+|(\d)\w{3}|(\w)\w{3}|(\w)\w+$)", m) and
+    check match("aaab", re".*(?<=^(\d)\w+|(\d)\w{3}|(\w)\w{3}|(\w)\w+$)", m) and
       m.captures == @[@[], @[], @[0 .. 0], @[]]
-    doAssert match("aaab", re".*(?<=^(\d)\w+|(\d)\w{3}|(\d)\w{3}|(\w)\w+$)", m) and
+    check match("aaab", re".*(?<=^(\d)\w+|(\d)\w{3}|(\d)\w{3}|(\w)\w+$)", m) and
       m.captures == @[@[], @[], @[], @[0 .. 0]]
-    doAssert match("aaab", re"(\w*|\w{4}|\w{4}|\w*)+", m) and
+    check match("aaab", re"(\w*|\w{4}|\w{4}|\w*)+", m) and
       m.captures == @[@[0 .. 3, 4 .. 3]]
-    doAssert match("aaab", re".*(?<=^(\w*|\w{4}|\w{4}|\w*)+$)", m) and
+    check match("aaab", re".*(?<=^(\w*|\w{4}|\w{4}|\w*)+$)", m) and
       m.captures == @[@[0 .. -1, 0 .. 3]]
-    doAssert match("aaab", re".*(?<=^(\w+)|(\w{4})|(\w{10})$)", m) and
+    check match("aaab", re".*(?<=^(\w+)|(\w{4})|(\w{10})$)", m) and
       m.captures == @[@[0 .. 3], @[], @[]]
-    doAssert match("aaab", re".*(?<=^(\w{10})|(\w{4})|(\w+)$)", m) and
+    check match("aaab", re".*(?<=^(\w{10})|(\w{4})|(\w+)$)", m) and
       m.captures == @[@[], @[0 .. 3], @[]]
-    doAssert match("aaab", re".*(?<=^((\w{10})|(\w{4})|(\w+))+$)", m) and
+    check match("aaab", re".*(?<=^((\w{10})|(\w{4})|(\w+))+$)", m) and
       m.captures == @[@[0 .. 3], @[], @[0 .. 3], @[]]
-    doAssert match("aaab", re".*(?<=^((\w{10})|(\w{4})|(\w+))*$)", m) and
+    check match("aaab", re".*(?<=^((\w{10})|(\w{4})|(\w+))*$)", m) and
       m.captures == @[@[0 .. 3], @[], @[0 .. 3], @[]]
-    doAssert match("aaab", re".*(?<=^(\w+|\w{4}|\w{4}|\w+)*?$)", m) and
+    check match("aaab", re".*(?<=^(\w+|\w{4}|\w{4}|\w+)*?$)", m) and
       m.captures == @[@[0 .. 3]]
-    doAssert match("aaab", re".*(?<=^(\w*|\w{4}|\w{4}|\w*)*?$)", m) and
+    check match("aaab", re".*(?<=^(\w*|\w{4}|\w{4}|\w*)*?$)", m) and
       m.captures == @[@[0 .. 3]]
-    doAssert match("aaab", re".*(?<=^(\w+|\w{4}|\w{4}|\w+)+?$)", m) and
+    check match("aaab", re".*(?<=^(\w+|\w{4}|\w{4}|\w+)+?$)", m) and
       m.captures == @[@[0 .. 3]]
   when false:
     var matched = false
     match "ab", rex"a(?=b)\w":
       matched = true
-    doAssert matched
+    check matched
     matched = false
     match "ab", rex"\w(?<=a)b":
       matched = true
-    doAssert matched
-  doAssert findAllBounds(r"1abab", re"(?<=\d\w*)ab") ==
+    check matched
+  check findAllBounds(r"1abab", re"(?<=\d\w*)ab") ==
     @[1 .. 2, 3 .. 4]
-  doAssert findAllBounds(r"abab", re"(?<=\d\w*)ab").len == 0
-  doAssert findAllBounds(r"abab1", re"ab(?=\w*\d)") ==
+  check findAllBounds(r"abab", re"(?<=\d\w*)ab").len == 0
+  check findAllBounds(r"abab1", re"ab(?=\w*\d)") ==
     @[0 .. 1, 2 .. 3]
-  doAssert findAllBounds(r"abab", re"ab(?=\w*\d)").len == 0
-  doAssert findAllBounds("foo\nbar\nbar", re"bar(?=$)") ==
+  check findAllBounds(r"abab", re"ab(?=\w*\d)").len == 0
+  check findAllBounds("foo\nbar\nbar", re"bar(?=$)") ==
     @[8 .. 10]
-  doAssert findAllBounds("foo\nbar\nbar", re"(?m)bar(?=$)") ==
+  check findAllBounds("foo\nbar\nbar", re"(?m)bar(?=$)") ==
     @[4 .. 6, 8 .. 10]
-  doAssert findAllBounds("bar\nfoo\nbar", re"(?<=^)bar") ==
+  check findAllBounds("bar\nfoo\nbar", re"(?<=^)bar") ==
     @[0 .. 2]
-  doAssert findAllBounds("bar\nfoo\nbar", re"(?m)(?<=^)bar") ==
+  check findAllBounds("bar\nfoo\nbar", re"(?m)(?<=^)bar") ==
     @[0 .. 2, 8 .. 10]
   block:
     # There is a difference in how nesting is
@@ -1899,54 +1931,67 @@ test "tfull_lookarounds":
     # is less mind blending, and it makes more sense to me
     #
     # These 2 match in D, but not in JS
-    doAssert(not match("ab", re"\w(?<=a(?=b(?<=a)))b"))  # JS, !D
-    doAssert(not match("ab", re"\w(?<=a(?<=a(?=b(?<=a))))b"))  # JS, !D
+    check(not match("ab", re"\w(?<=a(?=b(?<=a)))b"))  # JS, !D
+    check(not match("ab", re"\w(?<=a(?<=a(?=b(?<=a))))b"))  # JS, !D
     # These 2 match in JS, but not in D
-    doAssert match("ab", re"\w(?<=a(?=b(?<=b)))b")  # JS, !D
-    doAssert match("ab", re"\w(?<=a(?<=a(?=b(?<=b))))b")  # JS, !D
+    check match("ab", re"\w(?<=a(?=b(?<=b)))b")  # JS, !D
+    check match("ab", re"\w(?<=a(?<=a(?=b(?<=b))))b")  # JS, !D
   block:
     let asterisk = re"(?<=(?<!\\)(?:\\\\)*)\*"
-    doAssert findAllBounds(r"*foo*", asterisk) ==
+    check findAllBounds(r"*foo*", asterisk) ==
       @[0 .. 0, 4 .. 4]
-    doAssert findAllBounds(r"\*foo\*", asterisk).len == 0
-    doAssert findAllBounds(r"\\*foo\\*", asterisk) ==
+    check findAllBounds(r"\*foo\*", asterisk).len == 0
+    check findAllBounds(r"\\*foo\\*", asterisk) ==
       @[2 .. 2, 8 .. 8]
-    doAssert findAllBounds(r"\\\*foo\\\*", asterisk).len == 0
-    doAssert findAllBounds(r"\\\\*foo\\\\*", asterisk) ==
+    check findAllBounds(r"\\\*foo\\\*", asterisk).len == 0
+    check findAllBounds(r"\\\\*foo\\\\*", asterisk) ==
       @[4 .. 4, 12 .. 12]
-    doAssert findAllBounds(r"\\\\\*foo\\\\\*", asterisk).len == 0
+    check findAllBounds(r"\\\\\*foo\\\\\*", asterisk).len == 0
   block:
     let asterisk = re".*(?<=(?<!\\)(?:\\\\)*)\*"
-    doAssert match(r"*", asterisk)
-    doAssert(not match(r"\*", asterisk))
-    doAssert match(r"\\*", asterisk)
-    doAssert(not match(r"\\\*", asterisk))
-    doAssert match(r"\\\\*", asterisk)
-    doAssert(not match(r"\\\\\*", asterisk))
+    check match(r"*", asterisk)
+    check(not match(r"\*", asterisk))
+    check match(r"\\*", asterisk)
+    check(not match(r"\\\*", asterisk))
+    check match(r"\\\\*", asterisk)
+    check(not match(r"\\\\\*", asterisk))
   block:
-    doAssert findAllBounds("foobarbaz", re"(?<=o)b") == @[3 .. 3]
-    doAssert findAllBounds("foobar", re"o(?=b)") == @[2 .. 2]
-    doAssert findAllBounds("100 in USD100", re"(?<=USD)\d{3}") ==
+    check findAllBounds("foobarbaz", re"(?<=o)b") == @[3 .. 3]
+    check findAllBounds("foobar", re"o(?=b)") == @[2 .. 2]
+    check findAllBounds("100 in USD100", re"(?<=USD)\d{3}") ==
       @[10 .. 12]
-    doAssert findAllBounds("100 in USD100", re"\d{3}(?<=USD\d{3})") ==
+    check findAllBounds("100 in USD100", re"\d{3}(?<=USD\d{3})") ==
       @[10 .. 12]
   block:
-    doAssert match("弢b", re"弢(?=b)\w")
-    doAssert match("a弢", re"a(?=弢)\w")
-    doAssert match("Ⓐb", re"Ⓐ(?=b)\w")
-    doAssert match("aⒶ", re"a(?=Ⓐ)\w")
-    doAssert match("Ⓐb", re"Ⓐ(?=b)\w")
-    doAssert match("aΪ", re"a(?=Ϊ)\w")
-    doAssert match("Ϊb", re"Ϊ(?=b)\w")
-    doAssert match("弢Ⓐ", re"弢(?=Ⓐ)\w")
+    check match("弢b", re"弢(?=b)\w")
+    check match("a弢", re"a(?=弢)\w")
+    check match("Ⓐb", re"Ⓐ(?=b)\w")
+    check match("aⒶ", re"a(?=Ⓐ)\w")
+    check match("Ⓐb", re"Ⓐ(?=b)\w")
+    check match("aΪ", re"a(?=Ϊ)\w")
+    check match("Ϊb", re"Ϊ(?=b)\w")
+    check match("弢Ⓐ", re"弢(?=Ⓐ)\w")
   block:
-    doAssert match("a弢", re"\w(?<=a)弢")
-    doAssert match("弢b", re"\w(?<=弢)b")
-    doAssert match("aⒶ", re"\w(?<=a)Ⓐ")
-    doAssert match("Ⓐb", re"\w(?<=Ⓐ)b")
-    doAssert match("aΪ", re"\w(?<=a)Ϊ")
-    doAssert match("Ϊb", re"\w(?<=Ϊ)b")
-    doAssert match("弢Ⓐ", re"\w(?<=弢)Ⓐ")
+    check match("a弢", re"\w(?<=a)弢")
+    check match("弢b", re"\w(?<=弢)b")
+    check match("aⒶ", re"\w(?<=a)Ⓐ")
+    check match("Ⓐb", re"\w(?<=Ⓐ)b")
+    check match("aΪ", re"\w(?<=a)Ϊ")
+    check match("Ϊb", re"\w(?<=Ϊ)b")
+    check match("弢Ⓐ", re"\w(?<=弢)Ⓐ")
+  block:  # Follows Nim re's behaviour
+    check(not match("abc", re"^bc", m, start = 1))
+    check match("abc", re"(?<=a)bc", m, start = 1)
+    check(not match("abc", re"(?<=x)bc", m, start = 1))
+  block:
+    check match("abcdefg", re"\w+(?<=(ab)cd(?<=(cd)))\w+", m) and
+      m.captures == @[@[0 .. 1], @[2 .. 3]]
+    check match("abcdefg", re"\w+(?<=(ab)(?=(cd)))\w+", m) and
+      m.captures == @[@[0 .. 1], @[2 .. 3]]
+    check match("abcdefg", re"\w+(?<=(ab)(?=(cd)(?<=(cd))))\w+", m) and
+      m.captures == @[@[0 .. 1], @[2 .. 3], @[2 .. 3]]
+    check match("abcdefg", re"\w+(?=(cd)(?<=(cd)))\w+", m) and
+      m.captures == @[@[2 .. 3], @[2 .. 3]]
 
 test "tpretty_errors":
   block:

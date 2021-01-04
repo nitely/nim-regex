@@ -191,6 +191,18 @@ func reversedMatchImpl(
       return bounds.a
   return -1
 
+func reversedMatchImpl*(
+  smA, smB: var Submatches,
+  text: string,
+  nfa: Nfa,
+  look: var Lookaround,
+  start, limit: int
+): int =
+  var capts: Capts
+  var captIdx = -1'i32
+  reversedMatchImpl(
+    smA, smB, capts, captIdx, text, nfa, look, start, limit)
+
 template initLook*: Lookaround =
   Lookaround(
     ahead: matchImpl,
@@ -218,14 +230,14 @@ func matchImpl*(
       m.namedGroups = regex.namedGroups
     m.boundaries = smA[0].bounds
 
-func reversedMatchImpl*(
-  smA, smB: var Submatches,
-  text: string,
-  nfa: Nfa,
-  look: var Lookaround,
-  start, limit: int
-): int =
-  var capts: Capts
-  var captIdx = -1'i32
-  reversedMatchImpl(
-    smA, smB, capts, captIdx, text, nfa, look, start, limit)
+func startsWithImpl*(text: string, regex: Regex, start: int): bool =
+  var
+    smA = newSubmatches(regex.nfa.s.len)
+    smB = newSubmatches(regex.nfa.s.len)
+    capts: Capts
+    capt = -1'i32
+    look = initLook()
+  # XXX optimize mfShortestMatch, mfNoCaptures
+  const flags = {mfAnchored, mfShortestMatch, mfNoCaptures}
+  result = matchImpl(
+    smA, smB, capts, capt, text, regex.nfa, look, start, flags)

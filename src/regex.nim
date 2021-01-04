@@ -728,9 +728,7 @@ func startsWith*(
     doAssert "abc".startsWith(re"\w")
     doAssert not "abc".startsWith(re"\d")
 
-  for bounds in findAllBounds(s, pattern):
-    return bounds.a == start
-  return false
+  startsWithImpl(s, pattern, start)
 
 # XXX use findAll and check last match bounds
 func endsWith*(s: string, pattern: Regex): bool {.inline, raises: [].} =
@@ -1101,6 +1099,38 @@ when isMainModule:
 
   doAssert match("abcabcabc", re"(?:(?:abc)){3}")
   doAssert match("abcabcabc", re"((abc)){3}")
+
+  block:
+    doAssert match("ab", re"a(?=b)\w")
+    doAssert(not match("ab", re"a(?=x)\w"))
+    doAssert match("ab", re"\w(?<=a)b")
+    doAssert(not match("ab", re"\w(?<=x)b"))
+    doAssert match("aaab", re".*(?<=^(\w*?)(\w*?)(\w??)$)", m) and
+      m.captures == @[@[0 .. 3], @[4 .. 3], @[4 .. 3]]
+    doAssert match("aaab", re".*(?<=^(\w*?)(\w*)(\w??)$)", m) and
+      m.captures == @[@[0 .. -1], @[0 .. 3], @[4 .. 3]]
+    doAssert match("aaab", re"(\w*)(\w??)", m) and
+      m.captures == @[@[0 .. 3], @[4 .. 3]]
+    doAssert match("aaab", re".*(?<=^(\w*)(\w??)$)", m) and
+      m.captures == @[@[0 .. 3], @[4 .. 3]]
+    doAssert match("aaab", re".*(?<=^(\w*)(\w?)$)", m) and
+      m.captures == @[@[0 .. 2], @[3 .. 3]]
+    doAssert match("aaab", re".*(?<=^(\d)\w+|(\w)\w{3}|(\w)\w{3}|(\w)\w+$)", m) and
+      m.captures == @[@[], @[0 .. 0], @[], @[]]
+    doAssert match("aaab", re".*(?<=^(\d)\w+|(\d)\w{3}|(\w)\w{3}|(\w)\w+$)", m) and
+      m.captures == @[@[], @[], @[0 .. 0], @[]]
+    doAssert match("aaab", re".*(?<=^(\d)\w+|(\d)\w{3}|(\d)\w{3}|(\w)\w+$)", m) and
+      m.captures == @[@[], @[], @[], @[0 .. 0]]
+    doAssert(not match("ab", re"\w(?<=a(?=b(?<=a)))b"))
+    doAssert(not match("ab", re"\w(?<=a(?<=a(?=b(?<=a))))b"))
+    doAssert match("ab", re"\w(?<=a(?=b(?<=b)))b")
+    doAssert match("ab", re"\w(?<=a(?<=a(?=b(?<=b))))b")
+    doAssert findAllBounds(r"1abab", re"(?<=\d\w*)ab") ==
+      @[1 .. 2, 3 .. 4]
+    doAssert findAllBounds(r"abab", re"(?<=\d\w*)ab").len == 0
+    doAssert findAllBounds(r"abab1", re"ab(?=\w*\d)") ==
+      @[0 .. 1, 2 .. 3]
+    doAssert findAllBounds(r"abab", re"ab(?=\w*\d)").len == 0
 
   doAssert match("ab", re"a(?=b)\w")
   doAssert(not match("ab", re"a(?=x)\w"))

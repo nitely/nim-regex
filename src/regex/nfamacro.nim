@@ -8,6 +8,7 @@ import std/sets
 import pkg/unicodedb/properties
 import pkg/unicodedb/types as utypes
 
+import ./common
 import ./types
 import ./nfatype
 import ./compiler
@@ -36,28 +37,6 @@ type
   Lookaround = object
     ahead, behind: Sig
     smL: NimNode
-
-# XXX move to common
-func bwRuneAt(s: string, n: int): Rune =
-  ## Take rune ending at ``n``
-  doAssert n >= 0
-  doAssert n <= s.len-1
-  var n = n
-  while n > 0 and s[n].ord shr 6 == 0b10:
-    dec n
-  fastRuneAt(s, n, result, false)
-
-# XXX move to common
-template bwFastRuneAt(
-  s: string, n: var int, result: var Rune
-) =
-  ## Take rune ending at ``n``
-  doAssert n > 0
-  doAssert n <= s.len
-  dec n
-  while n > 0 and s[n].ord shr 6 == 0b10:
-    dec n
-  fastRuneAt(s, n, result, false)
 
 # todo: can not use unicodeplus due to
 # https://github.com/nim-lang/Nim/issues/7059

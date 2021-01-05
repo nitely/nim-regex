@@ -6,7 +6,7 @@ import std/parseutils
 import pkg/unicodedb/properties
 
 import ./exptype
-import ./nodetype
+import ./types
 import ./common
 import ./scanner
 
@@ -622,19 +622,19 @@ func parseGroupTag(sc: Scanner[Rune]): Node =
       isCapturing = false)
   #reLookahead,
   #reLookbehind,
-  of "=".toRune, "<".toRune, "!".toRune:
+  of '='.Rune, '<'.Rune, '!'.Rune:
     var lookAroundKind: NodeKind
     case sc.peek
-    of "=".toRune:
+    of '='.Rune:
       lookAroundKind = reLookahead
-    of "!".toRune:
+    of '!'.Rune:
       lookAroundKind = reNotLookahead
-    of "<".toRune:
+    of '<'.Rune:
       discard sc.next()
       case sc.peek:
-      of "=".toRune:
+      of '='.Rune:
         lookAroundKind = reLookbehind
-      of "!".toRune:
+      of '!'.Rune:
         lookAroundKind = reNotLookbehind
       else:
         prettyCheck(
@@ -642,30 +642,12 @@ func parseGroupTag(sc: Scanner[Rune]): Node =
           "Invalid lookabehind, expected `<=` or `<!` symbol")
     else:
       doAssert false
-    doAssert sc.peek in ["=".toRune, "!".toRune]
+    doAssert sc.peek in ['='.Rune, '!'.Rune]
     discard sc.next
-    # todo: support sets and more
-    case sc.peek
-    of "\\".toRune:
-      let n = parseEscapedSeq(sc)
-      prettyCheck(
-        n.kind == reChar,
-        "Invalid lookaround. A " &
-        "character was expected, but " &
-        "found a special symbol")
-      result = Node(kind: lookAroundKind, cp: n.cp)
-    else:
-      prettyCheck(
-        not sc.finished,
-        "Invalid lookaround. A character " &
-        "was expected, but found nothing (end of string)")
-      result = Node(kind: lookAroundKind, cp: sc.next())
     prettyCheck(
-      sc.peek == ")".toRune,
-      "Invalid lookaround, expected closing symbol. " &
-      "Beware lookaround is currently limited to " &
-      "match one single character")
-    discard sc.next()
+      sc.peek != ')'.Rune,
+      "Empty lookaround is not allowed")
+    result = Node(kind: lookAroundKind)
   else:
     prettyCheck(
       false,

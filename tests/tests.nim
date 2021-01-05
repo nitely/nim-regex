@@ -16,8 +16,8 @@ template test(desc: string, body: untyped): untyped =
         echo "[CT/RT] " & desc
       body)()
 
-template check(conditions: bool) =
-  doAssert(conditions)
+template check(condition: bool) =
+  doAssert(condition)
 
 template expect(exception: typedesc, body: untyped): untyped =
   doAssertRaises(exception):
@@ -74,21 +74,20 @@ func findAllCapt(s: string, reg: Regex): seq[seq[seq[Slice[int]]]] =
 
 when (NimMajor, NimMinor) >= (1, 1):
   template matchMacro(s, r: untyped): untyped =
-    block:
-      var m = false
-      match s, r:
-        m = true
-      m
+    (func (): bool =
+      result = false
+      let exp = s
+      match exp, r:
+        result = true)()
 
   template matchMacroCapt(s, r: untyped): untyped =
-    block:
+    (func (): seq[string] =
       var m = false
-      var c: seq[string]
-      match s, r:
+      let exp = s
+      match exp, r:
         m = true
-        c = matches
-      check m
-      c
+        result = matches
+      check m)()
 
   test "tmatch_macro":
     block hasOwnScope:
@@ -148,6 +147,12 @@ when (NimMajor, NimMinor) >= (1, 1):
         match txt, rex"(\w)+":
           m = true
         check m)()
+    block:
+      var m = false
+      match "abcdefg", rex"\w+(?<=(ab)(?=(cd)))\w+":
+        check matches == @["ab", "cd"]
+        m = true
+      check m
   
   test "tmatch_macro_captures":
     check matchMacroCapt("ab", rex"(a)b") == @["a"]
@@ -187,6 +192,24 @@ when (NimMajor, NimMinor) >= (1, 1):
     check matchMacroCapt("aaaa", rex"(a*)(a*)") == @["aaaa", ""]
     check matchMacroCapt("aaaa", rex"(a*?)(a*?)") == @["", "aaaa"]
     check matchMacroCapt("aaaa", rex"(a)*(a)") == @["a", "a"]
+    check matchMacroCapt("abcdefg", rex"\w+(?<=(ab))\w+") == @["ab"]
+    check matchMacroCapt("abcdefg", rex"\w+(?=(cd))\w+") == @["cd"]
+    check matchMacroCapt("abcdefg", rex"\w+(?<=(ab))\w+(?<=(fg))") ==
+      @["ab", "fg"]
+    check matchMacroCapt("abcdefg", rex"\w+(?=(cd))\w+(?=(ef))\w+") ==
+      @["cd", "ef"]
+    check matchMacroCapt("abcdefg", rex"\w+(?<=(ab))\w+(?=(ef))\w+") ==
+      @["ab", "ef"]
+    check matchMacroCapt("abcdefg", rex"\w+(?<=(ab)cd(?<=(cd)))\w+") ==
+      @["ab", "cd"]
+    check matchMacroCapt("abcdefg", rex"\w+(?<=(ab)(?<=(ab)))\w+") ==
+      @["ab", "ab"]
+    check matchMacroCapt("abcdefg", rex"\w+(?<=(ab)(?=(cd)))\w+") ==
+      @["ab", "cd"]
+    check matchMacroCapt("abcdefg", rex"\w+(?<=(ab)(?=(cd)(?<=(cd))))\w+") ==
+      @["ab", "cd", "cd"]
+    check matchMacroCapt("abcdefg", rex"\w+(?=(cd)(?<=(cd)))\w+") ==
+      @["cd", "cd"]
 
   test "tmatch_macro_misc":
     check matchMacro("abc", rex"\w+")
@@ -277,6 +300,198 @@ when (NimMajor, NimMinor) >= (1, 1):
     check matchMacro("1111", rex"(11)*|(111)*")
     check matchMacro("111111", rex"(11)*|(111)*")
     check(not matchMacro("1", rex"(11)*|(111)*"))
+
+  test "tmacro_full_lookarounds":
+    check matchMacro("ab", rex"a(?=b)\w")
+    check(not matchMacro("ab", rex"a(?=x)\w"))
+    check(not matchMacro("ab", rex"ab(?=x)"))
+    check matchMacro("ab", rex"ab(?=$)")
+    check matchMacro("abc", rex"a(?=b)\w+")
+    check matchMacroCapt("abcdefg", rex"a(?=(bc))\w+") ==
+      @["bc"]
+    check matchMacro("ab", rex"\w(?<=a)b")
+    check(not matchMacro("ab", rex"\w(?<=x)b"))
+    check(not matchMacro("ab", rex"(?<=x)ab"))
+    check matchMacro("ab", rex"(?<=^)ab")
+    check matchMacro("abc", rex"\w\w(?<=(b))c")
+    check matchMacroCapt("abc", rex"\w\w(?<=(b))c") ==
+      @["b"]
+    check matchMacro("abc", rex"\w\w(?<=(ab))c")
+    check matchMacroCapt("abc", rex"\w\w(?<=(ab))c") ==
+      @["ab"]
+    check matchMacro("a", rex"\w(?<=a)")
+    check(not matchMacro("a", rex"\w(?=a)"))
+    check matchMacro("ab", rex"\w(?<=a(?<=a))b")
+    check matchMacro("ab", rex"\w(?<=a(?<=a(?<=a)))b")
+    check matchMacro("ab", rex"\w(?<=a(?=b))b")
+    check(not matchMacro("ab", rex"\w(?=b(?=b))b"))
+    check(not matchMacro("ab", rex"\w(?<=a(?=b(?=b)))b"))
+    check matchMacro("ab", rex"\w(?<=a(?<=a)(?=b))b")
+    check matchMacro("ab", rex"\w(?<=a(?<=a(?=b)))b")
+    check(not matchMacro("ab", rex"\w(?<=(?<=a)a)b"))
+    check matchMacro("aab", rex"\w\w(?<=aa(?=b))b")
+    block:
+      check matchMacroCapt("aaab", rex"(\w*)(\w*?)") ==
+        @["aaab", ""]
+      check matchMacroCapt("aaab", rex".*(?<=^(\w*)(\w*?)$)") ==
+        @["aaab", ""]
+      check matchMacroCapt("aaab", rex".*(?<=^(\w*)(\w*)$)") ==
+        @["", "aaab"]
+      check matchMacroCapt("aaab", rex"(\w*?)(\w*)(\w*?)") ==
+        @["", "aaab", ""]
+      check matchMacroCapt("aaab", rex".*(?<=^(\w*?)(\w*)(\w*?)$)") ==
+        @["", "aaab", ""]
+      check matchMacroCapt("aaab", rex"(\w*)(\w??)") ==
+        @["aaab", ""]
+      check matchMacroCapt("aaab", rex".*(?<=^(\w*)(\w??)$)") ==
+        @["aaab", ""]
+      check matchMacroCapt("aaab", rex".*(?<=^(\w*)(\w?)$)") ==
+        @["aaa", "b"]
+      check matchMacroCapt("aaab", rex".*(?<=^(\w*?)(\w?)(\w*?)$)") ==
+        @["aaa", "b", ""]
+      check matchMacroCapt("aaab", rex".*(?<=^(\w*?)(\w??)(\w*?)$)") ==
+        @["aaab", "", ""]
+      check matchMacroCapt("aaab", rex".*(?<=^(\w??)(\w*?)$)") ==
+        @["a", "aab"]
+      check matchMacroCapt("aaab", rex".*(?<=^(\w?)(\w*?)$)") ==
+        @["a", "aab"]
+      check matchMacroCapt("aaab", rex".*(?<=^(\w*?)(\w??)$)") ==
+        @["aaab", ""]
+      check matchMacroCapt("aaab", rex".*(?<=^(\w*)(\w??)$)") ==
+        @["aaab", ""]
+      check matchMacroCapt("aaab", rex".*(?<=^(\w*?)(\w?)$)") ==
+        @["aaa", "b"]
+      check matchMacroCapt("aaab", rex".*(?<=^(\w*)(\w?)$)") ==
+        @["aaa", "b"]
+      check matchMacroCapt("aaab", rex".*(?<=^(\w*?)(\w*?)(\w??)$)") ==
+        @["aaab", "", ""]
+      check matchMacroCapt("aaab", rex".*(?<=^(\w*?)(\w*)(\w??)$)") ==
+        @["", "aaab", ""]
+    block:
+      check matchMacroCapt("aaab", rex".*(?<=^(\w)\w+|(\w)\w+$)") ==
+        @["a", ""]
+      check matchMacroCapt("aaab", rex".*(?<=^(\d)\w+|(\w)\w+$)") ==
+        @["", "a"]
+      check matchMacroCapt("aaab", rex".*(?<=^(\w)\w+|(\w)\w+|(\w)\w+$)") ==
+        @["a", "", ""]
+      check matchMacroCapt("aaab", rex".*(?<=^(\d)\w+|(\w)\w+|(\w)\w+$)") ==
+        @["", "a", ""]
+      check matchMacroCapt("aaab", rex".*(?<=^(\d)\w+|(\d)\w+|(\w)\w+$)") ==
+        @["", "", "a"]
+    block:
+      check matchMacroCapt("aaab", rex".*(?<=^(?:(\w)\w+|(\w)\w+)+?$)") ==
+        @["a", ""]
+      check matchMacroCapt("aaab", rex".*(?<=^(?:(\d)\w+|(\w)\w+)+?$)") ==
+        @["", "a"]
+      check matchMacroCapt("aaab", rex".*(?<=^(?:(\w)\w+|(\w)\w+|(\w)\w+)+?$)") ==
+        @["a", "", ""]
+      check matchMacroCapt("aaab", rex".*(?<=^(?:(\d)\w+|(\w)\w+|(\w)\w+)+?$)") ==
+        @["", "a", ""]
+      check matchMacroCapt("aaab", rex".*(?<=^(?:(\d)\w+|(\d)\w+|(\w)\w+)+?$)") ==
+        @["", "", "a"]
+      check matchMacroCapt("aaab", rex".*(?<=^(?:(\w)\w+|(\w)\w+)*?$)") ==
+        @["a", ""]
+      check matchMacroCapt("aaab", rex".*(?<=^(?:(\d)\w+|(\w)\w+)*?$)") ==
+        @["", "a"]
+      check matchMacroCapt("aaab", rex".*(?<=^(?:(\w)\w+|(\w)\w+|(\w)\w+)*?$)") ==
+        @["a", "", ""]
+      check matchMacroCapt("aaab", rex".*(?<=^(?:(\d)\w+|(\w)\w+|(\w)\w+)*?$)") ==
+        @["", "a", ""]
+      check matchMacroCapt("aaab", rex".*(?<=^(?:(\d)\w+|(\d)\w+|(\w)\w+)*?$)") ==
+        @["", "", "a"]
+      check matchMacroCapt("aaab", rex".*(?<=^(?:(\w)\w+|(\w)\w+)??$)") ==
+        @["a", ""]
+      check matchMacroCapt("aaab", rex".*(?<=^(?:(\d)\w+|(\w)\w+)??$)") ==
+        @["", "a"]
+      check matchMacroCapt("aaab", rex".*(?<=^(?:(\w)\w+|(\w)\w+|(\w)\w+)??$)") ==
+        @["a", "", ""]
+      check matchMacroCapt("aaab", rex".*(?<=^(?:(\d)\w+|(\w)\w+|(\w)\w+)??$)") ==
+        @["", "a", ""]
+      check matchMacroCapt("aaab", rex".*(?<=^(?:(\d)\w+|(\d)\w+|(\w)\w+)??$)") ==
+        @["", "", "a"]
+    block:
+      check matchMacroCapt("aaab", rex".*(?<=^(\w)\w+?|(\w)\w+?$)") ==
+        @["a", ""]
+      check matchMacroCapt("aaab", rex".*(?<=^(\w)\w+|(\w)\w+$)") ==
+        @["a", ""]
+      check matchMacroCapt("aaab", rex".*(?<=^(\w)\w+?|(\w)\w+$)") ==
+        @["a", ""]
+      check matchMacroCapt("aaab", rex".*(?<=^(\w)\w+|(\w)\w+?$)") ==
+        @["a", ""]
+      check matchMacroCapt("aaab", rex".*(?<=^(\w+|\w{4}|\w{4}|\w+)*$)") ==
+        @["aaab"]
+      check matchMacroCapt("aaab", rex"(\w*|\w{4}|\w{4}|\w*)*") ==
+        @[""]
+      check matchMacroCapt("aaab", rex".*(?<=^(\w*|\w{4}|\w{4}|\w*)*$)") ==
+        @["aaab"]
+      check matchMacroCapt("aaab", rex".*(?<=^(\w+|\w{4}|\w{4}|\w+)+$)") ==
+        @["aaab"]
+      check matchMacroCapt("aaab", rex".*(?<=^(\w)\w+|\w{4}|\w{4}|(\w)\w+$)") ==
+        @["a", ""]
+      check matchMacroCapt("aaab", rex".*(?<=^(\d)\w+|(\w{4})|(\w{4})|(\w)\w+$)") ==
+        @["", "aaab", "", ""]
+      check matchMacroCapt("aaab", rex".*(?<=^(\d)\w+|(\w)\w{3}|(\w)\w{3}|(\w)\w+$)") ==
+        @["", "a", "", ""]
+      check matchMacroCapt("aaab", rex".*(?<=^(\d)\w+|(\d)\w{3}|(\w)\w{3}|(\w)\w+$)") ==
+        @["", "", "a", ""]
+      check matchMacroCapt("aaab", rex".*(?<=^(\d)\w+|(\d)\w{3}|(\d)\w{3}|(\w)\w+$)") ==
+        @["", "", "", "a"]
+      check matchMacroCapt("aaab", rex"(\w*|\w{4}|\w{4}|\w*)+") ==
+        @[""]
+      check matchMacroCapt("aaab", rex".*(?<=^(\w*|\w{4}|\w{4}|\w*)+$)") ==
+        @["aaab"]
+      check matchMacroCapt("aaab", rex".*(?<=^(\w+)|(\w{4})|(\w{10})$)") ==
+        @["aaab", "", ""]
+      check matchMacroCapt("aaab", rex".*(?<=^(\w{10})|(\w{4})|(\w+)$)") ==
+        @["", "aaab", ""]
+      check matchMacroCapt("aaab", rex".*(?<=^((\w{10})|(\w{4})|(\w+))+$)") ==
+        @["aaab", "", "aaab", ""]
+      check matchMacroCapt("aaab", rex".*(?<=^((\w{10})|(\w{4})|(\w+))*$)") ==
+        @["aaab", "", "aaab", ""]
+      check matchMacroCapt("aaab", rex".*(?<=^(\w+|\w{4}|\w{4}|\w+)*?$)") ==
+        @["aaab"]
+      check matchMacroCapt("aaab", rex".*(?<=^(\w*|\w{4}|\w{4}|\w*)*?$)") ==
+        @["aaab"]
+      check matchMacroCapt("aaab", rex".*(?<=^(\w+|\w{4}|\w{4}|\w+)+?$)") ==
+        @["aaab"]
+    check(not matchMacro("ab", rex"\w(?<=a(?=b(?<=a)))b"))
+    check(not matchMacro("ab", rex"\w(?<=a(?<=a(?=b(?<=a))))b"))
+    check matchMacro("ab", rex"\w(?<=a(?=b(?<=b)))b")
+    check matchMacro("ab", rex"\w(?<=a(?<=a(?=b(?<=b))))b")
+    block:
+      template asterisk: untyped = rex".*(?<=(?<!\\)(?:\\\\)*)\*"
+      check matchMacro(r"*", asterisk)
+      check(not matchMacro(r"\*", asterisk))
+      check matchMacro(r"\\*", asterisk)
+      check(not matchMacro(r"\\\*", asterisk))
+      check matchMacro(r"\\\\*", asterisk)
+      check(not matchMacro(r"\\\\\*", asterisk))
+    block:
+      check matchMacro(r"弢b", rex"弢(?=b)\w")
+      check matchMacro(r"a弢", rex"a(?=弢)\w")
+      check matchMacro(r"Ⓐb", rex"Ⓐ(?=b)\w")
+      check matchMacro(r"aⒶ", rex"a(?=Ⓐ)\w")
+      check matchMacro(r"Ⓐb", rex"Ⓐ(?=b)\w")
+      check matchMacro(r"aΪ", rex"a(?=Ϊ)\w")
+      check matchMacro(r"Ϊb", rex"Ϊ(?=b)\w")
+      check matchMacro(r"弢Ⓐ", rex"弢(?=Ⓐ)\w")
+    block:
+      check matchMacro(r"a弢", rex"\w(?<=a)弢")
+      check matchMacro(r"弢b", rex"\w(?<=弢)b")
+      check matchMacro(r"aⒶ", rex"\w(?<=a)Ⓐ")
+      check matchMacro(r"Ⓐb", rex"\w(?<=Ⓐ)b")
+      check matchMacro(r"aΪ", rex"\w(?<=a)Ϊ")
+      check matchMacro(r"Ϊb", rex"\w(?<=Ϊ)b")
+      check matchMacro(r"弢Ⓐ", rex"\w(?<=弢)Ⓐ")
+    block:
+      check matchMacroCapt("abcdefg", rex"\w+(?<=(ab)cd(?<=(cd)))\w+") ==
+        @["ab", "cd"]
+      check matchMacroCapt("abcdefg", rex"\w+(?<=(ab)(?=(cd)))\w+") ==
+        @["ab", "cd"]
+      check matchMacroCapt("abcdefg", rex"\w+(?<=(ab)(?=(cd)(?<=(cd))))\w+") ==
+        @["ab", "cd", "cd"]
+      check matchMacroCapt("abcdefg", rex"\w+(?=(cd)(?<=(cd)))\w+") ==
+        @["cd", "cd"]
 
 test "tfull_match":
   check "".isMatch(re"")
@@ -1351,6 +1566,10 @@ test "tstarts_with":
   check "abc".startsWith(re"(a|b)")
   check "bc".startsWith(re"(a|b)")
   check(not "c".startsWith(re"(a|b)"))
+  check startsWith("abc", re"b", start = 1)
+  check startsWith("abc", re"(?<=a)b", start = 1)
+  check(not startsWith("abc", re"(?<=x)b", start = 1))
+  check(not startsWith("abc", re"^b", start = 1))
 
 test "tends_with":
   check "abc".endsWith(re"bc")
@@ -1717,6 +1936,244 @@ test "tnegative_look_around":
   check(not "ab".isMatch(re"\w(?<!c)"))
   check(not "ab".isMatch(re"\w(?<!a)b"))
   check "ab".matchWithCapt(re"(\w(?<!c))b") == @[@["a"]]
+
+test "tfull_lookarounds":
+  var m: RegexMatch
+  check match("ab", re"a(?=b)\w")
+  check(not match("ab", re"a(?=x)\w"))
+  check(not match("ab", re"ab(?=x)"))
+  check match("ab", re"ab(?=$)")
+  check match("abc", re"a(?=b)\w+")
+  check match("abc", re"a(?=(bc))\w+", m) and
+    m.captures == @[@[1 .. 2]]
+  check match("ab", re"\w(?<=a)b")
+  check(not match("ab", re"\w(?<=x)b"))
+  check(not match("ab", re"(?<=x)ab"))
+  check match("ab", re"(?<=^)ab")
+  check match("abc", re"\w\w(?<=(b))c")
+  check match("abc", re"\w\w(?<=(b))c", m) and
+    m.captures == @[@[1 .. 1]]
+  check match("abc", re"\w\w(?<=(ab))c")
+  check match("abc", re"\w\w(?<=(ab))c", m) and
+    m.captures == @[@[0 .. 1]]
+  check match("a", re"\w(?<=a)")
+  check(not match("a", re"\w(?=a)"))
+  check match("ab", re"\w(?<=a(?<=a))b")
+  check match("ab", re"\w(?<=a(?<=a(?<=a)))b")
+  check match("ab", re"\w(?<=a(?=b))b")
+  check(not match("ab", re"\w(?=b(?=b))b"))  # JS, D
+  check(not match("ab", re"\w(?<=a(?=b(?=b)))b"))  # JS, D
+  check match("ab", re"\w(?<=a(?<=a)(?=b))b")
+  check match("ab", re"\w(?<=a(?<=a(?=b)))b")
+  check(not match("ab", re"\w(?<=(?<=a)a)b"))  # JS, D
+  check match("aab", re"\w\w(?<=aa(?=b))b")
+  block:
+    check match("aaab", re"(\w*)(\w*?)", m) and
+      m.captures == @[@[0 .. 3], @[4 .. 3]]
+    check match("aaab", re".*(?<=^(\w*)(\w*?)$)", m) and
+      m.captures == @[@[0 .. 3], @[4 .. 3]]
+    check match("aaab", re".*(?<=^(\w*)(\w*)$)", m) and
+      m.captures == @[@[0 .. -1], @[0 .. 3]]
+    check match("aaab", re"(\w*?)(\w*)(\w*?)", m) and
+      m.captures == @[@[0 .. -1], @[0 .. 3], @[4 .. 3]]
+    check match("aaab", re".*(?<=^(\w*?)(\w*)(\w*?)$)", m) and
+      m.captures == @[@[0 .. -1], @[0 .. 3], @[4 .. 3]]
+    check match("aaab", re"(\w*)(\w??)", m) and
+      m.captures == @[@[0 .. 3], @[4 .. 3]]
+    check match("aaab", re".*(?<=^(\w*)(\w??)$)", m) and
+      m.captures == @[@[0 .. 3], @[4 .. 3]]
+    check match("aaab", re".*(?<=^(\w*)(\w?)$)", m) and
+      m.captures == @[@[0 .. 2], @[3 .. 3]]
+    check match("aaab", re".*(?<=^(\w*?)(\w?)(\w*?)$)", m) and
+      m.captures == @[@[0 .. 2], @[3 .. 3], @[4 .. 3]]
+    check match("aaab", re".*(?<=^(\w*?)(\w??)(\w*?)$)", m) and
+      m.captures == @[@[0 .. 3], @[4 .. 3], @[4 .. 3]]
+    check match("aaab", re".*(?<=^(\w??)(\w*?)$)", m) and
+      m.captures == @[@[0 .. 0], @[1 .. 3]]
+    check match("aaab", re".*(?<=^(\w?)(\w*?)$)", m) and
+      m.captures == @[@[0 .. 0], @[1 .. 3]]
+    check match("aaab", re".*(?<=^(\w*?)(\w??)$)", m) and
+      m.captures == @[@[0 .. 3], @[4 .. 3]]
+    check match("aaab", re".*(?<=^(\w*)(\w??)$)", m) and
+      m.captures == @[@[0 .. 3], @[4 .. 3]]
+    check match("aaab", re".*(?<=^(\w*?)(\w?)$)", m) and
+      m.captures == @[@[0 .. 2], @[3 .. 3]]
+    check match("aaab", re".*(?<=^(\w*)(\w?)$)", m) and
+      m.captures == @[@[0 .. 2], @[3 .. 3]]
+    check match("aaab", re".*(?<=^(\w*?)(\w*?)(\w??)$)", m) and
+      m.captures == @[@[0 .. 3], @[4 .. 3], @[4 .. 3]]
+    check match("aaab", re".*(?<=^(\w*?)(\w*)(\w??)$)", m) and
+      m.captures == @[@[0 .. -1], @[0 .. 3], @[4 .. 3]]
+  block:
+    check match("aaab", re".*(?<=^(\w)\w+|(\w)\w+$)", m) and
+      m.captures == @[@[0 .. 0], @[]]
+    check match("aaab", re".*(?<=^(\d)\w+|(\w)\w+$)", m) and
+      m.captures == @[@[], @[0 .. 0]]
+    check match("aaab", re".*(?<=^(\w)\w+|(\w)\w+|(\w)\w+$)", m) and
+      m.captures == @[@[0 .. 0], @[], @[]]
+    check match("aaab", re".*(?<=^(\d)\w+|(\w)\w+|(\w)\w+$)", m) and
+      m.captures == @[@[], @[0 .. 0], @[]]
+    check match("aaab", re".*(?<=^(\d)\w+|(\d)\w+|(\w)\w+$)", m) and
+      m.captures == @[@[], @[], @[0 .. 0]]
+  block:
+    check match("aaab", re".*(?<=^(?:(\w)\w+|(\w)\w+)+?$)", m) and
+      m.captures == @[@[0 .. 0], @[]]
+    check match("aaab", re".*(?<=^(?:(\d)\w+|(\w)\w+)+?$)", m) and
+      m.captures == @[@[], @[0 .. 0]]
+    check match("aaab", re".*(?<=^(?:(\w)\w+|(\w)\w+|(\w)\w+)+?$)", m) and
+      m.captures == @[@[0 .. 0], @[], @[]]
+    check match("aaab", re".*(?<=^(?:(\d)\w+|(\w)\w+|(\w)\w+)+?$)", m) and
+      m.captures == @[@[], @[0 .. 0], @[]]
+    check match("aaab", re".*(?<=^(?:(\d)\w+|(\d)\w+|(\w)\w+)+?$)", m) and
+      m.captures == @[@[], @[], @[0 .. 0]]
+    check match("aaab", re".*(?<=^(?:(\w)\w+|(\w)\w+)*?$)", m) and
+      m.captures == @[@[0 .. 0], @[]]
+    check match("aaab", re".*(?<=^(?:(\d)\w+|(\w)\w+)*?$)", m) and
+      m.captures == @[@[], @[0 .. 0]]
+    check match("aaab", re".*(?<=^(?:(\w)\w+|(\w)\w+|(\w)\w+)*?$)", m) and
+      m.captures == @[@[0 .. 0], @[], @[]]
+    check match("aaab", re".*(?<=^(?:(\d)\w+|(\w)\w+|(\w)\w+)*?$)", m) and
+      m.captures == @[@[], @[0 .. 0], @[]]
+    check match("aaab", re".*(?<=^(?:(\d)\w+|(\d)\w+|(\w)\w+)*?$)", m) and
+      m.captures == @[@[], @[], @[0 .. 0]]
+    check match("aaab", re".*(?<=^(?:(\w)\w+|(\w)\w+)??$)", m) and
+      m.captures == @[@[0 .. 0], @[]]
+    check match("aaab", re".*(?<=^(?:(\d)\w+|(\w)\w+)??$)", m) and
+      m.captures == @[@[], @[0 .. 0]]
+    check match("aaab", re".*(?<=^(?:(\w)\w+|(\w)\w+|(\w)\w+)??$)", m) and
+      m.captures == @[@[0 .. 0], @[], @[]]
+    check match("aaab", re".*(?<=^(?:(\d)\w+|(\w)\w+|(\w)\w+)??$)", m) and
+      m.captures == @[@[], @[0 .. 0], @[]]
+    check match("aaab", re".*(?<=^(?:(\d)\w+|(\d)\w+|(\w)\w+)??$)", m) and
+      m.captures == @[@[], @[], @[0 .. 0]]
+  block:
+    check match("aaab", re".*(?<=^(\w)\w+?|(\w)\w+?$)", m) and
+      m.captures == @[@[0 .. 0], @[]]
+    check match("aaab", re".*(?<=^(\w)\w+|(\w)\w+$)", m) and
+      m.captures == @[@[0 .. 0], @[]]
+    check match("aaab", re".*(?<=^(\w)\w+?|(\w)\w+$)", m) and
+      m.captures == @[@[0 .. 0], @[]]
+    check match("aaab", re".*(?<=^(\w)\w+|(\w)\w+?$)", m) and
+      m.captures == @[@[0 .. 0], @[]]
+    check match("aaab", re".*(?<=^(\w+|\w{4}|\w{4}|\w+)*$)", m) and
+      m.captures == @[@[0 .. 3]]
+    check match("aaab", re"(\w*|\w{4}|\w{4}|\w*)*", m) and
+      m.captures == @[@[0 .. 3, 4 .. 3]]
+    check match("aaab", re".*(?<=^(\w*|\w{4}|\w{4}|\w*)*$)", m) and
+      m.captures == @[@[0 .. -1, 0 .. 3]]
+    check match("aaab", re".*(?<=^(\w+|\w{4}|\w{4}|\w+)+$)", m) and
+      m.captures == @[@[0 .. 3]]
+    check match("aaab", re".*(?<=^(\w)\w+|\w{4}|\w{4}|(\w)\w+$)", m) and
+      m.captures == @[@[0 .. 0], @[]]
+    check match("aaab", re".*(?<=^(\d)\w+|(\w{4})|(\w{4})|(\w)\w+$)", m) and
+      m.captures == @[@[], @[0 .. 3], @[], @[]]
+    check match("aaab", re".*(?<=^(\d)\w+|(\w)\w{3}|(\w)\w{3}|(\w)\w+$)", m) and
+      m.captures == @[@[], @[0 .. 0], @[], @[]]
+    check match("aaab", re".*(?<=^(\d)\w+|(\d)\w{3}|(\w)\w{3}|(\w)\w+$)", m) and
+      m.captures == @[@[], @[], @[0 .. 0], @[]]
+    check match("aaab", re".*(?<=^(\d)\w+|(\d)\w{3}|(\d)\w{3}|(\w)\w+$)", m) and
+      m.captures == @[@[], @[], @[], @[0 .. 0]]
+    check match("aaab", re"(\w*|\w{4}|\w{4}|\w*)+", m) and
+      m.captures == @[@[0 .. 3, 4 .. 3]]
+    check match("aaab", re".*(?<=^(\w*|\w{4}|\w{4}|\w*)+$)", m) and
+      m.captures == @[@[0 .. -1, 0 .. 3]]
+    check match("aaab", re".*(?<=^(\w+)|(\w{4})|(\w{10})$)", m) and
+      m.captures == @[@[0 .. 3], @[], @[]]
+    check match("aaab", re".*(?<=^(\w{10})|(\w{4})|(\w+)$)", m) and
+      m.captures == @[@[], @[0 .. 3], @[]]
+    check match("aaab", re".*(?<=^((\w{10})|(\w{4})|(\w+))+$)", m) and
+      m.captures == @[@[0 .. 3], @[], @[0 .. 3], @[]]
+    check match("aaab", re".*(?<=^((\w{10})|(\w{4})|(\w+))*$)", m) and
+      m.captures == @[@[0 .. 3], @[], @[0 .. 3], @[]]
+    check match("aaab", re".*(?<=^(\w+|\w{4}|\w{4}|\w+)*?$)", m) and
+      m.captures == @[@[0 .. 3]]
+    check match("aaab", re".*(?<=^(\w*|\w{4}|\w{4}|\w*)*?$)", m) and
+      m.captures == @[@[0 .. 3]]
+    check match("aaab", re".*(?<=^(\w+|\w{4}|\w{4}|\w+)+?$)", m) and
+      m.captures == @[@[0 .. 3]]
+  check findAllBounds(r"1abab", re"(?<=\d\w*)ab") ==
+    @[1 .. 2, 3 .. 4]
+  check findAllBounds(r"abab", re"(?<=\d\w*)ab").len == 0
+  check findAllBounds(r"abab1", re"ab(?=\w*\d)") ==
+    @[0 .. 1, 2 .. 3]
+  check findAllBounds(r"abab", re"ab(?=\w*\d)").len == 0
+  check findAllBounds("foo\nbar\nbar", re"bar(?=$)") ==
+    @[8 .. 10]
+  check findAllBounds("foo\nbar\nbar", re"(?m)bar(?=$)") ==
+    @[4 .. 6, 8 .. 10]
+  check findAllBounds("bar\nfoo\nbar", re"(?<=^)bar") ==
+    @[0 .. 2]
+  check findAllBounds("bar\nfoo\nbar", re"(?m)(?<=^)bar") ==
+    @[0 .. 2, 8 .. 10]
+  block:
+    # There is a difference in how nesting is
+    # handled by JS vs D; in D all of them start
+    # from the outermost one, while in JS they
+    # start from the outer one/parent. I think the JS way
+    # is less mind blending, and it makes more sense to me
+    #
+    # These 2 match in D, but not in JS
+    check(not match("ab", re"\w(?<=a(?=b(?<=a)))b"))  # JS, !D
+    check(not match("ab", re"\w(?<=a(?<=a(?=b(?<=a))))b"))  # JS, !D
+    # These 2 match in JS, but not in D
+    check match("ab", re"\w(?<=a(?=b(?<=b)))b")  # JS, !D
+    check match("ab", re"\w(?<=a(?<=a(?=b(?<=b))))b")  # JS, !D
+  block:
+    let asterisk = re"(?<=(?<!\\)(?:\\\\)*)\*"
+    check findAllBounds(r"*foo*", asterisk) ==
+      @[0 .. 0, 4 .. 4]
+    check findAllBounds(r"\*foo\*", asterisk).len == 0
+    check findAllBounds(r"\\*foo\\*", asterisk) ==
+      @[2 .. 2, 8 .. 8]
+    check findAllBounds(r"\\\*foo\\\*", asterisk).len == 0
+    check findAllBounds(r"\\\\*foo\\\\*", asterisk) ==
+      @[4 .. 4, 12 .. 12]
+    check findAllBounds(r"\\\\\*foo\\\\\*", asterisk).len == 0
+  block:
+    let asterisk = re".*(?<=(?<!\\)(?:\\\\)*)\*"
+    check match(r"*", asterisk)
+    check(not match(r"\*", asterisk))
+    check match(r"\\*", asterisk)
+    check(not match(r"\\\*", asterisk))
+    check match(r"\\\\*", asterisk)
+    check(not match(r"\\\\\*", asterisk))
+  block:
+    check findAllBounds("foobarbaz", re"(?<=o)b") == @[3 .. 3]
+    check findAllBounds("foobar", re"o(?=b)") == @[2 .. 2]
+    check findAllBounds("100 in USD100", re"(?<=USD)\d{3}") ==
+      @[10 .. 12]
+    check findAllBounds("100 in USD100", re"\d{3}(?<=USD\d{3})") ==
+      @[10 .. 12]
+  block:
+    check match("弢b", re"弢(?=b)\w")
+    check match("a弢", re"a(?=弢)\w")
+    check match("Ⓐb", re"Ⓐ(?=b)\w")
+    check match("aⒶ", re"a(?=Ⓐ)\w")
+    check match("Ⓐb", re"Ⓐ(?=b)\w")
+    check match("aΪ", re"a(?=Ϊ)\w")
+    check match("Ϊb", re"Ϊ(?=b)\w")
+    check match("弢Ⓐ", re"弢(?=Ⓐ)\w")
+  block:
+    check match("a弢", re"\w(?<=a)弢")
+    check match("弢b", re"\w(?<=弢)b")
+    check match("aⒶ", re"\w(?<=a)Ⓐ")
+    check match("Ⓐb", re"\w(?<=Ⓐ)b")
+    check match("aΪ", re"\w(?<=a)Ϊ")
+    check match("Ϊb", re"\w(?<=Ϊ)b")
+    check match("弢Ⓐ", re"\w(?<=弢)Ⓐ")
+  block:  # Follows Nim re's behaviour
+    check(not match("abc", re"^bc", m, start = 1))
+    check match("abc", re"(?<=a)bc", m, start = 1)
+    check(not match("abc", re"(?<=x)bc", m, start = 1))
+  block:
+    check match("abcdefg", re"\w+(?<=(ab)cd(?<=(cd)))\w+", m) and
+      m.captures == @[@[0 .. 1], @[2 .. 3]]
+    check match("abcdefg", re"\w+(?<=(ab)(?=(cd)))\w+", m) and
+      m.captures == @[@[0 .. 1], @[2 .. 3]]
+    check match("abcdefg", re"\w+(?<=(ab)(?=(cd)(?<=(cd))))\w+", m) and
+      m.captures == @[@[0 .. 1], @[2 .. 3], @[2 .. 3]]
+    check match("abcdefg", re"\w+(?=(cd)(?<=(cd)))\w+", m) and
+      m.captures == @[@[2 .. 3], @[2 .. 3]]
 
 test "tpretty_errors":
   block:
@@ -2227,21 +2684,23 @@ test "tmisc2_5":
   check match("650-253-0001", re"[0-9]+..*", m)
   check(not match("abc-253-0001", re"[0-9]+..*", m))
   check(not match("6", re"[0-9]+..*", m))
-  block:
-    const re1 = re"((11)*)+(111)*"
-    check match("", re1)
-    check match("11", re1)
-    check match("111", re1)
-    check match("11111", re1)
-    check match("1111111", re1)
-    check match("1111111111", re1)
-    check(not match("1", re1))
-  block:
-    const re1 = re"(11)+(111)*"
-    check(not match("", re1))
-    check match("11", re1)
-    check(not match("111", re1))
-    check match("11111", re1)
+  # VM registry error on Nim < 1.1 (devel)
+  when not defined(runTestAtCT) or (NimMajor, NimMinor) > (1, 0):
+    block:
+      const re1 = re"((11)*)+(111)*"
+      check match("", re1)
+      check match("11", re1)
+      check match("111", re1)
+      check match("11111", re1)
+      check match("1111111", re1)
+      check match("1111111111", re1)
+      check(not match("1", re1))
+    block:
+      const re1 = re"(11)+(111)*"
+      check(not match("", re1))
+      check match("11", re1)
+      check(not match("111", re1))
+      check match("11111", re1)
 
 test "tmisc2_6":
   block:
@@ -2346,8 +2805,8 @@ test "tmisc3":
       m.boundaries == 11 .. 10
     # start is out of bounds, but this is what Nim's re
     # does, nre throws an error
-    check find("foo\nbar\nbar", re"(?m)$", m, start=12) and
-      m.boundaries == 12 .. 11
+    #check find("foo\nbar\nbar", re"(?m)$", m, start=12) and
+    #  m.boundaries == 12 .. 11
   # XXX make this return false?
   check match("abc", re"(?m)$", m, start=50)
   check match("abc", re"(?m)^", m, start=50)

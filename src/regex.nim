@@ -249,11 +249,10 @@ import std/sequtils
 import std/unicode
 from std/strutils import addf
 
-import ./regex/nodetype
+import ./regex/types
 import ./regex/common
 import ./regex/compiler
 import ./regex/nfatype
-import ./regex/nfa
 import ./regex/nfafindall
 import ./regex/nfamatch
 when not defined(noRegexOpt):
@@ -508,50 +507,11 @@ func match*(
     doAssert "abcd".match(re"abcd", m)
     doAssert not "abcd".match(re"abc", m)
 
-  const f: MatchFlags = {}
-  result = matchImpl(s, pattern, m, f, start)
+  result = matchImpl(s, pattern, m, start)
 
 func match*(s: string, pattern: Regex): bool {.inline, raises: [].} =
   var m: RegexMatch
-  result = matchImpl(s, pattern, m, {mfNoCaptures})
-
-template containsImpl: untyped {.dirty.} =
-  const f = {mfShortestMatch, mfFindMatch, mfNoCaptures}
-  var m: RegexMatch
-  result = matchImpl(s, pattern, m, f)
-
-func contains*(s: string, pattern: Regex): bool {.inline, raises: [].} =
-  ##  search for the pattern anywhere
-  ##  in the string. It returns as soon
-  ##  as there is a match, even when the
-  ##  expression has repetitions
-  runnableExamples:
-    doAssert re"bc" in "abcd"
-    doAssert re"(23)+" in "23232"
-    doAssert re"^(23)+$" notin "23232"
-
-  containsImpl()
-
-template findImpl: untyped {.dirty.} =
-  matchImpl(s, pattern, m, {mfFindMatch}, start)
-
-func find*(
-  s: string,
-  pattern: Regex,
-  m: var RegexMatch,
-  start = 0
-): bool {.inline, raises: [].} =
-  ## search through the string looking for the first
-  ## location where there is a match
-  runnableExamples:
-    var m: RegexMatch
-    doAssert "abcd".find(re"bc", m) and
-      m.boundaries == 1 .. 2
-    doAssert not "abcd".find(re"de", m)
-    doAssert "2222".find(re"(22)*", m) and
-      m.group(0) == @[0 .. 1, 2 .. 3]
-
-  findImpl()
+  result = matchImpl(s, pattern, m)
 
 template runeIncAt(s: string, n: var int) =
   ## increment ``n`` up to
@@ -660,6 +620,42 @@ func findAndCaptureAll*(
   for m in s.findAll(pattern):
     result.add s[m.boundaries]
 
+# XXX find shortest match; disable captures
+func contains*(s: string, pattern: Regex): bool {.inline, raises: [].} =
+  ##  search for the pattern anywhere in the string
+  runnableExamples:
+    doAssert re"bc" in "abcd"
+    doAssert re"(23)+" in "23232"
+    doAssert re"^(23)+$" notin "23232"
+
+  for _ in findAllBounds(s, pattern):
+    return true
+  return false
+
+func find*(
+  s: string,
+  pattern: Regex,
+  m: var RegexMatch,
+  start = 0
+): bool {.inline, raises: [].} =
+  ## search through the string looking for the first
+  ## location where there is a match
+  runnableExamples:
+    var m: RegexMatch
+    doAssert "abcd".find(re"bc", m) and
+      m.boundaries == 1 .. 2
+    doAssert not "abcd".find(re"de", m)
+    doAssert "2222".find(re"(22)*", m) and
+      m.group(0) == @[0 .. 1, 2 .. 3]
+
+  m.clear()
+  for m2 in findAll(s, pattern, start):
+    m.captures.add m2.captures
+    m.namedGroups = m2.namedGroups
+    m.boundaries = m2.boundaries
+    return true
+  return false
+
 iterator split*(s: string, sep: Regex): string {.inline, raises: [].} =
   ## return not matched substrings
   runnableExamples:
@@ -731,26 +727,25 @@ func startsWith*(
   runnableExamples:
     doAssert "abc".startsWith(re"\w")
     doAssert not "abc".startsWith(re"\d")
-  var m: RegexMatch
-  result = matchImpl(s, pattern, m, {mfShortestMatch, mfNoCaptures}, start)
 
-template endsWithImpl: untyped {.dirty.} =
-  result = false
-  var
-    m: RegexMatch
-    i = 0
-  while i < s.len:
-    result = matchImpl(s, pattern, m, {mfNoCaptures}, i)
-    if result: return
-    s.runeIncAt(i)
+  startsWithImpl(s, pattern, start)
 
+# XXX use findAll and check last match bounds
 func endsWith*(s: string, pattern: Regex): bool {.inline, raises: [].} =
   ## return whether the string
   ## ends with the pattern or not
   runnableExamples:
     doAssert "abc".endsWith(re"\w")
     doAssert not "abc".endsWith(re"\d")
-  endsWithImpl()
+
+  result = false
+  var
+    m: RegexMatch
+    i = 0
+  while i < s.len:
+    result = match(s, pattern, m, i)
+    if result: return
+    s.runeIncAt(i)
 
 func flatCaptures(
   result: var seq[string],
@@ -1174,6 +1169,59 @@ when isMainModule:
     doAssert findAllBounds("#foo://#", re"[\w]+://") == @[1 .. 6]
     doAssert findAllBounds("abc\nabc\na", re"(?m)^a") ==
       @[0 .. 0, 4 .. 4, 8 .. 8]
+    doAssert match("ab", re"a(?=b)\w")
+    doAssert(not match("ab", re"a(?=x)\w"))
+    doAssert match("ab", re"\w(?<=a)b")
+    doAssert(not match("ab", re"\w(?<=x)b"))
+    doAssert match("aaab", re".*(?<=^(\w*?)(\w*?)(\w??)$)", m) and
+      m.captures == @[@[0 .. 3], @[4 .. 3], @[4 .. 3]]
+    doAssert match("aaab", re".*(?<=^(\w*?)(\w*)(\w??)$)", m) and
+      m.captures == @[@[0 .. -1], @[0 .. 3], @[4 .. 3]]
+    doAssert match("aaab", re"(\w*)(\w??)", m) and
+      m.captures == @[@[0 .. 3], @[4 .. 3]]
+    doAssert match("aaab", re".*(?<=^(\w*)(\w??)$)", m) and
+      m.captures == @[@[0 .. 3], @[4 .. 3]]
+    doAssert match("aaab", re".*(?<=^(\w*)(\w?)$)", m) and
+      m.captures == @[@[0 .. 2], @[3 .. 3]]
+    doAssert match("aaab", re".*(?<=^(\d)\w+|(\w)\w{3}|(\w)\w{3}|(\w)\w+$)", m) and
+      m.captures == @[@[], @[0 .. 0], @[], @[]]
+    doAssert match("aaab", re".*(?<=^(\d)\w+|(\d)\w{3}|(\w)\w{3}|(\w)\w+$)", m) and
+      m.captures == @[@[], @[], @[0 .. 0], @[]]
+    doAssert match("aaab", re".*(?<=^(\d)\w+|(\d)\w{3}|(\d)\w{3}|(\w)\w+$)", m) and
+      m.captures == @[@[], @[], @[], @[0 .. 0]]
+    doAssert(not match("ab", re"\w(?<=a(?=b(?<=a)))b"))
+    doAssert(not match("ab", re"\w(?<=a(?<=a(?=b(?<=a))))b"))
+    doAssert match("ab", re"\w(?<=a(?=b(?<=b)))b")
+    doAssert match("ab", re"\w(?<=a(?<=a(?=b(?<=b))))b")
+    doAssert findAllBounds(r"1abab", re"(?<=\d\w*)ab") ==
+      @[1 .. 2, 3 .. 4]
+    doAssert findAllBounds(r"abab", re"(?<=\d\w*)ab").len == 0
+    doAssert findAllBounds(r"abab1", re"ab(?=\w*\d)") ==
+      @[0 .. 1, 2 .. 3]
+    doAssert findAllBounds(r"abab", re"ab(?=\w*\d)").len == 0
+    doAssert match("aΪ", re"a(?=Ϊ)\w")
+    doAssert match("Ϊb", re"Ϊ(?=b)\w")
+    doAssert match("弢Ⓐ", re"弢(?=Ⓐ)\w")
+    doAssert match("aΪ", re"\w(?<=a)Ϊ")
+    doAssert match("Ϊb", re"\w(?<=Ϊ)b")
+    doAssert match("弢Ⓐ", re"\w(?<=弢)Ⓐ")
+    block:  # Follows Nim re's behaviour
+      doAssert match("abc", re"(?<=a)bc", m, start = 1)
+      doAssert(not match("abc", re"(?<=x)bc", m, start = 1))
+      doAssert(not match("abc", re"^bc", m, start = 1))
+    doAssert startsWith("abc", re"b", start = 1)
+    doAssert startsWith("abc", re"(?<=a)b", start = 1)
+    doAssert startsWith("abc", re"b", start = 1)
+    doAssert(not startsWith("abc", re"(?<=x)b", start = 1))
+    doAssert(not startsWith("abc", re"^b", start = 1))
+    doAssert(not match("ab", re"ab(?=x)"))
+    doAssert(not match("ab", re"(?<=x)ab"))
+    doAssert match("ab", re"(?<=^)ab")
+    doAssert match("ab", re"ab(?=$)")
+    doAssert match("abcdefg", re"\w+(?<=(ab)(?=(cd)))\w+", m) and
+      m.captures == @[@[0 .. 1], @[2 .. 3]]
+    doAssert match("abcdefg", re"\w+(?<=(ab)(?=(cd)(?<=(cd))))\w+", m) and
+      m.captures == @[@[0 .. 1], @[2 .. 3], @[2 .. 3]]
     when canUseMacro:
       block:
         var m = false
@@ -1223,6 +1271,12 @@ when isMainModule:
         let text = "[my link](https://example.com)"
         match text, rex"\[([a-z ]*)\]\((https?://[^)]+)\)":
           doAssert matches == @["my link", "https://example.com"]
+          matched = true
+        doAssert matched
+      block:
+        var matched = false
+        match "abcdefg", rex"\w+(?<=(ab)(?=(cd)))\w+":
+          doAssert matches == @["ab", "cd"]
           matched = true
         doAssert matched
 

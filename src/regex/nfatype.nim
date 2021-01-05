@@ -4,7 +4,7 @@ import std/tables
 import std/sets
 import std/algorithm
 
-import ./nfa
+import ./types
 import ./litopt
 
 type
@@ -41,6 +41,18 @@ func constructSubmatches*(
   for c in captures.mitems:
     c.reverse()
 
+func reverse*(capts: var Capts, a, b: int32): int32 =
+  ## reverse capture indices from a to b; return head
+  doAssert a >= b
+  var capt = a
+  var parent = b
+  while capt != b:
+    let p = capts[capt].parent
+    capts[capt].parent = parent
+    parent = capt
+    capt = p
+  return parent
+
 type
   RegexLit* = distinct string
     ## raw regex literal string
@@ -56,6 +68,9 @@ type
     mfNoCaptures
     mfFindMatch
     mfFindMatchOpt
+    mfAnchored
+    mfBwMatch
+    mfReverseCapts
   MatchFlags* = set[MatchFlag]
   RegexMatch* = object
     ## result from matching operations
@@ -127,5 +142,46 @@ iterator items*(sm: Submatches): PState {.inline.} =
 func cap*(sm: Submatches): int {.inline.} =
   sm.ss.len
 
+func setLen*(sm: var Submatches, size: int) {.inline.} =
+  sm.ss.setLen size
+
 when defined(release):
   {.pop.}
+
+# XXX maybe store the lookaround number + count, and use a fixed
+#     size seq to reduce allocations
+type
+  SmLookaroundItem* = object
+    a, b: Submatches
+  SmLookaround* = object
+    s: seq[SmLookaroundItem]
+    i: int
+
+func setLen*(item: var SmLookaroundItem, size: int) {.inline.} =
+  if item.a == nil:
+    doAssert item.b == nil
+    item.a = newSubmatches size
+    item.b = newSubmatches size
+  else:
+    doAssert item.b != nil
+    item.a.setLen size
+    item.b.setLen size
+
+template last*(sm: var SmLookaround): untyped =
+  sm.s[sm.i-1]
+
+template lastA*(sm: var SmLookaround): untyped =
+  last(sm).a
+
+template lastB*(sm: var SmLookaround): untyped =
+  last(sm).b
+
+func grow*(sm: var SmLookaround) {.inline.} =
+  doAssert sm.i <= sm.s.len
+  if sm.i == sm.s.len:
+    sm.s.setLen(max(1, sm.s.len) * 2)
+  sm.i += 1
+
+func removeLast*(sm: var SmLookaround) {.inline.} =
+  doAssert sm.i > 0
+  sm.i -= 1

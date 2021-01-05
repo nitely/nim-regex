@@ -1,7 +1,7 @@
 import std/deques
+import std/algorithm
 
-import ./exptype
-import ./nodetype
+import ./types
 import ./common
 
 func check(cond: bool, msg: string) =
@@ -9,26 +9,12 @@ func check(cond: bool, msg: string) =
     raise newException(RegexError, msg)
 
 type
-  Enfa* = object
-    s*: seq[Node]
-
-type
   End = seq[int16]
-    ## store all the last
+    ## store the last
     ## states of a given state.
     ## Avoids having to recurse
-    ## a state to find its ends,
+    ## a state to find its end,
     ## but have to keep them up-to-date
-
-type
-  TransitionsAll* = seq[seq[int16]]
-  ZclosureStates* = seq[seq[Node]]
-  Transitions* = object
-    allZ*: TransitionsAll
-    z*: ZclosureStates
-  Nfa* = object
-    s*: seq[Node]
-    t*: Transitions
 
 func combine(
   eNfa: var Enfa,
@@ -258,6 +244,73 @@ func eRemoval*(eNfa: Enfa): Nfa {.raises: [].} =
         qw.addFirst qb
   result.t.allZ.setLen result.s.len
 
+func reverse(eNfa: Enfa): Enfa =
+  template state0: untyped = int16(eNfa.s.len-1)
+  result = eNfa
+  for n in mitems result.s:
+    n.next.setLen 0
+  var stack = @[(state0, -1'i16)]
+  var visited: set[int16]
+  template state: untyped = eNfa.s[ni]
+  while stack.len > 0:
+    let (ni, pi) = stack.pop()
+    if pi > -1:
+      result.s[ni].next.add pi
+    if ni in visited:
+      continue
+    visited.incl ni
+    for mi in state.next:
+      stack.add (mi, ni)
+  for n in mitems result.s:
+    n.next.reverse
+  # fix loops greediness
+  for i, n in pairs eNfa.s:
+    case n.kind:
+    of reZeroOrMore:
+      if not n.isGreedy:
+        result.s[i].next.reverse
+    of reOneOrMore:
+      if not n.isGreedy:
+        result.s[n.next[1]].next.reverse
+    else:
+      discard
+  # Swap initial state by eoe
+  var eoeIdx = -1'i16
+  for i, n in pairs result.s:
+    if n.kind == reEoe:
+      doAssert eoeIdx == -1
+      eoeIdx = i.int16
+  doAssert eoeIdx != -1
+  for i in eNfa.s[state0].next:
+    for j in 0 .. result.s[i].next.len-1:
+      if result.s[i].next[j] == state0:
+        result.s[i].next[j] = eoeIdx
+  swap result.s[state0].next, result.s[eoeIdx].next
+  doAssert result.s[state0].kind == reSkip
+  doAssert result.s[eoeIdx].kind == reEoe
+  doAssert result.s[state0].next.len > 0
+  doAssert result.s[eoeIdx].next.len == 0
+
+func subExps*(exp: RpnExp): RpnExp =
+  result = exp
+  for n in mitems result.s:
+    case n.kind
+    of reLookahead, reNotLookahead:
+      n.subExp.nfa = n.subExp.rpn
+        .subExps
+        .eNfa
+        .eRemoval
+      n.subExp.rpn.s = newSeq[Node]()  # nullify
+    of reLookbehind, reNotLookbehind:
+      n.subExp.nfa = n.subExp.rpn
+        .subExps
+        .eNfa
+        .reverse
+        .eRemoval
+      n.subExp.rpn.s = newSeq[Node]()  # nullify
+    else:
+      discard
+
 # XXX rename to nfa when Nim v0.19 is dropped
 func nfa2*(exp: RpnExp): Nfa {.raises: [RegexError].} =
-  exp.eNfa.eRemoval
+  exp.subExps.eNfa.eRemoval

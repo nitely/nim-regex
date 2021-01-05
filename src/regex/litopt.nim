@@ -49,8 +49,7 @@ import std/algorithm
 import std/sets
 import std/unicode
 
-import ./exptype
-import ./nodetype
+import ./types
 import ./nodematch
 import ./nfa
 
@@ -237,6 +236,7 @@ func litopt2*(exp: RpnExp): LitOpt =
     return
   result.lit = litNode.cp
   result.nfa = exp
+    .subExps
     .eNfa
     .prefix(litNode.uid)
     .eRemoval

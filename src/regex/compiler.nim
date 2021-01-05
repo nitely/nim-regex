@@ -1,5 +1,6 @@
 import ./parser
 import ./exptransformation
+import ./types
 import ./nfatype
 import ./nfa
 import ./litopt

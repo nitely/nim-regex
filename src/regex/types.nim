@@ -10,7 +10,33 @@ import pkg/unicodedb/properties
 
 import ./common
 
+# XXX split nfatype.nim and nodetype.nim
+#     once acyclic imports are supported
+# XXX refactor transitions, add tIdx: int16
+#     to Node, make TransitionsAll dense;
+#     remove z and store transition Nodes in
+#     the NFA; flatten TransitionsAll to seq[int16]
+#     + delimiter (-1'i16) or set first bit of
+#     every last tn idx
+
 type
+  # exptype.nim
+  RpnExp* = object
+    s*: seq[Node]
+
+  # nfatype.nim
+  Enfa* = object
+    s*: seq[Node]
+  TransitionsAll* = seq[seq[int16]]
+  ZclosureStates* = seq[seq[Node]]
+  Transitions* = object
+    allZ*: TransitionsAll
+    z*: ZclosureStates
+  Nfa* = object
+    s*: seq[Node]
+    t*: Transitions
+
+  # nodetype.nim
   Flag* = enum
     flagCaseInsensitive,  # i
     flagNotCaseInsensitive,  # -i
@@ -91,6 +117,13 @@ type
     shorthands*: seq[Node]
     # reUCC, reNotUCC
     cc*: UnicodeCategorySet
+    # reLookahead, reLookbehind,
+    # reNotLookahead, reNotLookbehind
+    subExp*: SubExp
+  SubExp* = object
+    nfa*: Nfa
+    rpn*: RpnExp
+    reverseCapts*: bool
 
 func toCharNode*(r: Rune): Node =
   ## return a ``Node`` that is meant to be matched
@@ -186,6 +219,17 @@ const
     reLookbehind,
     reNotLookahead,
     reNotLookbehind}
+  lookaroundKind* = {
+    reLookahead,
+    reLookbehind,
+    reNotLookahead,
+    reNotLookbehind}
+  lookaheadKind* = {
+    reLookahead,
+    reNotLookahead}
+  lookbehindKind* = {
+    reLookbehind,
+    reNotLookbehind}
   shorthandKind* = {
     reWord,
     reDigit,
@@ -231,6 +275,7 @@ const
   groupKind* = {
     reGroupStart,
     reGroupEnd}
+  groupStartKind* = {reGroupStart} + lookaroundKind
 
 func `$`*(n: Node): string =
   ## return the string representation

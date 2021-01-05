@@ -4,7 +4,7 @@ import std/tables
 import std/algorithm
 
 import ./exptype
-import ./nodetype
+import ./types
 import ./common
 import ./scanner
 
@@ -54,7 +54,7 @@ func fillGroups(
   var gs = newSeq[int]()
   for i, n in mpairs result.s:
     case n.kind
-    of reGroupStart:
+    of groupStartKind:
       gs.add i
       if n.isCapturing:
         n.idx = groups.count
@@ -204,7 +204,7 @@ func applyFlags(exp: Exp): Exp =
     # (?flags)
     # Orphan flags are added to current group
     case n.kind
-    of reGroupStart:
+    of groupStartKind:
       if n.flags.len == 0:
         flags.add @[]
         result.s.add n
@@ -317,12 +317,12 @@ func joinAtoms(exp: Exp): AtomsExp =
   var atomsCount = 0
   for n in exp.s:
     case n.kind
-    of matchableKind, assertionKind:
+    of matchableKind, assertionKind - lookaroundKind:
       inc atomsCount
       if atomsCount > 1:
         atomsCount = 1
         result.s.add initJoinerNode()
-    of reGroupStart:
+    of groupStartKind:
       if atomsCount > 0:
         result.s.add initJoinerNode()
       atomsCount = 0
@@ -386,13 +386,13 @@ func popGreaterThan(ops: var seq[Node], op: Node): seq[Node] =
   while (ops.len > 0 and
       ops[ops.len - 1].kind in opKind and
       ops[ops.len - 1].kind.hasPrecedence(op.kind)):
-    result.add(ops.pop())
+    result.add ops.pop()
 
 func popUntilGroupStart(ops: var seq[Node]): seq[Node] =
   result = newSeqOfCap[Node](ops.len)
   while true:
     let op = ops.pop()
-    result.add(op)
+    result.add op
     if op.kind == reGroupStart:
       break
 
@@ -426,6 +426,47 @@ func rpn(exp: AtomsExp): RpnExp =
   for i in 1 .. ops.len:
     result.s.add ops[ops.len-i]
 
+func subExps(exp: AtomsExp, parentKind = reLookahead): AtomsExp =
+  ## Collect and convert lookaround sub-expressions to RPN
+  template n: untyped = result.s[^1]
+  result.s = newSeq[Node](exp.s.len)
+  result.s.setLen 0
+  var i = 0
+  var parens = newSeq[bool]()
+  while i < exp.s.len:
+    if exp.s[i].kind in lookaroundKind:
+      result.s.add exp.s[i]
+      inc i
+      parens.setLen 0
+      let i0 = i
+      while i < exp.s.len:
+        case exp.s[i].kind
+        of groupStartKind:
+          parens.add true
+        of reGroupEnd:
+          if parens.len > 0:
+            discard parens.pop()
+          else:
+            break
+        else:
+          discard
+        inc i
+      doAssert exp.s[i].kind == reGroupEnd
+      let atoms = AtomsExp(s: exp.s[i0 .. i-1])
+      n.subExp.rpn = atoms
+        .subExps(parentKind = n.kind)
+        .rpn
+      # Store whether the capts must be reversed
+      if parentKind in lookaheadKind:
+        n.subExp.reverseCapts = n.kind in lookbehindKind
+      else:
+        doAssert parentKind in lookbehindKind
+        n.subExp.reverseCapts = n.kind in lookaheadKind
+      inc i
+    else:
+      result.s.add exp.s[i]
+      inc i
+
 func toAtoms*(
   exp: Exp,
   groups: var GroupsCapture
@@ -444,4 +485,5 @@ func transformExp*(
 ): RpnExp {.inline.} =
   result = exp
     .toAtoms(groups)
+    .subExps
     .rpn

@@ -1,6 +1,6 @@
 import std/unicode
 
-import ./nodetype
+import ./types
 import ./common
 
 type

@@ -300,9 +300,9 @@ func genMatchedBody(
         `captx` = (len(`capts`) - 1).int32
     of assertionKind - lookaroundKind:
       let matchCond = if mfBwMatch in flags:
-        genMatch(z, cPrev, c)
-      else:
         genMatch(z, c, cPrev)
+      else:
+        genMatch(z, cPrev, c)
       matchedBody.add quote do:
         `matched` = `matched` and `matchCond`
     of lookaroundKind:

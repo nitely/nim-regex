@@ -1,8 +1,4 @@
-Enfa	regex/nfa.html#Enfa	nfa: Enfa	
-Nfa	regex/nfa.html#Nfa	nfa: Nfa	
-eNfa	regex/nfa.html#eNfa,seq[Node]	nfa: eNfa(expression: seq[Node]): Enfa	
-TransitionsAll	regex/nfa.html#TransitionsAll	nfa: TransitionsAll	
-ZclosureStates	regex/nfa.html#ZclosureStates	nfa: ZclosureStates	
-Transitions	regex/nfa.html#Transitions	nfa: Transitions	
-eRemoval	regex/nfa.html#eRemoval,Enfa,Transitions	nfa: eRemoval(eNfa: Enfa; transitions: var Transitions): Nfa	
-nfa2	regex/nfa.html#nfa2,seq[Node],Transitions	nfa: nfa2(exp: seq[Node]; transitions: var Transitions): Nfa	
+eNfa	regex/nfa.html#eNfa,RpnExp	nfa: eNfa(exp: RpnExp): Enfa	
+eRemoval	regex/nfa.html#eRemoval,Enfa	nfa: eRemoval(eNfa: Enfa): Nfa	
+subExps	regex/nfa.html#subExps,RpnExp	nfa: subExps(exp: RpnExp): RpnExp	
+nfa2	regex/nfa.html#nfa2,RpnExp	nfa: nfa2(exp: RpnExp): Nfa	

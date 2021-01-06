@@ -56,10 +56,12 @@ function main() {
     }
   }
 }
+
+window.addEventListener('DOMContentLoaded', main);
 </script>
 
 </head>
-<body onload="main()">
+<body>
 <div class="document" id="documentId">
   <div class="container">
     <h1 class="title">regex/nfatype</h1>
@@ -116,13 +118,13 @@ function main() {
   <li><a class="reference" href="#Regex"
     title="Regex = object
   nfa*: Nfa
-  transitions*: Transitions
   groupsCount*: int16
   namedGroups*: OrderedTable[string, int16]
   litOpt*: LitOpt">Regex</a></li>
   <li><a class="reference" href="#MatchFlag"
     title="MatchFlag = enum
-  mfShortestMatch, mfNoCaptures, mfFindMatch, mfFindMatchOpt">MatchFlag</a></li>
+  mfShortestMatch, mfNoCaptures, mfFindMatch, mfFindMatchOpt, mfAnchored,
+  mfBwMatch, mfReverseCapts">MatchFlag</a></li>
   <li><a class="reference" href="#MatchFlags"
     title="MatchFlags = set[MatchFlag]">MatchFlags</a></li>
   <li><a class="reference" href="#RegexMatch"
@@ -141,13 +143,27 @@ function main() {
   sx: seq[PState]
   ss: seq[int16]
   si: int16">Submatches</a></li>
+  <li><a class="reference" href="#SmLookaroundItem"
+    title="SmLookaroundItem = object
+  a, b: Submatches">SmLookaroundItem</a></li>
+  <li><a class="reference" href="#SmLookaround"
+    title="SmLookaround = object
+  s: seq[SmLookaroundItem]
+  i: int">SmLookaround</a></li>
 
   </ul>
 </li>
 <li>
-  <a class="reference reference-toplevel" href="#13" id="63">Funcs</a>
+  <a class="reference reference-toplevel" href="#12" id="62">Procs</a>
   <ul class="simple simple-toc-section">
-      <ul class="simple nested-toc-section">constructSubmatches
+      <ul class="simple nested-toc-section">setLen
+      <li><a class="reference" href="#setLen%2CSubmatches%2Cint"
+    title="setLen(sm: var Submatches; size: int)">setLen,<wbr>Submatches,<wbr>int</a></li>
+  <li><a class="reference" href="#setLen%2CSmLookaroundItem%2Cint"
+    title="setLen(item: var SmLookaroundItem; size: int)">setLen,<wbr>SmLookaroundItem,<wbr>int</a></li>
+
+  </ul>
+  <ul class="simple nested-toc-section">constructSubmatches
       <li><a class="reference" href="#constructSubmatches%2CCaptures%2CCapts%2Cint%2Cint"
     title="constructSubmatches(captures: var Captures; capts: Capts; capt, size: int)">constructSubmatches,<wbr>Captures,<wbr>Capts,<wbr>int,<wbr>int</a></li>
 
@@ -167,11 +183,26 @@ function main() {
     title="hasState(sm: Submatches; n: int16): bool">hasState,<wbr>Submatches,<wbr>int16</a></li>
 
   </ul>
+  <ul class="simple nested-toc-section">removeLast
+      <li><a class="reference" href="#removeLast%2CSmLookaround"
+    title="removeLast(sm: var SmLookaround)">removeLast,<wbr>SmLookaround</a></li>
+
+  </ul>
   <ul class="simple nested-toc-section">clear
       <li><a class="reference" href="#clear%2CRegexMatch"
     title="clear(m: var RegexMatch)">clear,<wbr>RegexMatch</a></li>
   <li><a class="reference" href="#clear%2CSubmatches"
     title="clear(sm: var Submatches)">clear,<wbr>Submatches</a></li>
+
+  </ul>
+  <ul class="simple nested-toc-section">grow
+      <li><a class="reference" href="#grow%2CSmLookaround"
+    title="grow(sm: var SmLookaround)">grow,<wbr>SmLookaround</a></li>
+
+  </ul>
+  <ul class="simple nested-toc-section">reverse
+      <li><a class="reference" href="#reverse%2CCapts%2Cint32%2Cint32"
+    title="reverse(capts: var Capts; a, b: int32): int32">reverse,<wbr>Capts,<wbr>int32,<wbr>int32</a></li>
 
   </ul>
   <ul class="simple nested-toc-section">cap
@@ -200,6 +231,18 @@ function main() {
 
   </ul>
 </li>
+<li>
+  <a class="reference reference-toplevel" href="#18" id="68">Templates</a>
+  <ul class="simple simple-toc-section">
+      <li><a class="reference" href="#last.t%2CSmLookaround"
+    title="last(sm: var SmLookaround): untyped">last</a></li>
+  <li><a class="reference" href="#lastA.t%2CSmLookaround"
+    title="lastA(sm: var SmLookaround): untyped">lastA</a></li>
+  <li><a class="reference" href="#lastB.t%2CSmLookaround"
+    title="lastB(sm: var SmLookaround): untyped">lastB</a></li>
+
+  </ul>
+</li>
 
 </ul>
 
@@ -212,7 +255,7 @@ function main() {
   <div class="section" id="6">
 <h1><a class="toc-backref" href="#6">Imports</a></h1>
 <dl class="item">
-<a class="reference external" href="nfa.html">nfa</a>, <a class="reference external" href="litopt.html">litopt</a>
+<a class="reference external" href="types.html">types</a>, <a class="reference external" href="litopt.html">litopt</a>
 </dl></div>
 <div class="section" id="7">
 <h1><a class="toc-backref" href="#7">Types</a></h1>
@@ -258,8 +301,7 @@ raw regex literal string
 </dd>
 <a id="Regex"></a>
 <dt><pre><a href="nfatype.html#Regex"><span class="Identifier">Regex</span></a> <span class="Other">=</span> <span class="Keyword">object</span>
-  <span class="Identifier">nfa</span><span class="Operator">*</span><span class="Other">:</span> <a href="nfa.html#Nfa"><span class="Identifier">Nfa</span></a>
-  <span class="Identifier">transitions</span><span class="Operator">*</span><span class="Other">:</span> <a href="nfa.html#Transitions"><span class="Identifier">Transitions</span></a>
+  <span class="Identifier">nfa</span><span class="Operator">*</span><span class="Other">:</span> <a href="types.html#Nfa"><span class="Identifier">Nfa</span></a>
   <span class="Identifier">groupsCount</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int16</span>
   <span class="Identifier">namedGroups</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">OrderedTable</span><span class="Other">[</span><span class="Identifier">string</span><span class="Other">,</span> <span class="Identifier">int16</span><span class="Other">]</span>
   <span class="Identifier">litOpt</span><span class="Operator">*</span><span class="Other">:</span> <a href="litopt.html#LitOpt"><span class="Identifier">LitOpt</span></a>
@@ -271,7 +313,8 @@ a compiled regular expression
 </dd>
 <a id="MatchFlag"></a>
 <dt><pre><a href="nfatype.html#MatchFlag"><span class="Identifier">MatchFlag</span></a> <span class="Other">=</span> <span class="Keyword">enum</span>
-  <span class="Identifier">mfShortestMatch</span><span class="Other">,</span> <span class="Identifier">mfNoCaptures</span><span class="Other">,</span> <span class="Identifier">mfFindMatch</span><span class="Other">,</span> <span class="Identifier">mfFindMatchOpt</span></pre></dt>
+  <span class="Identifier">mfShortestMatch</span><span class="Other">,</span> <span class="Identifier">mfNoCaptures</span><span class="Other">,</span> <span class="Identifier">mfFindMatch</span><span class="Other">,</span> <span class="Identifier">mfFindMatchOpt</span><span class="Other">,</span> <span class="Identifier">mfAnchored</span><span class="Other">,</span>
+  <span class="Identifier">mfBwMatch</span><span class="Other">,</span> <span class="Identifier">mfReverseCapts</span></pre></dt>
 <dd>
 
 
@@ -327,10 +370,29 @@ result from matching operations
 Parallel states would be a better name. This is a sparse set
 
 </dd>
+<a id="SmLookaroundItem"></a>
+<dt><pre><a href="nfatype.html#SmLookaroundItem"><span class="Identifier">SmLookaroundItem</span></a> <span class="Other">=</span> <span class="Keyword">object</span>
+  <span class="Identifier">a</span><span class="Other">,</span> <span class="Identifier">b</span><span class="Other">:</span> <a href="nfatype.html#Submatches"><span class="Identifier">Submatches</span></a>
+</pre></dt>
+<dd>
+
+
+
+</dd>
+<a id="SmLookaround"></a>
+<dt><pre><a href="nfatype.html#SmLookaround"><span class="Identifier">SmLookaround</span></a> <span class="Other">=</span> <span class="Keyword">object</span>
+  <span class="Identifier">s</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><a href="nfatype.html#SmLookaroundItem"><span class="Identifier">SmLookaroundItem</span></a><span class="Other">]</span>
+  <span class="Identifier">i</span><span class="Other">:</span> <span class="Identifier">int</span>
+</pre></dt>
+<dd>
+
+
+
+</dd>
 
 </dl></div>
-<div class="section" id="13">
-<h1><a class="toc-backref" href="#13">Funcs</a></h1>
+<div class="section" id="12">
+<h1><a class="toc-backref" href="#12">Procs</a></h1>
 <dl class="item">
 <a id="constructSubmatches,Captures,Capts,int,int"></a>
 <dt><pre><span class="Keyword">func</span> <a href="#constructSubmatches%2CCaptures%2CCapts%2Cint%2Cint"><span class="Identifier">constructSubmatches</span></a><span class="Other">(</span><span class="Identifier">captures</span><span class="Other">:</span> <span class="Keyword">var</span> <a href="nfatype.html#Captures"><span class="Identifier">Captures</span></a><span class="Other">;</span> <span class="Identifier">capts</span><span class="Other">:</span> <a href="nfatype.html#Capts"><span class="Identifier">Capts</span></a><span class="Other">;</span> <span class="Identifier">capt</span><span class="Other">,</span> <span class="Identifier">size</span><span class="Other">:</span> <span class="Identifier">int</span><span class="Other">)</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma">
@@ -338,6 +400,13 @@ Parallel states would be a better name. This is a sparse set
 <dd>
 
 
+
+</dd>
+<a id="reverse,Capts,int32,int32"></a>
+<dt><pre><span class="Keyword">func</span> <a href="#reverse%2CCapts%2Cint32%2Cint32"><span class="Identifier">reverse</span></a><span class="Other">(</span><span class="Identifier">capts</span><span class="Other">:</span> <span class="Keyword">var</span> <a href="nfatype.html#Capts"><span class="Identifier">Capts</span></a><span class="Other">;</span> <span class="Identifier">a</span><span class="Other">,</span> <span class="Identifier">b</span><span class="Other">:</span> <span class="Identifier">int32</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">int32</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<dd>
+
+reverse capture indices from a to b; return head
 
 </dd>
 <a id="clear,RegexMatch"></a>
@@ -396,6 +465,35 @@ Parallel states would be a better name. This is a sparse set
 
 
 </dd>
+<a id="setLen,Submatches,int"></a>
+<dt><pre><span class="Keyword">func</span> <a href="#setLen%2CSubmatches%2Cint"><span class="Identifier">setLen</span></a><span class="Other">(</span><span class="Identifier">sm</span><span class="Other">:</span> <span class="Keyword">var</span> <a href="nfatype.html#Submatches"><span class="Identifier">Submatches</span></a><span class="Other">;</span> <span class="Identifier">size</span><span class="Other">:</span> <span class="Identifier">int</span><span class="Other">)</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">inline</span><span class="Other">,</span> <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<dd>
+
+
+
+</dd>
+<a id="setLen,SmLookaroundItem,int"></a>
+<dt><pre><span class="Keyword">func</span> <a href="#setLen%2CSmLookaroundItem%2Cint"><span class="Identifier">setLen</span></a><span class="Other">(</span><span class="Identifier">item</span><span class="Other">:</span> <span class="Keyword">var</span> <a href="nfatype.html#SmLookaroundItem"><span class="Identifier">SmLookaroundItem</span></a><span class="Other">;</span> <span class="Identifier">size</span><span class="Other">:</span> <span class="Identifier">int</span><span class="Other">)</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">inline</span><span class="Other">,</span> <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span>
+    <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<dd>
+
+
+
+</dd>
+<a id="grow,SmLookaround"></a>
+<dt><pre><span class="Keyword">func</span> <a href="#grow%2CSmLookaround"><span class="Identifier">grow</span></a><span class="Other">(</span><span class="Identifier">sm</span><span class="Other">:</span> <span class="Keyword">var</span> <a href="nfatype.html#SmLookaround"><span class="Identifier">SmLookaround</span></a><span class="Other">)</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">inline</span><span class="Other">,</span> <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<dd>
+
+
+
+</dd>
+<a id="removeLast,SmLookaround"></a>
+<dt><pre><span class="Keyword">func</span> <a href="#removeLast%2CSmLookaround"><span class="Identifier">removeLast</span></a><span class="Other">(</span><span class="Identifier">sm</span><span class="Other">:</span> <span class="Keyword">var</span> <a href="nfatype.html#SmLookaround"><span class="Identifier">SmLookaround</span></a><span class="Other">)</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">inline</span><span class="Other">,</span> <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<dd>
+
+
+
+</dd>
 
 </dl></div>
 <div class="section" id="15">
@@ -403,6 +501,32 @@ Parallel states would be a better name. This is a sparse set
 <dl class="item">
 <a id="items.i,Submatches"></a>
 <dt><pre><span class="Keyword">iterator</span> <a href="#items.i%2CSubmatches"><span class="Identifier">items</span></a><span class="Other">(</span><span class="Identifier">sm</span><span class="Other">:</span> <a href="nfatype.html#Submatches"><span class="Identifier">Submatches</span></a><span class="Other">)</span><span class="Other">:</span> <a href="nfatype.html#PState"><span class="Identifier">PState</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">inline</span><span class="Other">,</span> <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<dd>
+
+
+
+</dd>
+
+</dl></div>
+<div class="section" id="18">
+<h1><a class="toc-backref" href="#18">Templates</a></h1>
+<dl class="item">
+<a id="last.t,SmLookaround"></a>
+<dt><pre><span class="Keyword">template</span> <a href="#last.t%2CSmLookaround"><span class="Identifier">last</span></a><span class="Other">(</span><span class="Identifier">sm</span><span class="Other">:</span> <span class="Keyword">var</span> <a href="nfatype.html#SmLookaround"><span class="Identifier">SmLookaround</span></a><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">untyped</span></pre></dt>
+<dd>
+
+
+
+</dd>
+<a id="lastA.t,SmLookaround"></a>
+<dt><pre><span class="Keyword">template</span> <a href="#lastA.t%2CSmLookaround"><span class="Identifier">lastA</span></a><span class="Other">(</span><span class="Identifier">sm</span><span class="Other">:</span> <span class="Keyword">var</span> <a href="nfatype.html#SmLookaround"><span class="Identifier">SmLookaround</span></a><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">untyped</span></pre></dt>
+<dd>
+
+
+
+</dd>
+<a id="lastB.t,SmLookaround"></a>
+<dt><pre><span class="Keyword">template</span> <a href="#lastB.t%2CSmLookaround"><span class="Identifier">lastB</span></a><span class="Other">(</span><span class="Identifier">sm</span><span class="Other">:</span> <span class="Keyword">var</span> <a href="nfatype.html#SmLookaround"><span class="Identifier">SmLookaround</span></a><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">untyped</span></pre></dt>
 <dd>
 
 
@@ -418,7 +542,7 @@ Parallel states would be a better name. This is a sparse set
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br/>
-        <small style="color: var(--hint);">Made with Nim. Generated: 2020-11-22 06:24:09 UTC</small>
+        <small style="color: var(--hint);">Made with Nim. Generated: 2021-01-06 13:01:29 UTC</small>
       </div>
     </div>
   </div>

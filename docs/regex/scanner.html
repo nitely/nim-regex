@@ -56,10 +56,12 @@ function main() {
     }
   }
 }
+
+window.addEventListener('DOMContentLoaded', main);
 </script>
 
 </head>
-<body onload="main()">
+<body>
 <div class="document" id="documentId">
   <div class="container">
     <h1 class="title">regex/scanner</h1>
@@ -123,17 +125,13 @@ function main() {
     title="newScanner[T](s: seq[T]): Scanner[T]">newScanner,<wbr>seq[T]</a></li>
 
   </ul>
-
-  </ul>
-</li>
-<li>
-  <a class="reference reference-toplevel" href="#13" id="63">Funcs</a>
-  <ul class="simple simple-toc-section">
-      <ul class="simple nested-toc-section">peek
+  <ul class="simple nested-toc-section">peek
       <li><a class="reference" href="#peek%2CScanner%5BRune%5D"
     title="peek(sc: Scanner[Rune]): Rune">peek,<wbr>Scanner[Rune]</a></li>
   <li><a class="reference" href="#peek%2CScanner%5BNode%5D"
     title="peek(sc: Scanner[Node]): Node">peek,<wbr>Scanner[Node]</a></li>
+  <li><a class="reference" href="#peek%2CScanner%5BRune%5D%2Cint"
+    title="peek(sc: Scanner[Rune]; n: int): Rune">peek,<wbr>Scanner[Rune],<wbr>int</a></li>
 
   </ul>
   <ul class="simple nested-toc-section">next
@@ -188,7 +186,7 @@ function main() {
   <div class="section" id="6">
 <h1><a class="toc-backref" href="#6">Imports</a></h1>
 <dl class="item">
-<a class="reference external" href="nodetype.html">nodetype</a>, <a class="reference external" href="common.html">common</a>
+<a class="reference external" href="types.html">types</a>, <a class="reference external" href="common.html">common</a>
 </dl></div>
 <div class="section" id="7">
 <h1><a class="toc-backref" href="#7">Types</a></h1>
@@ -230,11 +228,6 @@ A scanner is a common construct for reading data
 
 
 </dd>
-
-</dl></div>
-<div class="section" id="13">
-<h1><a class="toc-backref" href="#13">Funcs</a></h1>
-<dl class="item">
 <a id="finished,Scanner[T]"></a>
 <dt><pre><span class="Keyword">func</span> <a href="#finished%2CScanner%5BT%5D"><span class="Identifier">finished</span></a><span class="Other">[</span><span class="Identifier">T</span><span class="Other">]</span><span class="Other">(</span><span class="Identifier">sc</span><span class="Other">:</span> <a href="scanner.html#Scanner"><span class="Identifier">Scanner</span></a><span class="Other">[</span><span class="Identifier">T</span><span class="Other">]</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">bool</span></pre></dt>
 <dd>
@@ -271,7 +264,14 @@ return current item and consume it
 
 </dd>
 <a id="peek,Scanner[Node]"></a>
-<dt><pre><span class="Keyword">func</span> <a href="#peek%2CScanner%5BNode%5D"><span class="Identifier">peek</span></a><span class="Other">(</span><span class="Identifier">sc</span><span class="Other">:</span> <a href="scanner.html#Scanner"><span class="Identifier">Scanner</span></a><span class="Other">[</span><a href="nodetype.html#Node"><span class="Identifier">Node</span></a><span class="Other">]</span><span class="Other">)</span><span class="Other">:</span> <a href="nodetype.html#Node"><span class="Identifier">Node</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<dt><pre><span class="Keyword">func</span> <a href="#peek%2CScanner%5BNode%5D"><span class="Identifier">peek</span></a><span class="Other">(</span><span class="Identifier">sc</span><span class="Other">:</span> <a href="scanner.html#Scanner"><span class="Identifier">Scanner</span></a><span class="Other">[</span><a href="types.html#Node"><span class="Identifier">Node</span></a><span class="Other">]</span><span class="Other">)</span><span class="Other">:</span> <a href="types.html#Node"><span class="Identifier">Node</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<dd>
+
+
+
+</dd>
+<a id="peek,Scanner[Rune],int"></a>
+<dt><pre><span class="Keyword">func</span> <a href="#peek%2CScanner%5BRune%5D%2Cint"><span class="Identifier">peek</span></a><span class="Other">(</span><span class="Identifier">sc</span><span class="Other">:</span> <a href="scanner.html#Scanner"><span class="Identifier">Scanner</span></a><span class="Other">[</span><span class="Identifier">Rune</span><span class="Other">]</span><span class="Other">;</span> <span class="Identifier">n</span><span class="Other">:</span> <span class="Identifier">int</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">Rune</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
 
 
@@ -320,7 +320,7 @@ the yielded item gets consumed
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br/>
-        <small style="color: var(--hint);">Made with Nim. Generated: 2020-11-22 06:24:09 UTC</small>
+        <small style="color: var(--hint);">Made with Nim. Generated: 2021-01-06 13:01:28 UTC</small>
       </div>
     </div>
   </div>

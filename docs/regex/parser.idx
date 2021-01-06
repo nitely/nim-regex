@@ -1,1 +1,1 @@
-parse	regex/parser.html#parse,string	parser: parse(expression: string): seq[Node]	
+parse	regex/parser.html#parse,string	parser: parse(expression: string): Exp	

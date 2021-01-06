@@ -11,4 +11,5 @@ next	regex/scanner.html#next,Scanner[T]	scanner: next[T](sc: Scanner[T]): T
 peek	regex/scanner.html#peek,Scanner[Rune]	scanner: peek(sc: Scanner[Rune]): Rune	
 peek	regex/scanner.html#peek,Scanner[Node]	scanner: peek(sc: Scanner[Node]): Node	
 peek	regex/scanner.html#peek.i,Scanner[T]	scanner: peek[T](sc: Scanner[T]): (T, T)	
+peek	regex/scanner.html#peek,Scanner[Rune],int	scanner: peek(sc: Scanner[Rune]; n: int): Rune	
 find	regex/scanner.html#find,Scanner[Rune],Rune	scanner: find(sc: Scanner[Rune]; r: Rune): int	

@@ -3,12 +3,16 @@ CaptNode	regex/nfatype.html#CaptNode	nfatype: CaptNode
 Capts	regex/nfatype.html#Capts	nfatype: Capts	
 Captures	regex/nfatype.html#Captures	nfatype: Captures	
 constructSubmatches	regex/nfatype.html#constructSubmatches,Captures,Capts,int,int	nfatype: constructSubmatches(captures: var Captures; capts: Capts; capt, size: int)	
+reverse	regex/nfatype.html#reverse,Capts,int32,int32	nfatype: reverse(capts: var Capts; a, b: int32): int32	
 RegexLit	regex/nfatype.html#RegexLit	nfatype: RegexLit	
 Regex	regex/nfatype.html#Regex	nfatype: Regex	
 mfShortestMatch	regex/nfatype.html#mfShortestMatch	MatchFlag.mfShortestMatch	
 mfNoCaptures	regex/nfatype.html#mfNoCaptures	MatchFlag.mfNoCaptures	
 mfFindMatch	regex/nfatype.html#mfFindMatch	MatchFlag.mfFindMatch	
 mfFindMatchOpt	regex/nfatype.html#mfFindMatchOpt	MatchFlag.mfFindMatchOpt	
+mfAnchored	regex/nfatype.html#mfAnchored	MatchFlag.mfAnchored	
+mfBwMatch	regex/nfatype.html#mfBwMatch	MatchFlag.mfBwMatch	
+mfReverseCapts	regex/nfatype.html#mfReverseCapts	MatchFlag.mfReverseCapts	
 MatchFlag	regex/nfatype.html#MatchFlag	nfatype: MatchFlag	
 MatchFlags	regex/nfatype.html#MatchFlags	nfatype: MatchFlags	
 RegexMatch	regex/nfatype.html#RegexMatch	nfatype: RegexMatch	
@@ -25,3 +29,12 @@ len	regex/nfatype.html#len,Submatches	nfatype: len(sm: Submatches): int
 clear	regex/nfatype.html#clear,Submatches	nfatype: clear(sm: var Submatches)	
 items	regex/nfatype.html#items.i,Submatches	nfatype: items(sm: Submatches): PState	
 cap	regex/nfatype.html#cap,Submatches	nfatype: cap(sm: Submatches): int	
+setLen	regex/nfatype.html#setLen,Submatches,int	nfatype: setLen(sm: var Submatches; size: int)	
+SmLookaroundItem	regex/nfatype.html#SmLookaroundItem	nfatype: SmLookaroundItem	
+SmLookaround	regex/nfatype.html#SmLookaround	nfatype: SmLookaround	
+setLen	regex/nfatype.html#setLen,SmLookaroundItem,int	nfatype: setLen(item: var SmLookaroundItem; size: int)	
+last	regex/nfatype.html#last.t,SmLookaround	nfatype: last(sm: var SmLookaround): untyped	
+lastA	regex/nfatype.html#lastA.t,SmLookaround	nfatype: lastA(sm: var SmLookaround): untyped	
+lastB	regex/nfatype.html#lastB.t,SmLookaround	nfatype: lastB(sm: var SmLookaround): untyped	
+grow	regex/nfatype.html#grow,SmLookaround	nfatype: grow(sm: var SmLookaround)	
+removeLast	regex/nfatype.html#removeLast,SmLookaround	nfatype: removeLast(sm: var SmLookaround)	

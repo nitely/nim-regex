@@ -56,10 +56,12 @@ function main() {
     }
   }
 }
+
+window.addEventListener('DOMContentLoaded', main);
 </script>
 
 </head>
-<body onload="main()">
+<body>
 <div class="document" id="documentId">
   <div class="container">
     <h1 class="title">regex/common</h1>
@@ -127,6 +129,11 @@ function main() {
     title="cmp(x, y: Rune): int">cmp,<wbr>Rune,<wbr>Rune</a></li>
 
   </ul>
+  <ul class="simple nested-toc-section">bwRuneAt
+      <li><a class="reference" href="#bwRuneAt%2Cstring%2Cint"
+    title="bwRuneAt(s: string; n: int): Rune">bwRuneAt,<wbr>string,<wbr>int</a></li>
+
+  </ul>
   <ul class="simple nested-toc-section">%%
       <li><a class="reference" href="#%25%25%2Cstring%2CopenArray%5Bstring%5D"
     title="`%%`(formatstr: string; a: openArray[string]): string">%%,<wbr>string,<wbr>openArray[string]</a></li>
@@ -134,6 +141,14 @@ function main() {
     title="`%%`(formatstr: string; a: string): string">%%,<wbr>string,<wbr>string</a></li>
 
   </ul>
+
+  </ul>
+</li>
+<li>
+  <a class="reference reference-toplevel" href="#18" id="68">Templates</a>
+  <ul class="simple simple-toc-section">
+      <li><a class="reference" href="#bwFastRuneAt.t%2Cstring%2Cint%2CRune"
+    title="bwFastRuneAt(s: string; n: var int; result: var Rune): untyped">bwFastRuneAt</a></li>
 
   </ul>
 </li>
@@ -201,6 +216,13 @@ function main() {
 
 
 </dd>
+<a id="bwRuneAt,string,int"></a>
+<dt><pre><span class="Keyword">func</span> <a href="#bwRuneAt%2Cstring%2Cint"><span class="Identifier">bwRuneAt</span></a><span class="Other">(</span><span class="Identifier">s</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">;</span> <span class="Identifier">n</span><span class="Other">:</span> <span class="Identifier">int</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">Rune</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<dd>
+
+Take rune ending at <tt class="docutils literal"><span class="pre">n</span></tt>
+
+</dd>
 <a id="%%,string,openArray[string]"></a>
 <dt><pre><span class="Keyword">proc</span> <a href="#%25%25%2Cstring%2CopenArray%5Bstring%5D"><span class="Identifier">`%%`</span></a><span class="Other">(</span><span class="Identifier">formatstr</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">;</span> <span class="Identifier">a</span><span class="Other">:</span> <span class="Identifier">openArray</span><span class="Other">[</span><span class="Identifier">string</span><span class="Other">]</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">string</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">noSideEffect</span><span class="Other">,</span>
     <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
@@ -218,6 +240,18 @@ same as <tt class="docutils literal"><span class="pre">&quot;$#&quot; % [&quot;f
 </dd>
 
 </dl></div>
+<div class="section" id="18">
+<h1><a class="toc-backref" href="#18">Templates</a></h1>
+<dl class="item">
+<a id="bwFastRuneAt.t,string,int,Rune"></a>
+<dt><pre><span class="Keyword">template</span> <a href="#bwFastRuneAt.t%2Cstring%2Cint%2CRune"><span class="Identifier">bwFastRuneAt</span></a><span class="Other">(</span><span class="Identifier">s</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">;</span> <span class="Identifier">n</span><span class="Other">:</span> <span class="Keyword">var</span> <span class="Identifier">int</span><span class="Other">;</span> <span class="Identifier">result</span><span class="Other">:</span> <span class="Keyword">var</span> <span class="Identifier">Rune</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">untyped</span></pre></dt>
+<dd>
+
+Take rune ending at <tt class="docutils literal"><span class="pre">n</span></tt>
+
+</dd>
+
+</dl></div>
 
   </div>
 </div>
@@ -226,7 +260,7 @@ same as <tt class="docutils literal"><span class="pre">&quot;$#&quot; % [&quot;f
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br/>
-        <small style="color: var(--hint);">Made with Nim. Generated: 2020-11-22 06:24:09 UTC</small>
+        <small style="color: var(--hint);">Made with Nim. Generated: 2021-01-06 13:01:28 UTC</small>
       </div>
     </div>
   </div>

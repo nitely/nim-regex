@@ -6,7 +6,7 @@ the regular expression. So, it can handle
 input from untrusted users. The syntax is similar to PCRE
 but lacks a few features that can not be implemented
 while keeping the space/time complexity guarantees,
-i.e.: backreferences and look-around assertions.
+ex: backreferences.
 
 Syntax
 ******
@@ -150,13 +150,15 @@ Lookaround Assertions
 #####################
 
 .. code-block::
-  (?=x)   A positive lookahead assertion
-  (?!x)   A negative lookahead assertion
-  (?<=x)  A positive lookbehind assertion
-  (?<!x)  A negative lookbehind assertion
+  (?=regex)   A positive lookahead assertion
+  (?!regex)   A negative lookahead assertion
+  (?<=regex)  A positive lookbehind assertion
+  (?<!regex)  A negative lookbehind assertion
 
-Lookaround assertions are limited to a single character
-at the moment.
+Any regex expression is a valid lookaround; groups
+are captured as well. Beware, lookarounds containing
+repetitions (``*``, ``+``, and ``{n,}``) may run in
+polynomial time.
 
 Examples
 ********

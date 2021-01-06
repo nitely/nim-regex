@@ -1,3 +1,15 @@
+v0.19.0
+==================
+
+* Adds support for unbounded lookaround assertions
+* Fix: parsing `{n,m}` repetitions is less strict;
+  `{}`, `{abc}`, etc are parsed as characters. This is
+  closer to PCRE, but it won't allow error prone instances
+  such as missing brackets: `{123`.
+* Fix: double repetitions: `**`, `++`, `*+`, `???`, `{n}*`, `{n}+`,
+  and other combinations are no longer allowed. The `++` PCRE hack
+  is not allowed, as it won't work the same way anyway.
+
 v0.18.0
 ==================
 

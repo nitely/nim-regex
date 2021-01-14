@@ -164,7 +164,7 @@ func submatch(
     for nti, nt in nfa[n].next.pairs:
       if smB.hasState nt:
         continue
-      if nfa[nt].kind != reEoe and not match(nfa[nt], c.Rune):
+      if nfa[nt].kind != reEoe and not match(nfa[nt], c):
         continue
       matched = true
       captx = capt
@@ -180,7 +180,7 @@ func submatch(
               idx: z.idx)
             captx = (capts.len-1).int32
           of assertionKind - lookaroundKind:
-            matched = match(z, cPrev.Rune, c.Rune)
+            matched = match(z, cPrev, c)
           of lookaroundKind:
             lookAroundTpl()
           else:

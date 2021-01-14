@@ -45,7 +45,7 @@ func bwRuneAt*(s: string, n: int): Rune =
   fastRuneAt(s, n, result, false)
 
 template bwFastRuneAt*(
-  s: string, n: var int, result: var Rune
+  s: string, n: var int, result: untyped
 ): untyped =
   ## Take rune ending at ``n``
   doAssert n > 0

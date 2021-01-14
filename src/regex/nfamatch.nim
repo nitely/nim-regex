@@ -104,9 +104,9 @@ template nextStateTpl(bwMatch = false): untyped {.dirty.} =
           captx = (capts.len-1).int32
         of assertionKind - lookaroundKind:
           when bwMatch:
-            matched = match(z, c, cPrev.Rune)
+            matched = match(z, c, cPrev)
           else:
-            matched = match(z, cPrev.Rune, c)
+            matched = match(z, cPrev, c)
         of lookaroundKind:
           lookAroundTpl()
         else:
@@ -127,7 +127,8 @@ func matchImpl(
   flags: set[MatchFlag] = {}
 ): bool =
   var
-    c = Rune(-1)
+    cu: Rune
+    c = -1'i32
     cPrev = -1'i32
     i = start
     iNext = start
@@ -138,17 +139,20 @@ func matchImpl(
     cPrev = bwRuneAt(text, start-1).int32
   smA.clear()
   smA.add (0'i16, captIdx, i .. i-1)
-  while i < text.len:
-    fastRuneAt(text, iNext, c, true)
+  while i <= text.len:
+    if i < text.len:
+      fastRuneAt(text, iNext, cu, true)
+      c = cu.int32
+    else:
+      c = -1'i32
+      inc iNext
     nextStateTpl()
     if smA.len == 0:
       return false
     if anchored and nfa.s[smA[0].ni].kind == reEoe:
       break
     i = iNext
-    cPrev = c.int32
-  c = Rune(-1)
-  nextStateTpl()
+    cPrev = c
   if smA.len > 0:
     if mfReverseCapts in flags:
       captIdx = reverse(capts, smA[0].ci, captIdx)
@@ -170,7 +174,8 @@ func reversedMatchImpl(
   #doAssert start < len(text)
   doAssert start >= limit
   var
-    c = Rune(-1)
+    cu: Rune
+    c = -1'i32
     cPrev = -1'i32
     i = start
     iNext = start
@@ -181,19 +186,20 @@ func reversedMatchImpl(
     cPrev = text.runeAt(start).int32
   smA.clear()
   smA.add (0'i16, captIdx, i .. i-1)
-  while iNext > limit:
-    bwFastRuneAt(text, iNext, c)
+  while iNext >= limit:
+    if iNext > 0:
+      bwFastRuneAt(text, iNext, cu)
+      c = cu.int32
+    else:
+      c = -1'i32
+      dec iNext
     nextStateTpl(bwMatch = true)
     if smA.len == 0:
       return -1
     if nfa.s[smA[0].ni].kind == reEoe:
       break
     i = iNext
-    cPrev = c.int32
-  c = Rune(-1)
-  if iNext > 0:
-    bwFastRuneAt(text, iNext, c)
-  nextStateTpl(bwMatch = true)
+    cPrev = c
   for n, capt, bounds in items smA:
     if nfa.s[n].kind == reEoe:
       if mfReverseCapts in flags:

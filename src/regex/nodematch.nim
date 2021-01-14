@@ -7,6 +7,9 @@ import pkg/unicodedb/types as utypes
 import ./types
 import ./common
 
+const seoe = -1'i32
+const lineBreak = lineBreakRune.int32
+
 func isWord(r: Rune): bool {.inline.} =
   utmWord in unicodeTypes(r)
 
@@ -26,34 +29,34 @@ func isWordAscii(r: Rune): bool {.inline.} =
     false
 
 template isWordBoundaryImpl(r, nxt, isWordProc): bool =
-  (r.int > -1 and isWordProc(r)) xor
-    (nxt.int > -1 and isWordProc(nxt))
+  (r != seoe and isWordProc r.Rune) xor
+    (nxt != seoe and isWordProc nxt.Rune)
 
-func isWordBoundary(r: Rune, nxt: Rune): bool {.inline.} =
+func isWordBoundary(r, nxt: int32): bool {.inline.} =
   ## check if current match
   ## is a boundary (i.e the end of a word)
   isWordBoundaryImpl(r, nxt, isWord)
 
-func isWordBoundaryAscii(r: Rune, nxt: Rune): bool {.inline.} =
+func isWordBoundaryAscii(r, nxt: int32): bool {.inline.} =
   ## check if current match
   ## is a boundary. Match ascii only
   isWordBoundaryImpl(r, nxt, isWordAscii)
 
-func match*(n: Node, r: Rune, nxt: Rune): bool {.inline.} =
+func match*(n: Node, r, nxt: int32): bool {.inline.} =
   ## match for ``Node`` of assertion kind.
   ## Return whether the node matches
   ## the current characters or not
   case n.kind
   of reStart, reStartSym:
-    r == invalidRune
+    r == seoe
   of reEnd, reEndSym:
-    nxt == invalidRune
+    nxt == seoe
   of reStartSymML:
-    (r == invalidRune or
-     r == lineBreakRune)
+    (r == seoe or
+     r == lineBreak)
   of reEndSymML:
-    (nxt == invalidRune or
-     nxt == lineBreakRune)
+    (nxt == seoe or
+     nxt == lineBreak)
   of reWordBoundary:
     isWordBoundary(r, nxt)
   of reNotWordBoundary:
@@ -96,7 +99,7 @@ func isDigitAscii(r: Rune): bool {.inline.} =
     false
 
 func isAnyAscii(r: Rune): bool {.inline.} =
-  (r.int <= int8.high and
+  (r.int < 128 and
    r != lineBreakRune)
 
 # todo: can not use unicodeplus due to
@@ -107,63 +110,64 @@ func swapCase*(r: Rune): Rune =
     return
   result = r.toUpper()
 
-func match*(n: Node, r: Rune): bool {.inline.} =
+func match*(n: Node, cp: int32): bool {.inline.} =
   ## match for ``Node`` of matchable kind.
   ## Return whether the node matches
   ## the current character or not
-  if r.int < 0:
+  template r: untyped = cp.Rune
+  if cp == seoe:
     return n.kind == reEOE
-  case n.kind
-  of reEOE:
-    r == invalidRune
-  of reWord:
-    r.isWord()
-  of reNotAlphaNum:
-    not r.isWord()
-  of reDigit:
-    r.isDecimal()
-  of reNotDigit:
-    not r.isDecimal()
-  of reWhiteSpace:
-    r.isWhiteSpace()
-  of reNotWhiteSpace:
-    not r.isWhiteSpace()
-  of reInSet, reNotSet:
-    var matches = (
-      r in n.cps or
-      r in n.ranges)
-    if not matches:
-      for nn in n.shorthands:
-        matches = nn.match(r)
-        if matches: break
-    ((matches and n.kind == reInSet) or
-     (not matches and n.kind == reNotSet))
-  of reAny:
-    r != lineBreakRune
-  of reAnyNL:
-    true
-  of reCharCI:
-    r == n.cp or r == n.cp.swapCase()
-  of reWordAscii:
-    r.isWordAscii()
-  of reDigitAscii:
-    r.isDigitAscii()
-  of reWhiteSpaceAscii:
-    r.isWhiteSpaceAscii()
-  of reUCC:
-    r.unicodeCategory() in n.cc
-  of reNotAlphaNumAscii:
-    not r.isWordAscii()
-  of reNotDigitAscii:
-    not r.isDigitAscii()
-  of reNotWhiteSpaceAscii:
-    not r.isWhiteSpaceAscii()
-  of reNotUCC:
-    r.unicodeCategory() notin n.cc
-  of reAnyAscii:
-    r.isAnyAscii()
-  of reAnyNLAscii:
-    r.isAnyAscii() or r == lineBreakRune
-  else:
-    assert n.kind == reChar
-    n.cp == r
+  result = case n.kind
+    of reEOE:
+      cp == seoe
+    of reWord:
+      r.isWord()
+    of reNotAlphaNum:
+      not r.isWord()
+    of reDigit:
+      r.isDecimal()
+    of reNotDigit:
+      not r.isDecimal()
+    of reWhiteSpace:
+      r.isWhiteSpace()
+    of reNotWhiteSpace:
+      not r.isWhiteSpace()
+    of reInSet, reNotSet:
+      var matches = (
+        r in n.cps or
+        r in n.ranges)
+      if not matches:
+        for nn in n.shorthands:
+          matches = nn.match(cp)
+          if matches: break
+      ((matches and n.kind == reInSet) or
+      (not matches and n.kind == reNotSet))
+    of reAny:
+      r != lineBreakRune
+    of reAnyNL:
+      true
+    of reCharCI:
+      r == n.cp or r == n.cp.swapCase()
+    of reWordAscii:
+      r.isWordAscii()
+    of reDigitAscii:
+      r.isDigitAscii()
+    of reWhiteSpaceAscii:
+      r.isWhiteSpaceAscii()
+    of reUCC:
+      r.unicodeCategory() in n.cc
+    of reNotAlphaNumAscii:
+      not r.isWordAscii()
+    of reNotDigitAscii:
+      not r.isDigitAscii()
+    of reNotWhiteSpaceAscii:
+      not r.isWhiteSpaceAscii()
+    of reNotUCC:
+      r.unicodeCategory() notin n.cc
+    of reAnyAscii:
+      r.isAnyAscii()
+    of reAnyNLAscii:
+      r.isAnyAscii() or r == lineBreakRune
+    else:
+      assert n.kind == reChar
+      n.cp == r

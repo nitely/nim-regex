@@ -168,7 +168,7 @@ func lonelyLit(exp: RpnExp): NodeIdx =
       if n.uid == litNfa.s[nlit].uid:
         result = ni.NodeIdx
         #return
-      if not match(n, litNfa.s[nlit].cp):
+      if not match(n, litNfa.s[nlit].cp.int32):
         litsTmp.add nlit
     swap lits, litsTmp
     litsTmp.setLen 0

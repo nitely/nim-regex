@@ -1116,6 +1116,7 @@ when isMainModule:
   doAssert match("b", re"(|b)")
   doAssert match("", re"(|b)")
   doAssert(not match("a", re"(|b)"))
+  doAssert match("", re"||")
 
   doAssert graph(re"^a+$") == """digraph graphname {
     0 [label="q0";color=blue];

@@ -1332,13 +1332,6 @@ test "tflags":
     "abc(?q)\n" &
     "   ^"
 
-test "tor_op":
-  check raisesMsg(r"|") ==
-    "Invalid OR conditional, nothing " &
-    "to match at right/left side of the condition"
-  check raises(r"abc|")
-  check raises(r"|abc")
-
 test "tescaped_sequences":
   check "\x07".isMatch(re"\a")
   check "\x0C".isMatch(re"\f")

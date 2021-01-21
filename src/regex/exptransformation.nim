@@ -24,6 +24,20 @@ func check(cond: bool, msg: string) =
   if not cond:
     raise newException(RegexError, msg)
 
+func fixEmptyOr(exp: Exp): Exp =
+  ## Handle "|", "(|)", "a|", "|b", "||", "a||b", ...
+  result.s = newSeq[Node](exp.s.len)
+  result.s.setLen 0
+  for i in 0 .. exp.s.len-1:
+    if exp.s[i].kind == reOr:
+      if i-1 < 0 or exp.s[i-1].kind == reGroupStart:
+        result.s.add initSkipNode()
+      result.s.add exp.s[i]
+      if i+1 > exp.s.len-1 or exp.s[i+1].kind in {reGroupEnd, reOr}:
+        result.s.add initSkipNode()
+    else:
+      result.s.add exp.s[i]
+
 func greediness(exp: Exp): Exp =
   ## apply greediness to an expression
   result.s = newSeq[Node](exp.s.len)
@@ -317,7 +331,7 @@ func joinAtoms(exp: Exp): AtomsExp =
   var atomsCount = 0
   for n in exp.s:
     case n.kind
-    of matchableKind, assertionKind - lookaroundKind:
+    of matchableKind, assertionKind - lookaroundKind, reSkip:
       inc atomsCount
       if atomsCount > 1:
         atomsCount = 1
@@ -410,7 +424,7 @@ func rpn(exp: AtomsExp): RpnExp =
   var ops = newSeq[Node]()
   for n in exp.s:
     case n.kind
-    of matchableKind, assertionKind:
+    of matchableKind, assertionKind, reSkip:
       result.s.add n
     of reGroupStart:
       ops.add n
@@ -472,6 +486,7 @@ func toAtoms*(
   groups: var GroupsCapture
 ): AtomsExp {.inline.} =
   result = exp
+    .fixEmptyOr
     .fillGroups(groups)
     .greediness
     .applyFlags

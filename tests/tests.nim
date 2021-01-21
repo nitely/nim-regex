@@ -628,10 +628,6 @@ test "talternations":
   check raises(r"a|*b")
   check raises(r"a|+")
   check raises(r"a|+b")
-  # XXX these work on PCRE
-  check raises(r"(a|)")
-  check raises(r"(|)")
-  check raises(r"|")
 
 test "tcaptures":
   check "ab".matchWithCapt(re"(a)b") == @[@["a"]]
@@ -1335,13 +1331,6 @@ test "tflags":
     "Invalid group. Unknown group type\n" &
     "abc(?q)\n" &
     "   ^"
-
-test "tor_op":
-  check raisesMsg(r"|") ==
-    "Invalid OR conditional, nothing " &
-    "to match at right/left side of the condition"
-  check raises(r"abc|")
-  check raises(r"|abc")
 
 test "tescaped_sequences":
   check "\x07".isMatch(re"\a")
@@ -2920,3 +2909,42 @@ test "escapeRe":
     for c in 0 .. 255:
       s.add c.char
     discard re(escapeRe(s))
+
+test "issue_98":
+  check match("", re"|")
+  check match("a", re"a|")
+  check match("", re"a|")
+  check(not match("b", re"a|"))
+  check match("b", re"|b")
+  check match("", re"|b")
+  check(not match("a", re"|b"))
+  check match("", re"(|)")
+  check match("a", re"(a|)")
+  check match("", re"(a|)")
+  check(not match("b", re"(a|)"))
+  check match("b", re"(|b)")
+  check match("", re"(|b)")
+  check(not match("a", re"(|b)"))
+  check match("", re"||")
+  check match("a", re"a||")
+  check match("", re"a||")
+  check match("b", re"||b")
+  check match("", re"||b")
+  check match("", re"a||b")
+  check match("a", re"a||b")
+  check match("b", re"a||b")
+  check match("", re"|||")
+  check match("a", re"a|||")
+  check match("", re"a|||")
+  check match("b", re"|||b")
+  check match("", re"|||b")
+  check match("a", re"a|||b")
+  check match("b", re"a|||b")
+  check match("", re"(||)")
+  check match("a", re"(a||)")
+  check match("", re"(a||)")
+  check match("b", re"(||b)")
+  check match("", re"(||b)")
+  check match("1.1.1.1", re"(\d+)\.(\d+)(\.(\d+)|)(\.(\d+)|)")
+  check match("1.1.1", re"(\d+)\.(\d+)(\.(\d+)|)(\.(\d+)|)")
+  check match("1.1", re"(\d+)\.(\d+)(\.(\d+)|)(\.(\d+)|)")

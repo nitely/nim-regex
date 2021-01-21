@@ -2920,3 +2920,22 @@ test "escapeRe":
     for c in 0 .. 255:
       s.add c.char
     discard re(escapeRe(s))
+
+test "issue_98":
+  check match("", re"|")
+  check match("a", re"a|")
+  check match("", re"a|")
+  check(not match("b", re"a|"))
+  check match("b", re"|b")
+  check match("", re"|b")
+  check(not match("a", re"|b"))
+  check match("", re"(|)")
+  check match("a", re"(a|)")
+  check match("", re"(a|)")
+  check(not match("b", re"(a|)"))
+  check match("b", re"(|b)")
+  check match("", re"(|b)")
+  check(not match("a", re"(|b)"))
+  check match("1.1.1.1", re"(\d+)\.(\d+)(\.(\d+)|)(\.(\d+)|)")
+  check match("1.1.1", re"(\d+)\.(\d+)(\.(\d+)|)(\.(\d+)|)")
+  check match("1.1", re"(\d+)\.(\d+)(\.(\d+)|)(\.(\d+)|)")

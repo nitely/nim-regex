@@ -66,7 +66,7 @@ func eNfa*(exp: RpnExp): Enfa {.raises: [RegexError].} =
        "limit is ~$#") %% $int16.high)
     let ni = result.s.len.int16
     case n.kind
-    of matchableKind, assertionKind:
+    of matchableKind, assertionKind, reSkip:
       n.next.add eoe
       ends.update(ni, [eoe])
       result.s.add n

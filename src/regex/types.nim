@@ -175,6 +175,11 @@ func initGroupStart*(
     flags: flags,
     isCapturing: isCapturing)
 
+func initSkipNode*(): Node =
+  result = Node(
+    kind: reSkip,
+    cp: "#".toRune)
+
 func initSkipNode*(next: openArray[int16]): Node =
   ## Return a dummy node that should be skipped
   ## while traversing the NFA

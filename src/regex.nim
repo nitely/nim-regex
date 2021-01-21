@@ -1102,6 +1102,21 @@ when isMainModule:
   doAssert match("abcabcabc", re"(?:(?:abc)){3}")
   doAssert match("abcabcabc", re"((abc)){3}")
 
+  doAssert match("", re"|")
+  doAssert match("a", re"a|")
+  doAssert match("", re"a|")
+  doAssert(not match("b", re"a|"))
+  doAssert match("b", re"|b")
+  doAssert match("", re"|b")
+  doAssert(not match("a", re"|b"))
+  doAssert match("", re"(|)")
+  doAssert match("a", re"(a|)")
+  doAssert match("", re"(a|)")
+  doAssert(not match("b", re"(a|)"))
+  doAssert match("b", re"(|b)")
+  doAssert match("", re"(|b)")
+  doAssert(not match("a", re"(|b)"))
+
   doAssert graph(re"^a+$") == """digraph graphname {
     0 [label="q0";color=blue];
     1 [label="q1";color=black];

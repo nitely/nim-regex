@@ -1118,6 +1118,15 @@ when isMainModule:
   doAssert(not match("a", re"(|b)"))
   doAssert match("", re"||")
 
+  doAssert match(" ", re"(?x)     (?-x) ")
+  doAssert match("aa", re"((?x)   a    )a")
+  doAssert match(" ", re"((?x)     ) ")
+  doAssert match(" ", re"(?x:(?x)     ) ")
+  doAssert match(" ", re"((?x:)) ")
+  doAssert match("A", re"(?xi)     a")
+  doAssert(not match("A", re"((?xi))     a"))
+  doAssert(not match("A", re"(?xi:(?xi)     )a"))
+
   doAssert graph(re"^a+$") == """digraph graphname {
     0 [label="q0";color=blue];
     1 [label="q1";color=black];

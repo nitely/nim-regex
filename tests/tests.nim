@@ -1155,10 +1155,6 @@ test "tnamed_groups":
   check raisesMsg(r"(b(a)") ==
     "Invalid capturing group. " &
     "Found too many opening symbols"
-  check raisesMsg(r"a()") ==
-    "Invalid group. Empty group is not allowed\n" &
-    "a()\n" &
-    " ^"
   check raisesMsg(r"a(?P<asd)") ==
     "Invalid group name. Expected char in " &
     "{'a'..'z', 'A'..'Z', '0'..'9', '-', '_'}, " &
@@ -2948,3 +2944,24 @@ test "issue_98":
   check match("1.1.1.1", re"(\d+)\.(\d+)(\.(\d+)|)(\.(\d+)|)")
   check match("1.1.1", re"(\d+)\.(\d+)(\.(\d+)|)(\.(\d+)|)")
   check match("1.1", re"(\d+)\.(\d+)(\.(\d+)|)(\.(\d+)|)")
+
+test "issue_101":
+  var m: RegexMatch
+  check match("TXT1/TXT2.1", re"(TXT1)/TXT2()\.(\d+)")
+  check match("TXT1/TXT2.1", re"(TXT1)/TXT2(?:)\.(\d+)")
+  check match("TXT1/TXT2.1", re"(TXT1)/TXT2(?i:)\.(\d+)")
+  check match("TXT1/TXT2.1", re"(TXT1)/TXT2(?P<foo>)\.(\d+)")
+  check match("TXT1/TXT2.1", re"(TXT1)/TXT2()\.(\d+)", m) and
+    m.captures == @[@[0 .. 3], @[9 .. 8], @[10 .. 10]]
+  check match(" ", re"(?x)     (?-x) ")
+  check match("aa", re"((?x)a    )a")
+  check match("aa", re"((?x)   a    )a")
+  check match(" ", re"((?x)) ")
+  check match(" ", re"((?x)     ) ")
+  check match(" ", re"(?x:(?x)     ) ")
+  check match(" ", re"(?x:) ")
+  check match(" ", re"(?x:   ) ")
+  check match(" ", re"((?x:)) ")
+  check match("A", re"(?xi)     a")
+  check(not match("A", re"((?xi))     a"))
+  check(not match("A", re"(?xi:(?xi)     )a"))

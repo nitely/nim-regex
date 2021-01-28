@@ -56,6 +56,7 @@ type
     reJoiner,  # ~
     reGroupStart,  # (
     reGroupEnd,  # )
+    reFlags,  # (?flags)
     reOr,  # |
     reZeroOrMore,  # *
     reOneOrMore,  # +
@@ -292,6 +293,7 @@ func `$`*(n: Node): string =
   of reJoiner: "~"
   of reGroupStart: "("
   of reGroupEnd: ")"
+  of reFlags: "(?flags)"
   of reOr: "|"
   of reZeroOrMore: "*" & (if n.isGreedy: "" else: "?")
   of reOneOrMore: "+" & (if n.isGreedy: "" else: "?")

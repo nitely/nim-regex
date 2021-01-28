@@ -24,8 +24,9 @@ func check(cond: bool, msg: string) =
   if not cond:
     raise newException(RegexError, msg)
 
-func fixEmptyOr(exp: Exp): Exp =
+func fixEmptyOps(exp: Exp): Exp =
   ## Handle "|", "(|)", "a|", "|b", "||", "a||b", ...
+  ## Handle "()"
   result.s = newSeq[Node](exp.s.len)
   result.s.setLen 0
   for i in 0 .. exp.s.len-1:
@@ -34,6 +35,10 @@ func fixEmptyOr(exp: Exp): Exp =
         result.s.add initSkipNode()
       result.s.add exp.s[i]
       if i+1 > exp.s.len-1 or exp.s[i+1].kind in {reGroupEnd, reOr}:
+        result.s.add initSkipNode()
+    elif exp.s[i].kind == reGroupStart:
+      result.s.add exp.s[i]
+      if i+1 > exp.s.len-1 or exp.s[i+1].kind == reGroupEnd:
         result.s.add initSkipNode()
     else:
       result.s.add exp.s[i]
@@ -219,20 +224,18 @@ func applyFlags(exp: Exp): Exp =
     # Orphan flags are added to current group
     case n.kind
     of groupStartKind:
-      if n.flags.len == 0:
-        flags.add @[]
-        result.s.add n
-        continue
-      if sc.peek.kind == reGroupEnd:  # (?flags)
-        discard sc.next()
-        if flags.len > 0:
-          flags[flags.len - 1].add n.flags
-        else:
-          flags.add n.flags
-        continue  # skip (
       flags.add n.flags
     of reGroupEnd:
       discard flags.pop()
+    of reFlags:
+      if flags.len > 0:
+        flags[flags.len-1].add n.flags
+      else:
+        flags.add n.flags
+      # XXX define skipKind = {reSkip, reFlags} in types,
+      #     instead of this hack
+      result.s.add Node(kind: reSkip)
+      continue  # skip node
     else:
       let ff = flags.squash()
       for f in Flag.low .. Flag.high:
@@ -486,7 +489,7 @@ func toAtoms*(
   groups: var GroupsCapture
 ): AtomsExp {.inline.} =
   result = exp
-    .fixEmptyOr
+    .fixEmptyOps
     .fillGroups(groups)
     .greediness
     .applyFlags

@@ -545,11 +545,6 @@ func toNegFlag(r: Rune): Flag =
       ("Invalid group flag, found -$# " &
        "but expected one of: -i, -m, -s, -U or -u") %% $r)
 
-template checkEmptyGroup() {.dirty.} =
-  prettyCheck(
-    peek(sc) != toRune(")"),
-    "Invalid group. Empty group is not allowed")
-
 func parseGroupTag(sc: Scanner[Rune]): Node =
   ## parse a special group (name, flags, non-captures).
   ## Return a regular ``reGroupStart``
@@ -557,14 +552,12 @@ func parseGroupTag(sc: Scanner[Rune]): Node =
   # A regular group
   let startPos = sc.pos
   if sc.peek != "?".toRune:
-    checkEmptyGroup()
     result = initGroupStart()
     return
   discard sc.next()  # Consume "?"
   case sc.peek
   of ":".toRune:
     discard sc.next()
-    checkEmptyGroup()
     result = initGroupStart(isCapturing = false)
   of "P".toRune:
     discard sc.next()
@@ -592,7 +585,6 @@ func parseGroupTag(sc: Scanner[Rune]): Node =
     prettyCheck(
       sc.prev == ">".toRune,
       "Invalid group name. Missing `>`")
-    checkEmptyGroup()
     result = initGroupStart(name)
   of "i".toRune,
       "m".toRune,
@@ -605,21 +597,21 @@ func parseGroupTag(sc: Scanner[Rune]): Node =
       flags: seq[Flag] = @[]
       isNegated = false
     for cp in sc:
-      if cp == ":".toRune:
-        checkEmptyGroup()
+      if cp == ":".toRune or cp == ")".toRune:
         break
       if cp == "-".toRune:
         isNegated = true
         continue
       if isNegated:
-        flags.add(toNegFlag(cp))
+        flags.add toNegFlag(cp)
       else:
-        flags.add(toFlag(cp))
-      if sc.peek == ")".toRune:
-        break
-    result = initGroupStart(
-      flags = flags,
-      isCapturing = false)
+        flags.add toFlag(cp)
+    result = if sc.prev == ")".toRune:
+      Node(kind: reFlags, flags: flags)
+    else:
+      initGroupStart(
+        flags = flags,
+        isCapturing = false)
   #reLookahead,
   #reLookbehind,
   of '='.Rune, '<'.Rune, '!'.Rune:
@@ -716,27 +708,34 @@ func verbosity(
   case n.kind:
   of reGroupStart:
     if vb.len > 0:
-      vb.add(vb[vb.high])
+      vb.add vb[vb.len-1]
     else:
-      vb.add(false)
+      vb.add false
     for f in n.flags:
       case f:
       of flagVerbose:
-        vb[vb.high] = true
+        vb[vb.len-1] = true
       of flagNotVerbose:
-        vb[vb.high] = false
+        vb[vb.len-1] = false
       else:
         discard
-    if sc.peek == ")".toRune:  # (?flags)
-      if vb.len > 1:  # set outter group
-        vb[vb.high - 1] = vb[vb.high]
-      else:
-        vb.add(vb[vb.high])
   of reGroupEnd:
     if vb.len > 0:
       discard vb.pop()
     # else: unbalanced parentheses,
     # it'll raise later
+  of reFlags:
+    if vb.len == 0:
+      vb.add false
+    # else set outter group
+    for f in n.flags:
+      case f:
+      of flagVerbose:
+        vb[vb.len-1] = true
+      of flagNotVerbose:
+        vb[vb.len-1] = false
+      else:
+        discard
   else:
     discard
 

@@ -193,6 +193,10 @@ func teClosure(
   for s in eNfa.s[state].next:
     teClosure(result, eNfa, s, processing, zclosure)
 
+when (NimMajor, NimMinor, NimPatch) < (1,4,0) and not declared(IndexDefect):
+  # avoids a warning
+  type IndexDefect = IndexError
+
 func eRemoval*(eNfa: Enfa): Nfa {.raises: [].} =
   ## Remove e-transitions and return
   ## remaining state transtions and
@@ -220,7 +224,7 @@ func eRemoval*(eNfa: Enfa): Nfa {.raises: [].} =
   while qw.len > 0:
     try:
       qa = qw.popLast()
-    except IndexError:
+    except IndexDefect:
       doAssert false
     closure.setLen 0
     teClosure(closure, eNfa, qa, processing)

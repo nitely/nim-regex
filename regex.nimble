@@ -7,7 +7,7 @@ license = "MIT"
 srcDir = "src"
 skipDirs = @["tests", "bench", "docs"]
 
-requires "nim >= 0.19.6"
+requires "nim >= 1.0.0"
 requires "unicodedb >= 0.7.2"
 
 task test, "Test":
@@ -33,4 +33,5 @@ task test, "Test":
     exec "nim doc -o:./docs/ugh/ugh.html ./src/regex.nim"
 
 task docs, "Docs":
+  # xxx use --outdir:docs
   exec "nim doc --project -o:./docs ./src/regex.nim"

@@ -5,6 +5,7 @@ when NimMajor >= 1:
 import std/unicode
 import std/sets
 from std/algorithm import sorted
+from std/sequtils import toSeq
 
 import pkg/unicodedb/properties
 
@@ -186,13 +187,7 @@ func initSkipNode*(next: openArray[int16]): Node =
   ## while traversing the NFA
   result = Node(
     kind: reSkip,
-    cp: "#".toRune)
-  when false:
-    # pending https://github.com/nim-lang/Nim/issues/15511#issuecomment-719952709
-    result.next.add next
-  else:
-    for ai in next:
-      result.next.add ai
+    cp: "#".toRune, next: toSeq(next))
 
 func isEmpty*(n: Node): bool =
   ## check if a set ``Node`` is empty

@@ -794,7 +794,7 @@ func replace*(
   pattern: Regex,
   by: string,
   limit = 0
-): string {.inline, raises: [ValueError].} =
+): string {.inline, effectsOf: by.} =
   ## Replace matched substrings.
   ##
   ## Matched groups can be accessed with ``$N``

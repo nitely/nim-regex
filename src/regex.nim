@@ -828,12 +828,15 @@ func replace*(
     if limit > 0 and j == limit: break
   result.addsubstr(s, i)
 
+when not defined(nimHasEffectsOf):
+  {.pragma: effectsOf.}
+
 func replace*(
   s: string,
   pattern: Regex,
   by: proc (m: RegexMatch, s: string): string,
   limit = 0
-): string {.inline, raises: [].} =
+): string {.inline, raises: [], effectsOf: by.} =
   ## Replace matched substrings.
   ##
   ## If ``limit`` is given, at most ``limit``

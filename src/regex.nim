@@ -836,7 +836,7 @@ func replace*(
   pattern: Regex,
   by: proc (m: RegexMatch, s: string): string,
   limit = 0
-): string {.inline, effectsOf: by.} =
+): string {.inline, raises: [], effectsOf: by.} =
   ## Replace matched substrings.
   ##
   ## If ``limit`` is given, at most ``limit``

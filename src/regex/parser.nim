@@ -441,6 +441,7 @@ func parseRepRange(sc: Scanner[Rune]): Node =
   # This is not PCRE compatible. PCRE allows
   # {,} and {,1} to be parsed as chars instead of a
   # repetition range, we raise an error instead.
+  # Range limit can be defined with the `reRepRangeLimit` param.
   if sc.peek.int != ','.ord and
       sc.peek.int notin '0'.ord .. '9'.ord:
     return Node(kind: reChar, cp: '{'.Rune)
@@ -494,11 +495,12 @@ func parseRepRange(sc: Scanner[Rune]): Node =
     "Invalid repetition range. Max value is $#" %% $int16.high)
   # for perf reasons. This becomes a?a?a?...
   # too many parallel states
+  const reRepRangeLimit {.intdefine.} = 100
   prettyCheck(
-    not (lastNum - firstNum > 100),
+    not (lastNum - firstNum > reRepRangeLimit),
     ("Invalid repetition range. " &
-     "Expected 100 repetitions or less, " &
-     "but found: $#") %% $(lastNum - firstNum))
+     "Expected $# repetitions or less, " &
+     "but found: $#") %% [$reRepRangeLimit, $(lastNum - firstNum)])
   result = Node(
     kind: reRepRange,
     min: firstNum.int16,

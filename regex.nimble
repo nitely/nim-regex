@@ -1,6 +1,6 @@
 # Package
 
-version = "0.19.0"
+version = "0.20.0"
 author = "Esteban Castro Borsani (@nitely)"
 description = "Linear time regex matching"
 license = "MIT"
@@ -33,5 +33,4 @@ task test, "Test":
     exec "nim doc -o:./docs/ugh/ugh.html ./src/regex.nim"
 
 task docs, "Docs":
-  # xxx use --outdir:docs
   exec "nim doc --project -o:./docs ./src/regex.nim"

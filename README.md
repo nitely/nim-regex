@@ -13,6 +13,7 @@ Features:
 * Unicode level-1 support
 * Descriptive error messages
 * Supports matching at compile-time (Nim +0.20)
+* PCRE syntax and semantics
 
 ## Install
 
@@ -22,7 +23,7 @@ nimble install regex
 
 # Compatibility
 
-Nim +0.19.0
+Nim +1.0.0
 
 ## Docs
 

@@ -123,10 +123,9 @@ func parseUnicodeLit(sc: Scanner[Rune], size: int): Node =
       ("Invalid unicode literal. " &
        "Expected $# hex digits, but found $#") %% [$size, $i])
     prettyCheck(
-      sc.curr.int in {
-        '0'.ord .. '9'.ord,
-        'a'.ord .. 'z'.ord,
-        'A'.ord .. 'Z'.ord},
+      sc.curr.int in '0'.ord .. '9'.ord or
+      sc.curr.int in 'a'.ord .. 'z'.ord or
+      sc.curr.int in 'A'.ord .. 'Z'.ord,
       ("Invalid unicode literal. " &
        "Expected hex digit, but found $#") %% $sc.curr)
     rawCP[i] = sc.next().int.char

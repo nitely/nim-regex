@@ -571,7 +571,7 @@ proc matchImpl*(text, expLit, body: NimNode): NimNode =
     smA, smB, capts, capt, matched,
     text, startLit, regex.nfa, look(smL), flags)
   let nfaLenLit = newLit regex.nfa.s.len
-  let nfaGroupsLen = regex.groupsCount
+  let nfaGroupsLen = int(regex.groupsCount)
   result = quote do:
     block:
       var

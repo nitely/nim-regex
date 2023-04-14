@@ -161,7 +161,7 @@ func parseOctalLit(sc: Scanner[Rune]): Node =
       ("Invalid octal literal. " &
        "Expected 3 octal digits, but found $#") %% $i)
     prettyCheck(
-      sc.curr.int in {'0'.ord .. '7'.ord},
+      sc.curr.int in '0'.ord .. '7'.ord,
       ("Invalid octal literal. " &
        "Expected octal digit, but found $#") %% $sc.curr)
     rawCP[i] = sc.next().int.char
@@ -189,9 +189,8 @@ func parseUnicodeNameX(sc: Scanner[Rune]): Node =
   var name = newString(nameEnd)
   for i in 0 ..< nameEnd:
     prettyCheck(
-      sc.curr.int in {
-        'a'.ord .. 'z'.ord,
-        'A'.ord .. 'Z'.ord},
+      sc.curr.int in 'a'.ord .. 'z'.ord or
+      sc.curr.int in 'A'.ord .. 'Z'.ord,
       "Invalid unicode name. " &
       "Expected chars in {'a'..'z', 'A'..'Z'}")
     name[i] = sc.next().int.char
@@ -571,11 +570,11 @@ func parseGroupTag(sc: Scanner[Rune]): Node =
       if r == ">".toRune:
         break
       prettyCheck(
-        r.int in {
-          'a'.ord .. 'z'.ord,
-          'A'.ord .. 'Z'.ord,
-          '0'.ord .. '9'.ord,
-          '-'.ord, '_'.ord},
+        r.int <= char.high.ord and r.int.char in {
+          'a' .. 'z',
+          'A' .. 'Z',
+          '0' .. '9',
+          '-', '_'},
         ("Invalid group name. Expected char in " &
          "{'a'..'z', 'A'..'Z', '0'..'9', '-', '_'}, " &
          "but found `$#`") %% $r)

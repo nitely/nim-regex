@@ -935,6 +935,14 @@ func match2*(s: string, pattern: Regex): bool {.inline, raises: [].} =
   var m: RegexMatch2
   result = matchImpl(s, pattern, m)
 
+func group*(m: RegexMatch2, i: int): Slice[int] {.inline, raises: [].} =
+  m.captures[i]
+
+func group*(
+  m: RegexMatch2, s: string
+): Slice[int] {.inline, raises: [KeyError].} =
+  m.group m.namedGroups[s]
+
 when isMainModule:
   import ./regex/parser
   import ./regex/exptransformation

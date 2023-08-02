@@ -554,3 +554,231 @@ test "tdot_any_matcher":
   check "\t".isMatch(re".")
   check(not "\L".isMatch(re".*"))
 
+test "tgroup":
+  block:
+    var m: RegexMatch2
+    check "foobar".match2(re"(\w*)", m)
+    check m.group(0) == 0..5
+  block:
+    var m: RegexMatch2
+    check "foobar".match2(re"(?P<foo>\w*)", m)
+    check m.group(0) == 0..5
+  block:
+    var m: RegexMatch2
+    check "ab".match2(re"(a)(b)", m)
+    check m.group(0) == 0..0
+    check m.group(1) == 1..1
+  block:
+    var m: RegexMatch2
+    check match2("ab", re"(a)(b)", m)
+    check m.toStrCaptures("ab") == @["a", "b"]
+  block:
+    var m: RegexMatch2
+    check "abc".match2(re"(?P<foo>\w)+", m)
+    check m.group("foo") == 2..2
+  block:
+    var m: RegexMatch2
+    check "abc".match2(re"(\w)+", m)
+    check m.group(0) == 2..2
+
+test "tnamed_groups":
+  block:
+    var m: RegexMatch2
+    check "foobar".match2(re"(?P<foo>\w*)", m)
+    check m.group("foo") == 0..5
+  block:
+    var m: RegexMatch2
+    check "foobar".match2(re"(?P<foo>(?P<bar>\w*))", m)
+    check m.group("foo") == 0..5
+    check m.group("bar") == 0..5
+  block:
+    var m: RegexMatch2
+    check "aab".match2(re"(?P<foo>(?P<bar>a)*b)", m)
+    check m.group("foo") == 0..2
+    check m.group("bar") == 1..1
+  block:
+    var m: RegexMatch2
+    check "aab".match2(re"((?P<bar>a)*b)", m)
+    check m.group("bar") == 1..1
+
+  check raisesMsg(r"abc(?Pabc)") ==
+    "Invalid group name. Missing `<`\n" &
+    "abc(?Pabc)\n" &
+    "   ^"
+  check raisesMsg(r"abc(?P<abc") ==
+    "Invalid group name. Missing `>`\n" &
+    "abc(?P<abc\n" &
+    "   ^"
+  check raisesMsg(r"a(?P<>abc)") ==
+    "Invalid group name. Name can't be empty\n" &
+    "a(?P<>abc)\n" &
+    " ^"
+  check raisesMsg(r"(a)b)") ==
+    "Invalid capturing group. " &
+    "Found too many closing symbols"
+  check raisesMsg(r"(b(a)") ==
+    "Invalid capturing group. " &
+    "Found too many opening symbols"
+  check raisesMsg(r"a(?P<asd)") ==
+    "Invalid group name. Expected char in " &
+    "{'a'..'z', 'A'..'Z', '0'..'9', '-', '_'}, " &
+    "but found `)`\n" &
+    "a(?P<asd)\n" &
+    " ^"
+  check(not raises(r"(?P<abcdefghijklmnopqrstuvwxyz" &
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_>abc)"))
+  check(not raises(r"(\b)"))
+  #[
+  var manyGroups = newStringOfCap(int16.high * 3)
+  for _ in 0 ..< int16.high - 1:
+    manyGroups.add(r"(a)")
+  check(not raises(manyGroups))
+  manyGroups.add(r"(a)")
+  check raisesMsg(manyGroups) ==
+    "Invalid number of capturing " &
+    "groups, the limit is 32766"
+  ]#
+
+test "tflags":
+  check "foo\Lbar".isMatch(re"(?s).*")
+  check "foo\Lbar".isMatch(re"(?s:.*)")
+  check "foo\Lbar".isMatch(re"(?ssss).*")
+  check(not "foo\Lbar".isMatch(re"(?s-s).*"))
+  check(not "foo\Lbar".isMatch(re"(?-s-s-s).*"))
+  check(not "foo\Lbar".isMatch(re"(?-ss).*"))
+  check(not "foo\Lbar".isMatch(re"(?-ss-ss).*"))
+  check(not "foo\Lbar".isMatch(re"(?-sssss-s).*"))
+  check(not "foo\Lbar".isMatch(re"(?s-s:.*)"))
+  check(not "foo\Lbar".isMatch(re"(?------s----s:.*)"))
+  check "foo\Lbar".matchWithCapt(re"((?s:.*))") == @["foo\Lbar"]
+  check "a".matchWithCapt(re"((?i:a))") == @["a"]
+  check "A".matchWithCapt(re"((?i:a))") == @["A"]
+  check "ABC".matchWithCapt(re"((?i:aBc))") == @["ABC"]
+  check "a".matchWithCapt(re"((?-i:a))") == @["a"]
+  check(not "A".isMatch(re"((?-i:a))"))
+  check(not "A".isMatch(re"((?-ii-i:a))"))
+  check "a".matchWithCapt(re"((?i)a)") == @["a"]
+  check "A".matchWithCapt(re"((?i)a)") == @["A"]
+  check "a".matchWithCapt(re"((?-i)a)") == @["a"]
+  check(not "A".isMatch(re"((?-i)a)"))
+  check "AaA".isMatch(re"(?i)a+")
+  check "AaA".isMatch(re"(?i)A+")
+  check "AbC".isMatch(re"(?i)abc")
+  check(not "b".isMatch(re"(?i)a"))
+  check "A".isMatch(re"(?-i)(?i)a")
+  check(not "A".isMatch(re"(?i)(?-i)a"))
+  check "AaA".matchWithCapt(re"((?i)a+)") == @["AaA"]
+  check "A".isMatch(re"(?i)[a]")
+  check "a".isMatch(re"(?i)[a]")
+  check(not "@".isMatch(re"(?i)[a]"))
+  check "a".isMatch(re"(?i)[A]")
+  check "A".isMatch(re"(?i)[A]")
+  check "C".isMatch(re"(?i)[a-z]")
+  check "c".isMatch(re"(?i)[a-z]")
+  check(not "@".isMatch(re"(?i)[a-z]"))
+  check "c".isMatch(re"(?i)[A-Z]")
+  check "C".isMatch(re"(?i)[A-Z]")
+
+  check "aa".matchWithCapt(re"((?U)a*)(a*)") == @["", "aa"]
+  check "aa".matchWithCapt(re"((?U)a*?)(a*)") == @["aa", ""]
+  check "aa".matchWithCapt(re"((?U-U)a*)(a*)") == @["aa", ""]
+  # no empty matches
+  check "aa".matchWithCapt(re"(?U:(a)*)(a)*") == @["", "a"]
+  check "aa".matchWithCapt(re"((?U:a*))(a*)") == @["", "aa"]
+  check "aa".matchWithCapt(re"((?U:a*?))(a*)") == @["aa", ""]
+  check "aa".matchWithCapt(re"((?U-U:a*))(a*)") == @["aa", ""]
+
+  check(not "a\Lb\L".isMatch(re"(?sm)a.b(?-sm:.)"))
+  check "a\Lb\L".isMatch(re"(?ms)a.b(?s-m:.)")
+  check "a\L".isMatch(re"(?s)a.")
+  check(not "a\L\L".isMatch(re"(?s)a.$."))
+  check "a\L\L".isMatch(re"(?sm)a.$.")
+  check(not "a\L\L".isMatch(re"(?-sm)a.$."))
+  check(not "a\L\L".isMatch(re"(?s-m)a.$."))
+  check "a\L\L".isMatch(re"(?s-m)(?m:a.$.)")
+  check(not "a\L\L".isMatch(re"(?i-sm)(?s:a.$.)"))
+  check "a\L\L".isMatch(re"(?i-sm)(?sm:a.$.)")
+  check(not "a\L\L".isMatch(re"(?-sm)(?sm)(?-sm:a.$.)"))
+  check "a\L\L".isMatch(re"(?sm)(?-sm)(?sm:a.$.)")
+  check(not "a\L\L".isMatch(re"(?-sm)(?sm:(?-sm:a.$.))"))
+  check "a\L\L".isMatch(re"(?sm)(?-sm:(?sm:a.$.))")
+
+  check "Ǝ".isMatch(re"\w")
+  check "Ǝ".isMatch(re"(?u)\w")
+  check(not "Ǝ".isMatch(re"(?-u)\w"))
+  check "abczABCZ0129_".isMatch(re"(?-u)\w*")
+  check(not "\t".isMatch(re"(?-u)\w"))
+  # todo: test every ascii kind
+  check "Ǝ".isMatch(re"(?u)[\w]")
+  check(not "Ǝ".isMatch(re"(?u)[^\w]"))
+  check "Ǝ".isMatch(re"(?-u)[^\w]")
+  check(not "Ǝ".isMatch(re"(?-u)[\w]"))
+  check(not "\t".isMatch(re"(?-u)[\w]"))
+  check "ƎƎ".isMatch(re"(?-u)[^\w](?u)\w")
+
+  check "a".isMatch(re"(?x)a")
+  check "a".isMatch(re"(?x)a ")
+  check "a".isMatch(re"(?x)a   ")
+  check "a".isMatch(re"(?x) a ")
+  check "a".isMatch(re("(?x)a\L   \L   \L"))
+  check "a".isMatch(re("(?x)\L a \L"))
+  check "a".isMatch(re"(?x: a )")
+  check "a".isMatch(re"""(?x)a""")
+  check "a".isMatch(re"""(?x)
+    a
+    """)
+  check "a".isMatch(re"""(?x:
+    a
+    )""")
+  check "a".isMatch(re"""(?x)(
+    a
+    )""")
+  check "a".isMatch(re"""(?x)
+    a  # should ignore this comment
+    """)
+  check "a".isMatch(re"""(?x:
+    a  # should ignore this comment
+    )""")
+  check "aa ".isMatch(re"(?x)a  (?-x)a ")
+  check "a a".isMatch(re"a (?x)a  ")
+  check "aa".isMatch(re"((?x)a    )a")
+  check "aa".isMatch(re"(?x:a    )a")
+  check "a ".isMatch(re"(?x)a\ ")
+  check "a ".isMatch(re"(?x)a\   ")
+  check "a#".isMatch(re"(?x)a\#")
+  check "a ".isMatch(re"(?x)a[ ]")
+  check "a\n".isMatch(re"(?x)a\n")
+  check "aa ".isMatch(re"""(?x)
+    a    #    comment
+    (?-x)a """)
+  check "aaa".isMatch(re"""(?x)  # comment
+    a  # comment
+    a  # comment
+    a  # comment
+    # comment""")
+  check "12.0".isMatch(re"""(?x)
+    \d +  # the integral part
+    \.    # the decimal point
+    \d *  # some fractional digits""")
+  check re"""(?x)    # verbose mode
+    ^                   # beginning of string
+    M{0,4}              # thousands - 0 to 4 M's
+    (CM|CD|D?C{0,3})    # hundreds - 900 (CM), 400 (CD), 0-300 (0 to 3 C's),
+                        #            or 500-800 (D, followed by 0 to 3 C's)
+    (XC|XL|L?X{0,3})    # tens - 90 (XC), 40 (XL), 0-30 (0 to 3 X's),
+                        #        or 50-80 (L, followed by 0 to 3 X's)
+    (IX|IV|V?I{0,3})    # ones - 9 (IX), 4 (IV), 0-3 (0 to 3 I's),
+                        #        or 5-8 (V, followed by 0 to 3 I's)
+    $                   # end of string
+    """ in "MMMMDCCCLXXXVIII"
+
+  check raisesMsg(r"(?uq)") ==
+    "Invalid group flag, found q but " &
+    "expected one of: i, m, s, U or u"
+  check raisesMsg(r"(?u-q)") ==
+    "Invalid group flag, found -q but " &
+    "expected one of: -i, -m, -s, -U or -u"
+  check raisesMsg(r"abc(?q)") ==
+    "Invalid group. Unknown group type\n" &
+    "abc(?q)\n" &
+    "   ^"

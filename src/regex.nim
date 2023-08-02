@@ -257,6 +257,7 @@ import ./regex/compiler
 import ./regex/nfatype
 import ./regex/nfafindall
 import ./regex/nfamatch
+import ./regex/nfamatch2
 when not defined(noRegexOpt):
   import ./regex/litopt
 
@@ -269,6 +270,7 @@ when canUseMacro:
 export
   Regex,
   RegexMatch,
+  RegexMatch2,
   RegexError
 
 func re*(
@@ -918,6 +920,20 @@ proc toString(pattern: Regex): string {.used.} =
   ## For debugging purposes
   var visited: set[int16]
   result = pattern.toString(0, visited)
+
+##### NEW API
+
+func match2*(
+  s: string,
+  pattern: Regex,
+  m: var RegexMatch2,
+  start = 0
+): bool {.inline, raises: [].} =
+  result = matchImpl(s, pattern, m, start)
+
+func match2*(s: string, pattern: Regex): bool {.inline, raises: [].} =
+  var m: RegexMatch2
+  result = matchImpl(s, pattern, m)
 
 when isMainModule:
   import ./regex/parser

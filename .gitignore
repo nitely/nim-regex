@@ -4,6 +4,8 @@ src/regex.out
 src/regex/litopt
 tests/tests
 tests/tests.js
+tests/tests2
+tests/tests2.js
 docs/ugh
 bin/*
 bench/bench

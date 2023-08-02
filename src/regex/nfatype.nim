@@ -77,8 +77,20 @@ type
     captures*: Captures
     namedGroups*: OrderedTable[string, int16]
     boundaries*: Slice[int]
+  RegexMatch2* = object
+    ## result from matching operations
+    captures*: seq[Slice[int]]
+    namedGroups*: OrderedTable[string, int16]
+    boundaries*: Slice[int]
 
 func clear*(m: var RegexMatch) {.inline.} =
+  if m.captures.len > 0:
+    m.captures.setLen(0)
+  if m.namedGroups.len > 0:
+    m.namedGroups.clear()
+  m.boundaries = 0 .. -1
+
+func clear*(m: var RegexMatch2) {.inline.} =
   if m.captures.len > 0:
     m.captures.setLen(0)
   if m.namedGroups.len > 0:

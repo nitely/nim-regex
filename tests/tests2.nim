@@ -50,6 +50,11 @@ proc matchWithCapt(s: string, pattern: static Regex): seq[string] =
   for i, bounds in m.captures.pairs:
     result[i] = s[bounds]
 
+proc matchWithBounds(s: string, pattern: static Regex): seq[Slice[int]] =
+  var m: RegexMatch2
+  check match2(s, pattern, m)
+  return m.captures
+
 proc toStrCaptures(m: RegexMatch2, s: string): seq[string] =
   result.setLen m.captures.len
   for i, bounds in m.captures.pairs:
@@ -113,38 +118,64 @@ test "trepetition_cycle":
   check "aa".matchWithCapt(re"(a*)*?") == @["aa"]
   check "aa".matchWithCapt(re"(a*)*?(a*)*?") == @["", "aa"]
   check "".matchWithCapt(re"(a*)*?(a*)*?") == @["", ""]
+  check "".matchWithBounds(re"(a*)*?(a*)*?") == @[0 .. -1, 0 .. -1]
   check "aa".matchWithCapt(re"(.*?)") == @["aa"]
+  check "aa".matchWithBounds(re"(.*)*") == @[2 .. 1]
   check "aa".matchWithCapt(re"(.*)*") == @[""]
+  check "a".matchWithBounds(re"(a*)*") == @[1 .. 0]
   check "a".matchWithCapt(re"(a*)*") == @[""]
+  check "a".matchWithBounds(re"(a*)*(a*)*") == @[1 .. 0, 1 .. 0]
   check "a".matchWithCapt(re"(a*)*(a*)*") == @["", ""]
+  check "".matchWithBounds(re"(a*)*") == @[0 .. -1]
   check "".matchWithCapt(re"(a*)*") == @[""]
+  check "".matchWithBounds(re"(a*)*(a*)*") == @[0 .. -1, 0 .. -1]
   check "".matchWithCapt(re"(a*)*(a*)*") == @["", ""]
   check "a".matchWithCapt(re"(a*)*?") == @["a"]
   check "a".matchWithCapt(re"(a?)*?") == @["a"]
+  check "a".matchWithBounds(re"(a*?)*") == @[1 .. 0]
   check "a".matchWithCapt(re"(a*?)*") == @[""]
   check "a".matchWithCapt(re"(a*?)*?") == @["a"]
+  check "a".matchWithBounds(re"(a??)*") == @[1 .. 0]
   check "a".matchWithCapt(re"(a??)*") == @[""]
+  check "ab".matchWithBounds(re"(a??)*b") == @[1 .. 0]
   check "ab".matchWithCapt(re"(a??)*b") == @[""]
+  check "".matchWithBounds(re"(a??)*") == @[0 .. -1]
   check "".matchWithCapt(re"(a??)*") == @[""]
   check "a".matchWithCapt(re"(a?)??") == @["a"]
   check "a".matchWithCapt(re"(a*)??") == @["a"]
   check "a".matchWithCapt(re"(a*)+?") == @["a"]
+  check "".matchWithBounds(re"(a?)+") == @[0 .. -1]
   check "".matchWithCapt(re"(a?)+") == @[""]
+  check "".matchWithBounds(re"(a?)(a?)*") == @[0 .. -1, 0 .. -1]
   check "".matchWithCapt(re"(a?)(a?)*") == @["", ""]
+  check "a".matchWithBounds(re"(a?)+") == @[1 .. 0]
   check "a".matchWithCapt(re"(a?)+") == @[""]
+  check "".matchWithBounds(re"(a*)+") == @[0 .. -1]
   check "".matchWithCapt(re"(a*)+") == @[""]
+  check "".matchWithBounds(re"(a*)(a*)*") == @[0 .. -1, 0 .. -1]
   check "".matchWithCapt(re"(a*)(a*)*") == @["", ""]
+  check "a".matchWithBounds(re"(a*)+") == @[1 .. 0]
   check "a".matchWithCapt(re"(a*)+") == @[""]
+  check "b".matchWithBounds(re"(a*)+b") == @[0 .. -1]
   check "b".matchWithCapt(re"(a*)+b") == @[""]
+  check "b".matchWithBounds(re"(a*)+b*") == @[0 .. -1]
   check "b".matchWithCapt(re"(a*)+b*") == @[""]
+  check "ab".matchWithBounds(re"(a*)+b") == @[1 .. 0]
   check "ab".matchWithCapt(re"(a*)+b") == @[""]
+  check "".matchWithBounds(re"(a?)*") == @[0 .. -1]
   check "".matchWithCapt(re"(a?)*") == @[""]
+  check "a".matchWithBounds(re"(a?)*") == @[1 .. 0]
   check "a".matchWithCapt(re"(a?)*") == @[""]
+  check "a".matchWithBounds(re"(a?)*(a?)*") == @[1 .. 0, 1 .. 0]
   check "a".matchWithCapt(re"(a?)*(a?)*") == @["", ""]
+  check "ab".matchWithBounds(re"(a?)*b") == @[1 .. 0]
   check "ab".matchWithCapt(re"(a?)*b") == @[""]
+  check "".matchWithBounds(re"(a+)*") == @[0 .. -1]
   check "".matchWithCapt(re"(a+)*") == @[""]
   check "a".matchWithCapt(re"(?:a*)*") == newSeq[string]()
+  check "a".matchWithBounds(re"(a?b?)*") == @[1 .. 0]
   check "a".matchWithCapt(re"(a?b?)*") == @[""]
+  check "".matchWithBounds(re"(a?b?)*") == @[0 .. -1]
   check "".matchWithCapt(re"(a?b?)*") == @[""]
 
 test "talternations":

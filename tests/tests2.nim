@@ -50,6 +50,11 @@ proc matchWithCapt(s: string, pattern: static Regex): seq[string] =
   for i, bounds in m.captures.pairs:
     result[i] = s[bounds]
 
+proc toStrCaptures(m: RegexMatch2, s: string): seq[string] =
+  result.setLen m.captures.len
+  for i, bounds in m.captures.pairs:
+    result[i] = s[bounds]
+
 test "tfull_match":
   check "".isMatch(re"")
   check "a".isMatch(re"a")
@@ -391,3 +396,161 @@ test "tset":
   check "a".isMatch(re"[\x{61}]")
   check "abab".isMatch(re"[\x61-\x62]*")
   check "a".isMatch(re"[\141]")
+
+test "tnot_set":
+  check "a".matchWithCapt(re"([^b])") == @["a"]
+  check "asd".matchWithCapt(re"([^b]*)") == @["asd"]
+  check "ab".matchWithCapt(re"([^b]*b)") == @["ab"]
+  check "asd123".matchWithCapt(re"([^\d]*)(\d*)") == @["asd", "123"]
+  check "asd123".matchWithCapt(re"([asd]*)([^asd]*)") == @["asd", "123"]
+  check "<asd123!@#>".matchWithCapt(re"(<[^>]*>)") == @["<asd123!@#>"]
+  check(not "a".isMatch(re"[^a]"))
+  check raisesMsg(r"[^]") ==
+    "Invalid set. Missing `]`\n" &
+    "[^]\n" &
+    "^"
+  check "^".isMatch(re"[\^]")
+  check "a".isMatch(re"[\^a]")
+  check(not "^".isMatch(re"[^^]"))
+  check "a".isMatch(re"[^^]")
+  check "a".isMatch(re"[^-]")
+  check(not "-".isMatch(re"[^-]"))
+
+test "trepetition_range":
+  check(not "".isMatch(re"a{0}"))
+  check(not "".isMatch(re"a{0,0}"))
+  check "".isMatch(re"a{0,2}")
+  check "a".isMatch(re"a{0}")
+  check "a".isMatch(re"a{0,0}")
+  check "a".isMatch(re"a{1}")
+  check "aa".isMatch(re"a{2}")
+  check "aaa".isMatch(re"a{3}")
+  check(not "aaaa".isMatch(re"a{3}"))
+  check(not "".isMatch(re"a{1}"))
+  check "a".isMatch(re"a{1,1}")
+  check "a".isMatch(re"a{1,2}")
+  check "aa".isMatch(re"a{1,2}")
+  check(not "aaa".isMatch(re"a{1,2}"))
+  check(not "a".isMatch(re"a{2,4}"))
+  check "a".isMatch(re"a{1,}")
+  check "aa".isMatch(re"a{1,}")
+  check "aaa".isMatch(re"a{1,}")
+  check "aaaaaaaaaa".isMatch(re"a{1,}")
+  check "aa".isMatch(re"a{2,}")
+  check "aaaaaaaaaa".isMatch(re"a{0,}")
+  check "".isMatch(re"a{0,}")
+  check(not "a".isMatch(re"a{2,}"))
+  check "a{a,1}".isMatch(re"a{a,1}")
+  check(not "a".isMatch(re"a{a,1}"))
+  check(not "a1".isMatch(re"a{a,1}"))
+  check "a{".isMatch(re"a{")
+  check "a{{".isMatch(re"a{{")
+  check "a{}".isMatch(re"a{}")
+  check raises(r"a*{,}")
+  check raises(r"a*{0}")
+  check raises(r"a*{1}")
+  check "aaa".matchWithCapt(re"(a){0,}") == @["a"]
+  check "aaa".matchWithCapt(re"(a{0,}){0,}") == @[""]
+  check "aaaaa".matchWithCapt(re"(a){5}") == @["a"]
+  check "a".matchWithCapt(re"(a){1,5}") == @["a"]
+  check "aaa".matchWithCapt(re"(a){1,5}") == @["a"]
+  check "".matchWithCapt(re"(a){0,}") == @[""]
+  check "aaa".matchWithCapt(re"(a{0,}){0,}") == @[""]
+  check "aaa".matchWithCapt(re"(a{1}){0,}") == @["a"]
+  check "aaaa".matchWithCapt(re"(a{2}){0,}") == @["aa"]
+  check "aaaa".matchWithCapt(re"(a{0,3}){0,}") == @[""]
+  check "".matchWithCapt(re"(a{0,3}){0,}") == @[""]
+  check "aaa".matchWithCapt(re"(a{1,}){0,}") == @["aaa"]
+  check "".matchWithCapt(re"(a{1,}){0,}") == @[""]
+  check(not "".isMatch(re"(a{1,})"))
+  check "a".matchWithCapt(re"(a{1,})") == @["a"]
+  check "aaa".matchWithCapt(re"(a{1,})") == @["aaa"]
+  check "abab".matchWithCapt(re"(a(b)){2}") == @["ab", "b"]
+  check raisesMsg(r"a{0,bad}") ==
+    "Invalid repetition range. Range can only contain digits\n" &
+    "a{0,bad}\n" &
+    " ^"
+  check raisesMsg(r"a{1111111111}") ==
+    "Invalid repetition range. Max value is 32767\n" &
+    "a{1111111111}\n" &
+    " ^"
+  check raisesMsg(r"a{0,101}") ==
+    "Invalid repetition range. Expected 100 repetitions " &
+    "or less, but found: 101\n" &
+    "a{0,101}\n" &
+    " ^"
+  check(not raises(r"a{1,101}"))
+  check raises(r"a{0,a}")
+  check raises(r"a{,}")
+  check raises(r"a{,1}")
+  check raises(r"a{1x}")
+  check raises(r"a{1,x}")
+  check raises(r"a{1")
+  check raises(r"a{1,")
+  check raises(r"a{1,,}")
+  check raises(r"a{1,,2}")
+  check raises(r"a{1,,,2}")
+  check raisesMsg(r"{10}") ==
+    "Invalid repeition range, " &
+    "nothing to repeat"
+  check raisesMsg(r"abc\A{10}") ==
+    "Invalid repetition range, either " &
+    "char, shorthand (i.e: \\w), group, or set " &
+    "expected before repetition range"
+
+test "tnon_capturing_groups":
+  check "abab".matchWithCapt(re"(a(b))*") == @["ab", "b"]
+  check "abab".matchWithCapt(re"(?:a(b))*") == @["b"]
+  check "abab".matchWithCapt(re"(a(?:b))*") == @["ab"]
+  check ")".matchWithCapt(re"(\))") == @[")"]
+
+test "tgreediness":
+  check "a".matchWithCapt(re"(a)??") == @["a"]
+  check "aaa".matchWithCapt(re"(a)*(a)*(a)*") == @["a", "", ""]
+  check "aaa".matchWithCapt(re"(a)*?(a)*(a)*?") == @["", "a", ""]
+  check "aaa".matchWithCapt(re"(a)*?(a)*?(a)*") == @["", "", "a"]
+  check "aaa".matchWithCapt(re"(a)*?(a)*?(a)*?") == @["", "", "a"]
+  check "aaaa".matchWithCapt(re"(a)*?(a)*?(a)*?") == @["", "", "a"]
+  check "aa".matchWithCapt(re"(a)?(aa?)") == @["a", "a"]
+  check "aa".matchWithCapt(re"(a)??(a)") == @["a", "a"]
+  check "aa".matchWithCapt(re"(a)??(aa?)") == @["", "aa"]
+  check "aaa".matchWithCapt(re"(a)+(a)+(a)?") == @["a", "a", ""]
+  check "aaa".matchWithCapt(re"(a)+?(a)+(a)?") == @["a", "a", ""]
+  check "aaa".matchWithCapt(re"(a)+?(a)+?(a)?") == @["a", "a", "a"]
+  check "aaa".matchWithCapt(re"(a){0,}(a){0,}(a){0,}") == @["a", "", ""]
+  check "aaa".matchWithCapt(re"(a){0,}?(a){0,}(a){0,}?") == @["", "a", ""]
+  check "aaa".matchWithCapt(re"(a){0,}?(a){0,}?(a){0,}") == @["", "", "a"]
+  check "aaa".matchWithCapt(re"(a){0,}?(a){0,}?(a){0,}?") == @["", "", "a"]
+  check "aaa".matchWithCapt(re"(a){1,}(a){1,}(a)?") == @["a", "a", ""]
+  check "aaa".matchWithCapt(re"(a){1,}?(a){1,}(a)?") == @["a", "a", ""]
+  check "aaa".matchWithCapt(re"(a){1,}?(a){1,}?(a)?") == @["a", "a", "a"]
+  block:
+    var m: RegexMatch2
+    check match2("aaaa", re"(a*?)(a*?)(a*)", m)
+    check m.toStrCaptures("aaaa") == @["", "", "aaaa"]
+  block:
+    var m: RegexMatch2
+    check match2("aaaa", re"(a*)(a*?)(a*?)", m)
+    check m.toStrCaptures("aaaa") == @["aaaa", "", ""]
+
+test "tassertions":
+  check "bbaa aa".matchWithCapt(re"([\w ]*?)(\baa\b)") == @["bbaa ", "aa"]
+  check "aa bbaa".matchWithCapt(re"(\baa\b)([\w ]*)") == @["aa", " bbaa"]
+  check "This island is great".matchWithCapt(
+      re"([\w ]*?)(\bis\b)([\w ]*?)") == @["This island ", "is", " great"]
+  check "bbaabb".matchWithCapt(re"([\w ]*?)(\Baa\B)([\w ]*?)") ==
+    @["bb", "aa", "bb"]
+  check "This is my sister".matchWithCapt(
+      re"([\w ]*?)(\Bis\B)([\w ]*?)") == @["This is my s", "is", "ter"]
+  check "aa".isMatch(re"\b\b\baa\b\b\b")
+  check "bb".isMatch(re"^^^^bb$$$$")
+  check "bb".isMatch(re"\A\A\A\Abb\z\z\z\z")
+
+test "tdot_any_matcher":
+  check "a".isMatch(re".")
+  check "asd123!@#".isMatch(re".*")
+  check "| (•□•) | (❍ᴥ❍ʋ)".isMatch(re".*")
+  check "ฅ^•ﻌ•^ฅ".matchWithCapt(re"(.*)") == @["ฅ^•ﻌ•^ฅ"]
+  check "\t".isMatch(re".")
+  check(not "\L".isMatch(re".*"))
+

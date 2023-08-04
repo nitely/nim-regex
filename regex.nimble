@@ -11,6 +11,7 @@ requires "nim >= 1.0.0"
 requires "unicodedb >= 0.7.2"
 
 task test2, "Test":
+  # -d:noRegexOpt
   exec "nim c -r tests/tests2.nim"
 
 task test, "Test":

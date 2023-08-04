@@ -6,7 +6,7 @@ import ./common
 import ./nodematch
 import ./types
 import ./nfatype
-import ./nfamatch
+import ./nfamatch2
 
 # XXX remove
 const nonCapture = -1 .. -2
@@ -22,7 +22,7 @@ type
   RegexMatches2* = object
     a, b: Submatches
     m: Matches
-    c: seq[seq[Slice[int]]]
+    c: Capts2
     look: Lookaround
 
 func len(ms: Matches): int {.inline.} =
@@ -49,12 +49,13 @@ func clear(ms: var Matches) {.inline.} =
 
 template initMaybeImpl(
   ms: var RegexMatches2,
-  size: int
+  size, groupsLen: int
 ) =
   if ms.a == nil:
     assert ms.b == nil
     ms.a = newSubmatches size
     ms.b = newSubmatches size
+    ms.c = initCapts2 groupsLen
     ms.look = initLook()
   doAssert ms.a.cap >= size and
     ms.b.cap >= size
@@ -63,7 +64,7 @@ template initMaybeImpl(
   ms: var RegexMatches2,
   regex: Regex
 ) =
-  initMaybeImpl(ms, regex.nfa.s.len)
+  initMaybeImpl(ms, regex.nfa.s.len, regex.groupsCount)
 
 func hasMatches(ms: RegexMatches2): bool {.inline.} =
   return ms.m.len > 0
@@ -72,7 +73,7 @@ func clear(ms: var RegexMatches2) {.inline.} =
   ms.a.clear()
   ms.b.clear()
   ms.m.clear()
-  ms.c.setLen 0
+  ms.c.clear()
 
 iterator bounds*(ms: RegexMatches2): Slice[int] {.inline.} =
   for i in 0 .. ms.m.len-1:
@@ -144,11 +145,7 @@ func submatch(
           case z.kind
           of groupKind:
             if captx < 0:
-              var matches = newSeq[Slice[int]]()
-              matches.setLen regex.groupsCount
-              for i in 0 .. matches.len-1:
-                matches[i] = nonCapture
-              capts.add matches
+              capts.inc()
               captx = (capts.len-1).int32
             else:
               capts.add capts[captx]
@@ -159,8 +156,8 @@ func submatch(
               capts[captx][z.idx].b = i-1
           of assertionKind - lookaroundKind:
             matched = match(z, cPrev.Rune, c.Rune)
-          #of lookaroundKind:
-          #  lookAroundTpl()
+          of lookaroundKind:
+            lookAroundTpl()
           else:
             assert false
             discard
@@ -226,7 +223,7 @@ func findSomeImpl*(
 
 # findAll with literal optimization below,
 # there is an explanation of how this work
-# in litopt.nim, move this there?
+# in litopt.nim
 
 func findSomeOptImpl*(
   text: string,
@@ -237,11 +234,12 @@ func findSomeOptImpl*(
   template regexSize: untyped =
     max(regex.litOpt.nfa.s.len, regex.nfa.s.len)
   template opt: untyped = regex.litOpt
+  template groupsLen: untyped = regex.groupsCount
   template smA: untyped = ms.a
   template smB: untyped = ms.b
   template look: untyped = ms.look
   doAssert opt.nfa.s.len > 0
-  initMaybeImpl(ms, regexSize)
+  initMaybeImpl(ms, regexSize, groupsLen)
   ms.clear()
   var limit = start.int
   var i = start.int
@@ -256,7 +254,7 @@ func findSomeOptImpl*(
     #debugEcho "litIdx=", litIdx
     doAssert litIdx >= i
     i = litIdx
-    i = reversedMatchImpl(smA, smB, text, opt.nfa, look, i, limit)
+    i = reversedMatchImpl(smA, smB, text, opt.nfa, look, groupsLen, i, limit)
     if i == -1:
       #debugEcho "not.Match=", i
       i = litIdx+1

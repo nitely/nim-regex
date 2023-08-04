@@ -7,6 +7,8 @@ import std/algorithm
 import ./types
 import ./litopt
 
+const nonCapture* = -1 .. -2
+
 type
   CaptIdx* = int32
   CaptNode* = object
@@ -15,6 +17,34 @@ type
     idx*: int16  # XXX rename to group or groupNum
   Capts* = seq[CaptNode]
   Captures* = seq[seq[Slice[int]]]
+  Capts2* = object
+    s*: seq[seq[Slice[int]]]
+    groupsLen*: int
+
+func initCapts2*(groupsLen: int): Capts2 =
+  result.groupsLen = groupsLen
+
+func `[]`*(capts: Capts2, i: Natural): seq[Slice[int]] {.inline.} =
+  capts.s[i]
+
+func `[]`*(capts: var Capts2, i: Natural): var seq[Slice[int]] {.inline.} =
+  capts.s[i]
+
+func add*(capts: var Capts2, x: seq[Slice[int]]) {.inline.} =
+  capts.s.add x
+
+func len*(capts: Capts2): int {.inline.} =
+  capts.s.len
+
+func inc*(capts: var Capts2) {.inline.} =
+  doAssert capts.groupsLen > 0
+  capts.s.setLen(capts.s.len+1)
+  capts.s[^1].setLen capts.groupsLen
+  for i in 0 .. capts.groupsLen-1:
+    capts.s[^1][i] = nonCapture
+
+func clear*(capts: var Capts2) {.inline.} =
+  capts.s.setLen 0
 
 func constructSubmatches*(
   captures: var Captures,

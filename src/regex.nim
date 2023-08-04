@@ -256,6 +256,7 @@ import ./regex/common
 import ./regex/compiler
 import ./regex/nfatype
 import ./regex/nfafindall
+import ./regex/nfafindall2
 import ./regex/nfamatch
 import ./regex/nfamatch2
 when not defined(noRegexOpt):
@@ -269,6 +270,7 @@ when canUseMacro:
 
 export
   Regex,
+  Regex2,
   RegexMatch,
   RegexMatch2,
   RegexError
@@ -923,17 +925,24 @@ proc toString(pattern: Regex): string {.used.} =
 
 ##### NEW API
 
-func match2*(
+func re2*(s: string): Regex2 {.raises: [RegexError].} =
+  re(s).Regex2
+
+when not defined(forceRegexAtRuntime):
+  func re2*(s: static string): static[Regex2] {.inline.} =
+    re(s).Regex2
+
+func match*(
   s: string,
-  pattern: Regex,
+  pattern: Regex2,
   m: var RegexMatch2,
   start = 0
 ): bool {.inline, raises: [].} =
-  result = matchImpl(s, pattern, m, start)
+  result = matchImpl(s, pattern.Regex, m, start)
 
-func match2*(s: string, pattern: Regex): bool {.inline, raises: [].} =
+func match*(s: string, pattern: Regex2): bool {.inline, raises: [].} =
   var m: RegexMatch2
-  result = matchImpl(s, pattern, m)
+  result = matchImpl(s, pattern.Regex, m)
 
 func group*(m: RegexMatch2, i: int): Slice[int] {.inline, raises: [].} =
   m.captures[i]
@@ -942,6 +951,72 @@ func group*(
   m: RegexMatch2, s: string
 ): Slice[int] {.inline, raises: [KeyError].} =
   m.group m.namedGroups[s]
+
+iterator findAll*(
+  s: string,
+  pattern: Regex2,
+  start = 0
+): RegexMatch2 {.inline, raises: [].} =
+  var i = start
+  var i2 = start-1
+  var m: RegexMatch2
+  var ms: RegexMatches2
+  while i <= len(s):
+    doAssert(i > i2); i2 = i
+    i = findSomeOptTpl(s, pattern.Regex, ms, i)
+    #debugEcho i
+    if i < 0: break
+    for mi in ms:
+      fillMatchImpl(m, mi, ms, pattern.Regex)
+      yield m
+    if i == len(s):
+      break
+
+func find*(
+  s: string,
+  pattern: Regex2,
+  m: var RegexMatch2,
+  start = 0
+): bool {.inline, raises: [].} =
+  m.clear()
+  for m2 in findAll(s, pattern, start):
+    m.captures = m2.captures
+    m.namedGroups = m2.namedGroups
+    m.boundaries = m2.boundaries
+    return true
+  return false
+
+iterator findAllBounds*(
+  s: string,
+  pattern: Regex2,
+  start = 0
+): Slice[int] {.inline, raises: [].} =
+  var i = start
+  var i2 = start-1
+  var ms: RegexMatches2
+  while i <= len(s):
+    doAssert(i > i2); i2 = i
+    i = findSomeOptTpl(s, pattern.Regex, ms, i)
+    #debugEcho i
+    if i < 0: break
+    for ab in ms.bounds:
+      yield ab
+    if i == len(s):
+      break
+
+func findAllBounds*(
+  s: string,
+  pattern: Regex2,
+  start = 0
+): seq[Slice[int]] {.inline, raises: [].} =
+  for m in findAllBounds(s, pattern, start):
+    result.add m
+
+# XXX find shortest match; disable captures
+func contains*(s: string, pattern: Regex2): bool {.inline, raises: [].} =
+  for _ in findAllBounds(s, pattern):
+    return true
+  return false
 
 when isMainModule:
   import ./regex/parser

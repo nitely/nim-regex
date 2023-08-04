@@ -63,6 +63,8 @@ type
     namedGroups*: OrderedTable[string, int16]
     #flags*: set[RegexFlag]
     litOpt*: LitOpt
+  Regex2* = distinct Regex
+    ## a compiled regular expression
   MatchFlag* = enum
     mfShortestMatch
     mfNoCaptures

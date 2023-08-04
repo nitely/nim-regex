@@ -1018,6 +1018,69 @@ func contains*(s: string, pattern: Regex2): bool {.inline, raises: [].} =
     return true
   return false
 
+func groupsCount*(m: RegexMatch2): int {.inline, raises: [].} =
+  m.captures.len
+
+iterator split*(s: string, sep: Regex2): string {.inline, raises: [].} =
+  var
+    first, last, i = 0
+    i2 = -1
+    done = false
+    ms: RegexMatches2
+  while not done:
+    doAssert(i > i2); i2 = i
+    i = findSomeOptTpl(s, sep.Regex, ms, i)
+    done = i < 0 or i >= len(s)
+    if done: ms.dummyMatch(s.len)
+    for ab in ms.bounds:
+      last = ab.a
+      if ab.a > 0 or ab.a <= ab.b:  # skip first empty match
+        yield substr(s, first, last-1)
+      first = ab.b+1
+
+func split*(s: string, sep: Regex2): seq[string] {.inline, raises: [].} =
+  for w in split(s, sep):
+    result.add w
+
+func splitIncl*(s: string, sep: Regex2): seq[string] {.inline, raises: [].} =
+  template ab: untyped = m.boundaries
+  var
+    first, last, i = 0
+    i2 = -1
+    done = false
+    m: RegexMatch2
+    ms: RegexMatches2
+  while not done:
+    doAssert(i > i2); i2 = i
+    i = findSomeOptTpl(s, sep.Regex, ms, i)
+    done = i < 0 or i >= len(s)
+    if done: ms.dummyMatch(s.len)
+    for mi in ms:
+      fillMatchImpl(m, mi, ms, sep.Regex)
+      last = ab.a
+      if ab.a > 0 or ab.a <= ab.b:  # skip first empty match
+        result.add substr(s, first, last-1)
+        for g in 0 ..< m.groupsCount:
+          if m.group(g) != nonCapture:
+            result.add substr(s, m.group(g).a, m.group(g).b)
+      first = ab.b+1
+
+func startsWith*(
+  s: string, pattern: Regex2, start = 0
+): bool {.inline, raises: [].} =
+  startsWithImpl2(s, pattern.Regex, start)
+
+# XXX use findAll and check last match bounds
+func endsWith*(s: string, pattern: Regex2): bool {.inline, raises: [].} =
+  result = false
+  var
+    m: RegexMatch2
+    i = 0
+  while i < s.len:
+    result = match(s, pattern, m, i)
+    if result: return
+    s.runeIncAt(i)
+
 when isMainModule:
   import ./regex/parser
   import ./regex/exptransformation

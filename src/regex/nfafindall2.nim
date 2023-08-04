@@ -8,6 +8,9 @@ import ./types
 import ./nfatype
 import ./nfamatch
 
+# XXX remove
+const nonCapture = -1 .. -2
+
 type
   MatchItemIdx = int
   MatchItem = tuple
@@ -93,7 +96,7 @@ func fillMatchImpl*(
   else:
     m.captures.setLen regex.groupsCount
     for i in 0 .. m.captures.len-1:
-      m.captures[i] = -1 .. 0
+      m.captures[i] = nonCapture
   m.boundaries = ms.m.s[mi].bounds
 
 func dummyMatch*(ms: var RegexMatches2, i: int) {.inline.} =
@@ -144,7 +147,7 @@ func submatch(
               var matches = newSeq[Slice[int]]()
               matches.setLen regex.groupsCount
               for i in 0 .. matches.len-1:
-                matches[i] = 0 .. -1
+                matches[i] = nonCapture
               capts.add matches
               captx = (capts.len-1).int32
             else:

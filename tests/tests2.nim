@@ -1,5 +1,7 @@
 import ./regex
 
+const noCapture = -1 .. -2
+
 template test(desc: string, body: untyped): untyped =
   when defined(runTestAtCT):
     static:
@@ -117,7 +119,7 @@ test "trepetition_cycle":
   # Same as PCRE "^(a*)*?$"
   check "aa".matchWithCapt(re2"(a*)*?") == @["aa"]
   check "aa".matchWithCapt(re2"(a*)*?(a*)*?") == @["", "aa"]
-  check "".matchWithBounds(re2"(a*)*?(a*)*?") == @[0 .. -1, 0 .. -1]
+  check "".matchWithBounds(re2"(a*)*?(a*)*?") == @[noCapture, noCapture]
   check "".matchWithCapt(re2"(a*)*?(a*)*?") == @["", ""]
   check "aa".matchWithCapt(re2"(.*?)") == @["aa"]
   check "aa".matchWithBounds(re2"(.*)*") == @[2 .. 1]
@@ -170,7 +172,7 @@ test "trepetition_cycle":
   check "a".matchWithCapt(re2"(a?)*(a?)*") == @["", ""]
   check "ab".matchWithBounds(re2"(a?)*b") == @[1 .. 0]
   check "ab".matchWithCapt(re2"(a?)*b") == @[""]
-  check "".matchWithBounds(re2"(a+)*") == @[0 .. -1]
+  check "".matchWithBounds(re2"(a+)*") == @[noCapture]
   check "".matchWithCapt(re2"(a+)*") == @[""]
   check "a".matchWithCapt(re2"(?:a*)*") == newSeq[string]()
   check "a".matchWithBounds(re2"(a?b?)*") == @[1 .. 0]
@@ -881,3 +883,261 @@ test "tcontains":
   check re2"(23)+" in "2323"
   check re2"(23)+" in "23232"
   check re2"^(23)+$" notin "23232"
+
+test "tsplit":
+  check split("a,b,c", re2",") == @["a", "b", "c"]
+  check split("00232this02939is39an22example111", re2"\d+") ==
+    @["", "this", "is", "an", "example", ""]
+  check split("AAA :   : BBB", re2"\s*:\s*") == @["AAA", "", "BBB"]
+  check split("AAA :   : BBB :   : CCC", re2"\s*:\s*") ==
+    @["AAA", "", "BBB", "", "CCC"]
+  check split("", re2",") == @[""]
+  check split(",,", re2",") == @["", "", ""]
+  # nre's behaviour, differs from python
+  check split("abc", re2"") == @["a", "b", "c"]
+  check split("ab", re2"") == @["a", "b"]
+  check split("ab", re2"\b") == @["ab"]
+  check split("a b", re2" ") == @["a", "b"]
+  check split(",a,Ϊ,Ⓐ,弢,", re2",") ==
+    @["", "a", "Ϊ", "Ⓐ", "弢", ""]
+  check split("弢", re2"\xAF") == @["弢"]  # "弢" == "\xF0\xAF\xA2\x94"
+  block:
+    var
+      expected = ["", "a", "Ϊ", "Ⓐ", "弢", ""]
+      i = 0
+    for s in split("11a22Ϊ33Ⓐ44弢55", re2"\d+"):
+      check s == expected[i]
+      inc i
+
+  check split("Words, words, words.", re2"\W+") ==
+    @["Words", "words", "words", ""]
+  check split("0a3B9", re2"[a-fA-F]+") ==
+    @["0", "3", "9"]
+  check split("1 2 3 4 5 6 ", re2" ") ==
+    @["1", "2", "3", "4", "5", "6", ""]
+  check split("1  2  ", re2" ") == @["1", "", "2", "", ""]
+  check split("1 2", re2" ") == @["1", "2"]
+  check split("foo", re2"foo") == @["", ""]
+  check split("", re2"foo") == @[""]
+  check split("bar", re2"foo") == @["bar"]
+
+  check "12".split(re2"\w\b") == @["1", ""]
+  check "12".split(re2"\w\B") == @["", "2"]
+
+test "tsplitIncl":
+  check "a,b".splitIncl(re2"(,)") == @["a", ",", "b"]
+  check "12".splitIncl(re2"(\d)") == @["", "1", "", "2", ""]
+  check splitIncl("aΪⒶ弢", re2"(\w)") ==
+    @["", "a", "", "Ϊ", "", "Ⓐ", "", "弢", ""]
+  check splitIncl("aΪⒶ弢", re2"") == @["a", "Ϊ", "Ⓐ", "弢"]
+  check splitIncl("...words, words...", re2"(\W+)") ==
+    @["", "...", "words", ", ", "words", "...", ""]
+  check splitIncl("Words, words, words.", re2"(\W+)") ==
+    @["Words", ", ", "words", ", ", "words", ".", ""]
+
+  # regular split stuff
+  check splitIncl("a,b,c", re2",") == @["a", "b", "c"]
+  check splitIncl("00232this02939is39an22example111", re2"\d+") ==
+    @["", "this", "is", "an", "example", ""]
+  check splitIncl("AAA :   : BBB", re2"\s*:\s*") == @["AAA", "", "BBB"]
+  check splitIncl("", re2",") == @[""]
+  check splitIncl(",,", re2",") == @["", "", ""]
+  check splitIncl("abc", re2"") == @["a", "b", "c"]
+  check splitIncl(",a,Ϊ,Ⓐ,弢,", re2",") ==
+    @["", "a", "Ϊ", "Ⓐ", "弢", ""]
+  check splitIncl("弢", re2"\xAF") == @["弢"]  # "弢" == "\xF0\xAF\xA2\x94"
+  check splitIncl("Words, words, words.", re2"\W+") ==
+    @["Words", "words", "words", ""]
+  check splitIncl("0a3B9", re2"[a-fA-F]+") ==
+    @["0", "3", "9"]
+  check splitIncl("1 2 3 4 5 6 ", re2" ") ==
+    @["1", "2", "3", "4", "5", "6", ""]
+  check splitIncl("1  2  ", re2" ") == @["1", "", "2", "", ""]
+  check splitIncl("1 2", re2" ") == @["1", "2"]
+  check splitIncl("foo", re2"foo") == @["", ""]
+  check splitIncl("", re2"foo") == @[""]
+  check splitIncl("ab", re2"") == @["a", "b"]
+  check splitIncl("ab", re2"\b") == @["ab"]
+  check splitIncl("a b", re2" ") == @["a", "b"]
+
+test "tfindall":
+  check findAllBounds("abcabc abc", re2"abc abc|abc") == @[0 .. 2, 3 .. 9]
+  check findAllBounds("abcabc", re2"bc") == @[1 .. 2, 4 .. 5]
+  check findAllBounds("aa", re2"a") == @[0 .. 0, 1 .. 1]
+  check findAllBounds("a", re2"a") == @[0 .. 0]
+  check findAllBounds("a", re2"b").len == 0
+  check findAllBounds("", re2"b").len == 0
+  check findAllBounds("abc ab", re2"\w+ *") == @[0 .. 3, 4 .. 5]
+  check findAllBounds("AAA :   : BBB", re2"\s*:\s*") == @[3 .. 7, 8 .. 9]
+  check findAllBounds("a\n  b\n c\n  ", re2"(?m)^") ==
+    @[0 .. -1, 2 .. 1, 6 .. 5, 9 .. 8]
+  check findAllBounds("a\n  b\n c\n  ", re2"(?m)$") ==
+    @[1 .. 0, 5 .. 4, 8 .. 7, 11 .. 10]
+  check findAllBounds("\n\n", re2"(?m)^") == @[0 .. -1, 1 .. 0, 2 .. 1]
+  check findAllBounds("foobarbaz", re2"(?<=o)b") == @[3 .. 3]
+  check findAllBounds("foobarbaz", re2"(?<!o)b") == @[6 .. 6]
+  check findAllBounds("aaaabaaaa", re2"(?<!a)a") == @[0 .. 0, 5 .. 5]
+  check findAllBounds("foobar", re2"o(?=b)") == @[2 .. 2]
+  check findAllBounds("foobar", re2"o(?!b)") == @[1 .. 1]
+  check findAllBounds("aaaabaaaa", re2"a(?!a)") == @[3 .. 3, 8 .. 8]
+  check findAllBounds("aaa", re2"\w+b|\w") == @[0 .. 0, 1 .. 1, 2 .. 2]
+  # This follows nre's empty match behaviour
+  check findAllBounds("a", re2"") == @[0 .. -1, 1 .. 0]
+  check findAllBounds("ab", re2"") == @[0 .. -1, 1 .. 0, 2 .. 1]
+  check findAllBounds("a", re2"\b") == @[0 .. -1, 1 .. 0]
+  check findAllBounds("aΪⒶ弢", re2"Ϊ") == @[1 .. 2]
+  check findAllBounds("aΪⒶ弢", re2"Ⓐ") == @[3 .. 5]
+  check findAllBounds("aΪⒶ弢", re2"弢") == @[6 .. 9]
+  check findAllBounds("aΪⒶ弢aΪⒶ弢", re2"Ⓐ") == @[3 .. 5, 13 .. 15]
+  # This is nre and Python's re behaviour,
+  # they match aaa and then empty end
+  check findAllBounds("aaa", re2"a*") == @[0 .. 2, 3 .. 2]
+  check findAllBounds("aaab", re2"a*") == @[0 .. 2, 3 .. 2, 4 .. 3]
+  check findAllBounds("aaa", re2"a+") == @[0 .. 2]
+  check findAllBounds("foo", re2"") ==
+    @[0 .. -1, 1 .. 0, 2 .. 1, 3 .. 2]
+  check findAllBounds("abb", re2"a*") == @[0 .. 0, 1 .. 0, 2 .. 1, 3 .. 2]
+  check findAllBounds("abbbbccccdXabbbbccccdX", re2"a(b|c)*d") ==
+    @[0 .. 9, 11 .. 20]
+  check findAllBounds("abbbXabbbX", re2"((a)*(b)*)") ==
+    @[0 .. 3, 4 .. 3, 5 .. 8, 9 .. 8, 10 .. 9]
+  check findAllBounds("abbbXabbbX", re2"((a)+(b)+)") ==
+    @[0 .. 3, 5 .. 8]
+  check findAllBounds("abbbXabbbX", re2"((a(b)*)+(b)*)") ==
+    @[0 .. 3, 5 .. 8]
+  check findAllBounds("abXabX", re2"a(b|c)*d").len == 0
+  check findAllBounds("aaanasdnasdXaaanasdnasd", re2"((a)*n?(asd)*)+") ==
+    @[0 .. 10, 11 .. 10, 12 .. 22, 23 .. 22]
+  check findAllBounds("1xxx", re2"\d\w+x") == @[0 .. 3]
+  check findAllBounds("xxxx", re2"\d\w+x").len == 0
+
+test "tstarts_with":
+  check "abc".startsWith(re2"ab")
+  check(not "abc".startsWith(re2"bc"))
+  check startsWith("弢ⒶΪ", re2"弢Ⓐ")
+  check startsWith("弢", re("\xF0\xAF\xA2\x94"))
+  check(not startsWith("弢", re("\xF0\xAF\xA2")))
+  check "abc".startsWith(re2"\w")
+  check(not "abc".startsWith(re2"\d"))
+  check "abc".startsWith(re2"(a|b)")
+  check "bc".startsWith(re2"(a|b)")
+  check(not "c".startsWith(re2"(a|b)"))
+  check startsWith("abc", re2"b", start = 1)
+  check startsWith("abc", re2"(?<=a)b", start = 1)
+  check(not startsWith("abc", re2"(?<=x)b", start = 1))
+  check(not startsWith("abc", re2"^b", start = 1))
+
+test "tends_with":
+  check "abc".endsWith(re2"bc")
+  check(not "abc".endsWith(re2"ab"))
+  check endsWith("弢ⒶΪ", re2"ⒶΪ")
+  check endsWith("弢", re("\xF0\xAF\xA2\x94"))
+  check(not endsWith("弢", re("\xAF\xA2\x94")))
+  check "abc".endsWith(re2"(b|c)")
+  check "ab".endsWith(re2"(b|c)")
+  check(not "a".endsWith(re2"(b|c)"))
+
+test "tliterals":
+  check "a".isMatch(re2"\u0061")
+  check(not "b".isMatch(re2"\u0061"))
+  check "b".isMatch(re2"\u0062")
+  check "Ⓐ".isMatch(re2"\u24b6")
+  check "Ⓐ".isMatch(re2"\u24B6")
+  check raisesMsg(r"\u123") ==
+    "Invalid unicode literal. Expected 4 hex digits, but found 3\n" &
+    "\\u123\n" &
+    "^"
+  check raisesMsg(r"\u123@abc") ==
+    "Invalid unicode literal. Expected hex digit, but found @\n" &
+    "\\u123@abc\n" &
+    "^"
+  check "a".isMatch(re2"\U00000061")
+  check(not "b".isMatch(re2"\U00000061"))
+  check "b".isMatch(re2"\U00000062")
+  check "弢".isMatch(re2"\U0002f894")
+  check "弢".isMatch(re2"\U0002F894")
+  check raisesMsg(r"\U123") ==
+    "Invalid unicode literal. Expected 8 hex digits, but found 3\n" &
+    "\\U123\n" &
+    "^"
+  check raisesMsg(r"\U123@a") ==
+    "Invalid unicode literal. Expected hex digit, but found @\n" &
+    "\\U123@a\n" &
+    "^"
+  check raisesMsg(r"\UFFFFFFFF") ==
+    "Invalid unicode literal. FFFFFFFF value is too big\n" &
+    "\\UFFFFFFFF\n" &
+    "^"
+  check "a".isMatch(re2"\x{61}")
+  check "a".isMatch(re2"\x{061}")
+  check(not "b".isMatch(re2"\x{61}"))
+  check "Ⓐ".isMatch(re2"\x{24b6}")
+  check "Ⓐ".isMatch(re2"\x{000024b6}")
+  check "弢".isMatch(re2"\x{2f894}")
+  check "弢".isMatch(re2"\x{0002f894}")
+  check raises(r"\x{FFFFFFFF}")
+  check(not raises(r"\x{7fffffff}"))
+  check raisesMsg(r"\x{2f894") ==
+    "Invalid unicode literal. Expected `}`\n" &
+    "\\x{2f894\n" &
+    "^"
+  check raisesMsg(r"\x{00000000A}") ==
+    "Invalid unicode literal. Expected at most 8 chars, found 9\n" &
+    "\\x{00000000A}\n" &
+    "^"
+  check raisesMsg(r"\x{61@}") ==
+    "Invalid unicode literal. Expected hex digit, but found @\n" &
+    "\\x{61@}\n" &
+    " ^"
+  check "a".isMatch(re2"\x61")
+  check "aa".isMatch(re2"\x61a")
+  check "a".isMatch(re2"\x61")
+  check "a".isMatch(re2"\141")
+  check(not "b".isMatch(re2"\141"))
+  check "aa".isMatch(re2"\141a")
+  check "\u1ff".isMatch(re2"\777")
+  check "888".isMatch(re2"\888")
+  check raisesMsg(r"\12") ==
+    "Invalid octal literal. Expected 3 octal digits, but found 2\n" &
+    "\\12\n" &
+    "^"
+  check raisesMsg(r"\12@") ==
+    "Invalid octal literal. Expected octal digit, but found @\n" &
+    "\\12@\n" &
+    "^"
+
+test "tchar_class":
+  check "a".isMatch(re2"\pL")
+  check(not "a".isMatch(re2"\PL"))
+  check(not "1".isMatch(re2"\pL"))
+  check "1".isMatch(re2"\PL")
+  check "aa".isMatch(re2"\pLa")
+  check "1".isMatch(re2"\pN")
+  check "_".isMatch(re2"\pP")
+  check "+".isMatch(re2"\pS")
+  check " ".isMatch(re2"\pZ")
+  check raisesMsg(r"\pB") ==
+    "Invalid unicode name. Found B\n" &
+    "\\pB\n" &
+    "^"
+  check raisesMsg(r"\p11") ==
+    "Invalid unicode name. Found 1\n" &
+    "\\p11\n" &
+    "^"
+  check "a".isMatch(re2"\p{L}")
+  check "ǅ".isMatch(re2"\p{Lt}")
+  check(not "ǅ".isMatch(re2"\P{Lt}"))
+  check(not "a".isMatch(re2"\p{Lt}"))
+  check "a".isMatch(re2"\P{Lt}")
+  check raisesMsg(r"\p{Bb}") ==
+    "Invalid unicode name. Found Bb\n" &
+    "\\p{Bb}\n" &
+    "^"
+  check raisesMsg(r"\p{11}") ==
+    "Invalid unicode name. Expected chars in {'a'..'z', 'A'..'Z'}\n" &
+    "\\p{11}\n" &
+    "^"
+  check raisesMsg(r"\p{11") ==
+    "Invalid unicode name. Expected `}`\n" &
+    "\\p{11\n" &
+    "^"

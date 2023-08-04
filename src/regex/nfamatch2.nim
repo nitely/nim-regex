@@ -9,6 +9,8 @@ import ./nodematch
 import ./types
 import ./nfatype
 
+const nonCapture* = -1 .. -2
+
 template nextStateTpl(bwMatch = false): untyped {.dirty.} =
   template bounds2: untyped =
     when bwMatch: i .. bounds.b else: bounds.a .. i-1
@@ -70,7 +72,7 @@ func matchImpl(
     cPrev = bwRuneAt(text, start-1).int32
   # matches.setLen groups
   for i in 0 .. matches.len-1:
-    matches[i] = 0 .. -1
+    matches[i] = nonCapture
   var capts = newSeq[seq[Slice[int]]]()
   smA.clear()
   smA.add (0'i16, captx, i .. i-1)
@@ -109,3 +111,15 @@ func matchImpl*(
     if regex.namedGroups.len > 0:
       m.namedGroups = regex.namedGroups
     m.boundaries = smA[0].bounds
+
+func startsWithImpl2*(text: string, regex: Regex, start: int): bool =
+  # XXX optimize mfShortestMatch, mfNoCaptures
+  template flags: untyped = {mfAnchored, mfShortestMatch, mfNoCaptures}
+  var
+    smA = newSubmatches(regex.nfa.s.len)
+    smB = newSubmatches(regex.nfa.s.len)
+    capts = newSeq[Slice[int]]()
+    #look = initLook()
+  capts.setLen regex.groupsCount
+  result = matchImpl(
+    smA, smB, capts, text, regex.nfa, start, flags)

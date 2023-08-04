@@ -1081,6 +1081,49 @@ func endsWith*(s: string, pattern: Regex2): bool {.inline, raises: [].} =
     if result: return
     s.runeIncAt(i)
 
+func replace*(
+  s: string,
+  pattern: Regex2,
+  by: string,
+  limit = 0
+): string {.inline, raises: [ValueError].} =
+  result = ""
+  var
+    i, j = 0
+    capts = newSeqOfCap[string](pattern.Regex.groupsCount)
+  for m in findAll(s, pattern):
+    result.addsubstr(s, i, m.boundaries.a-1)
+    capts.setLen 0
+    for c in m.captures:
+      capts.add s[c]  # XXX openArray
+    if capts.len > 0:
+      result.addf(by, capts)
+    else:
+      result.add(by)
+    i = m.boundaries.b+1
+    inc j
+    if limit > 0 and j == limit: break
+  result.addsubstr(s, i)
+
+when not defined(nimHasEffectsOf):
+  {.pragma: effectsOf.}
+
+func replace*(
+  s: string,
+  pattern: Regex2,
+  by: proc (m: RegexMatch2, s: string): string,
+  limit = 0
+): string {.inline, raises: [], effectsOf: by.} =
+  result = ""
+  var i, j = 0
+  for m in findAll(s, pattern):
+    result.addsubstr(s, i, m.boundaries.a-1)
+    result.add by(m, s)
+    i = m.boundaries.b+1
+    inc j
+    if limit > 0 and j == limit: break
+  result.addsubstr(s, i)
+
 when isMainModule:
   import ./regex/parser
   import ./regex/exptransformation

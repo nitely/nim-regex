@@ -151,7 +151,7 @@ func submatch(
               capts.add capts[captx]
               captx = (capts.len-1).int32
             if z.kind == reGroupStart:
-              capts[captx][z.idx].a = i
+              capts[captx][z.idx].a = i  # XXX fix
             else:
               capts[captx][z.idx].b = i-1
           of assertionKind - lookaroundKind:

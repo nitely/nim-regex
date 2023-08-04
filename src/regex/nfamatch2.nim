@@ -2,7 +2,6 @@
 
 import std/unicode
 import std/tables
-import std/algorithm
 
 import ./common
 import ./nodematch
@@ -71,6 +70,8 @@ template lookAroundTpl*: untyped {.dirty.} =
 template nextStateTpl(bwMatch = false): untyped {.dirty.} =
   template bounds2: untyped =
     when bwMatch: i .. bounds.b else: bounds.a .. i-1
+  template captElm: untyped =
+    capts[captx][z.idx]
   smB.clear()
   for n, capt, bounds in items smA:
     if anchored and nfa.s[n].kind == reEoe:
@@ -99,10 +100,15 @@ template nextStateTpl(bwMatch = false): untyped {.dirty.} =
           else:
             capts.add capts[captx]
             captx = (capts.len-1).int32
-          if z.kind == reGroupStart:
-            capts[captx][z.idx].a = i
-          else:
-            capts[captx][z.idx].b = i-1
+          # XXX put in parent case
+          if z.kind == reGroupStart and
+              (mfReverseCapts notin flags or
+              captElm.a == nonCapture.a):
+            captElm.a = i
+          elif z.kind == reGroupEnd and
+              (mfReverseCapts notin flags or
+              captElm.b == nonCapture.b):
+            captElm.b = i-1
         of assertionKind - lookaroundKind:
           when bwMatch:
             matched = match(z, c, cPrev.Rune)
@@ -152,9 +158,9 @@ func matchImpl(
   nextStateTpl()
   if smA.len > 0:
     captIdx = smA[0].ci
-    if captIdx != -1 and
-        mfReverseCapts in flags:
-      capts[captIdx].reverse()
+    #if captIdx != -1 and
+    #    mfReverseCapts in flags:
+    #  capts[captIdx].reverse()
   return smA.len > 0
 
 func reversedMatchImpl(

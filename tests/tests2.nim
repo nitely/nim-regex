@@ -2023,3 +2023,143 @@ test "tfindallopt":
   check findAllBounds("۲弢@۲弢۲ΪΪ@۲弢", re2"\d+\w+@(۲\w)+") == @[0 .. 16]
   check findAllBounds("۲Ϊ@۲弢Ⓐ۲Ⓐ@۲弢", re2"\d+\w+@(۲\w)+") ==
     @[0 .. 10, 14 .. 25]
+
+test "tmisc2":
+  var m: RegexMatch2
+  check "one<TAG>two</TAG>tree".find(re2"<TAG>.*?</TAG>", m)
+  check m.boundaries == 3 .. 16
+  check "one<TAG>two</TAG>tree".find(re2"<TAG>[\w<>/]*?</TAG>", m)
+  check m.boundaries == 3 .. 16
+  check "<TAG>two</TAG>".match(re2"<TAG>.*?</TAG>", m)
+  check match("abc", re2"abc", m)
+  check match("ab", re2"a(b|c)", m)
+  check match("ac", re2"a(b|c)", m)
+  check(not match("ad", re2"a(b|c)", m))
+  check match("ab", re2"(ab)*", m)
+  check match("abab", re2"(ab)*", m)
+  check(not match("ababc", re2"(ab)*", m))
+  check(not match("a", re2"(ab)*", m))
+  check match("ab", re2"(ab)+", m)
+  check match("abab", re2"(ab)+", m)
+  check(not match("ababc", re2"(ab)+", m))
+  check(not match("a", re2"(ab)+", m))
+  check match("aa", re2"\b\b\baa\b\b\b", m)
+  check(not match("cac", re2"c\ba\bc", m))
+  check match("abc", re2"[abc]+", m)
+  check match("abc", re2"[\w]+", m)
+  check match("弢弢弢", re2"[\w]+", m)
+  check(not match("abc", re2"[\d]+", m))
+  check match("123", re2"[\d]+", m)
+  check match("abc$%&", re2".+", m)
+  check(not match("abc$%&\L", re2"(.+)", m))
+  check(not match("abc$%&\L", re2".+", m))
+  check(not match("弢", re2"\W", m))
+  check match("$%&", re2"\W+", m)
+  check match("abc123", re2"[^\W]+", m)
+  check match("aabcd", re2"(aa)bcd", m) and
+    m.captures == @[0 .. 1]
+  check match("aabc", re2"(aa)(bc)", m) and
+    m.captures == @[0 .. 1, 2 .. 3]
+  check match("ab", re2"a(b|c)", m) and
+    m.captures == @[1 .. 1]
+  check match("ab", re2"(ab)*", m) and
+    m.captures == @[0 .. 1]
+  check match("abab", re2"(ab)*", m) and
+    m.captures == @[2 .. 3]
+  check match("ab", re2"((a))b", m) and
+    m.captures == @[0 .. 0, 0 .. 0]
+  check match("c", re2"((ab)*)c", m) and
+    m.captures == @[0 .. -1, nonCapture]
+  check match("aab", re2"((a)*b)", m) and
+    m.captures == @[0 .. 2, 1 .. 1]
+  check match("abbbbcccc", re2"a(b|c)*", m) and
+    m.captures == @[8 .. 8]
+  check match("ab", re2"(a*)(b*)", m) and
+    m.captures == @[0 .. 0, 1 .. 1]
+  check match("ab", re2"(a)*(b)*", m) and
+    m.captures == @[0 .. 0, 1 .. 1]
+  check match("ab", re2"(a)*b*", m) and
+    m.captures == @[0 .. 0]
+  check match("abbb", re2"((a(b)*)*(b)*)", m) and
+    m.captures == @[0 .. 3, 0 .. 3, 3 .. 3, nonCapture]
+  check match("aa", re2"(a)+", m) and
+    m.captures == @[1 .. 1]
+  check match("abab", re2"(ab)+", m) and
+    m.captures == @[2 .. 3]
+  check match("a", re2"(a)?", m) and
+    m.captures == @[0 .. 0]
+  check match("ab", re2"(ab)?", m) and
+    m.captures == @[0 .. 1]
+  check match("aaabbbaaa", re2"(a*|b*)*", m) and
+    m.captures == @[9 .. 8]
+  check match("abab", re2"(a(b))*", m) and
+    m.captures == @[2 .. 3, 3 .. 3]
+  check match("aaanasdnasd", re2"((a)*n?(asd)*)*", m) and
+    m.captures == @[11 .. 10, 2 .. 2, 8 .. 10]
+  check match("aaanasdnasd", re2"((a)*n?(asd))*", m) and
+    m.captures == @[7 .. 10, 2 .. 2, 8 .. 10]
+
+test "tmisc2_5":
+  var m: RegexMatch2
+  check match("abd", re2"((ab)c)|((ab)d)", m) and
+    m.captures == @[nonCapture, nonCapture, 0 .. 2, 0 .. 1]
+  check match("aaa", re2"(a*)", m) and
+    m.captures == @[0 .. 2]
+  check match("aaaa", re2"(a*)(a*)", m) and
+    m.captures == @[0 .. 3, 4 .. 3]
+  check match("aaaa", re2"(a*?)(a*?)", m) and
+    m.captures == @[0 .. -1, 0 .. 3]
+  check match("aaaa", re2"(a)*(a)", m) and
+    m.captures == @[2 .. 2, 3 .. 3]
+  check "11222211".find(re2"(22)+", m) and
+    m.group(0) == 4 .. 5
+  check match("650-253-0001", re2"[0-9]+-[0-9]+-[0-9]+", m)
+  check(not match("abc-253-0001", re2"[0-9]+-[0-9]+-[0-9]+", m))
+  check(not match("650-253", re2"[0-9]+-[0-9]+-[0-9]+", m))
+  check(not match("650-253-0001-abc", re2"[0-9]+-[0-9]+-[0-9]+", m))
+  check match("650-253-0001", re2"[0-9]+..*", m)
+  check(not match("abc-253-0001", re2"[0-9]+..*", m))
+  check(not match("6", re2"[0-9]+..*", m))
+  # VM registry error on Nim < 1.1 (devel)
+  when not defined(runTestAtCT) or (NimMajor, NimMinor) > (1, 0):
+    block:
+      const re1 = re2"((11)*)+(111)*"
+      check match("", re1)
+      check match("11", re1)
+      check match("111", re1)
+      check match("11111", re1)
+      check match("1111111", re1)
+      check match("1111111111", re1)
+      check(not match("1", re1))
+    block:
+      const re1 = re2"(11)+(111)*"
+      check(not match("", re1))
+      check match("11", re1)
+      check(not match("111", re1))
+      check match("11111", re1)
+
+test "tmisc2_6":
+  block:
+    const re1 = re2"(aabb)(ab)*"
+    check match("aabb", re1)
+    check match("aabbab", re1)
+    check match("aabbabab", re1)
+    check(not match("ab", re1))
+    check(not match("aabbaba", re1))
+  block:
+    const re1 = re2"0(10)*"
+    check match("0", re1)
+    check match("010", re1)
+    check(not match("", re1))
+    check(not match("0101", re1))
+    check(not match("0100", re1))
+    check(not match("00", re1))
+    check(not match("000", re1))
+  block:
+    const re1 = re2"(11)*|(111)*"
+    check match("", re1)
+    check match("11", re1)
+    check match("111", re1)
+    check match("1111", re1)
+    check match("111111", re1)
+    check(not match("1", re1))

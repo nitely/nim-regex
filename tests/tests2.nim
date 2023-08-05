@@ -77,6 +77,11 @@ func findAllCapt(s: string, reg: Regex2): seq[seq[Slice[int]]] =
       for i in 0 .. m.groupsCount-1:
         result.add m.group(i))
 
+func findAllStr(s: string, reg: Regex2): seq[string] =
+  result = newSeq[string]()
+  for bounds in findAllBounds(s, reg):
+    result.add s[bounds]
+
 func group(
   m: RegexMatch2, i: int, text: string
 ): string {.inline, raises: [].} =
@@ -2163,3 +2168,248 @@ test "tmisc2_6":
     check match("1111", re1)
     check match("111111", re1)
     check(not match("1", re1))
+
+test "tmisc3":
+  var m: RegexMatch2
+  block:  # issue #61
+    const a = "void __mingw_setusermatherr (int (__attribute__((__cdecl__)) *)(struct _exception *));"
+    check replace(a, re2"__attribute__[ ]*\(\(.*?\)\)([ ,;])", "$1") ==
+      "void __mingw_setusermatherr (int ( *)(struct _exception *));"
+    check replace(a, re2"__attribute__[ ]*\(\(.*?\)\)(.*?[ ,;])", "$1") ==
+      "void __mingw_setusermatherr (int ( *)(struct _exception *));"
+    check find(a, re2"__attribute__[ ]*\(\(.*?\)\)([ ,;])", m) and
+      a[m.boundaries] == "__attribute__((__cdecl__)) "
+    check find(a, re2"__attribute__[ ]*\(\(.*?\)\)(.*?[ ,;])", m) and
+      a[m.boundaries] == "__attribute__((__cdecl__)) "
+    # non-greedy
+    check find(a, re2"__attribute__[ ]*\(\(.*\)\)([ ,;])", m) and
+      a[m.boundaries] == "__attribute__((__cdecl__)) *)(struct _exception *));"
+  # issue #29
+  check replace("foo", re2"", "-") == "-f-o-o-"
+  block:  # issue #13
+    const input = """foo
+              bar
+      baxx
+                bazz
+    """
+    const expected = """//foo
+//              bar
+//      baxx
+//                bazz
+//    """
+    check replace(input, re2"(?m)^", "//") == expected
+  check replace("bar", re2"^", "foo") == "foobar"
+  check replace("foo", re2"$", "bar") == "foobar"
+  block:
+    const input = """foo
+              bar
+      baxx
+                bazz
+    """
+    const expected = """foo//
+              bar//
+      baxx//
+                bazz//
+    //"""
+    check replace(input, re2"(?m)$", "//") == expected
+  check(not find("foobarbar", re2"^bar", m, start=3))
+  check find("foobar\nbar", re2"(?m)^bar", m, start=3) and
+    m.boundaries == 7 .. 9
+  check find("foo\nbar\nbar", re2"(?m)^bar", m, start=3) and
+    m.boundaries == 4 .. 6
+  check find("foo\nbar\nbar", re2"(?m)^bar", m, start=4) and
+    m.boundaries == 4 .. 6
+  block:
+    # The bounds must contain the empty match index
+    check find("foo\nbar\nbar", re2"(?m)^", m) and
+      m.boundaries == 0 .. -1
+    check find("foo\nbar\nbar", re2"(?m)^", m, start=1) and
+      m.boundaries == 4 .. 3
+    check find("foo\nbar\nbar", re2"(?m)^", m, start=4) and
+      m.boundaries == 4 .. 3
+    check find("foo\nbar\nbar", re2"(?m)^", m, start=5) and
+      m.boundaries == 8 .. 7
+    check find("foo\nbar\nbar", re2"(?m)^", m, start=8) and
+      m.boundaries == 8 .. 7
+    check(not find("foo\nbar\nbar", re2"(?m)^", m, start=9))
+    check find("foo\nbar\nbar", re2"(?m)$", m) and
+      m.boundaries == 3 .. 2
+    check find("foo\nbar\nbar", re2"(?m)$", m, start=3) and
+      m.boundaries == 3 .. 2
+    check find("foo\nbar\nbar", re2"(?m)$", m, start=4) and
+      m.boundaries == 7 .. 6
+    check find("foo\nbar\nbar", re2"(?m)$", m, start=7) and
+      m.boundaries == 7 .. 6
+    check find("foo\nbar\nbar", re2"(?m)$", m, start=8) and
+      m.boundaries == 11 .. 10
+    check find("foo\nbar\nbar", re2"(?m)$", m, start=11) and
+      m.boundaries == 11 .. 10
+    # start is out of bounds, but this is what Nim's re
+    # does, nre throws an error
+    #check find("foo\nbar\nbar", re2"(?m)$", m, start=12) and
+    #  m.boundaries == 12 .. 11
+  # XXX make this return false?
+  check match("abc", re2"(?m)$", m, start=50)
+  check match("abc", re2"(?m)^", m, start=50)
+  # this should be valid though
+  check match("", re2"(?m)^", m)
+  check match("", re2"(?m)$", m)
+  block:
+    const input = """foo
+              bar
+      baxx
+                bazz
+    """
+    const expected = @[
+      "foo\n",
+      "              bar\n",
+      "      baxx\n",
+      "                bazz\n",
+      "    "
+    ]
+    check split(input, re2"(?m)^") == expected
+  block:
+    const input = """foo
+              bar
+      baxx
+                bazz
+    """
+    const expected = @[
+      "foo",
+      "\n              bar",
+      "\n      baxx",
+      "\n                bazz",
+      "\n    "
+    ]
+    check split(input, re2"(?m)$") == expected
+  check split("acb\nb\nc\n", re2"(?m)^") == @["acb\n", "b\n", "c\n"]
+  check split("a b", re2"\b") == @["a", " ", "b"]
+  check split("ab", re2"\b") == @["ab"]
+  check split("iaiaiai", re2"i") == @["", "a", "a", "a", ""]
+  check split("aiaia", re2"i") == @["a", "a", "a"]
+  check split("aaa", re2"a") == @["", "", "", ""]
+  check split("a\na\na", re2"(?m)^") == @["a\n", "a\n", "a"]
+  check split("\n\n", re2"(?m)^") == @["\n", "\n"]
+  check split("foobar", re2"(?<=o)b") == @["foo", "ar"]
+  check split("foobarbaz", re2"(?<!o)b") == @["foobar", "az"]
+  check split("foobar", re2"o(?=b)") == @["fo", "bar"]
+  check split("foobar", re2"o(?!b)") == @["f", "obar"]
+  block:
+    var m: RegexMatch2
+    check find("abcxyz", re2"(abc)|\w+", m)
+    check m.boundaries == 0 .. 2
+    check find("xyzabc", re2"(abc)|\w+", m)
+    check m.boundaries == 0 .. 5
+  check findAllStr(
+    "He was carefully disguised but captured quickly by police.",
+    re2"\w+ly") == @["carefully", "quickly"]
+
+test "fix#83":
+  block:
+    let pattern = "^src/(?:[^\\/]*(?:\\/|$))*[^/]*\\.nim$"
+    check "src/dir/foo.nim".match(pattern.re)
+  check match("foo", re2"(?:$)*\w*")
+  check match("foo", re2"($)*\w*")
+  check match("foo", re2"^*\w*")
+  check match("foo", re2"([^/]*$)*\w*")
+  check match("src/dir/foo.nim", re2"^src/(?:[^/]*(?:/|$))*[^/]*\.nim$")
+  check(not match("foo", re2"$($*)*(\w*)"))
+  check(not match("foo", re2"$($$*$*)*(\w*)"))
+  check(not match("foo", re2"($|$)($*)*(\w*)"))
+  check(not match("foo", re2"($|$$)($*)*(\w*)"))
+  check(not match("foo", re2"($$|$)($*)*(\w*)"))
+  check(not match("foo", re2"($|$)(\w*)"))
+  check(not match("foo", re2"($|$$)(\w*)"))
+  check(not match("foo", re2"($$|$)(\w*)"))
+  check(not match("foo", re2"(^$|$)(\w*)"))
+  check(not match("foo", re2"($|^$)(\w*)"))
+  check match("", re2"$*\w*")
+  check match("foo", re2"($*?)(\w*)")
+  check match("foo", re2"($*)(\w*)")
+  check match("foox", re2"($*)(\w*)x")
+  check match("foo", re2"(a*?$*?)*?(\w*)")
+  check match("foox", re2"(a*$*)*(\w*)x")
+  check match("aaa", re2"($|^)(a*)")
+  check match("aaa", re2"(^|$)(a*)")
+  block:
+    check findAllBounds("aaaxaaa", re2"^(a*)") == @[0 .. 2]
+    check findAllBounds("aaaxaaa", re2"$(a*)") == @[7 .. 6]
+    check findAllBounds("aaaxaaa", re2"($|^)(a*)") == @[0 .. 2, 7 .. 6]
+    check findAllBounds("aaaxaaa", re2"(^|$)(a*)") == @[0 .. 2, 7 .. 6]
+
+test "escapere2":
+  check escapeRe("abc") == "abc"
+  check escapeRe("123") == "123"
+  check escapeRe("!") == "!"
+  check escapeRe("*") == r"\*"
+  check escapeRe" #$&()*+-.?[\]^{|}~" ==
+    r"\ \#\$\&\(\)\*\+\-\.\?\[\\\]\^\{\|\}\~"
+  check escapeRe("\L") == "\\\L"
+  check escapeRe"aΪⒶ弢" == "aΪⒶ弢"
+  check escapeRe"$Ϊ$Ⓐ$弢$" == r"\$Ϊ\$Ⓐ\$弢\$"
+  check match("$", re(escapeRe"$"))
+  block:
+    var s = ""
+    for c in 0 .. 255:
+      s.add c.char
+    discard re(escapeRe(s))
+
+test "issue_98":
+  check match("", re2"|")
+  check match("a", re2"a|")
+  check match("", re2"a|")
+  check(not match("b", re2"a|"))
+  check match("b", re2"|b")
+  check match("", re2"|b")
+  check(not match("a", re2"|b"))
+  check match("", re2"(|)")
+  check match("a", re2"(a|)")
+  check match("", re2"(a|)")
+  check(not match("b", re2"(a|)"))
+  check match("b", re2"(|b)")
+  check match("", re2"(|b)")
+  check(not match("a", re2"(|b)"))
+  check match("", re2"||")
+  check match("a", re2"a||")
+  check match("", re2"a||")
+  check match("b", re2"||b")
+  check match("", re2"||b")
+  check match("", re2"a||b")
+  check match("a", re2"a||b")
+  check match("b", re2"a||b")
+  check match("", re2"|||")
+  check match("a", re2"a|||")
+  check match("", re2"a|||")
+  check match("b", re2"|||b")
+  check match("", re2"|||b")
+  check match("a", re2"a|||b")
+  check match("b", re2"a|||b")
+  check match("", re2"(||)")
+  check match("a", re2"(a||)")
+  check match("", re2"(a||)")
+  check match("b", re2"(||b)")
+  check match("", re2"(||b)")
+  check match("1.1.1.1", re2"(\d+)\.(\d+)(\.(\d+)|)(\.(\d+)|)")
+  check match("1.1.1", re2"(\d+)\.(\d+)(\.(\d+)|)(\.(\d+)|)")
+  check match("1.1", re2"(\d+)\.(\d+)(\.(\d+)|)(\.(\d+)|)")
+
+test "issue_101":
+  var m: RegexMatch2
+  check match("TXT1/TXT2.1", re2"(TXT1)/TXT2()\.(\d+)")
+  check match("TXT1/TXT2.1", re2"(TXT1)/TXT2(?:)\.(\d+)")
+  check match("TXT1/TXT2.1", re2"(TXT1)/TXT2(?i:)\.(\d+)")
+  check match("TXT1/TXT2.1", re2"(TXT1)/TXT2(?P<foo>)\.(\d+)")
+  check match("TXT1/TXT2.1", re2"(TXT1)/TXT2()\.(\d+)", m) and
+    m.captures == @[0 .. 3, 9 .. 8, 10 .. 10]
+  check match(" ", re2"(?x)     (?-x) ")
+  check match("aa", re2"((?x)a    )a")
+  check match("aa", re2"((?x)   a    )a")
+  check match(" ", re2"((?x)) ")
+  check match(" ", re2"((?x)     ) ")
+  check match(" ", re2"(?x:(?x)     ) ")
+  check match(" ", re2"(?x:) ")
+  check match(" ", re2"(?x:   ) ")
+  check match(" ", re2"((?x:)) ")
+  check match("A", re2"(?xi)     a")
+  check(not match("A", re2"((?xi))     a"))
+  check(not match("A", re2"(?xi:(?xi)     )a"))

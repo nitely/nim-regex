@@ -972,6 +972,14 @@ iterator findAll*(
     if i == len(s):
       break
 
+func findAll*(
+  s: string,
+  pattern: Regex2,
+  start = 0
+): seq[RegexMatch2] {.inline, raises: [].} =
+  for m in findAll(s, pattern, start):
+    result.add m
+
 func find*(
   s: string,
   pattern: Regex2,
@@ -1020,6 +1028,9 @@ func contains*(s: string, pattern: Regex2): bool {.inline, raises: [].} =
 
 func groupsCount*(m: RegexMatch2): int {.inline, raises: [].} =
   m.captures.len
+
+func groupNames*(m: RegexMatch2): seq[string] {.inline, raises: [].} =
+  result = toSeq(m.namedGroups.keys)
 
 iterator split*(s: string, sep: Regex2): string {.inline, raises: [].} =
   var
@@ -1123,6 +1134,9 @@ func replace*(
     inc j
     if limit > 0 and j == limit: break
   result.addsubstr(s, i)
+
+func isInitialized*(re: Regex2): bool {.inline, raises: [].} =
+  re.Regex.nfa.s.len > 0
 
 when isMainModule:
   import ./regex/parser

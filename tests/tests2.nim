@@ -1,4 +1,5 @@
 from std/unicode import runeLen
+from std/sequtils import map
 
 import ./regex
 
@@ -68,6 +69,25 @@ proc findWithCapt(s: string, pattern: Regex2): seq[string] =
   var m: RegexMatch2
   check find(s, pattern, m)
   result = m.toStrCaptures(s)
+
+func findAllCapt(s: string, reg: Regex2): seq[seq[Slice[int]]] =
+  result = map(
+    findAll(s, reg),
+    func (m: RegexMatch2): seq[Slice[int]] =
+      for i in 0 .. m.groupsCount-1:
+        result.add m.group(i))
+
+func group(
+  m: RegexMatch2, i: int, text: string
+): string {.inline, raises: [].} =
+  text[m.group(i)]
+
+func group(
+  m: RegexMatch2,
+  groupName: string,
+  text: string
+): string {.inline, raises: [KeyError].} =
+  text[m.group(groupName)]
 
 test "tfull_match":
   check "".isMatch(re2"")
@@ -1638,3 +1658,368 @@ test "tfull_lookarounds":
       m.captures == @[0 .. 1, 2 .. 3, 2 .. 3]
     check match("abcdefg", re2"\w+(?=(cd)(?<=(cd)))\w+", m) and
       m.captures == @[2 .. 3, 2 .. 3]
+
+test "tpretty_errors":
+  block:
+    var exp = ""
+    for _ in 0 ..< 30:
+      exp.add('x')
+    exp.add("(?Pabc")
+    check raisesMsg(exp) ==
+      "Invalid group name. Missing `<`\n" &
+      "~16 chars~xxxxxxxxxxxxxx(?Pabc\n" &
+      "                        ^"
+  block:
+    var exp = "(?Pabc"
+    for _ in 0 ..< 30:
+      exp.add('x')
+    check raisesMsg(exp) ==
+      "Invalid group name. Missing `<`\n" &
+      "(?Pabcxxxxxxxxxxxxxxxxxxxxxxxx~6 chars~\n" &
+      "^"
+  block:
+    var exp = ""
+    for _ in 0 ..< 30:
+      exp.add('x')
+    exp.add("(?Pabc")
+    for _ in 0 ..< 30:
+      exp.add('x')
+    check raisesMsg(exp) ==
+      "Invalid group name. Missing `<`\n" &
+      "~16 chars~xxxxxxxxxxxxxx(?Pabcxxxxxxxxxx~20 chars~\n" &
+      "                        ^"
+  check(raisesMsg(r"""(?x)  # comment
+      (?Pabc  # comment
+      # comment""") ==
+    "Invalid group name. Missing `<`\n" &
+    "~8 chars~comment       (?Pabc  # commen~17 chars~\n" &
+    "                       ^")
+  check raisesMsg(r"aaa(?Pabc") ==
+    "Invalid group name. Missing `<`\n" &
+    "aaa(?Pabc\n" &
+    "   ^"
+  check raisesMsg(r"(?Pabc") ==
+    "Invalid group name. Missing `<`\n" &
+    "(?Pabc\n" &
+    "^"
+  # unicode chars may have a wider width,
+  # so better to just truncate them
+  check raisesMsg(r"弢(?Pabc") ==
+    "Invalid group name. Missing `<`\n" &
+    "~1 chars~(?Pabc\n" &
+    "         ^"
+  check raisesMsg(r"弢弢弢(?Pabc") ==
+    "Invalid group name. Missing `<`\n" &
+    "~3 chars~(?Pabc\n" &
+    "         ^"
+  check raisesMsg(r"弢aaa(?Pabc") ==
+    "Invalid group name. Missing `<`\n" &
+    "~4 chars~(?Pabc\n" &
+    "         ^"
+
+test "treuse_regex_match":
+  block:
+    var m: RegexMatch2
+    check "2222".find(re2"(22)*", m)
+    check m.group(0) == 2 .. 3
+
+    check "abcd".find(re2"(ab)", m)
+    check m.group(0) == 0 .. 1
+
+    check "abcd".find(re2"(bc)", m)
+    check m.group(0) == 1 .. 2
+
+    check "abcd".find(re2"(cd)", m)
+    check m.group(0) == 2 .. 3
+
+  block:
+    var m: RegexMatch2
+    check "foobar".match(re2"(?P<foo>(?P<bar>\w*))", m)
+    check m.group("foo") == 0..5
+    check m.group("bar") == 0..5
+
+    check "foobar".match(re2"(?P<foo>\w*)", m)
+    check m.group("foo") == 0..5
+    expect(ValueError):
+      discard m.group("bar")
+
+test "tisInitialized":
+  block:
+    var re: Regex2
+    check(not re.isInitialized)
+    re = re2"foo"
+    check re.isInitialized
+
+test "capturingGroupsNames":
+  block:
+    let text = "hello world"
+    var m: RegexMatch2
+    check text.match(re2"(?P<greet>hello) (?P<who>world)", m)
+    check m.groupsCount == 2
+    for name in @["greet", "who"]:
+      check m.groupNames.contains(name)
+  block:
+    let text = "hello world"
+    var m: RegexMatch2
+    check text.match(re2"(?P<greet>hello) (?P<who>world)", m)
+    check m.group("greet", text) == "hello"
+    check m.group("who", text) == "world"
+  block:
+    let text = "hello world foo bar"
+    var m: RegexMatch2
+    check text.match(re2"(?P<greet>hello) (?:(?P<who>[^\s]+)\s?)+", m)
+    check m.group("greet", text) == "hello"
+    check m.group("who", text) == "bar"
+  block:
+    let text = "hello world her"
+    var m: RegexMatch2
+    check text.match(re2"(?P<greet>hello) (?P<who>world) (?P<who>her)", m)
+    check m.group("who", text) == "her"
+  block:
+    let text = "hello world foo bar"
+    var m: RegexMatch2
+    check text.match(re2"(?P<greet>hello) (?:(?P<who>[^\s]+)\s?)+", m)
+    check m.group("who", text) == "bar"
+  block:
+    let text = "hello"
+    var m: RegexMatch2
+    check text.match(re2"(?P<greet>hello)\s?(?P<who>world)?", m)
+    check m.group("greet", text) == "hello"
+    check m.group("who", text) == ""
+  block:
+    let text = "hello"
+    var m: RegexMatch2
+    check text.match(re2"(hello)\s?(world)?", m)
+    check m.group(0, text) == "hello"
+    check m.group(1, text) == ""
+  block:
+    let text = ""
+    var m: RegexMatch2
+    check text.match(re2"(hello)?\s?(world)?", m)
+    check m.group(0, text) == ""
+    check m.group(1, text) == ""
+  block:
+    let text = "hello world foo bar"
+    var m: RegexMatch2
+    check text.match(re2"(hello) (?:([^\s]+)\s?)+", m)
+    check m.group(1, text) == "bar"
+
+# XXX raise a compile error when regex contains unicode
+#     in ascii mode
+test "tflags":
+  var m: RegexMatch2
+  #check match("abc", re(r"abc", {reAscii}), m)
+  check match("弢弢弢", re2"\w{3}", m)
+  #check(not match("弢弢弢", re(r"\w{3}", {reAscii}), m))
+  check re2"\w" in "弢"
+  #check re(r"\w", {reAscii}) notin "弢"
+  #check re(r"\w", {reAscii}) in "a"
+  #check "%ab%".find(re(r"\w{2}", {reAscii}), m)
+  check "%弢弢%".find(re2"\w{2}", m)
+  #check(not "%弢弢%".find(re(r"\w{2}", {reAscii}), m))
+
+test "tfindopt":
+  var m: RegexMatch2
+  check(not find("bar", re2"foo", m))
+  check(not find("bar", re2"baz", m))
+  check "abcd".find(re2"bc", m)
+  check m.boundaries == 1 .. 2
+  check "bcd".find(re2"bc", m)
+  check m.boundaries == 0 .. 1
+  check "bc".find(re2"bc", m)
+  check m.boundaries == 0 .. 1
+  check "ababcd".find(re2"bc", m)
+  check m.boundaries == 3 .. 4
+  check "abc@xyz".find(re2"\w@", m)
+  check m.boundaries == 2 .. 3
+  check "ab1c@xyz".find(re2"\d\w@", m)
+  check m.boundaries == 2 .. 4
+  check "##axyz##".find(re2"(a|b)xyz", m)
+  check m.boundaries == 2 .. 5
+  check "##bxyz##".find(re2"(a|b)xyz", m)
+  check m.boundaries == 2 .. 5
+  check "##x#ax#axy#bxyz##".find(re2"(a|b)xyz", m)
+  check m.boundaries == 11 .. 14
+  check "##z#xyz#yz#bxyz##".find(re2"(a|b)xyz", m)
+  check m.boundaries == 11 .. 14
+  check "#xabcx#abc#".find(re2"\babc\b", m)
+  check m.boundaries == 7 .. 9
+  check "#foo://#".find(re2"[\w]+://", m)
+  check m.boundaries == 1 .. 6
+  check "x#foo://#".find(re2"[\w]+://", m)
+  check m.boundaries == 2 .. 7
+
+test "tfindallopt":
+  check findAllBounds("bar", re2"foo").len == 0
+  check findAllBounds("bar", re2"baz").len == 0
+  check findAllBounds("abcd", re2"bc") ==
+    @[1 .. 2]
+  check findAllBounds("bcd", re2"bc") ==
+    @[0 .. 1]
+  check findAllBounds("bc", re2"bc") ==
+    @[0 .. 1]
+  check findAllBounds("ababcd", re2"bc") ==
+    @[3 .. 4]
+  check findAllBounds("abcdbcbc", re2"bc") ==
+    @[1 .. 2, 4 .. 5, 6 .. 7]
+  check findAllBounds("abc@xyz", re2"\w@") ==
+    @[2 .. 3]
+  check findAllBounds("abc@xyz@@", re2"\w@") ==
+    @[2 .. 3, 6 .. 7]
+  check findAllBounds("ab1c@xyz", re2"\d\w@") ==
+    @[2 .. 4]
+  check findAllBounds("ab1c@xy1z@z@", re2"\d\w@") ==
+    @[2 .. 4, 7 .. 9]
+  check findAllBounds("##axyz##", re2"(a|b)xyz") ==
+    @[2 .. 5]
+  check findAllBounds("##bxyz##", re2"(a|b)xyz") ==
+    @[2 .. 5]
+  check findAllBounds("##axyz##bxyz", re2"(a|b)xyz") ==
+    @[2 .. 5, 8 .. 11]
+  check findAllBounds("##x#ax#axy#bxyz##", re2"(a|b)xyz") ==
+    @[11 .. 14]
+  check findAllBounds("##z#xyz#yz#bxyz##", re2"(a|b)xyz") ==
+    @[11 .. 14]
+  check findAllBounds("#xabcx#abc#", re2"\babc\b") ==
+    @[7 .. 9]
+  check findAllBounds("#xabcx#abc#abc", re2"\babc\b") ==
+    @[7 .. 9, 11 .. 13]
+  check findAllBounds("#foo://#", re2"[\w]+://") ==
+    @[1 .. 6]
+  check findAllBounds("x#foo://#", re2"[\w]+://") ==
+    @[2 .. 7]
+  check findAllBounds("foobarbaz", re2"(?<=o)b") ==
+    @[3 .. 3]
+  check findAllBounds("foobarbaz", re2"(?<=r)b") ==
+    @[6 .. 6]
+  check findAllBounds("foobarbaz", re2"(?<!o)b") ==
+    @[6 .. 6]
+  check findAllBounds("foobarbaz", re2"(?<!r)b") ==
+    @[3 .. 3]
+  check findAllBounds("x@x@y@y@y@x@xy@yx@@", re2"(?<!x)@\w+") ==
+    @[5 .. 6, 7 .. 8, 9 .. 10, 14 .. 16]
+  check findAllBounds("foobar", re2"o(?=b)") ==
+    @[2 .. 2]
+  check findAllBounds("foobarbaz", re2"a(?=r)") ==
+    @[4 .. 4]
+  check findAllBounds("foobar", re2"o(?!b)") ==
+    @[1 .. 1]
+  check findAllBounds("foobarbaz", re2"a(?!r)") ==
+    @[7 .. 7]
+  check findAllBounds("x@x@y@y@y@x@xy@yx@@", re2"\w+@(?!x)") ==
+    @[2 .. 3, 4 .. 5, 6 .. 7, 12 .. 14, 15 .. 17]
+  check findAllBounds("abcdef", re2"^abcd") ==
+    @[0 .. 3]
+  check findAllBounds("abcdef", re2"cdef$") ==
+    @[2 .. 5]
+  check findAllBounds("abcdef", re2"^abcdef$") ==
+    @[0 .. 5]
+  check findAllBounds("abcdef", re2"^abcx").len == 0
+  check findAllBounds("abcdef", re2"xcdef$").len == 0
+  check findAllBounds("abc\nabc\na", re2"(?m)^a") ==
+    @[0 .. 0, 4 .. 4, 8 .. 8]
+  check findAllBounds("x\nabcxx\nabcxx", re2"(?m)x$\n?[^x]*") ==
+    @[0 .. 4, 6 .. 10, 12 .. 12]
+  check findAllBounds("#f1o2o3@bar#", re2"(\w\d)*?@\w+") ==
+    @[1 .. 10]
+  check findAllBounds("foo@bar@baz", re2"\w+@\w+") ==
+    @[0 .. 6]
+  check findAllBounds("foo@111@111", re2"\w+@\d+") ==
+    @[0 .. 6]
+  check findAllBounds("foo@111@111", re2"\w*@\d+") ==
+    @[0 .. 6, 7 .. 10]
+  check findAllBounds("foo@111@@111", re2"\w+@\d+") ==
+    @[0 .. 6]
+  check findAllBounds("foo@111foo@111", re2"\w+@\d+") ==
+    @[0 .. 6, 7 .. 13]
+  check findAllBounds("111@111@111", re2"\d+@\w+") ==
+    @[0 .. 6]
+  check findAllBounds("abbbbccccd@abbbbccccd@", re2"\w(b|c)*d@") ==
+    @[0 .. 10, 11 .. 21]
+  check findAllBounds("abXabX", re2"\w(b|c)*@").len == 0
+  check findAllBounds("abbcXabbcX", re2"((a(b)*)+(c))") ==
+    @[0 .. 3, 5 .. 8]
+  check findAllBounds("aaanasdnasd@aaanasdnasd@", re2"((a)*n?(asd)*)+@") ==
+    @[0 .. 11, 12 .. 23]
+  check findAllBounds("a1@a1a1@", re2"(\w\d)+@") ==
+    @[0 .. 2, 3 .. 7]
+  check findAllBounds("a1@a1a1@a@a", re2"(\w\d)+@") ==
+    @[0 .. 2, 3 .. 7]
+  check findAllBounds("a1@a1a1@a@a1a@1@a@a1@", re2"(\w\d)+@") ==
+    @[0 .. 2, 3 .. 7, 18 .. 20]
+  check findAllBounds("a1@a1a1@", re2"(\w\d)*@") ==
+    @[0 .. 2, 3 .. 7]
+  check findAllBounds("a1@a1a1@a@a", re2"(\w\d)*@") ==
+    @[0 .. 2, 3 .. 7, 9 .. 9]
+  check findAllBounds("a1@a1a1@", re2"(\w\d)+?@") ==
+    @[0 .. 2, 3 .. 7]
+  check findAllBounds("a1@a1a1@", re2"(\w\d)*?@") ==
+    @[0 .. 2, 3 .. 7]
+  check findAllBounds("a1@a1a1@", re2"\w+\d+?@") ==
+    @[0 .. 2, 3 .. 7]
+  check findAllBounds("a1@a1a1@", re2"\w+?\d+@") ==
+    @[0 .. 2, 3 .. 7]
+  check findAllBounds("a1@a1a1@", re2"\w+?\d+?@") ==
+    @[0 .. 2, 3 .. 7]
+  check findAllBounds("ab@&%", re2"(a|ab)\w@&%") ==
+    @[0 .. 4]
+  check findAllBounds("abc@&%", re2"(a|ab)\w@&%") ==
+    @[0 .. 5]
+  check findAllBounds("ab@&%abc@&%", re2"(a|ab)\w@&%") ==
+    @[0 .. 4, 5 .. 10]
+  check findAllCapt("ab@&%", re2"(?:(a)|(ab))\w@&%") ==
+    @[@[0 .. 0, nonCapture]]
+  check findAllCapt("a#b@&%", re2"(?:(a)|(a#))\w@&%") ==
+    @[@[nonCapture, 0 .. 1]]
+  check findAllCapt("abc@&%", re2"(?:(a)|(ab))\w@&%") ==
+    @[@[nonCapture, 0 .. 1]]
+  check findAllCapt("aba@&%", re2"(?:(ab)|(a))\w@&%") ==
+    @[@[0 .. 1, nonCapture]]
+  check findAllCapt("ab@&%abc@&%", re2"(?:(a)|(ab))\w@&%") ==
+    @[@[0 .. 0, nonCapture], @[nonCapture, 5 .. 6]]
+  check findAllCapt("abc@&%ab@&%", re2"(?:(a)|(ab))\w@&%") ==
+    @[@[nonCapture, 0 .. 1], @[6 .. 6, nonCapture]]
+  check findAllBounds("x@xxzx@xxz", re2"\w+@\w+(?=z)") == @[0 .. 3, 4 .. 8]
+  check findAllBounds("1x@11zx@xxz", re2"\d+\w+@\w+(?=z)") == @[0 .. 4]
+  check findAllBounds("1x@11zx@xxz", re2"\d+\w+@\w+") == @[0 .. 6]
+  check findAllBounds("1x@1x@1x", re2"\d+\w+@\w+") == @[0 .. 4]
+  check findAllBounds("1x@1x@1x", re2"\d+\w+@(\d\w)+") == @[0 .. 4]
+  check findAllBounds("2222", re2"22") == @[0 .. 1, 2 .. 3]
+  block overlapTests:
+    check findAllBounds("1x@1xx@1x", re2"\d+\w+@(1\w)+") == @[0 .. 4]
+    check findAllBounds("1x@1x1xx@1x", re2"\d+\w+@(1\w)+") == @[0 .. 6]
+    check findAllBounds("1x@1xx1x@1x", re2"\d+\w+@(1\w)+") == @[0 .. 4, 6 .. 10]
+    check findAllBounds("1x@1xx@1x", re2"\d\w+@(\d\w)+") == @[0 .. 4]
+    check findAllBounds("2x1x@xx", re2"(1\w)+@\w+") == @[2 .. 6]
+    check findAllBounds("2x1x1x@xx", re2"(1\w)+@\w+") == @[2 .. 8]
+  check findAllBounds("bcbc#bc", re2"\bbc\B") == @[0 .. 1]
+  check findAllBounds("bcbc#bca", re2"\bbc\B") == @[0 .. 1, 5 .. 6]
+  check findAllBounds("bcbc#bc#xbcx#bcbcbc#bc", re2"\bbc\B") ==
+    @[0 .. 1, 13 .. 14]
+  check findAllBounds("bcbc#bc#xbcx#bcbcbc#bc", re2"\Bbc\b") ==
+    @[2 .. 3, 17 .. 18]
+  check findAllBounds("bcbc", re2"\Bbc") == @[2 .. 3]
+  check findAllBounds("bcbcbc", re2"\Bbc") == @[2 .. 3, 4 .. 5]
+  check findAllBounds("bc#bc#xbcx", re2"\Bbc\B") == @[7 .. 8]
+  check findAllBounds("bcbc#bca", re2"\Bbc\b") == @[2 .. 3]
+  check findAllBounds("bcbc#bc", re2"\Bbc\b") == @[2 .. 3]
+  check findAllBounds("abcabc", re2"bc") == @[1 .. 2, 4 .. 5]
+  check findAllBounds("bcbc#bc", re2"\bbc\b") == @[5 .. 6]
+  check findAllBounds("bcbc", re2"\bbc") == @[0 .. 1]
+  check findAllBounds("bc#bc", re2"\bbc\b") == @[0 .. 1, 3 .. 4]
+  check findAllBounds("bcabc", re2"^bc") == @[0 .. 1]
+  check findAllBounds("bcbc", re2"^bc") == @[0 .. 1]
+  check findAllBounds("bcabc\nbc\nabc\nbcbc", re2"(?m)^bc") ==
+    @[0 .. 1, 6 .. 7, 13 .. 14]
+  check findAllBounds("弢@弢@弢", re2"\w+@\w+") == @[0 .. 8]
+  check findAllBounds("弢ⒶΪ@弢ⒶΪ@弢ⒶΪ", re2"\w+@\w+") == @[0 .. 18]
+  check findAllBounds("۲@弢۲⅕@弢", re2"\d+@\w+") == @[0 .. 8]
+  check findAllBounds("۲۲@弢ⒶΪ11@弢ⒶΪ", re2"\d+@弢ⒶΪ") ==
+    @[0 .. 13, 14 .. 25]
+  check findAllBounds("#xa弢ⒶΪx#a弢ⒶΪ#", re2"\ba弢ⒶΪ\b") == @[14 .. 23]
+  check findAllBounds("#xa弢ⒶΪx#a弢ⒶΪ#a弢ⒶΪ", re2"\ba弢ⒶΪ\b") ==
+    @[14 .. 23, 25 .. 34]
+  check findAllBounds("۲Ⓐ@۲弢Ϊ@۲弢", re2"\d+\w+@(۲\w)+") == @[0 .. 11]
+  check findAllBounds("۲弢@۲弢۲ΪΪ@۲弢", re2"\d+\w+@(۲\w)+") == @[0 .. 16]
+  check findAllBounds("۲Ϊ@۲弢Ⓐ۲Ⓐ@۲弢", re2"\d+\w+@(۲\w)+") ==
+    @[0 .. 10, 14 .. 25]

@@ -11,7 +11,7 @@ import ./nfatype
 type
   AheadSig = proc (
     smA, smB: var Submatches,
-    capts: var Capts2,
+    capts: var Capts3,
     captIdx: var int32,
     text: string,
     nfa: Nfa,
@@ -21,7 +21,7 @@ type
   ): bool {.noSideEffect, raises: [].}
   BehindSig = proc (
     smA, smB: var Submatches,
-    capts: var Capts2,
+    capts: var Capts3,
     captIdx: var int32,
     text: string,
     nfa: Nfa,
@@ -71,9 +71,11 @@ template nextStateTpl(bwMatch = false): untyped {.dirty.} =
   template bounds2: untyped =
     when bwMatch: i .. bounds.b else: bounds.a .. i-1
   template captElm: untyped =
-    capts[captx][z.idx]
+    capts[captx, z.idx]
   smB.clear()
   for n, capt, bounds in items smA:
+    if capt != -1:
+      capts.touch capt
     if anchored and nfa.s[n].kind == reEoe:
       if not smB.hasState n:
         smB.add (n, capt, bounds)
@@ -93,21 +95,16 @@ template nextStateTpl(bwMatch = false): untyped {.dirty.} =
         if not matched:
           break
         case z.kind
-        of groupKind:
-          if captx < 0:
-            capts.inc()
-            captx = (capts.len-1).int32
-          else:
-            capts.add capts[captx]
-            captx = (capts.len-1).int32
-          # XXX put in parent case
-          if z.kind == reGroupStart and
-              (mfReverseCapts notin flags or
-              captElm.a == nonCapture.a):
+        of reGroupStart:
+          # XXX don't diverge if nti == 0
+          captx = capts.diverge captx
+          if mfReverseCapts notin flags or
+              captElm.a == nonCapture.a:
             captElm.a = i
-          elif z.kind == reGroupEnd and
-              (mfReverseCapts notin flags or
-              captElm.b == nonCapture.b):
+        of reGroupEnd:
+          captx = capts.diverge captx
+          if mfReverseCapts notin flags or
+              captElm.b == nonCapture.b:
             captElm.b = i-1
         of assertionKind - lookaroundKind:
           when bwMatch:
@@ -122,10 +119,11 @@ template nextStateTpl(bwMatch = false): untyped {.dirty.} =
       if matched:
         smB.add (nt, captx, bounds2)
   swap smA, smB
+  capts.recycle()
 
 func matchImpl(
   smA, smB: var Submatches,
-  capts: var Capts2,
+  capts: var Capts3,
   captIdx: var int32,
   text: string,
   nfa: Nfa,
@@ -165,7 +163,7 @@ func matchImpl(
 
 func reversedMatchImpl(
   smA, smB: var Submatches,
-  capts: var Capts2,
+  capts: var Capts3,
   captIdx: var int32,
   text: string,
   nfa: Nfa,
@@ -217,7 +215,7 @@ func reversedMatchImpl*(
   groupsLen: int,
   start, limit: int
 ): int =
-  var capts = initCapts2(groupsLen)
+  var capts = initCapts3(groupsLen)
   var captIdx = -1'i32
   reversedMatchImpl(
     smA, smB, capts, captIdx, text, nfa, look, start, limit)
@@ -237,16 +235,17 @@ func matchImpl*(
   var
     smA = newSubmatches(regex.nfa.s.len)
     smB = newSubmatches(regex.nfa.s.len)
-    capts = initCapts2(regex.groupsCount)
+    capts = initCapts3(regex.groupsCount)
     captIdx = -1'i32
     look = initLook()
   result = matchImpl(
     smA, smB, capts, captIdx, text, regex.nfa, look, start)
   if result:
+    m.captures.setLen regex.groupsCount
     if captIdx != -1:
-      m.captures.add capts[captIdx]
+      for i in 0 .. m.captures.len-1:
+        m.captures[i] = capts[captIdx, i]
     else:
-      m.captures.setLen regex.groupsCount
       for i in 0 .. m.captures.len-1:
         m.captures[i] = nonCapture
     if regex.namedGroups.len > 0:
@@ -259,7 +258,7 @@ func startsWithImpl2*(text: string, regex: Regex, start: int): bool =
   var
     smA = newSubmatches(regex.nfa.s.len)
     smB = newSubmatches(regex.nfa.s.len)
-    capts = initCapts2(regex.groupsCount)
+    capts = initCapts3(regex.groupsCount)
     captIdx = -1'i32
     look = initLook()
   result = matchImpl(

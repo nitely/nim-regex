@@ -3,6 +3,8 @@
 import std/tables
 import std/sets
 import std/algorithm
+import std/math
+import std/bitops
 
 import ./types
 import ./litopt
@@ -11,40 +13,86 @@ const nonCapture* = -1 .. -2
 
 type
   CaptIdx* = int32
+  Capts3* = object
+    ## Seq of captures divided into blocks
+    ## of power of 2 len. One block per parallel state.
+    ## A seq/set to keep track of used blocks.
+    ## A seq of free blocks for reusing
+    s: seq[Slice[int]]
+    groupsLen: Natural
+    blockSize: Natural
+    blockSizeL2: Natural
+    touched: seq[bool]
+    free: seq[int16]
+
+func len(capts: Capts3): int {.inline.} =
+  capts.s.len shr capts.blockSizeL2  # s.len / blockSize
+
+func `[]`*(capts: Capts3, i, j: Natural): Slice[int] {.inline.} =
+  #doAssert i <= capts.len-1
+  #doAssert j <= capts.groupsLen-1
+  capts.s[(i shl capts.blockSizeL2) + j]  # i * blockSize
+
+func `[]`*(capts: var Capts3, i, j: Natural): var Slice[int] {.inline.} =
+  #doAssert i <= capts.len-1
+  #doAssert j <= capts.groupsLen-1
+  capts.s[(i shl capts.blockSizeL2) + j]  # i * blockSize
+
+func `[]=`(capts: var Capts3, i, j: Natural, x: Slice[int]) {.inline.} =
+  #doAssert i <= capts.len-1
+  #doAssert j <= capts.groupsLen-1
+  capts.s[(i shl capts.blockSizeL2) + j] = x
+
+func initCapts3*(groupsLen: int): Capts3 =
+  result.groupsLen = groupsLen
+  result.blockSize = max(2, nextPowerOfTwo groupsLen)
+  result.blockSizeL2 = fastLog2 result.blockSize
+
+func touch*(capts: var Capts3, touched: Natural) =
+  capts.touched[touched] = true
+
+func diverge*(capts: var Capts3, captIdx: CaptIdx): CaptIdx =
+  if capts.free.len > 0:
+    result = capts.free.pop
+    for i in 0 .. capts.blockSize-1:
+      capts[result, i] = nonCapture
+    capts.touched[result] = true
+  else:
+    result = capts.len.CaptIdx
+    for _ in 0 .. capts.blockSize-1:
+      capts.s.add nonCapture
+    capts.touched.add true
+    doAssert result == capts.touched.len-1
+  if captIdx != -1:
+    for i in 0 .. capts.blockSize-1:
+      capts[result, i] = capts[captIdx, i]
+
+func recycle*(capts: var Capts3) =
+  ## Free untouched entries
+  capts.free.setLen 0
+  for i in 0 .. capts.touched.len-1:
+    if not capts.touched[i]:
+      capts.free.add i.int16
+    capts.touched[i] = false
+
+func clear*(capts: var Capts3) =
+  capts.s.setLen 0
+  capts.touched.setLen 0
+  capts.free.setLen 0
+
+template toOpenArray*(catps: Capts3, i: Natural): untyped =
+  toOpenArray(
+    catps.s,
+    if i == -1: 0 else: i shl capts.blockSizeL2,
+    if i == -1: -1 else: (i shl capts.blockSizeL2) + capts.groupsLen-1)
+
+type
   CaptNode* = object
     parent*: CaptIdx
     bound*: int
     idx*: int16  # XXX rename to group or groupNum
   Capts* = seq[CaptNode]
   Captures* = seq[seq[Slice[int]]]
-  Capts2* = object
-    s*: seq[seq[Slice[int]]]
-    groupsLen*: int
-
-func initCapts2*(groupsLen: int): Capts2 =
-  result.groupsLen = groupsLen
-
-func `[]`*(capts: Capts2, i: Natural): seq[Slice[int]] {.inline.} =
-  capts.s[i]
-
-func `[]`*(capts: var Capts2, i: Natural): var seq[Slice[int]] {.inline.} =
-  capts.s[i]
-
-func add*(capts: var Capts2, x: seq[Slice[int]]) {.inline.} =
-  capts.s.add x
-
-func len*(capts: Capts2): int {.inline.} =
-  capts.s.len
-
-func inc*(capts: var Capts2) {.inline.} =
-  doAssert capts.groupsLen > 0
-  capts.s.setLen(capts.s.len+1)
-  capts.s[^1].setLen capts.groupsLen
-  for i in 0 .. capts.groupsLen-1:
-    capts.s[^1][i] = nonCapture
-
-func clear*(capts: var Capts2) {.inline.} =
-  capts.s.setLen 0
 
 func constructSubmatches*(
   captures: var Captures,
@@ -229,3 +277,142 @@ func grow*(sm: var SmLookaround) {.inline.} =
 func removeLast*(sm: var SmLookaround) {.inline.} =
   doAssert sm.i > 0
   sm.i -= 1
+
+when isMainModule:
+  block:
+    var capts = initCapts3(2)
+    doAssert capts.len == 0
+    discard capts.diverge -1
+    doAssert capts.len == 1
+    discard capts.diverge -1
+    doAssert capts.len == 2
+    discard capts.diverge -1
+    doAssert capts.len == 3
+  block:
+    var groupsLen = 1
+    var capts = initCapts3(groupsLen)
+    var captx = capts.diverge -1
+    doAssert captx == 0
+    doAssert capts[captx, 0] == nonCapture
+    captx = capts.diverge -1
+    doAssert captx == 1
+    doAssert capts[captx, 0] == nonCapture
+  block:
+    var groupsLen = 1
+    var capts = initCapts3(groupsLen)
+    for i in 0 .. 20:
+      var captx = capts.diverge -1
+      doAssert captx == i
+      doAssert capts[captx, 0] == nonCapture
+  block:
+    var capts = initCapts3(1)
+    var captx1 = capts.diverge -1
+    capts[captx1, 0] = 1..1
+    var captx2 = capts.diverge -1
+    capts[captx2, 0] = 2..2
+    doAssert capts[captx1, 0] == 1..1
+    doAssert capts[captx2, 0] == 2..2
+  block:
+    var capts = initCapts3(2)
+    var captx1 = capts.diverge -1
+    capts[captx1, 0] = 1..1
+    capts[captx1, 1] = 2..2
+    var captx2 = capts.diverge -1
+    capts[captx2, 0] = 3..3
+    capts[captx2, 1] = 4..4
+    doAssert capts[captx1, 0] == 1..1
+    doAssert capts[captx1, 1] == 2..2
+    doAssert capts[captx2, 0] == 3..3
+    doAssert capts[captx2, 1] == 4..4
+    doAssert captx1 == 0
+    doAssert captx2 == 1
+  block:
+    var groupsLen = 2
+    var capts = initCapts3(groupsLen)
+    for i in 0 .. 20:
+      var captx = capts.diverge -1
+      doAssert captx == i
+      for j in 0 .. 1:
+        doAssert capts[i, j] == nonCapture
+        capts[i,j] = (i+j)..(i+j)
+    # check for overwrites
+    for i in 0 .. 20:
+      for j in 0 .. 1:
+        doAssert capts[i,j] == (i+j)..(i+j)
+  block:
+    var capts = initCapts3(2)
+    var captx1 = capts.diverge -1
+    capts[captx1, 0] = 1..1
+    capts[captx1, 1] = 2..2
+    var captx2 = capts.diverge captx1
+    doAssert capts[captx1, 0] == 1..1
+    doAssert capts[captx1, 1] == 2..2
+    doAssert capts[captx2, 0] == 1..1
+    doAssert capts[captx2, 1] == 2..2
+    doAssert captx1 == 0
+    doAssert captx2 == 1
+  block:
+    var capts = initCapts3(2)
+    var captx1 = capts.diverge -1
+    capts[captx1, 0] = 1..1
+    capts[captx1, 1] = 2..2
+    capts.recycle()
+    var captx2 = capts.diverge -1
+    capts[captx2, 0] = 3..3
+    capts[captx2, 1] = 4..4
+    doAssert capts[captx1, 0] == 1..1
+    doAssert capts[captx1, 1] == 2..2
+    doAssert capts[captx2, 0] == 3..3
+    doAssert capts[captx2, 1] == 4..4
+    doAssert captx1 == 0
+    doAssert captx2 == 1
+  block:
+    var capts = initCapts3(2)
+    var captx1 = capts.diverge -1
+    capts[captx1, 0] = 1..1
+    capts[captx1, 1] = 2..2
+    doAssert capts[captx1, 0] == 1..1
+    doAssert capts[captx1, 1] == 2..2
+    capts.recycle()
+    capts.recycle()
+    var captx2 = capts.diverge -1
+    doAssert captx1 == captx2
+    doAssert capts[captx1, 0] == nonCapture
+    doAssert capts[captx1, 1] == nonCapture
+  block:
+    var capts = initCapts3(2)
+    var captx1 = capts.diverge -1
+    capts[captx1, 0] = 1..1
+    capts[captx1, 1] = 2..2
+    doAssert capts[captx1, 0] == 1..1
+    doAssert capts[captx1, 1] == 2..2
+    capts.recycle()
+    capts.touch captx1
+    var captx2 = capts.diverge -1
+    doAssert captx1 != captx2
+    doAssert capts[captx1, 0] == 1..1
+    doAssert capts[captx1, 1] == 2..2
+    doAssert capts[captx2, 0] == nonCapture
+    doAssert capts[captx2, 1] == nonCapture
+  block:
+    var capts = initCapts3(1)
+    doAssert toOpenArray(capts, -1).len == 0
+    var captx1 = capts.diverge -1
+    doAssert toOpenArray(capts, captx1).len == 1
+    doAssert toOpenArray(capts, captx1)[0 .. ^1] == @[nonCapture]
+    var captx2 = capts.diverge -1
+    doAssert toOpenArray(capts, captx2).len == 1
+    doAssert toOpenArray(capts, captx2)[0 .. ^1] == @[nonCapture]
+  block:
+    var capts = initCapts3(2)
+    doAssert toOpenArray(capts, -1).len == 0
+    var captx1 = capts.diverge -1
+    capts[captx1, 0] = 1..1
+    capts[captx1, 1] = 2..2
+    doAssert toOpenArray(capts, captx1).len == 2
+    doAssert toOpenArray(capts, captx1)[0 .. ^1] == @[1..1, 2..2]
+    var captx2 = capts.diverge -1
+    capts[captx2, 0] = 3..3
+    capts[captx2, 1] = 4..4
+    doAssert toOpenArray(capts, captx2).len == 2
+    doAssert toOpenArray(capts, captx2)[0 .. ^1] == @[3..3, 4..4]

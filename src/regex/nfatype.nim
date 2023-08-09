@@ -12,6 +12,8 @@ import ./litopt
 const nonCapture* = -1 .. -2
 
 type
+  TouchOpts* = enum
+    touYes, touNo, touKeep
   CaptIdx* = int32
   Capts3* = object
     ## Seq of captures divided into blocks
@@ -22,7 +24,7 @@ type
     groupsLen: Natural
     blockSize: Natural
     blockSizeL2: Natural
-    touched: seq[bool]
+    touched: seq[TouchOpts]
     free: seq[int16]
 
 func len(capts: Capts3): int {.inline.} =
@@ -49,19 +51,22 @@ func initCapts3*(groupsLen: int): Capts3 =
   result.blockSizeL2 = fastLog2 result.blockSize
 
 func touch*(capts: var Capts3, touched: Natural) =
-  capts.touched[touched] = true
+  capts.touched[touched] = touYes
+
+func untouch*(capts: var Capts3, touched: Natural) =
+  capts.touched[touched] = touNo
 
 func diverge*(capts: var Capts3, captIdx: CaptIdx): CaptIdx =
   if capts.free.len > 0:
     result = capts.free.pop
     for i in 0 .. capts.blockSize-1:
       capts[result, i] = nonCapture
-    capts.touched[result] = true
+    capts.touched[result] = touYes
   else:
     result = capts.len.CaptIdx
     for _ in 0 .. capts.blockSize-1:
       capts.s.add nonCapture
-    capts.touched.add true
+    capts.touched.add touYes
     doAssert result == capts.touched.len-1
   if captIdx != -1:
     for i in 0 .. capts.blockSize-1:
@@ -71,9 +76,13 @@ func recycle*(capts: var Capts3) =
   ## Free untouched entries
   capts.free.setLen 0
   for i in 0 .. capts.touched.len-1:
-    if not capts.touched[i]:
+    if capts.touched[i] == touNo:
       capts.free.add i.int16
-    capts.touched[i] = false
+    if capts.touched[i] != touKeep:
+      capts.touched[i] = touNo
+
+func doNotRecycle*(capts: var Capts3, captIdx: CaptIdx) =
+  capts.touched[captIdx] = touKeep
 
 func clear*(capts: var Capts3) =
   capts.s.setLen 0

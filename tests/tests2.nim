@@ -881,7 +881,6 @@ test "tfind":
   block:
     var m: RegexMatch2
     check "2222".find(re2"(22)*", m)
-    echo m.group(0)
     check m.group(0) == 2 .. 3
   block:
     var m: RegexMatch2
@@ -962,8 +961,6 @@ test "tsplit":
 test "tsplitIncl":
   check "a,b".splitIncl(re2"(,)") == @["a", ",", "b"]
   check "12".splitIncl(re2"(\d)") == @["", "1", "", "2", ""]
-  echo splitIncl("a#b#cde", re2"(\w)")
-  echo splitIncl("aΪⒶ弢", re2"(\w)")
   check splitIncl("aΪⒶ弢", re2"(\w)") ==
     @["", "a", "", "Ϊ", "", "Ⓐ", "", "弢", ""]
   check splitIncl("aΪⒶ弢", re2"") == @["a", "Ϊ", "Ⓐ", "弢"]

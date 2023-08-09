@@ -1,8 +1,6 @@
 import std/unicode
 import std/tables
 from std/strutils import find
-from std/math import nextPowerOfTwo
-from std/bitops import fastLog2
 
 import ./common
 import ./nodematch
@@ -11,63 +9,11 @@ import ./nfatype
 import ./nfamatch2
 
 type
-  Matches = object
-    ## Final capts + bounds
-    ## Use first block index as bounds
-    s: seq[Slice[int]]
-    blockSize: Natural
-    blockSizeL2: Natural
-    groupsLen: Natural
-
-func `[]`(ms: Matches, matchIdx: Natural): Slice[int] {.inline.} =
-  ## Return bounds at matchIdx
-  ms.s[matchIdx shl ms.blockSizeL2]  # i * blockSize
-
-func `[]`(ms: Matches, matchIdx, captIdx: Natural): Slice[int] {.inline.} =
-  ## Return capt at (matchIdx+captIdx)
-  doAssert captIdx <= ms.groupsLen-1
-  ms.s[(matchIdx shl ms.blockSizeL2)+1 + captIdx]  # +1 skip bounds
-
-func initMatches(groupsLen: int): Matches =
-  result.groupsLen = groupsLen
-  result.blockSize = max(2, nextPowerOfTwo groupsLen+1)  # + bounds item
-  result.blockSizeL2 = fastLog2 result.blockSize
-
-func len(ms: Matches): int {.inline.} =
-  ms.s.len shr ms.blockSizeL2  # s.len / blockSize
-
-func add(
-  ms: var Matches,
-  bounds: Slice[int],
-  capts: openArray[Slice[int]]
-) =
-  ## Add bounds+capts to m. Remove all overlapped matches.
-  doAssert capts.len == 0 or capts.len == ms.groupsLen
-  var size = 0
-  #debugEcho ms.s
-  for i in countdown(ms.len-1, 0):
-    if max(ms[i].b, ms[i].a) < bounds.a:
-      size = i+1
-      break
-  ms.s.setLen(size shl ms.blockSizeL2)
-  ms.s.add bounds
-  ms.s.add capts
-  for _ in capts.len+1 .. ms.blockSize-1:  # +1 bounds
-    ms.s.add nonCapture
-  doAssert ms.s.len == ms.len shl ms.blockSizeL2
-
-func add(ms: var Matches, bounds: Slice[int]) =
-  ## Add bounds+empty capts to m
-  ms.s.add bounds
-  for _ in 1 .. ms.blockSize-1:
-    ms.s.add nonCapture
-  doAssert ms.s.len == ms.len shl ms.blockSizeL2
-
-func clear(ms: var Matches) {.inline.} =
-  ms.s.setLen 0
-
-type
   MatchItemIdx = int
+  MatchItem = tuple
+    capt: CaptIdx
+    bounds: Bounds
+  Matches = seq[MatchItem]
   RegexMatches2* = object
     a, b: Submatches
     m: Matches
@@ -83,7 +29,6 @@ template initMaybeImpl(
     ms.a = newSubmatches size
     ms.b = newSubmatches size
     ms.c = initCapts3 groupsLen
-    ms.m = initMatches groupsLen
     ms.look = initLook()
   doAssert ms.a.cap >= size and
     ms.b.cap >= size
@@ -94,18 +39,35 @@ template initMaybeImpl(
 ) =
   initMaybeImpl(ms, regex.nfa.s.len, regex.groupsCount)
 
+func add(ms: var RegexMatches2, m: MatchItem) {.inline.} =
+  ## Add `m` to `ms.m`. Remove all overlapped matches.
+  template msm: untyped = ms.m
+  template capts: untyped = ms.c
+  var size = 0
+  for i in countdown(msm.len-1, 0):
+    if max(msm[i].bounds.b, msm[i].bounds.a) < m.bounds.a:
+      size = i+1
+      break
+  #for i in size .. msm.len-1:
+    if msm[i].capt != -1:
+      capts.untouch msm[i].capt
+  msm.setLen size
+  msm.add m
+  if m.capt != -1:
+    capts.doNotRecycle m.capt
+
 func hasMatches(ms: RegexMatches2): bool {.inline.} =
   return ms.m.len > 0
 
 func clear(ms: var RegexMatches2) {.inline.} =
   ms.a.clear()
   ms.b.clear()
-  ms.m.clear()
+  ms.m.setLen 0
   ms.c.clear()
 
 iterator bounds*(ms: RegexMatches2): Slice[int] {.inline.} =
   for i in 0 .. ms.m.len-1:
-    yield ms.m[i]
+    yield ms.m[i].bounds
 
 iterator items*(ms: RegexMatches2): MatchItemIdx {.inline.} =
   for i in 0 .. ms.m.len-1:
@@ -117,22 +79,26 @@ func fillMatchImpl*(
   ms: RegexMatches2,
   regex: Regex
 ) {.inline.} =
+  template capt: untyped = ms.m[mi].capt
   if m.namedGroups.len != regex.namedGroups.len:
     m.namedGroups = regex.namedGroups
   m.captures.setLen regex.groupsCount
-  #debugEcho ms.m.s
-  for i in 0 .. m.captures.len-1:
-    m.captures[i] = ms.m[mi, i]
-  m.boundaries = ms.m[mi]
+  if capt != -1:
+    for i in 0 .. m.captures.len-1:
+      m.captures[i] = ms.c[capt, i]
+  else:
+    for i in 0 .. m.captures.len-1:
+      m.captures[i] = nonCapture
+  m.boundaries = ms.m[mi].bounds
 
 func dummyMatch*(ms: var RegexMatches2, i: int) {.inline.} =
   ## hack to support `split` last value.
   ## we need to add the end boundary if
   ## it has not matched the end
   ## (no match implies this too)
-  template ab: untyped = ms.m[ms.m.len-1]
+  template ab: untyped = ms.m[^1].bounds
   if ms.m.len == 0 or max(ab.a, ab.b) < i:
-    ms.m.add i+1 .. i
+    ms.add (-1'i32, i+1 .. i)
 
 func submatch(
   ms: var RegexMatches2,
@@ -186,7 +152,7 @@ func submatch(
       if matched:
         if nfa[nt].kind == reEoe:
           #debugEcho "eoe ", bounds, " ", ms.m
-          ms.m.add(bounds.a .. i-1, toOpenArray(capts, captx))
+          ms.add (captx, bounds.a .. i-1)
           smA.clear()
           if not eoeFound:
             eoeFound = true

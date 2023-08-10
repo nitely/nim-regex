@@ -73,7 +73,7 @@ func diverge*(capts: var Capts3, captIdx: CaptIdx): CaptIdx =
       capts[result, i] = capts[captIdx, i]
 
 func recycle*(capts: var Capts3) =
-  ## Free untouched entries
+  ## Free untouched entries, and untouch all entries
   capts.free.setLen 0
   for i in 0 .. capts.touched.len-1:
     if capts.touched[i] == touNo:
@@ -88,12 +88,6 @@ func clear*(capts: var Capts3) =
   capts.s.setLen 0
   capts.touched.setLen 0
   capts.free.setLen 0
-
-template toOpenArray*(catps: Capts3, i: Natural): untyped =
-  toOpenArray(
-    catps.s,
-    if i == -1: 0 else: i shl capts.blockSizeL2,
-    if i == -1: -1 else: (i shl capts.blockSizeL2) + capts.groupsLen-1)
 
 type
   CaptNode* = object
@@ -404,24 +398,33 @@ when isMainModule:
     doAssert capts[captx2, 0] == nonCapture
     doAssert capts[captx2, 1] == nonCapture
   block:
-    var capts = initCapts3(1)
-    doAssert toOpenArray(capts, -1).len == 0
-    var captx1 = capts.diverge -1
-    doAssert toOpenArray(capts, captx1).len == 1
-    doAssert toOpenArray(capts, captx1)[0 .. ^1] == @[nonCapture]
-    var captx2 = capts.diverge -1
-    doAssert toOpenArray(capts, captx2).len == 1
-    doAssert toOpenArray(capts, captx2)[0 .. ^1] == @[nonCapture]
-  block:
     var capts = initCapts3(2)
-    doAssert toOpenArray(capts, -1).len == 0
     var captx1 = capts.diverge -1
     capts[captx1, 0] = 1..1
     capts[captx1, 1] = 2..2
-    doAssert toOpenArray(capts, captx1).len == 2
-    doAssert toOpenArray(capts, captx1)[0 .. ^1] == @[1..1, 2..2]
+    doAssert capts[captx1, 0] == 1..1
+    doAssert capts[captx1, 1] == 2..2
+    capts.doNotRecycle captx1
+    capts.recycle()
+    capts.recycle()
     var captx2 = capts.diverge -1
-    capts[captx2, 0] = 3..3
-    capts[captx2, 1] = 4..4
-    doAssert toOpenArray(capts, captx2).len == 2
-    doAssert toOpenArray(capts, captx2)[0 .. ^1] == @[3..3, 4..4]
+    doAssert captx1 != captx2
+    doAssert capts[captx1, 0] == 1..1
+    doAssert capts[captx1, 1] == 2..2
+    doAssert capts[captx2, 0] == nonCapture
+    doAssert capts[captx2, 1] == nonCapture
+  block:
+    var capts = initCapts3(2)
+    var captx1 = capts.diverge -1
+    capts[captx1, 0] = 1..1
+    capts[captx1, 1] = 2..2
+    doAssert capts[captx1, 0] == 1..1
+    doAssert capts[captx1, 1] == 2..2
+    capts.doNotRecycle captx1
+    capts.untouch captx1
+    capts.recycle()
+    capts.recycle()
+    var captx2 = capts.diverge -1
+    doAssert captx1 == captx2
+    doAssert capts[captx1, 0] == nonCapture
+    doAssert capts[captx1, 1] == nonCapture

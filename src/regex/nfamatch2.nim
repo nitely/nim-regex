@@ -96,7 +96,8 @@ template nextStateTpl(bwMatch = false): untyped {.dirty.} =
           break
         case z.kind
         of reGroupStart:
-          # XXX don't diverge if nti == 0
+          # XXX this can be avoided on 1st z loop iteration
+          #     and also on 1st nti loop iteration
           captx = capts.diverge captx
           if mfReverseCapts notin flags or
               captElm.a == nonCapture.a:
@@ -112,7 +113,12 @@ template nextStateTpl(bwMatch = false): untyped {.dirty.} =
           else:
             matched = match(z, cPrev.Rune, c)
         of lookaroundKind:
+          # XXX mark as do not recycle all capts
+          #     no test is catching this
+          # touched will have ints instead of enum
+          # var freezed = capts.freeze()
           lookAroundTpl()
+          # capts.unfreeze(freezed)
         else:
           doAssert false
           discard
@@ -156,9 +162,6 @@ func matchImpl(
   nextStateTpl()
   if smA.len > 0:
     captIdx = smA[0].ci
-    #if captIdx != -1 and
-    #    mfReverseCapts in flags:
-    #  capts[captIdx].reverse()
   return smA.len > 0
 
 func reversedMatchImpl(
@@ -202,8 +205,6 @@ func reversedMatchImpl(
   for n, capt, bounds in items smA:
     if nfa.s[n].kind == reEoe:
       captIdx = capt
-      #if mfReverseCapts in flags:
-      #  capts[captIdx].reverse()
       return bounds.a
   return -1
 

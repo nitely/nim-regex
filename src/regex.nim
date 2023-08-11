@@ -1139,32 +1139,6 @@ func isInitialized*(re: Regex2): bool {.inline, raises: [].} =
   re.Regex.nfa.s.len > 0
 
 when isMainModule:
-    #@[0 .. 3, 0 .. 3]
-    var m: RegexMatch
-    echo match("aaab", re"(\w+)|\w+(?<=^(\w+))b", m)
-    echo m.captures
-    var m2: RegexMatch2
-    #echo match("aaab", re2"((\w+)|a(a+)b(?<=^(a+)(b)))", m2)
-    #echo match("aaab", re2"a(a+)b(?<=^(a+)(b))", m2)
-    #echo match("aaab", re2"(a)(a)(a)b(?<=^(a+)(b))", m2)
-    #echo match("aaab", re2"(a(a+)b(?<=^(a+)(b))|(\w+))", m2)
-    #echo match("aaab", re2"(a(a+)b(?<=^(a+)(x))|(\w+))", m2)
-    #echo match("aaab", re2"(a(a+)(?<=^(a+)(b))x|(\w+))", m2)
-    #echo match("aaab", re2"(\w+)|(a+(?<=^(aa)(a)(b))b)", m2)
-    #echo match("aaab", re2"(a+)(?<=^(aa)(a))b", m2)
-    #echo match("aaab", re2"(a+)(?<=(^(aa)(a))|(^(aa)(a)))b", m2)
-    #echo match("aaab", re2"(a+)(?<=(?:^(aa)(a))|(?:^(a)(a)(a)))b", m2)
-    #echo match("aaab", re2"(a)(a)(a)(?<=(?:^(aa)(a))|(?:^(a)(a)(a)))b", m2)
-    #echo match("aaab", re2"(a(a+)(?<=^(a+)(b))x|(\w+))", m2)
-    #echo match("aaab", re2"(\w+)|(a+(?<=^(\w+)(?<=^(\w+)))b)", m2)
-    #echo match("aaab", re2"(\w+)(?<=^(\w+))|(a+(?<=^(\w+))b)", m2)
-    #echo match("aaab", re2"((\w+)(?<=^(\w+)))|(a+(?<=^(\w+))b)", m2)
-    #echo match("aaab", re2"((\w+)(?<=^(\w+)))|(?:a+(?<=^(\w+))b)", m2)
-    #echo match("aaab", re2"(\w+)|\w+(?<=^(\w+))b", m2)
-    # XXX FIX
-    echo match("aaab", re2"(\w+)|\w+(?<=^(\w+))b", m2)
-    echo m2.captures
-when false:
   import ./regex/parser
   import ./regex/exptransformation
   import ./regex/dotgraph

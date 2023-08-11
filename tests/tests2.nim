@@ -2415,3 +2415,51 @@ test "issue_101":
   check match("A", re2"(?xi)     a")
   check(not match("A", re2"((?xi))     a"))
   check(not match("A", re2"(?xi:(?xi)     )a"))
+
+test "tlookaround_captures":
+  var m: RegexMatch2
+  check match("aaab", re2"((\w+)|a(a+)b(?<=^(a+)(b)))", m) and
+    m.captures == @[0 .. 3, 0 .. 3, nonCapture, nonCapture, nonCapture]
+  check match("aaab", re2"a(a+)b(?<=^(a+)(b))", m) and
+    m.captures == @[1 .. 2, 0 .. 2, 3 .. 3]
+  check match("aaab", re2"(a)(a)(a)b(?<=^(a+)(b))", m) and
+    m.captures == @[0 .. 0, 1 .. 1, 2 .. 2, 0 .. 2, 3 .. 3]
+  check match("aaab", re2"(a(a+)b(?<=^(a+)(b))|(\w+))", m) and
+    m.captures == @[0 .. 3, 1 .. 2, 0 .. 2, 3 .. 3, nonCapture]
+  check match("aaab", re2"(a(a+)b(?<=^(a+)(x))|(\w+))", m) and
+    m.captures == @[0 .. 3, nonCapture, nonCapture, nonCapture, 0 .. 3]
+  check match("aaab", re2"(a(a+)(?<=^(a+)(b))x|(\w+))", m) and
+    m.captures == @[0 .. 3, nonCapture, nonCapture, nonCapture, 0 .. 3]
+  check match("aaab", re2"(\w+)|(a+(?<=^(aa)(a)(b))b)", m) and
+    m.captures == @[0 .. 3, nonCapture, nonCapture, nonCapture, nonCapture]
+  check match("aaab", re2"(a+)(?<=^(aa)(a))b", m) and
+    m.captures == @[0 .. 2, 0 .. 1, 2 .. 2]
+  check match("aaab", re2"(a+)(?<=(^(aa)(a))|(^(aa)(a)))b", m) and
+    m.captures == @[0 .. 2, 0 .. 2, 0 .. 1, 2 .. 2, nonCapture, nonCapture, nonCapture]
+  check match("aaab", re2"(a+)(?<=(?:^(aa)(a))|(?:^(a)(a)(a)))b", m) and
+    m.captures == @[0 .. 2, 0 .. 1, 2 .. 2, nonCapture, nonCapture, nonCapture]
+  check match("aaab", re2"(a)(a)(a)(?<=(?:^(aa)(a))|(?:^(a)(a)(a)))b", m) and
+    m.captures == @[0 .. 0, 1 .. 1, 2 .. 2, 0 .. 1, 2 .. 2, nonCapture, nonCapture, nonCapture]
+  check match("aaab", re2"(a(a+)(?<=^(a+)(b))x|(\w+))", m) and
+    m.captures == @[0 .. 3, nonCapture, nonCapture, nonCapture, 0 .. 3]
+  check match("aaab", re2"(\w+)|(a+(?<=^(\w+)(?<=^(\w+)))b)", m) and
+    m.captures == @[0 .. 3, nonCapture, nonCapture, nonCapture]
+  check match("aaab", re2"(\w+)(?<=^(\w+))|(a+(?<=^(\w+))b)", m) and
+    m.captures == @[0 .. 3, 0 .. 3, nonCapture, nonCapture]
+  check match("aaab", re2"((\w+)(?<=^(\w+)))|(a+(?<=^(\w+))b)", m) and
+    m.captures == @[0 .. 3, 0 .. 3, 0 .. 3, nonCapture, nonCapture]
+  check match("aaab", re2"((\w+)(?<=^(\w+)))|(?:a+(?<=^(\w+))b)", m) and
+    m.captures == @[0 .. 3, 0 .. 3, 0 .. 3, nonCapture]
+  # The following two tests test the capture freeze mechanism
+  check match("aaab", re2"(\w+)|\w+(?<=^(\w+))b", m) and
+    m.captures == @[0 .. 3, nonCapture]
+  check match("aaab", re2"(\w+)|\w+(?<=^\w+)b", m) and
+    m.captures == @[0 .. 3]
+  check match("aaab", re2"(\w+)|\w+(?<=^(\w)(\w+))b", m) and
+    m.captures == @[0 .. 3, nonCapture, nonCapture]
+  check match("aaab", re2"(\w+)|\w+(?<=^(\w)(\w)(\w+))b", m) and
+    m.captures == @[0 .. 3, nonCapture, nonCapture, nonCapture]
+  check match("aaab", re2"(\w)(\w+)|\w+(?<=^(\w)(\w+))b", m) and
+    m.captures == @[0 .. 0, 1 .. 3, nonCapture, nonCapture]
+  check match("aaab", re2"(\w)(\w+)|\w+(?<=^(\w)(\w)(\w+))b", m) and
+    m.captures == @[0 .. 0, 1 .. 3, nonCapture, nonCapture, nonCapture]

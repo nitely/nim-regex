@@ -113,12 +113,9 @@ template nextStateTpl(bwMatch = false): untyped {.dirty.} =
           else:
             matched = match(z, cPrev.Rune, c)
         of lookaroundKind:
-          # XXX mark as do not recycle all capts
-          #     no test is catching this
-          # touched will have ints instead of enum
-          # var freezed = capts.freeze()
+          let freezed = capts.freeze()
           lookAroundTpl()
-          # capts.unfreeze(freezed)
+          capts.unfreeze freezed
         else:
           doAssert false
           discard

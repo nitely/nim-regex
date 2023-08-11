@@ -50,11 +50,11 @@ func add(ms: var RegexMatches2, m: MatchItem) {.inline.} =
       break
   #for i in size .. msm.len-1:
     if msm[i].capt != -1:
-      capts.untouch msm[i].capt
+      capts.recyclable msm[i].capt
   msm.setLen size
   msm.add m
   if m.capt != -1:
-    capts.doNotRecycle m.capt
+    capts.notRecyclable m.capt
 
 func hasMatches(ms: RegexMatches2): bool {.inline.} =
   return ms.m.len > 0
@@ -145,7 +145,9 @@ func submatch(
           of assertionKind - lookaroundKind:
             matched = match(z, cPrev.Rune, c.Rune)
           of lookaroundKind:
+            let freezed = capts.freeze()
             lookAroundTpl()
+            capts.unfreeze freezed
           else:
             assert false
             discard

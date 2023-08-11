@@ -11,9 +11,14 @@ import ./litopt
 
 const nonCapture* = -1 .. -2
 
+type TouchOpt* = uint8
+const
+  touNo = 0.TouchOpt
+  touYes = 1.TouchOpt
+  touKeep = 2.TouchOpt
+  touFrozen = 3.TouchOpt .. TouchOpt.high
+
 type
-  TouchOpts* = enum
-    touYes, touNo, touKeep
   CaptIdx* = int32
   Capts3* = object
     ## Seq of captures divided into blocks
@@ -24,8 +29,10 @@ type
     groupsLen: Natural
     blockSize: Natural
     blockSizeL2: Natural
-    touched: seq[TouchOpts]
+    touched: seq[TouchOpt]
     free: seq[int16]
+    freezeId: TouchOpt
+    freezeCount: Natural
 
 func len(capts: Capts3): int {.inline.} =
   capts.s.len shr capts.blockSizeL2  # s.len / blockSize
@@ -50,11 +57,28 @@ func initCapts3*(groupsLen: int): Capts3 =
   result.blockSize = max(2, nextPowerOfTwo groupsLen)
   result.blockSizeL2 = fastLog2 result.blockSize
 
-func touch*(capts: var Capts3, touched: Natural) =
-  capts.touched[touched] = touYes
+func touch*(capts: var Capts3, captIdx: CaptIdx) {.inline.} =
+  capts.touched[captIdx] = touYes
 
-func untouch*(capts: var Capts3, touched: Natural) =
-  capts.touched[touched] = touNo
+func freeze*(capts: var Capts3): TouchOpt =
+  ## Freeze all touched capts.
+  ## Return freezeId
+  doAssert capts.freezeId <= touFrozen.b
+  if capts.freezeCount == 0:
+    capts.freezeId = touFrozen.a
+  result = capts.freezeId
+  for i in 0 .. capts.touched.len-1:
+    if capts.touched[i] == touYes:
+      capts.touched[i] = result
+      inc capts.freezeCount
+  inc capts.freezeId
+
+func unfreeze*(capts: var Capts3, freezeId: TouchOpt) =
+  doAssert freezeId in touFrozen
+  for i in 0 .. capts.touched.len-1:
+    if capts.touched[i] == freezeId:
+      capts.touched[i] = touYes
+      dec capts.freezeCount
 
 func diverge*(capts: var Capts3, captIdx: CaptIdx): CaptIdx =
   if capts.free.len > 0:
@@ -78,11 +102,15 @@ func recycle*(capts: var Capts3) =
   for i in 0 .. capts.touched.len-1:
     if capts.touched[i] == touNo:
       capts.free.add i.int16
-    if capts.touched[i] != touKeep:
+    if capts.touched[i] == touYes:
       capts.touched[i] = touNo
 
-func doNotRecycle*(capts: var Capts3, captIdx: CaptIdx) =
+func notRecyclable*(capts: var Capts3, captIdx: CaptIdx) =
+  #doAssert capts.touched[captIdx] == touYes, $capts.touched[captIdx]
   capts.touched[captIdx] = touKeep
+
+func recyclable*(capts: var Capts3, captIdx: CaptIdx) {.inline.} =
+  capts.touched[captIdx] = touYes
 
 func clear*(capts: var Capts3) =
   capts.s.setLen 0
@@ -404,7 +432,7 @@ when isMainModule:
     capts[captx1, 1] = 2..2
     doAssert capts[captx1, 0] == 1..1
     doAssert capts[captx1, 1] == 2..2
-    capts.doNotRecycle captx1
+    capts.notRecyclable captx1
     capts.recycle()
     capts.recycle()
     var captx2 = capts.diverge -1
@@ -420,8 +448,8 @@ when isMainModule:
     capts[captx1, 1] = 2..2
     doAssert capts[captx1, 0] == 1..1
     doAssert capts[captx1, 1] == 2..2
-    capts.doNotRecycle captx1
-    capts.untouch captx1
+    capts.notRecyclable captx1
+    capts.recyclable captx1
     capts.recycle()
     capts.recycle()
     var captx2 = capts.diverge -1

@@ -11,6 +11,7 @@ import ./litopt
 
 const nonCapture* = -1 .. -2
 
+# XXX limit lookarounds to uint8.high per regex
 type TouchOpt* = uint8
 const
   touNo = 0.TouchOpt
@@ -56,15 +57,18 @@ func initCapts3*(groupsLen: int): Capts3 =
   result.groupsLen = groupsLen
   result.blockSize = max(2, nextPowerOfTwo groupsLen)
   result.blockSizeL2 = fastLog2 result.blockSize
+  result.freezeId = touFrozen.a
 
 func touch*(capts: var Capts3, captIdx: CaptIdx) {.inline.} =
-  capts.touched[captIdx] = touYes
+  if capts.touched[captIdx] == touNo:
+    capts.touched[captIdx] = touYes
 
 func freeze*(capts: var Capts3): TouchOpt =
   ## Freeze all touched capts.
   ## Return freezeId
-  doAssert capts.freezeId <= touFrozen.b
-  if capts.freezeCount == 0:
+  doAssert capts.freezeId in touFrozen
+  doAssert capts.freezeCount >= 0
+  if capts.freezeCount == 0:  # reset to avoid overflows
     capts.freezeId = touFrozen.a
   result = capts.freezeId
   for i in 0 .. capts.touched.len-1:
@@ -106,10 +110,12 @@ func recycle*(capts: var Capts3) =
       capts.touched[i] = touNo
 
 func notRecyclable*(capts: var Capts3, captIdx: CaptIdx) =
-  #doAssert capts.touched[captIdx] == touYes, $capts.touched[captIdx]
   capts.touched[captIdx] = touKeep
 
 func recyclable*(capts: var Capts3, captIdx: CaptIdx) {.inline.} =
+  # this is only safe because
+  # capts are marked as notRecyclable on reEoe
+  doAssert capts.touched[captIdx] == touKeep
   capts.touched[captIdx] = touYes
 
 func clear*(capts: var Capts3) =
@@ -456,3 +462,48 @@ when isMainModule:
     doAssert captx1 == captx2
     doAssert capts[captx1, 0] == nonCapture
     doAssert capts[captx1, 1] == nonCapture
+  block:
+    var capts = initCapts3(2)
+    var captx1 = capts.diverge -1
+    capts[captx1, 0] = 1..1
+    discard capts.freeze()
+    capts.recycle()
+    capts.recycle()
+    doAssert capts.free.len == 0
+    discard capts.diverge -1
+    doAssert capts[captx1, 0] == 1..1
+  block:
+    var capts = initCapts3(2)
+    discard capts.diverge -1
+    var freeze1 = capts.freeze()
+    capts.recycle()
+    capts.recycle()
+    doAssert capts.free.len == 0
+    discard capts.diverge -1
+    var freeze2 = capts.freeze()
+    capts.recycle()
+    capts.recycle()
+    doAssert capts.free.len == 0
+    capts.unfreeze freeze1
+    capts.recycle()
+    capts.recycle()
+    doAssert capts.free.len == 1
+    capts.unfreeze freeze2
+    capts.recycle()
+    capts.recycle()
+    doAssert capts.free.len == 2
+  block:
+    var capts = initCapts3(2)
+    var captx1 = capts.diverge -1
+    var freeze1 = capts.freeze()
+    capts.recycle()
+    capts.recycle()
+    doAssert capts.free.len == 0
+    capts.touch captx1  # does nothing
+    capts.recycle()
+    capts.recycle()
+    doAssert capts.free.len == 0
+    capts.unfreeze freeze1
+    capts.recycle()
+    capts.recycle()
+    doAssert capts.free.len == 1

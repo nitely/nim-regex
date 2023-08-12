@@ -88,7 +88,7 @@ func check(curr, next: CaptState): bool =
     curr == stsRecyclable
 
 proc to(a: var CaptState, b: CaptState) {.inline.} =
-  doAssert check(a, b), $a & " " & $b
+  doAssert check(a, b), $a.int & " " & $b.int
   a = b
 
 func keepAlive*(capts: var Capts3, captIdx: CaptIdx) {.inline.} =
@@ -158,6 +158,7 @@ func clear*(capts: var Capts3) =
   capts.states.setLen 0
   capts.free.setLen 0
 
+# XXX Deprecate
 type
   CaptNode* = object
     parent*: CaptIdx
@@ -207,7 +208,7 @@ type
   RegexLit* = distinct string
     ## raw regex literal string
   Regex* = object
-    ## a compiled regular expression
+    ## deprecated
     nfa*: Nfa
     groupsCount*: int16
     namedGroups*: OrderedTable[string, int16]
@@ -225,7 +226,7 @@ type
     mfReverseCapts
   MatchFlags* = set[MatchFlag]
   RegexMatch* = object
-    ## result from matching operations
+    ## deprecated
     captures*: Captures
     namedGroups*: OrderedTable[string, int16]
     boundaries*: Slice[int]

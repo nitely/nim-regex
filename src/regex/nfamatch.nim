@@ -1,9 +1,4 @@
-## NFA matcher for non-static regexes
-
-# Pro-tip: try modifications here and
-# run tests passing `-d:forceRegexAtRuntime`.
-# Then port the changes to nfamacro. Hacking
-# with nfamatch is a lot easier.
+## DEPRECATED
 
 import std/unicode
 import std/tables

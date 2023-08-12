@@ -2,6 +2,8 @@ from std/sequtils import map
 
 import ./regex
 
+{.push warning[Deprecated]: off.}
+
 template test(desc: string, body: untyped): untyped =
   when defined(runTestAtCT):
     static:
@@ -2965,3 +2967,5 @@ test "issue_101":
   check match("A", re"(?xi)     a")
   check(not match("A", re"((?xi))     a"))
   check(not match("A", re"(?xi:(?xi)     )a"))
+
+{.pop.}  # {.push warning[Deprecated]: off.}

@@ -3,7 +3,7 @@ from std/sequtils import map
 
 import ./regex
 
-const nonCapture = -1 .. -2
+const nonCapture = reNonCapture
 
 template test(desc: string, body: untyped): untyped =
   when defined(runTestAtCT):
@@ -1049,8 +1049,8 @@ test "tstarts_with":
   check "abc".startsWith(re2"ab")
   check(not "abc".startsWith(re2"bc"))
   check startsWith("弢ⒶΪ", re2"弢Ⓐ")
-  check startsWith("弢", re("\xF0\xAF\xA2\x94"))
-  check(not startsWith("弢", re("\xF0\xAF\xA2")))
+  check startsWith("弢", re2("\xF0\xAF\xA2\x94"))
+  check(not startsWith("弢", re2("\xF0\xAF\xA2")))
   check "abc".startsWith(re2"\w")
   check(not "abc".startsWith(re2"\d"))
   check "abc".startsWith(re2"(a|b)")
@@ -1065,8 +1065,8 @@ test "tends_with":
   check "abc".endsWith(re2"bc")
   check(not "abc".endsWith(re2"ab"))
   check endsWith("弢ⒶΪ", re2"ⒶΪ")
-  check endsWith("弢", re("\xF0\xAF\xA2\x94"))
-  check(not endsWith("弢", re("\xAF\xA2\x94")))
+  check endsWith("弢", re2("\xF0\xAF\xA2\x94"))
+  check(not endsWith("弢", re2("\xAF\xA2\x94")))
   check "abc".endsWith(re2"(b|c)")
   check "ab".endsWith(re2"(b|c)")
   check(not "a".endsWith(re2"(b|c)"))
@@ -1257,10 +1257,9 @@ test "treplace":
 
   block:
     proc removeEvenWords(m: RegexMatch2, s: string): string =
+      result = ""
       if s[m.group(1)].runeLen mod 2 != 0:
         result = s[m.group(0)]
-      else:
-        result = ""
 
     let
       text = "Es macht Spaß, alle geraden Wörter zu entfernen!"
@@ -1657,8 +1656,6 @@ test "tfull_lookarounds":
     check match("abc", re2"(?<=a)bc", m, start = 1)
     check(not match("abc", re2"(?<=x)bc", m, start = 1))
   block:
-    echo match("abcdefg", re2"\w+(?<=(ab)cd(?<=(cd)))\w+", m)
-    echo m.captures
     check match("abcdefg", re2"\w+(?<=(ab)cd(?<=(cd)))\w+", m) and
       m.captures == @[0 .. 1, 2 .. 3]
     check match("abcdefg", re2"\w+(?<=(ab)(?=(cd)))\w+", m) and
@@ -1817,15 +1814,15 @@ test "capturingGroupsNames":
 #     in ascii mode
 test "tflags":
   var m: RegexMatch2
-  #check match("abc", re(r"abc", {reAscii}), m)
+  #check match("abc", re2(r"abc", {reAscii}), m)
   check match("弢弢弢", re2"\w{3}", m)
-  #check(not match("弢弢弢", re(r"\w{3}", {reAscii}), m))
+  #check(not match("弢弢弢", re2(r"\w{3}", {reAscii}), m))
   check re2"\w" in "弢"
-  #check re(r"\w", {reAscii}) notin "弢"
-  #check re(r"\w", {reAscii}) in "a"
-  #check "%ab%".find(re(r"\w{2}", {reAscii}), m)
+  #check re2(r"\w", {reAscii}) notin "弢"
+  #check re2(r"\w", {reAscii}) in "a"
+  #check "%ab%".find(re2(r"\w{2}", {reAscii}), m)
   check "%弢弢%".find(re2"\w{2}", m)
-  #check(not "%弢弢%".find(re(r"\w{2}", {reAscii}), m))
+  #check(not "%弢弢%".find(re2(r"\w{2}", {reAscii}), m))
 
 test "tfindopt":
   var m: RegexMatch2
@@ -2311,7 +2308,7 @@ test "tmisc3":
 test "fix#83":
   block:
     let pattern = "^src/(?:[^\\/]*(?:\\/|$))*[^/]*\\.nim$"
-    check "src/dir/foo.nim".match(pattern.re)
+    check "src/dir/foo.nim".match(pattern.re2)
   check match("foo", re2"(?:$)*\w*")
   check match("foo", re2"($)*\w*")
   check match("foo", re2"^*\w*")
@@ -2351,12 +2348,12 @@ test "escapere2":
   check escapeRe("\L") == "\\\L"
   check escapeRe"aΪⒶ弢" == "aΪⒶ弢"
   check escapeRe"$Ϊ$Ⓐ$弢$" == r"\$Ϊ\$Ⓐ\$弢\$"
-  check match("$", re(escapeRe"$"))
+  check match("$", re2(escapeRe"$"))
   block:
     var s = ""
     for c in 0 .. 255:
       s.add c.char
-    discard re(escapeRe(s))
+    discard re2(escapeRe(s))
 
 test "issue_98":
   check match("", re2"|")

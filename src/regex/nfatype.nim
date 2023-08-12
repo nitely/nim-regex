@@ -11,13 +11,15 @@ import ./litopt
 
 const nonCapture* = -1 .. -2
 
-# XXX limit lookarounds to uint8.high per regex
-type TouchOpt* = uint8
+# XXX limit lookarounds to int8.high per regex
+type CaptState* = uint8
 const
-  touNo = 0.TouchOpt
-  touYes = 1.TouchOpt
-  touKeep = 2.TouchOpt
-  touFrozen = 3.TouchOpt .. TouchOpt.high
+  stsInitial = 0.CaptState
+  stsKeepAlive = 1.CaptState
+  stsRecyclable = 2.CaptState
+  stsRecycled = 3.CaptState
+  stsNotRecyclable = 4.CaptState
+  stsFrozen = 5.CaptState .. CaptState.high
 
 type
   CaptIdx* = int32
@@ -30,10 +32,9 @@ type
     groupsLen: Natural
     blockSize: Natural
     blockSizeL2: Natural
-    touched: seq[TouchOpt]
+    states: seq[CaptState]
     free: seq[int16]
-    freezeId: TouchOpt
-    freezeCount: Natural
+    freezeId: CaptState
 
 func len(capts: Capts3): int {.inline.} =
   capts.s.len shr capts.blockSizeL2  # s.len / blockSize
@@ -57,70 +58,104 @@ func initCapts3*(groupsLen: int): Capts3 =
   result.groupsLen = groupsLen
   result.blockSize = max(2, nextPowerOfTwo groupsLen)
   result.blockSizeL2 = fastLog2 result.blockSize
-  result.freezeId = touFrozen.a
+  result.freezeId = stsFrozen.a
 
-func touch*(capts: var Capts3, captIdx: CaptIdx) {.inline.} =
-  if capts.touched[captIdx] == touNo:
-    capts.touched[captIdx] = touYes
+func check(curr, next: CaptState): bool =
+  ## Check if transition from state curr to next is allowed
+  result = case next:
+  of stsInitial:
+    curr == stsInitial or
+    curr == stsRecycled or
+    curr == stsNotRecyclable or
+    curr in stsFrozen
+  of stsKeepAlive:
+    curr == stsInitial or
+    curr == stsRecyclable
+  of stsRecyclable:
+    curr == stsInitial or
+    curr == stsKeepAlive
+  of stsRecycled:
+    curr == stsRecyclable or
+    curr == stsRecycled
+  of stsNotRecyclable:
+    curr == stsInitial or
+    curr == stsKeepAlive or
+    curr in stsFrozen
+  else:
+    doAssert next in stsFrozen
+    curr == stsInitial or
+    curr == stsKeepAlive or
+    curr == stsRecyclable
 
-func freeze*(capts: var Capts3): TouchOpt =
-  ## Freeze all touched capts.
+proc to(a: var CaptState, b: CaptState) {.inline.} =
+  doAssert check(a, b), $a & " " & $b
+  a = b
+
+func keepAlive*(capts: var Capts3, captIdx: CaptIdx) {.inline.} =
+  template state: untyped = capts.states[captIdx]
+  doAssert state != stsRecycled
+  if state == stsInitial or
+      state == stsRecyclable:
+    state.to stsKeepAlive
+
+func freeze*(capts: var Capts3): CaptState =
+  ## Freeze all in use capts.
   ## Return freezeId
-  doAssert capts.freezeId in touFrozen
-  doAssert capts.freezeCount >= 0
-  if capts.freezeCount == 0:  # reset to avoid overflows
-    capts.freezeId = touFrozen.a
-  result = capts.freezeId
-  for i in 0 .. capts.touched.len-1:
-    if capts.touched[i] == touYes:
-      capts.touched[i] = result
-      inc capts.freezeCount
+  doAssert capts.freezeId < stsFrozen.b
   inc capts.freezeId
+  result = capts.freezeId
+  for state in mitems capts.states:
+    if state == stsInitial or
+        state == stsKeepAlive or
+        state == stsRecyclable:
+      state.to result
 
-func unfreeze*(capts: var Capts3, freezeId: TouchOpt) =
-  doAssert freezeId in touFrozen
-  for i in 0 .. capts.touched.len-1:
-    if capts.touched[i] == freezeId:
-      capts.touched[i] = touYes
-      dec capts.freezeCount
+func unfreeze*(capts: var Capts3, freezeId: CaptState) =
+  doAssert freezeId in stsFrozen
+  doAssert freezeId == capts.freezeId, "Unordered freeze/unfreeze call"
+  for state in mitems capts.states:
+    if state == freezeId:
+      state.to stsInitial
+  dec capts.freezeId
 
 func diverge*(capts: var Capts3, captIdx: CaptIdx): CaptIdx =
   if capts.free.len > 0:
     result = capts.free.pop
     for i in 0 .. capts.blockSize-1:
       capts[result, i] = nonCapture
-    capts.touched[result] = touYes
+    capts.states[result].to stsInitial
   else:
     result = capts.len.CaptIdx
     for _ in 0 .. capts.blockSize-1:
       capts.s.add nonCapture
-    capts.touched.add touYes
-    doAssert result == capts.touched.len-1
+    capts.states.add stsInitial
+    doAssert result == capts.states.len-1
   if captIdx != -1:
     for i in 0 .. capts.blockSize-1:
       capts[result, i] = capts[captIdx, i]
 
 func recycle*(capts: var Capts3) =
-  ## Free untouched entries, and untouch all entries
+  ## Free recyclable entries
+  ## Set initial/keepAlive entries to recyclable
   capts.free.setLen 0
-  for i in 0 .. capts.touched.len-1:
-    if capts.touched[i] == touNo:
+  for i, state in mpairs capts.states:
+    if state == stsRecyclable or
+        state == stsRecycled:
       capts.free.add i.int16
-    if capts.touched[i] == touYes:
-      capts.touched[i] = touNo
+      state.to stsRecycled
+    if state == stsInitial or
+        state == stsKeepAlive:
+      state.to stsRecyclable
 
 func notRecyclable*(capts: var Capts3, captIdx: CaptIdx) =
-  capts.touched[captIdx] = touKeep
+  capts.states[captIdx].to stsNotRecyclable
 
 func recyclable*(capts: var Capts3, captIdx: CaptIdx) {.inline.} =
-  # this is only safe because
-  # capts are marked as notRecyclable on reEoe
-  doAssert capts.touched[captIdx] == touKeep
-  capts.touched[captIdx] = touYes
+  capts.states[captIdx].to stsInitial
 
 func clear*(capts: var Capts3) =
   capts.s.setLen 0
-  capts.touched.setLen 0
+  capts.states.setLen 0
   capts.free.setLen 0
 
 type
@@ -424,7 +459,7 @@ when isMainModule:
     doAssert capts[captx1, 0] == 1..1
     doAssert capts[captx1, 1] == 2..2
     capts.recycle()
-    capts.touch captx1
+    capts.keepAlive captx1
     var captx2 = capts.diverge -1
     doAssert captx1 != captx2
     doAssert capts[captx1, 0] == 1..1
@@ -481,14 +516,15 @@ when isMainModule:
     doAssert capts.free.len == 0
     discard capts.diverge -1
     var freeze2 = capts.freeze()
+    doAssert freeze1 != freeze2
     capts.recycle()
     capts.recycle()
     doAssert capts.free.len == 0
-    capts.unfreeze freeze1
+    capts.unfreeze freeze2
     capts.recycle()
     capts.recycle()
     doAssert capts.free.len == 1
-    capts.unfreeze freeze2
+    capts.unfreeze freeze1
     capts.recycle()
     capts.recycle()
     doAssert capts.free.len == 2
@@ -499,7 +535,7 @@ when isMainModule:
     capts.recycle()
     capts.recycle()
     doAssert capts.free.len == 0
-    capts.touch captx1  # does nothing
+    capts.keepAlive captx1  # does nothing
     capts.recycle()
     capts.recycle()
     doAssert capts.free.len == 0

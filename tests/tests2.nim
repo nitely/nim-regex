@@ -1657,6 +1657,8 @@ test "tfull_lookarounds":
     check match("abc", re2"(?<=a)bc", m, start = 1)
     check(not match("abc", re2"(?<=x)bc", m, start = 1))
   block:
+    echo match("abcdefg", re2"\w+(?<=(ab)cd(?<=(cd)))\w+", m)
+    echo m.captures
     check match("abcdefg", re2"\w+(?<=(ab)cd(?<=(cd)))\w+", m) and
       m.captures == @[0 .. 1, 2 .. 3]
     check match("abcdefg", re2"\w+(?<=(ab)(?=(cd)))\w+", m) and

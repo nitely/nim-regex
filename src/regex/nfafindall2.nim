@@ -123,7 +123,7 @@ func submatch(
   var smi = 0
   while smi < smA.len:
     if capt != -1:
-      capts.touch capt
+      capts.keepAlive capt
     for nti, nt in nfa[n].next.pairs:
       if smB.hasState nt:
         continue
@@ -148,6 +148,8 @@ func submatch(
             let freezed = capts.freeze()
             lookAroundTpl()
             capts.unfreeze freezed
+            if captx != -1:
+              capts.keepAlive captx
           else:
             assert false
             discard

@@ -75,7 +75,7 @@ template nextStateTpl(bwMatch = false): untyped {.dirty.} =
   smB.clear()
   for n, capt, bounds in items smA:
     if capt != -1:
-      capts.touch capt
+      capts.keepAlive capt
     if anchored and nfa.s[n].kind == reEoe:
       if not smB.hasState n:
         smB.add (n, capt, bounds)
@@ -116,6 +116,8 @@ template nextStateTpl(bwMatch = false): untyped {.dirty.} =
           let freezed = capts.freeze()
           lookAroundTpl()
           capts.unfreeze freezed
+          if captx != -1:
+            capts.keepAlive captx
         else:
           doAssert false
           discard

@@ -54,10 +54,22 @@ func `[]=`(capts: var Capts3, i, j: Natural, x: Slice[int]) {.inline.} =
   #doAssert j <= capts.groupsLen-1
   capts.s[(i shl capts.blockSizeL2) + j] = x
 
+when defined(js):
+  func jsFastLog2(x: Natural): int {.importjs: "Math.log2(@)".}
+
+template fastLog2Tpl(x: Natural): untyped =
+  when nimvm:
+    fastLog2(x)
+  else:
+    when defined(js):
+      jsFastLog2(x)
+    else:
+      fastLog2(x)
+
 func initCapts3*(groupsLen: int): Capts3 =
   result.groupsLen = groupsLen
   result.blockSize = max(2, nextPowerOfTwo groupsLen)
-  result.blockSizeL2 = fastLog2 result.blockSize
+  result.blockSizeL2 = fastLog2Tpl result.blockSize
   result.freezeId = stsFrozen.a
 
 func check(curr, next: CaptState): bool =

@@ -42,12 +42,12 @@ func len(capts: Capts3): int {.inline.} =
 func `[]`*(capts: Capts3, i, j: Natural): Slice[int] {.inline.} =
   doAssert i <= capts.len-1
   doAssert j <= capts.blockSize-1
-  capts.s[(i shl capts.blockSizeL2) + j]  # i * blockSize
+  result = capts.s[(i shl capts.blockSizeL2) + j]  # i * blockSize
 
 func `[]`*(capts: var Capts3, i, j: Natural): var Slice[int] {.inline.} =
   doAssert i <= capts.len-1
   doAssert j <= capts.blockSize-1
-  capts.s[(i shl capts.blockSizeL2) + j]  # i * blockSize
+  result = capts.s[(i shl capts.blockSizeL2) + j]  # i * blockSize
 
 func `[]=`(capts: var Capts3, i, j: Natural, x: Slice[int]) {.inline.} =
   doAssert i <= capts.len-1

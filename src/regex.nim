@@ -1452,6 +1452,12 @@ when isMainModule:
       m.captures == @[0 .. 1, 2 .. 3]
     doAssert match("abcdefg", re2"\w+(?<=(ab)(?=(cd)(?<=(cd))))\w+", m) and
       m.captures == @[0 .. 1, 2 .. 3, 2 .. 3]
+    doAssert match("aaab", re2"(\w+)|\w+(?<=^\w+)b", m) and
+      m.captures == @[0 .. 3]
+    doAssert match("aaab", re2"(\w+)|\w+(?<=^(\w+))b", m) and
+      m.captures == @[0 .. 3, reNonCapture]
+    doAssert match("aaab", re2"(\w+)|\w+(?<=^(\w)(\w+))b", m) and
+      m.captures == @[0 .. 3, reNonCapture, reNonCapture]
     when canUseMacro:
       block:
         var m = false

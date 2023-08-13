@@ -32,28 +32,7 @@ task test2, "Test":
   when (NimMajor, NimMinor) >= (1, 1):
     exec "nim doc -o:./docs/ugh/ugh.html ./src/regex.nim"
 
-task test, "Test":
-  exec "nim c -r -o:bin/regex src/regex.nim"
-  exec "nim c -r -o:bin/litopt src/regex/litopt.nim"
-  exec "nim c -r -o:bin/nfatype src/regex/nfatype.nim"
-  exec "nim c -r tests/tests2.nim"
-  exec "nim c -r -d:forceRegexAtRuntime tests/tests2.nim"
-  exec "nim c -r -d:forceRegexAtRuntime -d:noRegexOpt tests/tests2.nim"
-  exec "nim c -r -d:noRegexOpt tests/tests2.nim"
-  when (NimMajor, NimMinor, NimPatch) >= (0, 20, 2):
-    exec "nim c -d:runTestAtCT tests/tests2.nim"
-  # js target should work in older versions, but
-  # the docker image for CI has it since Nim 1.0.4,
-  # so I'll only test it there
-  when (NimMajor, NimMinor, NimPatch) >= (1, 0, 4) and
-      (NimMajor, NimMinor) != (1, 4):  # issue #88
-    exec "nim js -r src/regex.nim"
-    exec "nim js -r tests/tests2.nim"
-    exec "nim js -r -d:forceRegexAtRuntime tests/tests2.nim"
-  # Test runnable examples
-  when (NimMajor, NimMinor) >= (1, 1):
-    exec "nim doc -o:./docs/ugh/ugh.html ./src/regex.nim"
-
+task oldtest, "Test":
   # OLD DEPRECATED API TESTS
   exec "nim c -r tests/tests.nim"
   exec "nim c -r -d:forceRegexAtRuntime tests/tests.nim"
@@ -68,6 +47,10 @@ task test, "Test":
       (NimMajor, NimMinor) != (1, 4):  # issue #88
     exec "nim js -r tests/tests.nim"
     exec "nim js -r -d:forceRegexAtRuntime tests/tests.nim"
+
+task test, "Test":
+  exec "nimble test2"
+  exec "nimble oldtest"
 
 task docs, "Docs":
   exec "nim doc --project -o:./docs ./src/regex.nim"

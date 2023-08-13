@@ -40,29 +40,29 @@ func len(capts: Capts3): int {.inline.} =
   capts.s.len shr capts.blockSizeL2  # s.len / blockSize
 
 func `[]`*(capts: Capts3, i, j: Natural): Slice[int] {.inline.} =
-  #doAssert i <= capts.len-1
-  #doAssert j <= capts.groupsLen-1
+  doAssert i <= capts.len-1
+  doAssert j <= capts.blockSize-1
   capts.s[(i shl capts.blockSizeL2) + j]  # i * blockSize
 
 func `[]`*(capts: var Capts3, i, j: Natural): var Slice[int] {.inline.} =
-  #doAssert i <= capts.len-1
-  #doAssert j <= capts.groupsLen-1
+  doAssert i <= capts.len-1
+  doAssert j <= capts.blockSize-1
   capts.s[(i shl capts.blockSizeL2) + j]  # i * blockSize
 
 func `[]=`(capts: var Capts3, i, j: Natural, x: Slice[int]) {.inline.} =
-  #doAssert i <= capts.len-1
-  #doAssert j <= capts.groupsLen-1
+  doAssert i <= capts.len-1
+  doAssert j <= capts.blockSize-1
   capts.s[(i shl capts.blockSizeL2) + j] = x
 
 when defined(js):
-  func jsFastLog2(x: Natural): int {.importjs: "Math.log2(@)".}
+  func jsLog2(x: Natural): int {.importjs: "Math.log2(@)".}
 
 template fastLog2Tpl(x: Natural): untyped =
   when nimvm:
     fastLog2(x)
   else:
     when defined(js):
-      jsFastLog2(x)
+      jsLog2(x)
     else:
       fastLog2(x)
 

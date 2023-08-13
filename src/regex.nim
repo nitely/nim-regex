@@ -163,24 +163,27 @@ polynomial time.
 Examples
 ********
 
-Multiple captures
+Captures
 #################
 
-Unlike most regex engines, this library supports capturing
-all repetitions. Most other libraries return only the last
-capture. The caveat is even non-repeated groups or
-characters are returned as a list of captures instead of
-a single capture.
+Like most other regex engines, this library only
+captures the last repetition in a repeated group
+(``*``, ``+``, ``{n}``). The space complexity for
+captures is ``O(regex_len * groups_count)``, and so
+it can be used to match untrusted text.
 
 .. code-block:: nim
     :test:
     let text = "nim c --styleCheck:hint --colors:off regex.nim"
-    var m: RegexMatch
-    if match(text, re"nim c (?:--(\w+:\w+) *)+ (\w+).nim", m):
-      doAssert m.group(0, text) == @["styleCheck:hint", "colors:off"]
-      doAssert m.group(1, text) == @["regex"]
+    var m: RegexMatch2
+    if match(text, re2"nim c (?:--(\w+:\w+) *)+ (\w+).nim", m):
+      doAssert text[m.group(0)] == "colors:off"
+      doAssert text[m.group(1)] == "regex"
     else:
       doAssert false, "no match"
+
+To check if a capture group didn't match you can use ``reNonCapture``.
+For example ``doAssert m.group(0) == reNonCapture``.
 
 Verbose Mode
 ############
@@ -192,7 +195,7 @@ scaped to be matched.
 
 .. code-block:: nim
     :test:
-    const exp = re"""(?x)
+    const exp = re2"""(?x)
     \#   # the hashtag
     \w+  # hashtag words
     """
@@ -215,9 +218,9 @@ and captures that match the regular expression.
     """
     var matches = newSeq[string]()
     var captures = newSeq[string]()
-    for m in findAll(text, re"(\w+)@\w+\.\w+"):
+    for m in findAll(text, re2"(\w+)@\w+\.\w+"):
       matches.add text[m.boundaries]
-      captures.add m.group(0, text)
+      captures.add text[m.group(0)]
     doAssert matches == @[
       "john_wick@continental.com",
       "winston@continental.com",
@@ -297,7 +300,7 @@ func re2*(s: string): Regex2 {.raises: [RegexError].} =
   Regex2(reImpl(s))
 
 # Workaround Nim/issues/14515
-# ideally only `re(string): Regex`
+# ideally only `re2(string): Regex`
 # would be needed (without static)
 when not defined(forceRegexAtRuntime):
   func re2*(s: static string): static[Regex2] {.inline.} =

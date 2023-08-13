@@ -3,12 +3,175 @@
 import std/tables
 import std/sets
 import std/algorithm
+import std/math
+import std/bitops
 
 import ./types
 import ./litopt
 
+const nonCapture* = -1 .. -2
+
+# XXX limit lookarounds to int8.high per regex
+type CaptState* = uint8
+const
+  stsInitial = 0.CaptState
+  stsKeepAlive = 1.CaptState
+  stsRecyclable = 2.CaptState
+  stsRecycled = 3.CaptState
+  stsNotRecyclable = 4.CaptState
+  stsFrozen = 5.CaptState .. CaptState.high
+
 type
   CaptIdx* = int32
+  Capts3* = object
+    ## Seq of captures divided into blocks
+    ## of power of 2 len. One block per parallel state.
+    ## A seq/set to keep track of used blocks.
+    ## A seq of free blocks for reusing
+    s: seq[Slice[int]]
+    groupsLen: Natural
+    blockSize: Natural
+    blockSizeL2: Natural
+    states: seq[CaptState]
+    free: seq[int16]
+    freezeId: CaptState
+
+func len(capts: Capts3): int {.inline.} =
+  capts.s.len shr capts.blockSizeL2  # s.len / blockSize
+
+func `[]`*(capts: Capts3, i, j: Natural): Slice[int] {.inline.} =
+  doAssert i <= capts.len-1
+  doAssert j <= capts.blockSize-1
+  result = capts.s[(i shl capts.blockSizeL2) + j]  # i * blockSize
+
+func `[]`*(capts: var Capts3, i, j: Natural): var Slice[int] {.inline.} =
+  doAssert i <= capts.len-1
+  doAssert j <= capts.blockSize-1
+  result = capts.s[(i shl capts.blockSizeL2) + j]  # i * blockSize
+
+func `[]=`(capts: var Capts3, i, j: Natural, x: Slice[int]) {.inline.} =
+  doAssert i <= capts.len-1
+  doAssert j <= capts.blockSize-1
+  capts.s[(i shl capts.blockSizeL2) + j] = x
+
+when defined(js):
+  func jsLog2(x: Natural): int {.importjs: "Math.log2(@)".}
+
+template fastLog2Tpl(x: Natural): untyped =
+  when nimvm:
+    fastLog2(x)
+  else:
+    when defined(js):
+      jsLog2(x)
+    else:
+      fastLog2(x)
+
+func initCapts3*(groupsLen: int): Capts3 =
+  result.groupsLen = groupsLen
+  result.blockSize = max(2, nextPowerOfTwo groupsLen)
+  result.blockSizeL2 = fastLog2Tpl result.blockSize
+  result.freezeId = stsFrozen.a
+
+func check(curr, next: CaptState): bool =
+  ## Check if transition from state curr to next is allowed
+  result = case next:
+  of stsInitial:
+    curr == stsInitial or
+    curr == stsRecycled or
+    curr == stsNotRecyclable or
+    curr in stsFrozen
+  of stsKeepAlive:
+    curr == stsInitial or
+    curr == stsRecyclable
+  of stsRecyclable:
+    curr == stsInitial or
+    curr == stsKeepAlive
+  of stsRecycled:
+    curr == stsRecyclable or
+    curr == stsRecycled
+  of stsNotRecyclable:
+    curr == stsInitial or
+    curr == stsKeepAlive or
+    curr in stsFrozen
+  else:
+    doAssert next in stsFrozen
+    curr == stsInitial or
+    curr == stsKeepAlive or
+    curr == stsRecyclable
+
+proc to(a: var CaptState, b: CaptState) {.inline.} =
+  doAssert check(a, b), $a.int & " " & $b.int
+  a = b
+
+func keepAlive*(capts: var Capts3, captIdx: CaptIdx) {.inline.} =
+  template state: untyped = capts.states[captIdx]
+  doAssert state != stsRecycled
+  if state == stsInitial or
+      state == stsRecyclable:
+    state.to stsKeepAlive
+
+func freeze*(capts: var Capts3): CaptState =
+  ## Freeze all in use capts.
+  ## Return freezeId
+  doAssert capts.freezeId < stsFrozen.b
+  inc capts.freezeId
+  result = capts.freezeId
+  for state in mitems capts.states:
+    if state == stsInitial or
+        state == stsKeepAlive or
+        state == stsRecyclable:
+      state.to result
+
+func unfreeze*(capts: var Capts3, freezeId: CaptState) =
+  doAssert freezeId in stsFrozen
+  doAssert freezeId == capts.freezeId, "Unordered freeze/unfreeze call"
+  for state in mitems capts.states:
+    if state == freezeId:
+      state.to stsInitial
+  dec capts.freezeId
+
+func diverge*(capts: var Capts3, captIdx: CaptIdx): CaptIdx =
+  if capts.free.len > 0:
+    result = capts.free.pop
+    for i in 0 .. capts.blockSize-1:
+      capts[result, i] = nonCapture
+    capts.states[result].to stsInitial
+  else:
+    result = capts.len.CaptIdx
+    for _ in 0 .. capts.blockSize-1:
+      capts.s.add nonCapture
+    capts.states.add stsInitial
+    doAssert result == capts.states.len-1
+  if captIdx != -1:
+    for i in 0 .. capts.blockSize-1:
+      capts[result, i] = capts[captIdx, i]
+
+func recycle*(capts: var Capts3) =
+  ## Free recyclable entries
+  ## Set initial/keepAlive entries to recyclable
+  capts.free.setLen 0
+  for i, state in mpairs capts.states:
+    if state == stsRecyclable or
+        state == stsRecycled:
+      capts.free.add i.int16
+      state.to stsRecycled
+    if state == stsInitial or
+        state == stsKeepAlive:
+      state.to stsRecyclable
+
+func notRecyclable*(capts: var Capts3, captIdx: CaptIdx) =
+  capts.states[captIdx].to stsNotRecyclable
+
+func recyclable*(capts: var Capts3, captIdx: CaptIdx) {.inline.} =
+  capts.states[captIdx].to stsInitial
+
+func clear*(capts: var Capts3) =
+  capts.s.setLen 0
+  capts.states.setLen 0
+  capts.free.setLen 0
+
+# XXX Deprecate
+type
   CaptNode* = object
     parent*: CaptIdx
     bound*: int
@@ -57,12 +220,14 @@ type
   RegexLit* = distinct string
     ## raw regex literal string
   Regex* = object
-    ## a compiled regular expression
+    ## deprecated
     nfa*: Nfa
     groupsCount*: int16
     namedGroups*: OrderedTable[string, int16]
     #flags*: set[RegexFlag]
     litOpt*: LitOpt
+  Regex2* = distinct Regex
+    ## a compiled regular expression
   MatchFlag* = enum
     mfShortestMatch
     mfNoCaptures
@@ -73,12 +238,24 @@ type
     mfReverseCapts
   MatchFlags* = set[MatchFlag]
   RegexMatch* = object
-    ## result from matching operations
+    ## deprecated
     captures*: Captures
+    namedGroups*: OrderedTable[string, int16]
+    boundaries*: Slice[int]
+  RegexMatch2* = object
+    ## result from matching operations
+    captures*: seq[Slice[int]]
     namedGroups*: OrderedTable[string, int16]
     boundaries*: Slice[int]
 
 func clear*(m: var RegexMatch) {.inline.} =
+  if m.captures.len > 0:
+    m.captures.setLen(0)
+  if m.namedGroups.len > 0:
+    m.namedGroups.clear()
+  m.boundaries = 0 .. -1
+
+func clear*(m: var RegexMatch2) {.inline.} =
   if m.captures.len > 0:
     m.captures.setLen(0)
   if m.namedGroups.len > 0:
@@ -185,3 +362,197 @@ func grow*(sm: var SmLookaround) {.inline.} =
 func removeLast*(sm: var SmLookaround) {.inline.} =
   doAssert sm.i > 0
   sm.i -= 1
+
+when isMainModule:
+  block:
+    var capts = initCapts3(2)
+    doAssert capts.len == 0
+    discard capts.diverge -1
+    doAssert capts.len == 1
+    discard capts.diverge -1
+    doAssert capts.len == 2
+    discard capts.diverge -1
+    doAssert capts.len == 3
+  block:
+    var groupsLen = 1
+    var capts = initCapts3(groupsLen)
+    var captx = capts.diverge -1
+    doAssert captx == 0
+    doAssert capts[captx, 0] == nonCapture
+    captx = capts.diverge -1
+    doAssert captx == 1
+    doAssert capts[captx, 0] == nonCapture
+  block:
+    var groupsLen = 1
+    var capts = initCapts3(groupsLen)
+    for i in 0 .. 20:
+      var captx = capts.diverge -1
+      doAssert captx == i
+      doAssert capts[captx, 0] == nonCapture
+  block:
+    var capts = initCapts3(1)
+    var captx1 = capts.diverge -1
+    capts[captx1, 0] = 1..1
+    var captx2 = capts.diverge -1
+    capts[captx2, 0] = 2..2
+    doAssert capts[captx1, 0] == 1..1
+    doAssert capts[captx2, 0] == 2..2
+  block:
+    var capts = initCapts3(2)
+    var captx1 = capts.diverge -1
+    capts[captx1, 0] = 1..1
+    capts[captx1, 1] = 2..2
+    var captx2 = capts.diverge -1
+    capts[captx2, 0] = 3..3
+    capts[captx2, 1] = 4..4
+    doAssert capts[captx1, 0] == 1..1
+    doAssert capts[captx1, 1] == 2..2
+    doAssert capts[captx2, 0] == 3..3
+    doAssert capts[captx2, 1] == 4..4
+    doAssert captx1 == 0
+    doAssert captx2 == 1
+  block:
+    var groupsLen = 2
+    var capts = initCapts3(groupsLen)
+    for i in 0 .. 20:
+      var captx = capts.diverge -1
+      doAssert captx == i
+      for j in 0 .. 1:
+        doAssert capts[i, j] == nonCapture
+        capts[i,j] = (i+j)..(i+j)
+    # check for overwrites
+    for i in 0 .. 20:
+      for j in 0 .. 1:
+        doAssert capts[i,j] == (i+j)..(i+j)
+  block:
+    var capts = initCapts3(2)
+    var captx1 = capts.diverge -1
+    capts[captx1, 0] = 1..1
+    capts[captx1, 1] = 2..2
+    var captx2 = capts.diverge captx1
+    doAssert capts[captx1, 0] == 1..1
+    doAssert capts[captx1, 1] == 2..2
+    doAssert capts[captx2, 0] == 1..1
+    doAssert capts[captx2, 1] == 2..2
+    doAssert captx1 == 0
+    doAssert captx2 == 1
+  block:
+    var capts = initCapts3(2)
+    var captx1 = capts.diverge -1
+    capts[captx1, 0] = 1..1
+    capts[captx1, 1] = 2..2
+    capts.recycle()
+    var captx2 = capts.diverge -1
+    capts[captx2, 0] = 3..3
+    capts[captx2, 1] = 4..4
+    doAssert capts[captx1, 0] == 1..1
+    doAssert capts[captx1, 1] == 2..2
+    doAssert capts[captx2, 0] == 3..3
+    doAssert capts[captx2, 1] == 4..4
+    doAssert captx1 == 0
+    doAssert captx2 == 1
+  block:
+    var capts = initCapts3(2)
+    var captx1 = capts.diverge -1
+    capts[captx1, 0] = 1..1
+    capts[captx1, 1] = 2..2
+    doAssert capts[captx1, 0] == 1..1
+    doAssert capts[captx1, 1] == 2..2
+    capts.recycle()
+    capts.recycle()
+    var captx2 = capts.diverge -1
+    doAssert captx1 == captx2
+    doAssert capts[captx1, 0] == nonCapture
+    doAssert capts[captx1, 1] == nonCapture
+  block:
+    var capts = initCapts3(2)
+    var captx1 = capts.diverge -1
+    capts[captx1, 0] = 1..1
+    capts[captx1, 1] = 2..2
+    doAssert capts[captx1, 0] == 1..1
+    doAssert capts[captx1, 1] == 2..2
+    capts.recycle()
+    capts.keepAlive captx1
+    var captx2 = capts.diverge -1
+    doAssert captx1 != captx2
+    doAssert capts[captx1, 0] == 1..1
+    doAssert capts[captx1, 1] == 2..2
+    doAssert capts[captx2, 0] == nonCapture
+    doAssert capts[captx2, 1] == nonCapture
+  block:
+    var capts = initCapts3(2)
+    var captx1 = capts.diverge -1
+    capts[captx1, 0] = 1..1
+    capts[captx1, 1] = 2..2
+    doAssert capts[captx1, 0] == 1..1
+    doAssert capts[captx1, 1] == 2..2
+    capts.notRecyclable captx1
+    capts.recycle()
+    capts.recycle()
+    var captx2 = capts.diverge -1
+    doAssert captx1 != captx2
+    doAssert capts[captx1, 0] == 1..1
+    doAssert capts[captx1, 1] == 2..2
+    doAssert capts[captx2, 0] == nonCapture
+    doAssert capts[captx2, 1] == nonCapture
+  block:
+    var capts = initCapts3(2)
+    var captx1 = capts.diverge -1
+    capts[captx1, 0] = 1..1
+    capts[captx1, 1] = 2..2
+    doAssert capts[captx1, 0] == 1..1
+    doAssert capts[captx1, 1] == 2..2
+    capts.notRecyclable captx1
+    capts.recyclable captx1
+    capts.recycle()
+    capts.recycle()
+    var captx2 = capts.diverge -1
+    doAssert captx1 == captx2
+    doAssert capts[captx1, 0] == nonCapture
+    doAssert capts[captx1, 1] == nonCapture
+  block:
+    var capts = initCapts3(2)
+    var captx1 = capts.diverge -1
+    capts[captx1, 0] = 1..1
+    discard capts.freeze()
+    capts.recycle()
+    capts.recycle()
+    doAssert capts.free.len == 0
+    discard capts.diverge -1
+    doAssert capts[captx1, 0] == 1..1
+  block:
+    var capts = initCapts3(2)
+    discard capts.diverge -1
+    var freeze1 = capts.freeze()
+    capts.recycle()
+    capts.recycle()
+    doAssert capts.free.len == 0
+    discard capts.diverge -1
+    var freeze2 = capts.freeze()
+    doAssert freeze1 != freeze2
+    capts.recycle()
+    capts.recycle()
+    doAssert capts.free.len == 0
+    capts.unfreeze freeze2
+    capts.recycle()
+    capts.recycle()
+    doAssert capts.free.len == 1
+    capts.unfreeze freeze1
+    capts.recycle()
+    capts.recycle()
+    doAssert capts.free.len == 2
+  block:
+    var capts = initCapts3(2)
+    var captx1 = capts.diverge -1
+    var freeze1 = capts.freeze()
+    capts.recycle()
+    capts.recycle()
+    doAssert capts.free.len == 0
+    capts.keepAlive captx1  # does nothing
+    capts.recycle()
+    capts.recycle()
+    doAssert capts.free.len == 0
+    capts.unfreeze freeze1
+    capts.recycle()
+    capts.recycle()
+    doAssert capts.free.len == 1

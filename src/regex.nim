@@ -163,24 +163,27 @@ polynomial time.
 Examples
 ********
 
-Multiple captures
+Captures
 #################
 
-Unlike most regex engines, this library supports capturing
-all repetitions. Most other libraries return only the last
-capture. The caveat is even non-repeated groups or
-characters are returned as a list of captures instead of
-a single capture.
+Like most other regex engines, this library only
+captures the last repetition in a repeated group
+(``*``, ``+``, ``{n}``). The space complexity for
+captures is ``O(regex_len * groups_count)``, and so
+it can be used to match untrusted text.
 
 .. code-block:: nim
     :test:
     let text = "nim c --styleCheck:hint --colors:off regex.nim"
-    var m: RegexMatch
-    if match(text, re"nim c (?:--(\w+:\w+) *)+ (\w+).nim", m):
-      doAssert m.group(0, text) == @["styleCheck:hint", "colors:off"]
-      doAssert m.group(1, text) == @["regex"]
+    var m: RegexMatch2
+    if match(text, re2"nim c (?:--(\w+:\w+) *)+ (\w+).nim", m):
+      doAssert text[m.group(0)] == "colors:off"
+      doAssert text[m.group(1)] == "regex"
     else:
       doAssert false, "no match"
+
+To check if a capture group didn't match you can use ``reNonCapture``.
+For example ``doAssert m.group(0) == reNonCapture``.
 
 Verbose Mode
 ############
@@ -192,7 +195,7 @@ scaped to be matched.
 
 .. code-block:: nim
     :test:
-    const exp = re"""(?x)
+    const exp = re2"""(?x)
     \#   # the hashtag
     \w+  # hashtag words
     """
@@ -215,9 +218,9 @@ and captures that match the regular expression.
     """
     var matches = newSeq[string]()
     var captures = newSeq[string]()
-    for m in findAll(text, re"(\w+)@\w+\.\w+"):
+    for m in findAll(text, re2"(\w+)@\w+\.\w+"):
       matches.add text[m.boundaries]
-      captures.add m.group(0, text)
+      captures.add text[m.group(0)]
     doAssert matches == @[
       "john_wick@continental.com",
       "winston@continental.com",
@@ -256,7 +259,9 @@ import ./regex/common
 import ./regex/compiler
 import ./regex/nfatype
 import ./regex/nfafindall
+import ./regex/nfafindall2
 import ./regex/nfamatch
+import ./regex/nfamatch2
 when not defined(noRegexOpt):
   import ./regex/litopt
 
@@ -268,204 +273,84 @@ when canUseMacro:
 
 export
   Regex,
+  Regex2,
   RegexMatch,
+  RegexMatch2,
   RegexError
 
-func re*(
-  s: string
-): Regex {.raises: [RegexError].} =
-  ## Parse and compile a regular expression at run-time
-  runnableExamples:
-    let abcx = re"abc\w"
-    let abcx2 = re(r"abc\w")
-    let pat = r"abc\w"
-    let abcx3 = re(pat)
-  reImpl(s)
+#
+# NEW APIs
+#
 
-# Workaround Nim/issues/14515
-# ideally only `re(string): Regex`
-# would be needed (without static)
-when not defined(forceRegexAtRuntime):
-  func re*(
-    s: static string
-  ): static[Regex] {.inline.} =
-    ## Parse and compile a regular expression at compile-time
-    when canUseMacro:  # VM dies on Nim < 1.1
-      reCt(s)
-    else:
-      reImpl(s)
-
-func toPattern*(
-  s: string
-): Regex {.raises: [RegexError], deprecated: "Use `re` instead".} =
-  re(s)
+const reNonCapture* = nonCapture
 
 when canUseMacro:
   func rex*(s: string): RegexLit =
     ## Raw regex literal string
     RegexLit s
 
-iterator group*(m: RegexMatch, i: int): Slice[int] {.inline, raises: [].} =
-  ## return slices for a given group.
-  ## Slices of start > end are empty
-  ## matches (i.e.: ``re"(\d?)"``)
+func re2*(s: string): Regex2 {.raises: [RegexError].} =
+  ## Parse and compile a regular expression at run-time
+  runnableExamples:
+    let abcx = re2"abc\w"
+    let abcx2 = re2(r"abc\w")
+    let pat = r"abc\w"
+    let abcx3 = re2(pat)
+
+  Regex2(reImpl(s))
+
+# Workaround Nim/issues/14515
+# ideally only `re2(string): Regex`
+# would be needed (without static)
+when not defined(forceRegexAtRuntime):
+  func re2*(s: static string): static[Regex2] {.inline.} =
+    ## Parse and compile a regular expression at compile-time
+    when canUseMacro:  # VM dies on Nim < 1.1
+      Regex2(reCt(s))
+    else:
+      Regex2(reImpl(s))
+
+func group*(m: RegexMatch2, i: int): Slice[int] {.inline, raises: [].} =
+  ## return slice for a given group.
+  ## Slice of start > end are empty
+  ## matches (i.e.: ``re2"(\d?)"``)
   ## and they are included same as in PCRE.
   runnableExamples:
     let text = "abc"
-    var m: RegexMatch
-    doAssert text.match(re"(\w)+", m)
-    var captures = newSeq[string]()
-    for bounds in m.group(0):
-      captures.add text[bounds]
-    doAssert captures == @["a", "b", "c"]
+    var m: RegexMatch2
+    doAssert text.match(re2"(\w)+", m)
+    doAssert text[m.group(0)] == "c"
 
-  for capt in m.captures[i]:
-    yield capt
-
-func group*(m: RegexMatch, i: int): seq[Slice[int]] {.inline, raises: [].} =
-  ## return slices for a given group.
-  ## Use the iterator version if you care about performance
   m.captures[i]
 
 func group*(
-  m: RegexMatch, i: int, text: string
-): seq[string] {.inline, raises: [].} =
-  ## return seq of captured text by group number `i`
-  runnableExamples:
-    let text = "hello beautiful world"
-    var m: RegexMatch
-    doAssert text.match(re"(hello) (?:([^\s]+)\s?)+", m)
-    doAssert m.group(0, text) == @["hello"]
-    doAssert m.group(1, text) == @["beautiful", "world"]
-
-  result = newSeq[string]()
-  for bounds in m.group i:
-    result.add text[bounds]
-
-func groupFirstCapture*(
-  m: RegexMatch, i: int, text: string
-): string {.inline, raises: [].} =
-  ## return first capture for a given capturing group
-  runnableExamples:
-    let text = "hello beautiful world"
-    var m: RegexMatch
-    doAssert text.match(re"(hello) (?:([^\s]+)\s?)+", m)
-    doAssert m.groupFirstCapture(0, text) == "hello"
-    doAssert m.groupFirstCapture(1, text) == "beautiful"
-
-  for bounds in m.group i:
-    return text[bounds]
-
-func groupLastCapture*(
-  m: RegexMatch, i: int, text: string
-): string {.inline, raises: [].} =
-  ## return last capture for a given capturing group
-  runnableExamples:
-    let text = "hello beautiful world"
-    var m: RegexMatch
-    doAssert text.match(re"(hello) (?:([^\s]+)\s?)+", m)
-    doAssert m.groupLastCapture(0, text) == "hello"
-    doAssert m.groupLastCapture(1, text) == "world"
-
-  var b = 0 .. -1
-  for bounds in m.group i:
-    b = bounds
-  result = text[b]
-
-iterator group*(
-  m: RegexMatch, s: string
+  m: RegexMatch2, s: string
 ): Slice[int] {.inline, raises: [KeyError].} =
   ## return slices for a given named group
   runnableExamples:
     let text = "abc"
-    var m: RegexMatch
-    doAssert text.match(re"(?P<foo>\w)+", m)
-    var captures = newSeq[string]()
-    for bounds in m.group("foo"):
-      captures.add text[bounds]
-    doAssert captures == @["a", "b", "c"]
+    var m: RegexMatch2
+    doAssert text.match(re2"(?P<foo>\w)+", m)
+    doAssert text[m.group("foo")] == "c"
 
-  for bounds in m.group(m.namedGroups[s]):
-    yield bounds
-
-func group*(
-  m: RegexMatch, s: string
-): seq[Slice[int]] {.inline, raises: [KeyError].} =
-  ## return slices for a given named group.
-  ## Use the iterator version if you care about performance
   m.group m.namedGroups[s]
 
-func group*(
-  m: RegexMatch,
-  groupName: string,
-  text: string
-): seq[string] {.inline, raises: [KeyError].} =
-  ## return seq of captured text by group `groupName`
-  runnableExamples:
-    let text = "hello beautiful world"
-    var m: RegexMatch
-    doAssert text.match(re"(?P<greet>hello) (?:(?P<who>[^\s]+)\s?)+", m)
-    doAssert m.group("greet", text) == @["hello"]
-    doAssert m.group("who", text) == @["beautiful", "world"]
-
-  result = newSeq[string]()
-  for bounds in m.group(groupName):
-    result.add text[bounds]
-
-func groupFirstCapture*(
-  m: RegexMatch,
-  groupName: string,
-  text: string
-): string {.inline, raises: [KeyError].} =
-  ## return first capture for a given capturing group
-  runnableExamples:
-    let text = "hello beautiful world"
-    var m: RegexMatch
-    doAssert text.match(re"(?P<greet>hello) (?:(?P<who>[^\s]+)\s?)+", m)
-    doAssert m.groupFirstCapture("greet", text) == "hello"
-    doAssert m.groupFirstCapture("who", text) == "beautiful"
-
-  let captures = m.group(groupName, text)
-  if captures.len > 0:
-    return captures[0]
-  else:
-    return "" 
-
-func groupLastCapture*(
-  m: RegexMatch,
-  groupName: string,
-  text: string
-): string {.inline, raises: [KeyError].} =
-  ## return last capture for a given capturing group
-  runnableExamples:
-    let text = "hello beautiful world"
-    var m: RegexMatch
-    doAssert text.match(re"(?P<greet>hello) (?:(?P<who>[^\s]+)\s?)+", m)
-    doAssert m.groupLastCapture("greet", text) == "hello"
-    doAssert m.groupLastCapture("who", text) == "world"
-
-  let captures = m.group(groupName, text)
-  if captures.len > 0:
-    return captures[captures.len-1]
-  else:
-    return ""
-
-func groupsCount*(m: RegexMatch): int {.inline, raises: [].} =
+func groupsCount*(m: RegexMatch2): int {.inline, raises: [].} =
   ## return the number of capturing groups
   runnableExamples:
-    var m: RegexMatch
-    doAssert "ab".match(re"(a)(b)", m)
+    var m: RegexMatch2
+    doAssert "ab".match(re2"(a)(b)", m)
     doAssert m.groupsCount == 2
 
   m.captures.len
 
-func groupNames*(m: RegexMatch): seq[string] {.inline, raises: [].} =
+func groupNames*(m: RegexMatch2): seq[string] {.inline, raises: [].} =
   ## return the names of capturing groups.
   runnableExamples:
     let text = "hello world"
-    var m: RegexMatch
-    doAssert text.match(re"(?P<greet>hello) (?P<who>world)", m)
-    doAssert m.groupNames() == @["greet", "who"]
+    var m: RegexMatch2
+    doAssert text.match(re2"(?P<greet>hello) (?P<who>world)", m)
+    doAssert m.groupNames == @["greet", "who"]
 
   result = toSeq(m.namedGroups.keys)
 
@@ -496,8 +381,8 @@ when canUseMacro:
 
 func match*(
   s: string,
-  pattern: Regex,
-  m: var RegexMatch,
+  pattern: Regex2,
+  m: var RegexMatch2,
   start = 0
 ): bool {.inline, raises: [].} =
   ## return a match if the whole string
@@ -505,23 +390,15 @@ func match*(
   ## is similar to ``find(text, re"^regex$", m)``
   ## but has better performance
   runnableExamples:
-    var m: RegexMatch
-    doAssert "abcd".match(re"abcd", m)
-    doAssert not "abcd".match(re"abc", m)
+    var m: RegexMatch2
+    doAssert "abcd".match(re2"abcd", m)
+    doAssert not "abcd".match(re2"abc", m)
 
-  result = matchImpl(s, pattern, m, start)
+  result = matchImpl(s, pattern.Regex, m, start)
 
-func match*(s: string, pattern: Regex): bool {.inline, raises: [].} =
-  var m: RegexMatch
-  result = matchImpl(s, pattern, m)
-
-template runeIncAt(s: string, n: var int) =
-  ## increment ``n`` up to
-  ## next rune's index
-  if n < s.len:
-    inc(n, runeLenAt(s, n))
-  else:
-    n = s.len+1
+func match*(s: string, pattern: Regex2): bool {.inline, raises: [].} =
+  var m: RegexMatch2
+  result = matchImpl(s, pattern.Regex, m)
 
 when defined(noRegexOpt):
   template findSomeOptTpl(s, pattern, ms, i): untyped =
@@ -535,9 +412,9 @@ else:
 
 iterator findAll*(
   s: string,
-  pattern: Regex,
+  pattern: Regex2,
   start = 0
-): RegexMatch {.inline, raises: [].} =
+): RegexMatch2 {.inline, raises: [].} =
   ## search through the string and
   ## return each match. Empty matches
   ## (start > end) are included
@@ -545,12 +422,477 @@ iterator findAll*(
     let text = "abcabc"
     var bounds = newSeq[Slice[int]]()
     var found = newSeq[string]()
-    for m in findAll(text, re"bc"):
+    for m in findAll(text, re2"bc"):
       bounds.add m.boundaries
       found.add text[m.boundaries]
     doAssert bounds == @[1 .. 2, 4 .. 5]
     doAssert found == @["bc", "bc"]
 
+  var i = start
+  var i2 = start-1
+  var m: RegexMatch2
+  var ms: RegexMatches2
+  while i <= len(s):
+    doAssert(i > i2); i2 = i
+    i = findSomeOptTpl(s, pattern.Regex, ms, i)
+    #debugEcho i
+    if i < 0: break
+    for mi in ms:
+      fillMatchImpl(m, mi, ms, pattern.Regex)
+      yield m
+    if i == len(s):
+      break
+
+func findAll*(
+  s: string,
+  pattern: Regex2,
+  start = 0
+): seq[RegexMatch2] {.inline, raises: [].} =
+  for m in findAll(s, pattern, start):
+    result.add m
+
+iterator findAllBounds*(
+  s: string,
+  pattern: Regex2,
+  start = 0
+): Slice[int] {.inline, raises: [].} =
+  ## search through the string and
+  ## return each match. Empty matches
+  ## (start > end) are included
+  runnableExamples:
+    let text = "abcabc"
+    var bounds = newSeq[Slice[int]]()
+    for bd in findAllBounds(text, re2"bc"):
+      bounds.add bd
+    doAssert bounds == @[1 .. 2, 4 .. 5]
+
+  var i = start
+  var i2 = start-1
+  var ms: RegexMatches2
+  while i <= len(s):
+    doAssert(i > i2); i2 = i
+    i = findSomeOptTpl(s, pattern.Regex, ms, i)
+    #debugEcho i
+    if i < 0: break
+    for ab in ms.bounds:
+      yield ab
+    if i == len(s):
+      break
+
+func findAllBounds*(
+  s: string,
+  pattern: Regex2,
+  start = 0
+): seq[Slice[int]] {.inline, raises: [].} =
+  for m in findAllBounds(s, pattern, start):
+    result.add m
+
+func find*(
+  s: string,
+  pattern: Regex2,
+  m: var RegexMatch2,
+  start = 0
+): bool {.inline, raises: [].} =
+  ## search through the string looking for the first
+  ## location where there is a match
+  runnableExamples:
+    var m: RegexMatch2
+    doAssert "abcd".find(re2"bc", m) and
+      m.boundaries == 1 .. 2
+    doAssert not "abcd".find(re2"de", m)
+    doAssert "2222".find(re2"(22)*", m) and
+      m.group(0) == 2 .. 3
+
+  m.clear()
+  for m2 in findAll(s, pattern, start):
+    m.captures = m2.captures
+    m.namedGroups = m2.namedGroups
+    m.boundaries = m2.boundaries
+    return true
+  return false
+
+# XXX find shortest match; disable captures
+func contains*(s: string, pattern: Regex2): bool {.inline, raises: [].} =
+  runnableExamples:
+    doAssert re2"bc" in "abcd"
+    doAssert re2"(23)+" in "23232"
+    doAssert re2"^(23)+$" notin "23232"
+
+  for _ in findAllBounds(s, pattern):
+    return true
+  return false
+
+iterator split*(s: string, sep: Regex2): string {.inline, raises: [].} =
+  ## return not matched substrings
+  runnableExamples:
+    var found = newSeq[string]()
+    for s in split("11a22Ϊ33Ⓐ44弢55", re2"\d+"):
+      found.add s
+    doAssert found == @["", "a", "Ϊ", "Ⓐ", "弢", ""]
+
+  var
+    first, last, i = 0
+    i2 = -1
+    done = false
+    ms: RegexMatches2
+  while not done:
+    doAssert(i > i2); i2 = i
+    i = findSomeOptTpl(s, sep.Regex, ms, i)
+    done = i < 0 or i >= len(s)
+    if done: ms.dummyMatch(s.len)
+    for ab in ms.bounds:
+      last = ab.a
+      if ab.a > 0 or ab.a <= ab.b:  # skip first empty match
+        yield substr(s, first, last-1)
+      first = ab.b+1
+
+func split*(s: string, sep: Regex2): seq[string] {.inline, raises: [].} =
+  ## return not matched substrings
+  runnableExamples:
+    doAssert split("11a22Ϊ33Ⓐ44弢55", re2"\d+") ==
+      @["", "a", "Ϊ", "Ⓐ", "弢", ""]
+
+  for w in split(s, sep):
+    result.add w
+
+func splitIncl*(s: string, sep: Regex2): seq[string] {.inline, raises: [].} =
+  ## return not matched substrings, including captured groups
+  runnableExamples:
+    let
+      parts = splitIncl("a,b", re2"(,)")
+      expected = @["a", ",", "b"]
+    doAssert parts == expected
+
+  template ab: untyped = m.boundaries
+  var
+    first, last, i = 0
+    i2 = -1
+    done = false
+    m: RegexMatch2
+    ms: RegexMatches2
+  while not done:
+    doAssert(i > i2); i2 = i
+    i = findSomeOptTpl(s, sep.Regex, ms, i)
+    done = i < 0 or i >= len(s)
+    if done: ms.dummyMatch(s.len)
+    for mi in ms:
+      fillMatchImpl(m, mi, ms, sep.Regex)
+      last = ab.a
+      if ab.a > 0 or ab.a <= ab.b:  # skip first empty match
+        result.add substr(s, first, last-1)
+        for g in 0 ..< m.groupsCount:
+          if m.group(g) != nonCapture:
+            result.add substr(s, m.group(g).a, m.group(g).b)
+      first = ab.b+1
+
+func startsWith*(
+  s: string, pattern: Regex2, start = 0
+): bool {.inline, raises: [].} =
+  ## return whether the string
+  ## starts with the pattern or not
+  runnableExamples:
+    doAssert "abc".startsWith(re2"\w")
+    doAssert not "abc".startsWith(re2"\d")
+
+  startsWithImpl2(s, pattern.Regex, start)
+
+template runeIncAt(s: string, n: var int) =
+  ## increment ``n`` up to
+  ## next rune's index
+  if n < s.len:
+    inc(n, runeLenAt(s, n))
+  else:
+    n = s.len+1
+
+# XXX use findAll and check last match bounds
+func endsWith*(s: string, pattern: Regex2): bool {.inline, raises: [].} =
+  ## return whether the string
+  ## ends with the pattern or not
+  runnableExamples:
+    doAssert "abc".endsWith(re2"\w")
+    doAssert not "abc".endsWith(re2"\d")
+
+  result = false
+  var
+    m: RegexMatch2
+    i = 0
+  while i < s.len:
+    result = match(s, pattern, m, i)
+    if result: return
+    s.runeIncAt(i)
+
+func addsubstr(
+  result: var string, s: string, first, last: int
+) {.inline, raises: [].} =
+  let
+    first = max(first, 0)
+    last = min(last, s.high)
+  if first > last: return
+  let n = result.len
+  result.setLen(result.len + last-first+1)
+  # XXX copyMem
+  var j = 0
+  for i in first .. last:
+    result[n + j] = s[i]
+    inc j
+
+func addsubstr(
+  result: var string, s: string, first: int
+) {.inline, raises: [].} =
+  addsubstr(result, s, first, s.high)
+
+func replace*(
+  s: string,
+  pattern: Regex2,
+  by: string,
+  limit = 0
+): string {.inline, raises: [ValueError].} =
+  ## Replace matched substrings.
+  ##
+  ## Matched groups can be accessed with ``$N``
+  ## notation, where ``N`` is the group's index,
+  ## starting at 1 (1-indexed). ``$$`` means
+  ## literal ``$``.
+  ##
+  ## If ``limit`` is given, at most ``limit``
+  ## replacements are done. ``limit`` of 0
+  ## means there is no limit
+  runnableExamples:
+    doAssert "aaa".replace(re2"a", "b", 1) == "baa"
+    doAssert "abc".replace(re2"(a(b)c)", "m($1) m($2)") ==
+      "m(abc) m(b)"
+    doAssert "Nim is awesome!".replace(re2"(\w\B)", "$1_") ==
+      "N_i_m i_s a_w_e_s_o_m_e!"
+
+  result = ""
+  var
+    i, j = 0
+    capts = newSeqOfCap[string](pattern.Regex.groupsCount)
+  for m in findAll(s, pattern):
+    result.addsubstr(s, i, m.boundaries.a-1)
+    capts.setLen 0
+    for c in m.captures:
+      capts.add s[c]  # XXX openArray
+    if capts.len > 0:
+      result.addf(by, capts)
+    else:
+      result.add(by)
+    i = m.boundaries.b+1
+    inc j
+    if limit > 0 and j == limit: break
+  result.addsubstr(s, i)
+
+when not defined(nimHasEffectsOf):
+  {.pragma: effectsOf.}
+
+func replace*(
+  s: string,
+  pattern: Regex2,
+  by: proc (m: RegexMatch2, s: string): string,
+  limit = 0
+): string {.inline, raises: [], effectsOf: by.} =
+  ## Replace matched substrings.
+  ##
+  ## If ``limit`` is given, at most ``limit``
+  ## replacements are done. ``limit`` of 0
+  ## means there is no limit
+  runnableExamples:
+    proc removeStars(m: RegexMatch2, s: string): string =
+      result = s[m.group(0)]
+      if result == "*":
+        result = ""
+    let text = "**this is a test**"
+    doAssert text.replace(re2"(\*)", removeStars) == "this is a test"
+
+  result = ""
+  var i, j = 0
+  for m in findAll(s, pattern):
+    result.addsubstr(s, i, m.boundaries.a-1)
+    result.add by(m, s)
+    i = m.boundaries.b+1
+    inc j
+    if limit > 0 and j == limit: break
+  result.addsubstr(s, i)
+
+func isInitialized*(re: Regex2): bool {.inline, raises: [].} =
+  ## Check whether the regex has been initialized
+  runnableExamples:
+    var re: Regex2
+    doAssert not re.isInitialized
+    re = re2"foo"
+    doAssert re.isInitialized
+
+  re.Regex.nfa.s.len > 0
+
+func escapeRe*(s: string): string {.raises: [].} =
+  ## Escape special regex characters in ``s``
+  ## so that it can be matched verbatim
+  # The special char list is the same as re.escape
+  # in Python 3.7
+  #
+  # utf-8 ascii code-points cannot be part of multi-byte
+  # code-points, so we can read/match byte by byte
+  result = ""
+  for c in s:
+    case c
+    of ' ', '#', '$', '&', '(',
+        ')', '*', '+', '-', '.',
+        '?', '[', '\\', ']', '^',
+        '{', '|', '}', '~', char(9),
+        char(10), char(11), char(12), char(13):
+      result.add '\\'
+      result.add c
+    else:
+      result.add c
+
+proc toString(
+  pattern: Regex2,
+  nIdx: int16,
+  visited: var set[int16]
+): string {.used.} =
+  ## NFA to string representation.
+  ## For debugging purposes
+  # XXX zero-match transitions are missing
+  if nIdx in visited:
+    result = "[...]"
+    return
+  visited.incl(nIdx)
+  let n = pattern.Regex.nfa.s[nIdx]
+  result = "["
+  result.add($n)
+  for nn in n.next:
+    result.add(", ")
+    result.add(pattern.toString(nn, visited))
+  result.add("]")
+
+proc toString(pattern: Regex2): string {.used.} =
+  ## NFA to string representation.
+  ## For debugging purposes
+  var visited: set[int16]
+  result = pattern.toString(0, visited)
+
+#
+#
+# OLD DEPRECATED APIs
+#
+#
+
+# below deprecated funcs call each other,
+# so turn warnings
+{.push warning[Deprecated]: off.}
+
+func re*(
+  s: string
+): Regex {.raises: [RegexError], deprecated: "use re2(string) instead".} =
+  reImpl(s)
+
+when not defined(forceRegexAtRuntime):
+  func re*(
+    s: static string
+  ): static[Regex] {.inline, deprecated: "use re2(static string) instead".} =
+    when canUseMacro:  # VM dies on Nim < 1.1
+      reCt(s)
+    else:
+      reImpl(s)
+
+func toPattern*(
+  s: string
+): Regex {.raises: [RegexError], deprecated: "Use `re2(string)` instead".} =
+  re(s)
+
+iterator group*(m: RegexMatch, i: int): Slice[int] {.inline, raises: [], deprecated.} =
+  for capt in m.captures[i]:
+    yield capt
+
+func group*(m: RegexMatch, i: int): seq[Slice[int]] {.inline, raises: [], deprecated: "use group(RegexMatch2, int)".} =
+  m.captures[i]
+
+func group*(
+  m: RegexMatch, i: int, text: string
+): seq[string] {.inline, raises: [], deprecated.} =
+  result = newSeq[string]()
+  for bounds in m.group i:
+    result.add text[bounds]
+
+func groupFirstCapture*(
+  m: RegexMatch, i: int, text: string
+): string {.inline, raises: [], deprecated.} =
+  for bounds in m.group i:
+    return text[bounds]
+
+func groupLastCapture*(
+  m: RegexMatch, i: int, text: string
+): string {.inline, raises: [], deprecated: "use group(RegexMatch2, int) instead".} =
+  var b = 0 .. -1
+  for bounds in m.group i:
+    b = bounds
+  result = text[b]
+
+iterator group*(
+  m: RegexMatch, s: string
+): Slice[int] {.inline, raises: [KeyError], deprecated.} =
+  for bounds in m.group(m.namedGroups[s]):
+    yield bounds
+
+func group*(
+  m: RegexMatch, s: string
+): seq[Slice[int]] {.inline, raises: [KeyError], deprecated: "use group(RegexMatch2, string)".} =
+  m.group m.namedGroups[s]
+
+func group*(
+  m: RegexMatch,
+  groupName: string,
+  text: string
+): seq[string] {.inline, raises: [KeyError], deprecated.} =
+  result = newSeq[string]()
+  for bounds in m.group(groupName):
+    result.add text[bounds]
+
+func groupFirstCapture*(
+  m: RegexMatch,
+  groupName: string,
+  text: string
+): string {.inline, raises: [KeyError], deprecated.} =
+  let captures = m.group(groupName, text)
+  if captures.len > 0:
+    return captures[0]
+  else:
+    return "" 
+
+func groupLastCapture*(
+  m: RegexMatch,
+  groupName: string,
+  text: string
+): string {.inline, raises: [KeyError], deprecated: "use group(RegexMatch2, string) instead".} =
+  let captures = m.group(groupName, text)
+  if captures.len > 0:
+    return captures[captures.len-1]
+  else:
+    return ""
+
+func groupsCount*(m: RegexMatch): int {.inline, raises: [], deprecated: "use groupsCount(RegexMatch2)".} =
+  m.captures.len
+
+func groupNames*(m: RegexMatch): seq[string] {.inline, raises: [], deprecated: "use groupNames(RegexMatch2)".} =
+  result = toSeq(m.namedGroups.keys)
+
+func match*(
+  s: string,
+  pattern: Regex,
+  m: var RegexMatch,
+  start = 0
+): bool {.inline, raises: [], deprecated: "use match(string, Regex2, var RegexMatch) instead".} =
+  result = matchImpl(s, pattern, m, start)
+
+func match*(s: string, pattern: Regex): bool {.inline, raises: [], deprecated: "use match(string, Regex2) instead".} =
+  var m: RegexMatch
+  result = matchImpl(s, pattern, m)
+
+iterator findAll*(
+  s: string,
+  pattern: Regex,
+  start = 0
+): RegexMatch {.inline, raises: [], deprecated: "use findAll(string, Regex2) instead".} =
   var i = start
   var i2 = start-1
   var m: RegexMatch
@@ -570,7 +912,7 @@ func findAll*(
   s: string,
   pattern: Regex,
   start = 0
-): seq[RegexMatch] {.inline, raises: [].} =
+): seq[RegexMatch] {.inline, raises: [], deprecated: "use findAll(string, Regex2) instead".} =
   for m in findAll(s, pattern, start):
     result.add m
 
@@ -578,17 +920,7 @@ iterator findAllBounds*(
   s: string,
   pattern: Regex,
   start = 0
-): Slice[int] {.inline, raises: [].} =
-  ## search through the string and
-  ## return each match. Empty matches
-  ## (start > end) are included
-  runnableExamples:
-    let text = "abcabc"
-    var bounds = newSeq[Slice[int]]()
-    for bd in findAllBounds(text, re"bc"):
-      bounds.add bd
-    doAssert bounds == @[1 .. 2, 4 .. 5]
-
+): Slice[int] {.inline, raises: [], deprecated: "use findAllBounds(string, Regex2) instead".} =
   var i = start
   var i2 = start-1
   var ms: RegexMatches
@@ -606,30 +938,17 @@ func findAllBounds*(
   s: string,
   pattern: Regex,
   start = 0
-): seq[Slice[int]] {.inline, raises: [].} =
+): seq[Slice[int]] {.inline, raises: [], deprecated: "use findAllBounds(string, Regex2) instead".} =
   for m in findAllBounds(s, pattern, start):
     result.add m
 
 func findAndCaptureAll*(
   s: string, pattern: Regex
-): seq[string] {.inline, raises: [].} =
-  ## search through the string and
-  ## return a seq with captures.
-  runnableExamples:
-    doAssert findAndCaptureAll("a1b2c3d4e5", re"\d") ==
-      @["1", "2", "3", "4", "5"]
-
+): seq[string] {.inline, raises: [], deprecated: "use findAll(string, Regex2) instead".} =
   for m in s.findAll(pattern):
     result.add s[m.boundaries]
 
-# XXX find shortest match; disable captures
-func contains*(s: string, pattern: Regex): bool {.inline, raises: [].} =
-  ##  search for the pattern anywhere in the string
-  runnableExamples:
-    doAssert re"bc" in "abcd"
-    doAssert re"(23)+" in "23232"
-    doAssert re"^(23)+$" notin "23232"
-
+func contains*(s: string, pattern: Regex): bool {.inline, raises: [], deprecated: "use contains(string, Regex2) instead".} =
   for _ in findAllBounds(s, pattern):
     return true
   return false
@@ -639,17 +958,7 @@ func find*(
   pattern: Regex,
   m: var RegexMatch,
   start = 0
-): bool {.inline, raises: [].} =
-  ## search through the string looking for the first
-  ## location where there is a match
-  runnableExamples:
-    var m: RegexMatch
-    doAssert "abcd".find(re"bc", m) and
-      m.boundaries == 1 .. 2
-    doAssert not "abcd".find(re"de", m)
-    doAssert "2222".find(re"(22)*", m) and
-      m.group(0) == @[0 .. 1, 2 .. 3]
-
+): bool {.inline, raises: [], deprecated: "use find(string, Regex2, var RegexMatch2) instead".} =
   m.clear()
   for m2 in findAll(s, pattern, start):
     m.captures.add m2.captures
@@ -658,14 +967,7 @@ func find*(
     return true
   return false
 
-iterator split*(s: string, sep: Regex): string {.inline, raises: [].} =
-  ## return not matched substrings
-  runnableExamples:
-    var found = newSeq[string]()
-    for s in split("11a22Ϊ33Ⓐ44弢55", re"\d+"):
-      found.add s
-    doAssert found == @["", "a", "Ϊ", "Ⓐ", "弢", ""]
-
+iterator split*(s: string, sep: Regex): string {.inline, raises: [], deprecated: "use split(string, Regex2) instead".} =
   var
     first, last, i = 0
     i2 = -1
@@ -682,23 +984,11 @@ iterator split*(s: string, sep: Regex): string {.inline, raises: [].} =
         yield substr(s, first, last-1)
       first = ab.b+1
 
-func split*(s: string, sep: Regex): seq[string] {.inline, raises: [].} =
-  ## return not matched substrings
-  runnableExamples:
-    doAssert split("11a22Ϊ33Ⓐ44弢55", re"\d+") ==
-      @["", "a", "Ϊ", "Ⓐ", "弢", ""]
-
+func split*(s: string, sep: Regex): seq[string] {.inline, raises: [], deprecated: "use split(string, Regex2) instead".} =
   for w in split(s, sep):
     result.add w
 
-func splitIncl*(s: string, sep: Regex): seq[string] {.inline, raises: [].} =
-  ## return not matched substrings, including captured groups
-  runnableExamples:
-    let
-      parts = splitIncl("a,b", re"(,)")
-      expected = @["a", ",", "b"]
-    doAssert parts == expected
-
+func splitIncl*(s: string, sep: Regex): seq[string] {.inline, raises: [], deprecated: "use splitIncl(string, Regex2) instead".} =
   template ab: untyped = m.boundaries
   var
     first, last, i = 0
@@ -723,23 +1013,11 @@ func splitIncl*(s: string, sep: Regex): seq[string] {.inline, raises: [].} =
 
 func startsWith*(
   s: string, pattern: Regex, start = 0
-): bool {.inline, raises: [].} =
-  ## return whether the string
-  ## starts with the pattern or not
-  runnableExamples:
-    doAssert "abc".startsWith(re"\w")
-    doAssert not "abc".startsWith(re"\d")
-
+): bool {.inline, raises: [], deprecated: "use startsWith(string, Regex2) instead".} =
   startsWithImpl(s, pattern, start)
 
 # XXX use findAll and check last match bounds
-func endsWith*(s: string, pattern: Regex): bool {.inline, raises: [].} =
-  ## return whether the string
-  ## ends with the pattern or not
-  runnableExamples:
-    doAssert "abc".endsWith(re"\w")
-    doAssert not "abc".endsWith(re"\d")
-
+func endsWith*(s: string, pattern: Regex): bool {.inline, raises: [], deprecated: "use endsWith(string, Regex2) instead".} =
   result = false
   var
     m: RegexMatch
@@ -769,49 +1047,12 @@ func flatCaptures(
         inc i
     assert i == n
 
-func addsubstr(
-  result: var string, s: string, first, last: int
-) {.inline, raises: [].} =
-  let
-    first = max(first, 0)
-    last = min(last, s.high)
-  if first > last: return
-  let n = result.len
-  result.setLen(result.len + last-first+1)
-  # XXX copyMem
-  var j = 0
-  for i in first .. last:
-    result[n + j] = s[i]
-    inc j
-
-func addsubstr(
-  result: var string, s: string, first: int
-) {.inline, raises: [].} =
-  addsubstr(result, s, first, s.high)
-
 func replace*(
   s: string,
   pattern: Regex,
   by: string,
   limit = 0
-): string {.inline, raises: [ValueError].} =
-  ## Replace matched substrings.
-  ##
-  ## Matched groups can be accessed with ``$N``
-  ## notation, where ``N`` is the group's index,
-  ## starting at 1 (1-indexed). ``$$`` means
-  ## literal ``$``.
-  ##
-  ## If ``limit`` is given, at most ``limit``
-  ## replacements are done. ``limit`` of 0
-  ## means there is no limit
-  runnableExamples:
-    doAssert "aaa".replace(re"a", "b", 1) == "baa"
-    doAssert "abc".replace(re"(a(b)c)", "m($1) m($2)") ==
-      "m(abc) m(b)"
-    doAssert "Nim is awesome!".replace(re"(\w\B)", "$1_") ==
-      "N_i_m i_s a_w_e_s_o_m_e!"
-
+): string {.inline, raises: [ValueError], deprecated: "use replace(string, Regex2, string) instead".} =
   result = ""
   var
     i, j = 0
@@ -836,22 +1077,7 @@ func replace*(
   pattern: Regex,
   by: proc (m: RegexMatch, s: string): string,
   limit = 0
-): string {.inline, raises: [], effectsOf: by.} =
-  ## Replace matched substrings.
-  ##
-  ## If ``limit`` is given, at most ``limit``
-  ## replacements are done. ``limit`` of 0
-  ## means there is no limit
-  runnableExamples:
-    proc removeEvenWords(m: RegexMatch, s: string): string =
-      result = ""
-      if m.group(1).len mod 2 != 0:
-        result = s[m.group(0)[0]]
-    
-    let text = "Es macht Spaß, alle geraden Wörter zu entfernen!"
-    doAssert text.replace(re"((\w)+\s*)", removeEvenWords) ==
-      "macht , geraden entfernen!"
-
+): string {.inline, raises: [], effectsOf: by, deprecated: "use replace(string, Regex2, proc(RegexMatch2, string) :string) instead".} =
   result = ""
   var i, j = 0
   for m in findAll(s, pattern):
@@ -862,36 +1088,8 @@ func replace*(
     if limit > 0 and j == limit: break
   result.addsubstr(s, i)
 
-func isInitialized*(re: Regex): bool {.inline, raises: [].} =
-  ## Check whether the regex has been initialized
-  runnableExamples:
-    var re: Regex
-    doAssert not re.isInitialized
-    re = re"foo"
-    doAssert re.isInitialized
-
+func isInitialized*(re: Regex): bool {.inline, raises: [], deprecated: "use isInitialized(Regex2) instead".} =
   re.nfa.s.len > 0
-
-func escapeRe*(s: string): string {.raises: [].} =
-  ## Escape special regex characters in ``s``
-  ## so that it can be matched verbatim
-  # The special char list is the same as re.escape
-  # in Python 3.7
-  #
-  # utf-8 ascii code-points cannot be part of multi-byte
-  # code-points, so we can read/match byte by byte
-  result = ""
-  for c in s:
-    case c
-    of ' ', '#', '$', '&', '(',
-        ')', '*', '+', '-', '.',
-        '?', '[', '\\', ']', '^',
-        '{', '|', '}', '~', char(9),
-        char(10), char(11), char(12), char(13):
-      result.add '\\'
-      result.add c
-    else:
-      result.add c
 
 proc toString(
   pattern: Regex,
@@ -919,6 +1117,8 @@ proc toString(pattern: Regex): string {.used.} =
   var visited: set[int16]
   result = pattern.toString(0, visited)
 
+{.pop.}  # {.push warning[Deprecated]: off.}
+
 when isMainModule:
   import ./regex/parser
   import ./regex/exptransformation
@@ -932,7 +1132,7 @@ when isMainModule:
     result = atoms.s.toString
 
   func toNfaStr(s: string): string =
-    result = re(s).toString
+    result = re2(s).toString
 
   doAssert toAtoms(r"a(b|c)*d") == r"a~(b|c)*~d"
   doAssert toAtoms(r"abc") == r"a~b~c"
@@ -988,149 +1188,149 @@ when isMainModule:
   doAssert r"[[:xdigit:]]".toAtoms == "[[0-9a-fA-F]]"
   doAssert r"[[:alpha:][:digit:]]".toAtoms == "[[a-zA-Z][0-9]]"
 
-  var m: RegexMatch
-  #doAssert match("abc", re(r"abc", {reAscii}), m)
-  doAssert match("abc", re"abc", m)
-  doAssert match("ab", re"a(b|c)", m)
-  doAssert match("ac", re"a(b|c)", m)
-  doAssert(not match("ad", re"a(b|c)", m))
-  doAssert match("ab", re"(ab)*", m)
-  doAssert match("abab", re"(ab)*", m)
-  doAssert(not match("ababc", re"(ab)*", m))
-  doAssert(not match("a", re"(ab)*", m))
-  doAssert match("ab", re"(ab)+", m)
-  doAssert match("abab", re"(ab)+", m)
-  doAssert(not match("ababc", re"(ab)+", m))
-  doAssert(not match("a", re"(ab)+", m))
-  doAssert match("aa", re"\b\b\baa\b\b\b", m)
-  doAssert(not match("cac", re"c\ba\bc", m))
-  doAssert match("abc", re"[abc]+", m)
-  doAssert match("abc", re"[\w]+", m)
-  doAssert match("弢弢弢", re"[\w]+", m)
-  doAssert(not match("abc", re"[\d]+", m))
-  doAssert match("123", re"[\d]+", m)
-  doAssert match("abc$%&", re".+", m)
-  doAssert(not match("abc$%&\L", re"(.+)", m))
-  doAssert(not match("abc$%&\L", re".+", m))
-  doAssert(not match("弢", re"\W", m))
-  doAssert match("$%&", re"\W+", m)
-  doAssert match("abc123", re"[^\W]+", m)
+  var m: RegexMatch2
+  #doAssert match("abc", re2(r"abc", {reAscii}), m)
+  doAssert match("abc", re2"abc", m)
+  doAssert match("ab", re2"a(b|c)", m)
+  doAssert match("ac", re2"a(b|c)", m)
+  doAssert(not match("ad", re2"a(b|c)", m))
+  doAssert match("ab", re2"(ab)*", m)
+  doAssert match("abab", re2"(ab)*", m)
+  doAssert(not match("ababc", re2"(ab)*", m))
+  doAssert(not match("a", re2"(ab)*", m))
+  doAssert match("ab", re2"(ab)+", m)
+  doAssert match("abab", re2"(ab)+", m)
+  doAssert(not match("ababc", re2"(ab)+", m))
+  doAssert(not match("a", re2"(ab)+", m))
+  doAssert match("aa", re2"\b\b\baa\b\b\b", m)
+  doAssert(not match("cac", re2"c\ba\bc", m))
+  doAssert match("abc", re2"[abc]+", m)
+  doAssert match("abc", re2"[\w]+", m)
+  doAssert match("弢弢弢", re2"[\w]+", m)
+  doAssert(not match("abc", re2"[\d]+", m))
+  doAssert match("123", re2"[\d]+", m)
+  doAssert match("abc$%&", re2".+", m)
+  doAssert(not match("abc$%&\L", re2"(.+)", m))
+  doAssert(not match("abc$%&\L", re2".+", m))
+  doAssert(not match("弢", re2"\W", m))
+  doAssert match("$%&", re2"\W+", m)
+  doAssert match("abc123", re2"[^\W]+", m)
 
-  doAssert match("aabcd", re"(aa)bcd", m) and
-    m.captures == @[@[0 .. 1]]
-  doAssert match("aabc", re"(aa)(bc)", m) and
-    m.captures == @[@[0 .. 1], @[2 .. 3]]
-  doAssert match("ab", re"a(b|c)", m) and
-    m.captures == @[@[1 .. 1]]
-  doAssert match("ab", re"(ab)*", m) and
-    m.captures == @[@[0 .. 1]]
-  doAssert match("abab", re"(ab)*", m) and
-    m.captures == @[@[0 .. 1, 2 .. 3]]
-  doAssert match("ab", re"((a))b", m) and
-    m.captures == @[@[0 .. 0], @[0 .. 0]]
-  doAssert match("c", re"((ab)*)c", m) and
-    m.captures == @[@[0 .. -1], @[]]
-  doAssert match("aab", re"((a)*b)", m) and
-    m.captures == @[@[0 .. 2], @[0 .. 0, 1 .. 1]]
-  doAssert match("abbbbcccc", re"a(b|c)*", m) and
-    m.captures == @[@[1 .. 1, 2 .. 2, 3 .. 3, 4 .. 4, 5 .. 5, 6 .. 6, 7 .. 7, 8 .. 8]]
-  doAssert match("ab", re"(a*)(b*)", m) and
-    m.captures == @[@[0 .. 0], @[1 .. 1]]
-  doAssert match("ab", re"(a)*(b)*", m) and
-    m.captures == @[@[0 .. 0], @[1 .. 1]]
-  doAssert match("ab", re"(a)*b*", m) and
-    m.captures == @[@[0 .. 0]]
-  doAssert match("abbb", re"((a(b)*)*(b)*)", m) and
-    m.captures == @[@[0 .. 3], @[0 .. 3], @[1 .. 1, 2 .. 2, 3 .. 3], @[]]
-  doAssert match("aa", re"(a)+", m) and
-    m.captures == @[@[0 .. 0, 1 .. 1]]
-  doAssert match("abab", re"(ab)+", m) and
-    m.captures == @[@[0 .. 1, 2 .. 3]]
-  doAssert match("a", re"(a)?", m) and
-    m.captures == @[@[0 .. 0]]
-  doAssert match("ab", re"(ab)?", m) and
-    m.captures == @[@[0 .. 1]]
-  doAssert match("aaabbbaaa", re"(a*|b*)*", m) and
-    m.captures == @[@[0 .. 2, 3 .. 5, 6 .. 8, 9 .. 8]]
-  doAssert match("abab", re"(a(b))*", m) and
-    m.captures == @[@[0 .. 1, 2 .. 3], @[1 .. 1, 3 .. 3]]
-  doAssert match("aaanasdnasd", re"((a)*n?(asd)*)*", m) and
-    m.captures == @[@[0 .. 6, 7 .. 10, 11 .. 10], @[0 .. 0, 1 .. 1, 2 .. 2], @[4 .. 6, 8 .. 10]]
-  doAssert match("aaanasdnasd", re"((a)*n?(asd))*", m) and
-    m.captures == @[@[0 .. 6, 7 .. 10], @[0 .. 0, 1 .. 1, 2 .. 2], @[4 .. 6, 8 .. 10]]
-  doAssert match("abd", re"((ab)c)|((ab)d)", m) and
-    m.captures == @[@[], @[], @[0 .. 2], @[0 .. 1]]
-  doAssert match("aaa", re"(a*)", m) and
-    m.captures == @[@[0 .. 2]]
-  doAssert match("aaaa", re"(a*)(a*)", m) and
-    m.captures == @[@[0 .. 3], @[4 .. 3]]
-  doAssert match("aaaa", re"(a*?)(a*?)", m) and
-    m.captures == @[@[0 .. -1], @[0 .. 3]]
-  doAssert match("aaaa", re"(a)*(a)", m) and
-    m.captures == @[@[0 .. 0, 1 .. 1, 2 .. 2], @[3 .. 3]]
+  doAssert match("aabcd", re2"(aa)bcd", m) and
+    m.captures == @[0 .. 1]
+  doAssert match("aabc", re2"(aa)(bc)", m) and
+    m.captures == @[0 .. 1, 2 .. 3]
+  doAssert match("ab", re2"a(b|c)", m) and
+    m.captures == @[1 .. 1]
+  doAssert match("ab", re2"(ab)*", m) and
+    m.captures == @[0 .. 1]
+  doAssert match("abab", re2"(ab)*", m) and
+    m.captures == @[2 .. 3]
+  doAssert match("ab", re2"((a))b", m) and
+    m.captures == @[0 .. 0, 0 .. 0]
+  doAssert match("c", re2"((ab)*)c", m) and
+    m.captures == @[0 .. -1, nonCapture]
+  doAssert match("aab", re2"((a)*b)", m) and
+    m.captures == @[0 .. 2, 1 .. 1]
+  doAssert match("abbbbcccc", re2"a(b|c)*", m) and
+    m.captures == @[8 .. 8]
+  doAssert match("ab", re2"(a*)(b*)", m) and
+    m.captures == @[0 .. 0, 1 .. 1]
+  doAssert match("ab", re2"(a)*(b)*", m) and
+    m.captures == @[0 .. 0, 1 .. 1]
+  doAssert match("ab", re2"(a)*b*", m) and
+    m.captures == @[0 .. 0]
+  doAssert match("abbb", re2"((a(b)*)*(b)*)", m) and
+    m.captures == @[0 .. 3, 0 .. 3, 3 .. 3, nonCapture]
+  doAssert match("aa", re2"(a)+", m) and
+    m.captures == @[1 .. 1]
+  doAssert match("abab", re2"(ab)+", m) and
+    m.captures == @[2 .. 3]
+  doAssert match("a", re2"(a)?", m) and
+    m.captures == @[0 .. 0]
+  doAssert match("ab", re2"(ab)?", m) and
+    m.captures == @[0 .. 1]
+  doAssert match("aaabbbaaa", re2"(a*|b*)*", m) and
+    m.captures == @[9 .. 8]
+  doAssert match("abab", re2"(a(b))*", m) and
+    m.captures == @[2 .. 3, 3 .. 3]
+  doAssert match("aaanasdnasd", re2"((a)*n?(asd)*)*", m) and
+    m.captures == @[11 .. 10, 2 .. 2, 8 .. 10]
+  doAssert match("aaanasdnasd", re2"((a)*n?(asd))*", m) and
+    m.captures == @[7 .. 10, 2 .. 2, 8 .. 10]
+  doAssert match("abd", re2"((ab)c)|((ab)d)", m) and
+    m.captures == @[nonCapture, nonCapture, 0 .. 2, 0 .. 1]
+  doAssert match("aaa", re2"(a*)", m) and
+    m.captures == @[0 .. 2]
+  doAssert match("aaaa", re2"(a*)(a*)", m) and
+    m.captures == @[0 .. 3, 4 .. 3]
+  doAssert match("aaaa", re2"(a*?)(a*?)", m) and
+    m.captures == @[0 .. -1, 0 .. 3]
+  doAssert match("aaaa", re2"(a)*(a)", m) and
+    m.captures == @[2 .. 2, 3 .. 3]
   
-  doAssert match("abc", re"abc")
-  doAssert(not match("abc", re"abd"))
-  doAssert(not match("abc", re"ab"))
-  doAssert(not match("abc", re"b"))
-  doAssert(not match("abc", re"c"))
+  doAssert match("abc", re2"abc")
+  doAssert(not match("abc", re2"abd"))
+  doAssert(not match("abc", re2"ab"))
+  doAssert(not match("abc", re2"b"))
+  doAssert(not match("abc", re2"c"))
 
-  doAssert re"bc" in "abcd"
-  doAssert re"(23)+" in "23232"
-  doAssert re"^(23)+$" notin "23232"
-  doAssert re"\w" in "弢"
-  #doAssert re(r"\w", {reAscii}) notin "弢"
-  #doAssert re(r"\w", {reAscii}) in "a"
+  doAssert re2"bc" in "abcd"
+  doAssert re2"(23)+" in "23232"
+  doAssert re2"^(23)+$" notin "23232"
+  doAssert re2"\w" in "弢"
+  #doAssert re2(r"\w", {reAscii}) notin "弢"
+  #doAssert re2(r"\w", {reAscii}) in "a"
 
-  doAssert "abcd".find(re"bc", m)
-  doAssert(not "abcd".find(re"de", m))
-  #doAssert "%ab%".find(re(r"\w{2}", {reAscii}), m)
-  doAssert "%弢弢%".find(re"\w{2}", m)
-  #doAssert(not "%弢弢%".find(re(r"\w{2}", {reAscii}), m)
+  doAssert "abcd".find(re2"bc", m)
+  doAssert(not "abcd".find(re2"de", m))
+  #doAssert "%ab%".find(re2(r"\w{2}", {reAscii}), m)
+  doAssert "%弢弢%".find(re2"\w{2}", m)
+  #doAssert(not "%弢弢%".find(re2(r"\w{2}", {reAscii}), m)
   doAssert(
-    "2222".find(re"(22)*", m) and
-    m.group(0) == @[0 .. 1, 2 .. 3])
+    "2222".find(re2"(22)*", m) and
+    m.group(0) == 2 .. 3)
   doAssert(
-    "11222211".find(re"(22)+", m) and
-    m.group(0) == @[2 .. 3, 4 .. 5])
+    "11222211".find(re2"(22)+", m) and
+    m.group(0) == 4 .. 5)
   
-  doAssert match("650-253-0001", re"[0-9]+-[0-9]+-[0-9]+", m)
-  doAssert(not match("abc-253-0001", re"[0-9]+-[0-9]+-[0-9]+", m))
-  doAssert(not match("650-253", re"[0-9]+-[0-9]+-[0-9]+", m))
-  doAssert(not match("650-253-0001-abc", re"[0-9]+-[0-9]+-[0-9]+", m))
-  doAssert match("650-253-0001", re"[0-9]+..*", m)
-  doAssert(not match("abc-253-0001", re"[0-9]+..*", m))
-  doAssert(not match("6", re"[0-9]+..*", m))
+  doAssert match("650-253-0001", re2"[0-9]+-[0-9]+-[0-9]+", m)
+  doAssert(not match("abc-253-0001", re2"[0-9]+-[0-9]+-[0-9]+", m))
+  doAssert(not match("650-253", re2"[0-9]+-[0-9]+-[0-9]+", m))
+  doAssert(not match("650-253-0001-abc", re2"[0-9]+-[0-9]+-[0-9]+", m))
+  doAssert match("650-253-0001", re2"[0-9]+..*", m)
+  doAssert(not match("abc-253-0001", re2"[0-9]+..*", m))
+  doAssert(not match("6", re2"[0-9]+..*", m))
 
-  doAssert match("abcabcabc", re"(?:(?:abc)){3}")
-  doAssert match("abcabcabc", re"((abc)){3}")
+  doAssert match("abcabcabc", re2"(?:(?:abc)){3}")
+  doAssert match("abcabcabc", re2"((abc)){3}")
 
-  doAssert match("", re"|")
-  doAssert match("a", re"a|")
-  doAssert match("", re"a|")
-  doAssert(not match("b", re"a|"))
-  doAssert match("b", re"|b")
-  doAssert match("", re"|b")
-  doAssert(not match("a", re"|b"))
-  doAssert match("", re"(|)")
-  doAssert match("a", re"(a|)")
-  doAssert match("", re"(a|)")
-  doAssert(not match("b", re"(a|)"))
-  doAssert match("b", re"(|b)")
-  doAssert match("", re"(|b)")
-  doAssert(not match("a", re"(|b)"))
-  doAssert match("", re"||")
+  doAssert match("", re2"|")
+  doAssert match("a", re2"a|")
+  doAssert match("", re2"a|")
+  doAssert(not match("b", re2"a|"))
+  doAssert match("b", re2"|b")
+  doAssert match("", re2"|b")
+  doAssert(not match("a", re2"|b"))
+  doAssert match("", re2"(|)")
+  doAssert match("a", re2"(a|)")
+  doAssert match("", re2"(a|)")
+  doAssert(not match("b", re2"(a|)"))
+  doAssert match("b", re2"(|b)")
+  doAssert match("", re2"(|b)")
+  doAssert(not match("a", re2"(|b)"))
+  doAssert match("", re2"||")
 
-  doAssert match(" ", re"(?x)     (?-x) ")
-  doAssert match("aa", re"((?x)   a    )a")
-  doAssert match(" ", re"((?x)     ) ")
-  doAssert match(" ", re"(?x:(?x)     ) ")
-  doAssert match(" ", re"((?x:)) ")
-  doAssert match("A", re"(?xi)     a")
-  doAssert(not match("A", re"((?xi))     a"))
-  doAssert(not match("A", re"(?xi:(?xi)     )a"))
+  doAssert match(" ", re2"(?x)     (?-x) ")
+  doAssert match("aa", re2"((?x)   a    )a")
+  doAssert match(" ", re2"((?x)     ) ")
+  doAssert match(" ", re2"(?x:(?x)     ) ")
+  doAssert match(" ", re2"((?x:)) ")
+  doAssert match("A", re2"(?xi)     a")
+  doAssert(not match("A", re2"((?xi))     a"))
+  doAssert(not match("A", re2"(?xi:(?xi)     )a"))
 
-  doAssert graph(re"^a+$") == """digraph graphname {
+  doAssert graph(Regex(re2"^a+$")) == """digraph graphname {
     0 [label="q0";color=blue];
     1 [label="q1";color=black];
     2 [label="q2";color=blue];
@@ -1142,7 +1342,7 @@ when isMainModule:
   # subset of tests.nim
   proc raisesMsg(pattern: string): string =
     try:
-      discard re(pattern)
+      discard re2(pattern)
     except RegexError:
       result = getCurrentExceptionMsg()
 
@@ -1152,32 +1352,32 @@ when isMainModule:
     (proc() = body)()
 
   test:
-    var m: RegexMatch
-    doAssert match("ac", re"a(b|c)", m)
-    doAssert(not match("ad", re"a(b|c)", m))
-    doAssert match("ab", re"(ab)*", m)
-    doAssert match("abab", re"(ab)*", m)
-    doAssert(not match("ababc", re"(ab)*", m))
-    doAssert(not match("a", re"(ab)*", m))
-    doAssert match("abab", re"(ab)*", m) and
-      m.captures == @[@[0 .. 1, 2 .. 3]]
-    doAssert match("bbaa aa", re"([\w ]*?)(\baa\b)", m) and
-      m.captures == @[@[0 .. 4], @[5 .. 6]]
-    doAssert re"bc" in "abcd"
-    doAssert re"(23)+" in "23232"
-    doAssert re"^(23)+$" notin "23232"
-    doAssert re"\w" in "弢"
-    doAssert "2222".find(re"(22)*", m) and
-      m.group(0) == @[0 .. 1, 2 .. 3]
+    var m: RegexMatch2
+    doAssert match("ac", re2"a(b|c)", m)
+    doAssert(not match("ad", re2"a(b|c)", m))
+    doAssert match("ab", re2"(ab)*", m)
+    doAssert match("abab", re2"(ab)*", m)
+    doAssert(not match("ababc", re2"(ab)*", m))
+    doAssert(not match("a", re2"(ab)*", m))
+    doAssert match("abab", re2"(ab)*", m) and
+      m.captures == @[2 .. 3]
+    doAssert match("bbaa aa", re2"([\w ]*?)(\baa\b)", m) and
+      m.captures == @[0 .. 4, 5 .. 6]
+    doAssert re2"bc" in "abcd"
+    doAssert re2"(23)+" in "23232"
+    doAssert re2"^(23)+$" notin "23232"
+    doAssert re2"\w" in "弢"
+    doAssert "2222".find(re2"(22)*", m) and
+      m.group(0) == 2 .. 3
     doAssert raisesMsg(r"[a-\w]") ==
       "Invalid set range. Range can't contain " &
       "a character-class or assertion\n" &
       "[a-\\w]\n" &
       "   ^"
-    doAssert "a,b".splitIncl(re"(,)") == @["a", ",", "b"]
-    doAssert "abcabc".replace(re"(abc)", "m($1)") ==
+    doAssert "a,b".splitIncl(re2"(,)") == @["a", ",", "b"]
+    doAssert "abcabc".replace(re2"(abc)", "m($1)") ==
       "m(abc)m(abc)"
-    const ip = re"""(?x)
+    const ip = re2"""(?x)
     \b
     ((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}
     (25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)
@@ -1185,73 +1385,79 @@ when isMainModule:
     """
     doAssert match("127.0.0.1", ip)
     doAssert(not match("127.0.0.999", ip))
-    doAssert "abcd".find(re"bc", m) and
+    doAssert "abcd".find(re2"bc", m) and
       m.boundaries == 1 .. 2
-    doAssert "bcd".find(re"bc", m) and
+    doAssert "bcd".find(re2"bc", m) and
       m.boundaries == 0 .. 1
-    doAssert "bc".find(re"bc", m) and
+    doAssert "bc".find(re2"bc", m) and
       m.boundaries == 0 .. 1
-    doAssert "#foo://#".find(re"[\w]+://", m) and
+    doAssert "#foo://#".find(re2"[\w]+://", m) and
       m.boundaries == 1 .. 6
-    doAssert findAllBounds("abcd", re"bc") == @[1 .. 2]
-    doAssert findAllBounds("bcd", re"bc") == @[0 .. 1]
-    doAssert findAllBounds("bc", re"bc") == @[0 .. 1]
-    doAssert findAllBounds("#foo://#", re"[\w]+://") == @[1 .. 6]
-    doAssert findAllBounds("abc\nabc\na", re"(?m)^a") ==
+    doAssert findAllBounds("abcd", re2"bc") == @[1 .. 2]
+    doAssert findAllBounds("bcd", re2"bc") == @[0 .. 1]
+    doAssert findAllBounds("bc", re2"bc") == @[0 .. 1]
+    doAssert findAllBounds("#foo://#", re2"[\w]+://") == @[1 .. 6]
+    doAssert findAllBounds("abc\nabc\na", re2"(?m)^a") ==
       @[0 .. 0, 4 .. 4, 8 .. 8]
-    doAssert match("ab", re"a(?=b)\w")
-    doAssert(not match("ab", re"a(?=x)\w"))
-    doAssert match("ab", re"\w(?<=a)b")
-    doAssert(not match("ab", re"\w(?<=x)b"))
-    doAssert match("aaab", re".*(?<=^(\w*?)(\w*?)(\w??)$)", m) and
-      m.captures == @[@[0 .. 3], @[4 .. 3], @[4 .. 3]]
-    doAssert match("aaab", re".*(?<=^(\w*?)(\w*)(\w??)$)", m) and
-      m.captures == @[@[0 .. -1], @[0 .. 3], @[4 .. 3]]
-    doAssert match("aaab", re"(\w*)(\w??)", m) and
-      m.captures == @[@[0 .. 3], @[4 .. 3]]
-    doAssert match("aaab", re".*(?<=^(\w*)(\w??)$)", m) and
-      m.captures == @[@[0 .. 3], @[4 .. 3]]
-    doAssert match("aaab", re".*(?<=^(\w*)(\w?)$)", m) and
-      m.captures == @[@[0 .. 2], @[3 .. 3]]
-    doAssert match("aaab", re".*(?<=^(\d)\w+|(\w)\w{3}|(\w)\w{3}|(\w)\w+$)", m) and
-      m.captures == @[@[], @[0 .. 0], @[], @[]]
-    doAssert match("aaab", re".*(?<=^(\d)\w+|(\d)\w{3}|(\w)\w{3}|(\w)\w+$)", m) and
-      m.captures == @[@[], @[], @[0 .. 0], @[]]
-    doAssert match("aaab", re".*(?<=^(\d)\w+|(\d)\w{3}|(\d)\w{3}|(\w)\w+$)", m) and
-      m.captures == @[@[], @[], @[], @[0 .. 0]]
-    doAssert(not match("ab", re"\w(?<=a(?=b(?<=a)))b"))
-    doAssert(not match("ab", re"\w(?<=a(?<=a(?=b(?<=a))))b"))
-    doAssert match("ab", re"\w(?<=a(?=b(?<=b)))b")
-    doAssert match("ab", re"\w(?<=a(?<=a(?=b(?<=b))))b")
-    doAssert findAllBounds(r"1abab", re"(?<=\d\w*)ab") ==
+    doAssert match("ab", re2"a(?=b)\w")
+    doAssert(not match("ab", re2"a(?=x)\w"))
+    doAssert match("ab", re2"\w(?<=a)b")
+    doAssert(not match("ab", re2"\w(?<=x)b"))
+    doAssert match("aaab", re2".*(?<=^(\w*?)(\w*?)(\w??)$)", m) and
+      m.captures == @[0 .. 3, 4 .. 3, 4 .. 3]
+    doAssert match("aaab", re2".*(?<=^(\w*?)(\w*)(\w??)$)", m) and
+      m.captures == @[0 .. -1, 0 .. 3, 4 .. 3]
+    doAssert match("aaab", re2"(\w*)(\w??)", m) and
+      m.captures == @[0 .. 3, 4 .. 3]
+    doAssert match("aaab", re2".*(?<=^(\w*)(\w??)$)", m) and
+      m.captures == @[0 .. 3, 4 .. 3]
+    doAssert match("aaab", re2".*(?<=^(\w*)(\w?)$)", m) and
+      m.captures == @[0 .. 2, 3 .. 3]
+    doAssert match("aaab", re2".*(?<=^(\d)\w+|(\w)\w{3}|(\w)\w{3}|(\w)\w+$)", m) and
+      m.captures == @[nonCapture, 0 .. 0, nonCapture, nonCapture]
+    doAssert match("aaab", re2".*(?<=^(\d)\w+|(\d)\w{3}|(\w)\w{3}|(\w)\w+$)", m) and
+      m.captures == @[nonCapture, nonCapture, 0 .. 0, nonCapture]
+    doAssert match("aaab", re2".*(?<=^(\d)\w+|(\d)\w{3}|(\d)\w{3}|(\w)\w+$)", m) and
+      m.captures == @[nonCapture, nonCapture, nonCapture, 0 .. 0]
+    doAssert(not match("ab", re2"\w(?<=a(?=b(?<=a)))b"))
+    doAssert(not match("ab", re2"\w(?<=a(?<=a(?=b(?<=a))))b"))
+    doAssert match("ab", re2"\w(?<=a(?=b(?<=b)))b")
+    doAssert match("ab", re2"\w(?<=a(?<=a(?=b(?<=b))))b")
+    doAssert findAllBounds(r"1abab", re2"(?<=\d\w*)ab") ==
       @[1 .. 2, 3 .. 4]
-    doAssert findAllBounds(r"abab", re"(?<=\d\w*)ab").len == 0
-    doAssert findAllBounds(r"abab1", re"ab(?=\w*\d)") ==
+    doAssert findAllBounds(r"abab", re2"(?<=\d\w*)ab").len == 0
+    doAssert findAllBounds(r"abab1", re2"ab(?=\w*\d)") ==
       @[0 .. 1, 2 .. 3]
-    doAssert findAllBounds(r"abab", re"ab(?=\w*\d)").len == 0
-    doAssert match("aΪ", re"a(?=Ϊ)\w")
-    doAssert match("Ϊb", re"Ϊ(?=b)\w")
-    doAssert match("弢Ⓐ", re"弢(?=Ⓐ)\w")
-    doAssert match("aΪ", re"\w(?<=a)Ϊ")
-    doAssert match("Ϊb", re"\w(?<=Ϊ)b")
-    doAssert match("弢Ⓐ", re"\w(?<=弢)Ⓐ")
+    doAssert findAllBounds(r"abab", re2"ab(?=\w*\d)").len == 0
+    doAssert match("aΪ", re2"a(?=Ϊ)\w")
+    doAssert match("Ϊb", re2"Ϊ(?=b)\w")
+    doAssert match("弢Ⓐ", re2"弢(?=Ⓐ)\w")
+    doAssert match("aΪ", re2"\w(?<=a)Ϊ")
+    doAssert match("Ϊb", re2"\w(?<=Ϊ)b")
+    doAssert match("弢Ⓐ", re2"\w(?<=弢)Ⓐ")
     block:  # Follows Nim re's behaviour
-      doAssert match("abc", re"(?<=a)bc", m, start = 1)
-      doAssert(not match("abc", re"(?<=x)bc", m, start = 1))
-      doAssert(not match("abc", re"^bc", m, start = 1))
-    doAssert startsWith("abc", re"b", start = 1)
-    doAssert startsWith("abc", re"(?<=a)b", start = 1)
-    doAssert startsWith("abc", re"b", start = 1)
-    doAssert(not startsWith("abc", re"(?<=x)b", start = 1))
-    doAssert(not startsWith("abc", re"^b", start = 1))
-    doAssert(not match("ab", re"ab(?=x)"))
-    doAssert(not match("ab", re"(?<=x)ab"))
-    doAssert match("ab", re"(?<=^)ab")
-    doAssert match("ab", re"ab(?=$)")
-    doAssert match("abcdefg", re"\w+(?<=(ab)(?=(cd)))\w+", m) and
-      m.captures == @[@[0 .. 1], @[2 .. 3]]
-    doAssert match("abcdefg", re"\w+(?<=(ab)(?=(cd)(?<=(cd))))\w+", m) and
-      m.captures == @[@[0 .. 1], @[2 .. 3], @[2 .. 3]]
+      doAssert match("abc", re2"(?<=a)bc", m, start = 1)
+      doAssert(not match("abc", re2"(?<=x)bc", m, start = 1))
+      doAssert(not match("abc", re2"^bc", m, start = 1))
+    doAssert startsWith("abc", re2"b", start = 1)
+    doAssert startsWith("abc", re2"(?<=a)b", start = 1)
+    doAssert startsWith("abc", re2"b", start = 1)
+    doAssert(not startsWith("abc", re2"(?<=x)b", start = 1))
+    doAssert(not startsWith("abc", re2"^b", start = 1))
+    doAssert(not match("ab", re2"ab(?=x)"))
+    doAssert(not match("ab", re2"(?<=x)ab"))
+    doAssert match("ab", re2"(?<=^)ab")
+    doAssert match("ab", re2"ab(?=$)")
+    doAssert match("abcdefg", re2"\w+(?<=(ab)(?=(cd)))\w+", m) and
+      m.captures == @[0 .. 1, 2 .. 3]
+    doAssert match("abcdefg", re2"\w+(?<=(ab)(?=(cd)(?<=(cd))))\w+", m) and
+      m.captures == @[0 .. 1, 2 .. 3, 2 .. 3]
+    doAssert match("aaab", re2"(\w+)|\w+(?<=^\w+)b", m) and
+      m.captures == @[0 .. 3]
+    doAssert match("aaab", re2"(\w+)|\w+(?<=^(\w+))b", m) and
+      m.captures == @[0 .. 3, reNonCapture]
+    doAssert match("aaab", re2"(\w+)|\w+(?<=^(\w)(\w+))b", m) and
+      m.captures == @[0 .. 3, reNonCapture, reNonCapture]
     when canUseMacro:
       block:
         var m = false

@@ -1,4 +1,4 @@
-## DEPRECATED
+## NFA matcher for non-static regexes
 
 import std/unicode
 import std/tables
@@ -11,7 +11,7 @@ import ./nfatype
 type
   AheadSig = proc (
     smA, smB: var Submatches,
-    capts: var Capts,
+    capts: var Capts3,
     captIdx: var int32,
     text: string,
     nfa: Nfa,
@@ -21,7 +21,7 @@ type
   ): bool {.noSideEffect, raises: [].}
   BehindSig = proc (
     smA, smB: var Submatches,
-    capts: var Capts,
+    capts: var Capts3,
     captIdx: var int32,
     text: string,
     nfa: Nfa,
@@ -70,8 +70,12 @@ template lookAroundTpl*: untyped {.dirty.} =
 template nextStateTpl(bwMatch = false): untyped {.dirty.} =
   template bounds2: untyped =
     when bwMatch: i .. bounds.b else: bounds.a .. i-1
+  template captElm: untyped =
+    capts[captx, z.idx]
   smB.clear()
   for n, capt, bounds in items smA:
+    if capt != -1:
+      capts.keepAlive capt
     if anchored and nfa.s[n].kind == reEoe:
       if not smB.hasState n:
         smB.add (n, capt, bounds)
@@ -91,29 +95,40 @@ template nextStateTpl(bwMatch = false): untyped {.dirty.} =
         if not matched:
           break
         case z.kind
-        of groupKind:
-          capts.add CaptNode(
-            parent: captx,
-            bound: i,
-            idx: z.idx)
-          captx = (capts.len-1).int32
+        of reGroupStart:
+          # XXX this can be avoided on 1st z loop iteration
+          #     and also on 1st nti loop iteration
+          captx = capts.diverge captx
+          if mfReverseCapts notin flags or
+              captElm.a == nonCapture.a:
+            captElm.a = i
+        of reGroupEnd:
+          captx = capts.diverge captx
+          if mfReverseCapts notin flags or
+              captElm.b == nonCapture.b:
+            captElm.b = i-1
         of assertionKind - lookaroundKind:
           when bwMatch:
             matched = match(z, c, cPrev.Rune)
           else:
             matched = match(z, cPrev.Rune, c)
         of lookaroundKind:
+          let freezed = capts.freeze()
           lookAroundTpl()
+          capts.unfreeze freezed
+          if captx != -1:
+            capts.keepAlive captx
         else:
           doAssert false
           discard
       if matched:
         smB.add (nt, captx, bounds2)
   swap smA, smB
+  capts.recycle()
 
 func matchImpl(
   smA, smB: var Submatches,
-  capts: var Capts,
+  capts: var Capts3,
   captIdx: var int32,
   text: string,
   nfa: Nfa,
@@ -145,15 +160,12 @@ func matchImpl(
   c = Rune(-1)
   nextStateTpl()
   if smA.len > 0:
-    if mfReverseCapts in flags:
-      captIdx = reverse(capts, smA[0].ci, captIdx)
-    else:
-      captIdx = smA[0].ci
+    captIdx = smA[0].ci
   return smA.len > 0
 
 func reversedMatchImpl(
   smA, smB: var Submatches,
-  capts: var Capts,
+  capts: var Capts3,
   captIdx: var int32,
   text: string,
   nfa: Nfa,
@@ -191,10 +203,7 @@ func reversedMatchImpl(
   nextStateTpl(bwMatch = true)
   for n, capt, bounds in items smA:
     if nfa.s[n].kind == reEoe:
-      if mfReverseCapts in flags:
-        captIdx = reverse(capts, capt, captIdx)
-      else:
-        captIdx = capt
+      captIdx = capt
       return bounds.a
   return -1
 
@@ -203,9 +212,10 @@ func reversedMatchImpl*(
   text: string,
   nfa: Nfa,
   look: var Lookaround,
+  groupsLen: int,
   start, limit: int
 ): int =
-  var capts: Capts
+  var capts = initCapts3(groupsLen)
   var captIdx = -1'i32
   reversedMatchImpl(
     smA, smB, capts, captIdx, text, nfa, look, start, limit)
@@ -218,33 +228,38 @@ template initLook*: Lookaround =
 func matchImpl*(
   text: string,
   regex: Regex,
-  m: var RegexMatch,
+  m: var RegexMatch2,
   start = 0
 ): bool =
   m.clear()
   var
     smA = newSubmatches(regex.nfa.s.len)
     smB = newSubmatches(regex.nfa.s.len)
-    capts: Capts
-    capt = -1'i32
+    capts = initCapts3(regex.groupsCount)
+    captIdx = -1'i32
     look = initLook()
   result = matchImpl(
-    smA, smB, capts, capt, text, regex.nfa, look, start)
+    smA, smB, capts, captIdx, text, regex.nfa, look, start)
   if result:
-    constructSubmatches(
-      m.captures, capts, capt, regex.groupsCount)
+    m.captures.setLen regex.groupsCount
+    if captIdx != -1:
+      for i in 0 .. m.captures.len-1:
+        m.captures[i] = capts[captIdx, i]
+    else:
+      for i in 0 .. m.captures.len-1:
+        m.captures[i] = nonCapture
     if regex.namedGroups.len > 0:
       m.namedGroups = regex.namedGroups
     m.boundaries = smA[0].bounds
 
-func startsWithImpl*(text: string, regex: Regex, start: int): bool =
+func startsWithImpl2*(text: string, regex: Regex, start: int): bool =
   # XXX optimize mfShortestMatch, mfNoCaptures
   template flags: untyped = {mfAnchored, mfShortestMatch, mfNoCaptures}
   var
     smA = newSubmatches(regex.nfa.s.len)
     smB = newSubmatches(regex.nfa.s.len)
-    capts: Capts
-    capt = -1'i32
+    capts = initCapts3(regex.groupsCount)
+    captIdx = -1'i32
     look = initLook()
   result = matchImpl(
-    smA, smB, capts, capt, text, regex.nfa, look, start, flags)
+    smA, smB, capts, captIdx, text, regex.nfa, look, start, flags)

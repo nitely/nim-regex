@@ -9,7 +9,6 @@ Features:
 
 * The match time is linear in the length of the input string
 * Regular expressions are (optionally) compiled at compile-time
-* Captures all group repetitions (not just the last one)
 * Unicode level-1 support
 * Descriptive error messages
 * Supports matching at compile-time (Nim +0.20)

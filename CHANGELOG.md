@@ -1,3 +1,38 @@
+v0.21.0
+==================
+
+* New API (issue #111)
+* Removed the "capture all group/submatch repetitions" feature.
+  Only the last group repetition is captured.
+
+Changes to migrate to the new API:
+
+```text
+re"regex" -> re2"regex"
+Regex -> Regex2
+RegexMatch -> RegexMatch2
+```
+
+Then deal with `group(RegexMatch2, int)` and similar APIs returning
+the last capture group/submatch repetition instead of a sequence
+with all of them.
+
+v0.20.2
+==================
+
+* Nim compat fixes: #119
+
+v0.20.1
+==================
+
+* Nim compat fixes: #117
+
+v0.20.0
+==================
+
+* Add `reRepRangeLimit` compile option to define range limit #113
+* Nim compat fixes: #98, #101, #110
+
 v0.19.0
 ==================
 

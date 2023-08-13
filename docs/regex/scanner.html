@@ -34,7 +34,6 @@ function main() {
     }
   }
 
-  const toggleSwitch = document.querySelector('.theme-switch input[type="checkbox"]');
   function switchTheme(e) {
       if (e.target.checked) {
           document.documentElement.setAttribute('data-theme', 'dark');
@@ -45,13 +44,19 @@ function main() {
       }
   }
 
-  toggleSwitch.addEventListener('change', switchTheme, false);
+  const toggleSwitch = document.querySelector('.theme-switch input[type="checkbox"]');
+  if (toggleSwitch !== null) {
+    toggleSwitch.addEventListener('change', switchTheme, false);
+  }
 
-  const currentTheme = localStorage.getItem('theme') ? localStorage.getItem('theme') : null;
+  var currentTheme = localStorage.getItem('theme');
+  if (!currentTheme && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+    currentTheme = 'dark';
+  }
   if (currentTheme) {
     document.documentElement.setAttribute('data-theme', currentTheme);
 
-    if (currentTheme === 'dark') {
+    if (currentTheme === 'dark' && toggleSwitch !== null) {
       toggleSwitch.checked = true;
     }
   }
@@ -113,50 +118,50 @@ window.addEventListener('DOMContentLoaded', main);
 <li>
   <a class="reference reference-toplevel" href="#12" id="62">Procs</a>
   <ul class="simple simple-toc-section">
-      <ul class="simple nested-toc-section">scan
-      <li><a class="reference" href="#scan%2Cseq%5BT%5D"
-    title="scan[T](s: seq[T]): Scanner[T]">scan,<wbr>seq[T]</a></li>
-  <li><a class="reference" href="#scan%2Cstring"
-    title="scan(raw: string): Scanner[Rune]">scan,<wbr>string</a></li>
-
-  </ul>
-  <ul class="simple nested-toc-section">newScanner
-      <li><a class="reference" href="#newScanner%2Cseq%5BT%5D"
-    title="newScanner[T](s: seq[T]): Scanner[T]">newScanner,<wbr>seq[T]</a></li>
-
-  </ul>
-  <ul class="simple nested-toc-section">peek
-      <li><a class="reference" href="#peek%2CScanner%5BRune%5D"
-    title="peek(sc: Scanner[Rune]): Rune">peek,<wbr>Scanner[Rune]</a></li>
-  <li><a class="reference" href="#peek%2CScanner%5BNode%5D"
-    title="peek(sc: Scanner[Node]): Node">peek,<wbr>Scanner[Node]</a></li>
-  <li><a class="reference" href="#peek%2CScanner%5BRune%5D%2Cint"
-    title="peek(sc: Scanner[Rune]; n: int): Rune">peek,<wbr>Scanner[Rune],<wbr>int</a></li>
-
-  </ul>
-  <ul class="simple nested-toc-section">next
-      <li><a class="reference" href="#next%2CScanner%5BT%5D"
-    title="next[T](sc: Scanner[T]): T">next,<wbr>Scanner[T]</a></li>
-
-  </ul>
-  <ul class="simple nested-toc-section">curr
+      <ul class="simple nested-toc-section">curr
       <li><a class="reference" href="#curr%2CScanner%5BT%5D"
-    title="curr[T](sc: Scanner[T]): T">curr,<wbr>Scanner[T]</a></li>
+    title="curr[T](sc: Scanner[T]): T">curr[T](sc: Scanner[T]): T</a></li>
 
   </ul>
   <ul class="simple nested-toc-section">find
       <li><a class="reference" href="#find%2CScanner%5BRune%5D%2CRune"
-    title="find(sc: Scanner[Rune]; r: Rune): int">find,<wbr>Scanner[Rune],<wbr>Rune</a></li>
+    title="find(sc: Scanner[Rune]; r: Rune): int">find(sc: Scanner[Rune]; r: Rune): int</a></li>
 
   </ul>
   <ul class="simple nested-toc-section">finished
       <li><a class="reference" href="#finished%2CScanner%5BT%5D"
-    title="finished[T](sc: Scanner[T]): bool">finished,<wbr>Scanner[T]</a></li>
+    title="finished[T](sc: Scanner[T]): bool">finished[T](sc: Scanner[T]): bool</a></li>
+
+  </ul>
+  <ul class="simple nested-toc-section">newScanner
+      <li><a class="reference" href="#newScanner%2Cseq%5BT%5D"
+    title="newScanner[T](s: seq[T]): Scanner[T]">newScanner[T](s: seq[T]): Scanner[T]</a></li>
+
+  </ul>
+  <ul class="simple nested-toc-section">next
+      <li><a class="reference" href="#next%2CScanner%5BT%5D"
+    title="next[T](sc: Scanner[T]): T">next[T](sc: Scanner[T]): T</a></li>
+
+  </ul>
+  <ul class="simple nested-toc-section">peek
+      <li><a class="reference" href="#peek%2CScanner%5BNode%5D"
+    title="peek(sc: Scanner[Node]): Node">peek(sc: Scanner[Node]): Node</a></li>
+  <li><a class="reference" href="#peek%2CScanner%5BRune%5D"
+    title="peek(sc: Scanner[Rune]): Rune">peek(sc: Scanner[Rune]): Rune</a></li>
+  <li><a class="reference" href="#peek%2CScanner%5BRune%5D%2Cint"
+    title="peek(sc: Scanner[Rune]; n: int): Rune">peek(sc: Scanner[Rune]; n: int): Rune</a></li>
 
   </ul>
   <ul class="simple nested-toc-section">prev
       <li><a class="reference" href="#prev%2CScanner%5BT%5D"
-    title="prev[T](sc: Scanner[T]): T">prev,<wbr>Scanner[T]</a></li>
+    title="prev[T](sc: Scanner[T]): T">prev[T](sc: Scanner[T]): T</a></li>
+
+  </ul>
+  <ul class="simple nested-toc-section">scan
+      <li><a class="reference" href="#scan%2Cstring"
+    title="scan(raw: string): Scanner[Rune]">scan(raw: string): Scanner[Rune]</a></li>
+  <li><a class="reference" href="#scan%2Cseq%5BT%5D"
+    title="scan[T](s: seq[T]): Scanner[T]">scan[T](s: seq[T]): Scanner[T]</a></li>
 
   </ul>
 
@@ -165,12 +170,21 @@ window.addEventListener('DOMContentLoaded', main);
 <li>
   <a class="reference reference-toplevel" href="#15" id="65">Iterators</a>
   <ul class="simple simple-toc-section">
+      <ul class="simple nested-toc-section">items
       <li><a class="reference" href="#items.i%2CScanner%5BT%5D"
-    title="items[T](sc: Scanner[T]): T">items</a></li>
-  <li><a class="reference" href="#mitems.i%2CScanner%5BT%5D"
-    title="mitems[T](sc: var Scanner[T]): var T">mitems</a></li>
-  <li><a class="reference" href="#peek.i%2CScanner%5BT%5D"
-    title="peek[T](sc: Scanner[T]): (T, T)">peek</a></li>
+    title="items[T](sc: Scanner[T]): T">items[T](sc: Scanner[T]): T</a></li>
+
+  </ul>
+  <ul class="simple nested-toc-section">mitems
+      <li><a class="reference" href="#mitems.i%2CScanner%5BT%5D"
+    title="mitems[T](sc: var Scanner[T]): var T">mitems[T](sc: var Scanner[T]): var T</a></li>
+
+  </ul>
+  <ul class="simple nested-toc-section">peek
+      <li><a class="reference" href="#peek.i%2CScanner%5BT%5D"
+    title="peek[T](sc: Scanner[T]): (T, T)">peek[T](sc: Scanner[T]): (T, T)</a></li>
+
+  </ul>
 
   </ul>
 </li>
@@ -191,7 +205,7 @@ window.addEventListener('DOMContentLoaded', main);
 <div class="section" id="7">
 <h1><a class="toc-backref" href="#7">Types</a></h1>
 <dl class="item">
-<a id="Scanner"></a>
+<div id="Scanner">
 <dt><pre><a href="scanner.html#Scanner"><span class="Identifier">Scanner</span></a><span class="Other">[</span><span class="Identifier">T</span><span class="Other">]</span> <span class="Other">=</span> <span class="Keyword">ref</span> <span class="Keyword">object</span>
   <span class="Identifier">raw</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">string</span>
   <span class="Identifier">s</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">T</span><span class="Other">]</span>
@@ -202,114 +216,129 @@ window.addEventListener('DOMContentLoaded', main);
 A scanner is a common construct for reading data
 
 </dd>
+</div>
 
 </dl></div>
 <div class="section" id="12">
 <h1><a class="toc-backref" href="#12">Procs</a></h1>
 <dl class="item">
-<a id="newScanner,seq[T]"></a>
-<dt><pre><span class="Keyword">proc</span> <a href="#newScanner%2Cseq%5BT%5D"><span class="Identifier">newScanner</span></a><span class="Other">[</span><span class="Identifier">T</span><span class="Other">]</span><span class="Other">(</span><span class="Identifier">s</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">T</span><span class="Other">]</span><span class="Other">)</span><span class="Other">:</span> <a href="scanner.html#Scanner"><span class="Identifier">Scanner</span></a><span class="Other">[</span><span class="Identifier">T</span><span class="Other">]</span></pre></dt>
-<dd>
-
-
-
-</dd>
-<a id="scan,seq[T]"></a>
-<dt><pre><span class="Keyword">proc</span> <a href="#scan%2Cseq%5BT%5D"><span class="Identifier">scan</span></a><span class="Other">[</span><span class="Identifier">T</span><span class="Other">]</span><span class="Other">(</span><span class="Identifier">s</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">T</span><span class="Other">]</span><span class="Other">)</span><span class="Other">:</span> <a href="scanner.html#Scanner"><span class="Identifier">Scanner</span></a><span class="Other">[</span><span class="Identifier">T</span><span class="Other">]</span></pre></dt>
-<dd>
-
-
-
-</dd>
-<a id="scan,string"></a>
-<dt><pre><span class="Keyword">proc</span> <a href="#scan%2Cstring"><span class="Identifier">scan</span></a><span class="Other">(</span><span class="Identifier">raw</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">)</span><span class="Other">:</span> <a href="scanner.html#Scanner"><span class="Identifier">Scanner</span></a><span class="Other">[</span><span class="Identifier">Rune</span><span class="Other">]</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
-<dd>
-
-
-
-</dd>
-<a id="finished,Scanner[T]"></a>
-<dt><pre><span class="Keyword">func</span> <a href="#finished%2CScanner%5BT%5D"><span class="Identifier">finished</span></a><span class="Other">[</span><span class="Identifier">T</span><span class="Other">]</span><span class="Other">(</span><span class="Identifier">sc</span><span class="Other">:</span> <a href="scanner.html#Scanner"><span class="Identifier">Scanner</span></a><span class="Other">[</span><span class="Identifier">T</span><span class="Other">]</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">bool</span></pre></dt>
-<dd>
-
-
-
-</dd>
-<a id="prev,Scanner[T]"></a>
-<dt><pre><span class="Keyword">func</span> <a href="#prev%2CScanner%5BT%5D"><span class="Identifier">prev</span></a><span class="Other">[</span><span class="Identifier">T</span><span class="Other">]</span><span class="Other">(</span><span class="Identifier">sc</span><span class="Other">:</span> <a href="scanner.html#Scanner"><span class="Identifier">Scanner</span></a><span class="Other">[</span><span class="Identifier">T</span><span class="Other">]</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">T</span></pre></dt>
-<dd>
-
-
-
-</dd>
-<a id="curr,Scanner[T]"></a>
+<div id="curr,Scanner[T]">
 <dt><pre><span class="Keyword">func</span> <a href="#curr%2CScanner%5BT%5D"><span class="Identifier">curr</span></a><span class="Other">[</span><span class="Identifier">T</span><span class="Other">]</span><span class="Other">(</span><span class="Identifier">sc</span><span class="Other">:</span> <a href="scanner.html#Scanner"><span class="Identifier">Scanner</span></a><span class="Other">[</span><span class="Identifier">T</span><span class="Other">]</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">T</span></pre></dt>
 <dd>
 
 
 
 </dd>
-<a id="next,Scanner[T]"></a>
+</div>
+<div id="find,Scanner[Rune],Rune">
+<dt><pre><span class="Keyword">func</span> <a href="#find%2CScanner%5BRune%5D%2CRune"><span class="Identifier">find</span></a><span class="Other">(</span><span class="Identifier">sc</span><span class="Other">:</span> <a href="scanner.html#Scanner"><span class="Identifier">Scanner</span></a><span class="Other">[</span><span class="Identifier">Rune</span><span class="Other">]</span><span class="Other">;</span> <span class="Identifier">r</span><span class="Other">:</span> <span class="Identifier">Rune</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">int</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+<dd>
+
+return number of consumed chars. The scanner's position is not moved. <tt class="docutils literal"><span class="pre">-1</span></tt> is returned when char is not found
+
+</dd>
+</div>
+<div id="finished,Scanner[T]">
+<dt><pre><span class="Keyword">func</span> <a href="#finished%2CScanner%5BT%5D"><span class="Identifier">finished</span></a><span class="Other">[</span><span class="Identifier">T</span><span class="Other">]</span><span class="Other">(</span><span class="Identifier">sc</span><span class="Other">:</span> <a href="scanner.html#Scanner"><span class="Identifier">Scanner</span></a><span class="Other">[</span><span class="Identifier">T</span><span class="Other">]</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">bool</span></pre></dt>
+<dd>
+
+
+
+</dd>
+</div>
+<div id="newScanner,seq[T]">
+<dt><pre><span class="Keyword">proc</span> <a href="#newScanner%2Cseq%5BT%5D"><span class="Identifier">newScanner</span></a><span class="Other">[</span><span class="Identifier">T</span><span class="Other">]</span><span class="Other">(</span><span class="Identifier">s</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">T</span><span class="Other">]</span><span class="Other">)</span><span class="Other">:</span> <a href="scanner.html#Scanner"><span class="Identifier">Scanner</span></a><span class="Other">[</span><span class="Identifier">T</span><span class="Other">]</span></pre></dt>
+<dd>
+
+
+
+</dd>
+</div>
+<div id="next,Scanner[T]">
 <dt><pre><span class="Keyword">func</span> <a href="#next%2CScanner%5BT%5D"><span class="Identifier">next</span></a><span class="Other">[</span><span class="Identifier">T</span><span class="Other">]</span><span class="Other">(</span><span class="Identifier">sc</span><span class="Other">:</span> <a href="scanner.html#Scanner"><span class="Identifier">Scanner</span></a><span class="Other">[</span><span class="Identifier">T</span><span class="Other">]</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">T</span></pre></dt>
 <dd>
 
 return current item and consume it
 
 </dd>
-<a id="peek,Scanner[Rune]"></a>
-<dt><pre><span class="Keyword">func</span> <a href="#peek%2CScanner%5BRune%5D"><span class="Identifier">peek</span></a><span class="Other">(</span><span class="Identifier">sc</span><span class="Other">:</span> <a href="scanner.html#Scanner"><span class="Identifier">Scanner</span></a><span class="Other">[</span><span class="Identifier">Rune</span><span class="Other">]</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">Rune</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+</div>
+<div id="peek,Scanner[Node]">
+<dt><pre><span class="Keyword">func</span> <a href="#peek%2CScanner%5BNode%5D"><span class="Identifier">peek</span></a><span class="Other">(</span><span class="Identifier">sc</span><span class="Other">:</span> <a href="scanner.html#Scanner"><span class="Identifier">Scanner</span></a><span class="Other">[</span><a href="types.html#Node"><span class="Identifier">Node</span></a><span class="Other">]</span><span class="Other">)</span><span class="Other">:</span> <a href="types.html#Node"><span class="Identifier">Node</span></a> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
 <dd>
 
 
 
 </dd>
-<a id="peek,Scanner[Node]"></a>
-<dt><pre><span class="Keyword">func</span> <a href="#peek%2CScanner%5BNode%5D"><span class="Identifier">peek</span></a><span class="Other">(</span><span class="Identifier">sc</span><span class="Other">:</span> <a href="scanner.html#Scanner"><span class="Identifier">Scanner</span></a><span class="Other">[</span><a href="types.html#Node"><span class="Identifier">Node</span></a><span class="Other">]</span><span class="Other">)</span><span class="Other">:</span> <a href="types.html#Node"><span class="Identifier">Node</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+</div>
+<div id="peek,Scanner[Rune]">
+<dt><pre><span class="Keyword">func</span> <a href="#peek%2CScanner%5BRune%5D"><span class="Identifier">peek</span></a><span class="Other">(</span><span class="Identifier">sc</span><span class="Other">:</span> <a href="scanner.html#Scanner"><span class="Identifier">Scanner</span></a><span class="Other">[</span><span class="Identifier">Rune</span><span class="Other">]</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">Rune</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
 <dd>
 
 
 
 </dd>
-<a id="peek,Scanner[Rune],int"></a>
-<dt><pre><span class="Keyword">func</span> <a href="#peek%2CScanner%5BRune%5D%2Cint"><span class="Identifier">peek</span></a><span class="Other">(</span><span class="Identifier">sc</span><span class="Other">:</span> <a href="scanner.html#Scanner"><span class="Identifier">Scanner</span></a><span class="Other">[</span><span class="Identifier">Rune</span><span class="Other">]</span><span class="Other">;</span> <span class="Identifier">n</span><span class="Other">:</span> <span class="Identifier">int</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">Rune</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+</div>
+<div id="peek,Scanner[Rune],int">
+<dt><pre><span class="Keyword">func</span> <a href="#peek%2CScanner%5BRune%5D%2Cint"><span class="Identifier">peek</span></a><span class="Other">(</span><span class="Identifier">sc</span><span class="Other">:</span> <a href="scanner.html#Scanner"><span class="Identifier">Scanner</span></a><span class="Other">[</span><span class="Identifier">Rune</span><span class="Other">]</span><span class="Other">;</span> <span class="Identifier">n</span><span class="Other">:</span> <span class="Identifier">int</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">Rune</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
 <dd>
 
 
 
 </dd>
-<a id="find,Scanner[Rune],Rune"></a>
-<dt><pre><span class="Keyword">func</span> <a href="#find%2CScanner%5BRune%5D%2CRune"><span class="Identifier">find</span></a><span class="Other">(</span><span class="Identifier">sc</span><span class="Other">:</span> <a href="scanner.html#Scanner"><span class="Identifier">Scanner</span></a><span class="Other">[</span><span class="Identifier">Rune</span><span class="Other">]</span><span class="Other">;</span> <span class="Identifier">r</span><span class="Other">:</span> <span class="Identifier">Rune</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">int</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+</div>
+<div id="prev,Scanner[T]">
+<dt><pre><span class="Keyword">func</span> <a href="#prev%2CScanner%5BT%5D"><span class="Identifier">prev</span></a><span class="Other">[</span><span class="Identifier">T</span><span class="Other">]</span><span class="Other">(</span><span class="Identifier">sc</span><span class="Other">:</span> <a href="scanner.html#Scanner"><span class="Identifier">Scanner</span></a><span class="Other">[</span><span class="Identifier">T</span><span class="Other">]</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">T</span></pre></dt>
 <dd>
 
-return number of consumed chars. The scanner's position is not moved. <tt class="docutils literal"><span class="pre">-1</span></tt> is returned when char is not found
+
 
 </dd>
+</div>
+<div id="scan,string">
+<dt><pre><span class="Keyword">proc</span> <a href="#scan%2Cstring"><span class="Identifier">scan</span></a><span class="Other">(</span><span class="Identifier">raw</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">)</span><span class="Other">:</span> <a href="scanner.html#Scanner"><span class="Identifier">Scanner</span></a><span class="Other">[</span><span class="Identifier">Rune</span><span class="Other">]</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+<dd>
+
+
+
+</dd>
+</div>
+<div id="scan,seq[T]">
+<dt><pre><span class="Keyword">proc</span> <a href="#scan%2Cseq%5BT%5D"><span class="Identifier">scan</span></a><span class="Other">[</span><span class="Identifier">T</span><span class="Other">]</span><span class="Other">(</span><span class="Identifier">s</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">T</span><span class="Other">]</span><span class="Other">)</span><span class="Other">:</span> <a href="scanner.html#Scanner"><span class="Identifier">Scanner</span></a><span class="Other">[</span><span class="Identifier">T</span><span class="Other">]</span></pre></dt>
+<dd>
+
+
+
+</dd>
+</div>
 
 </dl></div>
 <div class="section" id="15">
 <h1><a class="toc-backref" href="#15">Iterators</a></h1>
 <dl class="item">
-<a id="items.i,Scanner[T]"></a>
+<div id="items.i,Scanner[T]">
 <dt><pre><span class="Keyword">iterator</span> <a href="#items.i%2CScanner%5BT%5D"><span class="Identifier">items</span></a><span class="Other">[</span><span class="Identifier">T</span><span class="Other">]</span><span class="Other">(</span><span class="Identifier">sc</span><span class="Other">:</span> <a href="scanner.html#Scanner"><span class="Identifier">Scanner</span></a><span class="Other">[</span><span class="Identifier">T</span><span class="Other">]</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">T</span></pre></dt>
 <dd>
 
 the yielded item gets consumed
 
 </dd>
-<a id="mitems.i,Scanner[T]"></a>
+</div>
+<div id="mitems.i,Scanner[T]">
 <dt><pre><span class="Keyword">iterator</span> <a href="#mitems.i%2CScanner%5BT%5D"><span class="Identifier">mitems</span></a><span class="Other">[</span><span class="Identifier">T</span><span class="Other">]</span><span class="Other">(</span><span class="Identifier">sc</span><span class="Other">:</span> <span class="Keyword">var</span> <a href="scanner.html#Scanner"><span class="Identifier">Scanner</span></a><span class="Other">[</span><span class="Identifier">T</span><span class="Other">]</span><span class="Other">)</span><span class="Other">:</span> <span class="Keyword">var</span> <span class="Identifier">T</span></pre></dt>
 <dd>
 
 the yielded item gets consumed
 
 </dd>
-<a id="peek.i,Scanner[T]"></a>
+</div>
+<div id="peek.i,Scanner[T]">
 <dt><pre><span class="Keyword">iterator</span> <a href="#peek.i%2CScanner%5BT%5D"><span class="Identifier">peek</span></a><span class="Other">[</span><span class="Identifier">T</span><span class="Other">]</span><span class="Other">(</span><span class="Identifier">sc</span><span class="Other">:</span> <a href="scanner.html#Scanner"><span class="Identifier">Scanner</span></a><span class="Other">[</span><span class="Identifier">T</span><span class="Other">]</span><span class="Other">)</span><span class="Other">:</span> <span class="Other">(</span><span class="Identifier">T</span><span class="Other">,</span> <span class="Identifier">T</span><span class="Other">)</span></pre></dt>
 <dd>
 
 
 
 </dd>
+</div>
 
 </dl></div>
 
@@ -320,7 +349,7 @@ the yielded item gets consumed
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br/>
-        <small style="color: var(--hint);">Made with Nim. Generated: 2021-01-06 13:01:28 UTC</small>
+        <small style="color: var(--hint);">Made with Nim. Generated: 2023-08-13 19:52:43 UTC</small>
       </div>
     </div>
   </div>

@@ -34,7 +34,6 @@ function main() {
     }
   }
 
-  const toggleSwitch = document.querySelector('.theme-switch input[type="checkbox"]');
   function switchTheme(e) {
       if (e.target.checked) {
           document.documentElement.setAttribute('data-theme', 'dark');
@@ -45,13 +44,19 @@ function main() {
       }
   }
 
-  toggleSwitch.addEventListener('change', switchTheme, false);
+  const toggleSwitch = document.querySelector('.theme-switch input[type="checkbox"]');
+  if (toggleSwitch !== null) {
+    toggleSwitch.addEventListener('change', switchTheme, false);
+  }
 
-  const currentTheme = localStorage.getItem('theme') ? localStorage.getItem('theme') : null;
+  var currentTheme = localStorage.getItem('theme');
+  if (!currentTheme && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+    currentTheme = 'dark';
+  }
   if (currentTheme) {
     document.documentElement.setAttribute('data-theme', currentTheme);
 
-    if (currentTheme === 'dark') {
+    if (currentTheme === 'dark' && toggleSwitch !== null) {
       toggleSwitch.checked = true;
     }
   }
@@ -114,12 +119,12 @@ window.addEventListener('DOMContentLoaded', main);
   <ul class="simple simple-toc-section">
       <ul class="simple nested-toc-section">toAtoms
       <li><a class="reference" href="#toAtoms%2CExp%2CGroupsCapture"
-    title="toAtoms(exp: Exp; groups: var GroupsCapture): AtomsExp">toAtoms,<wbr>Exp,<wbr>GroupsCapture</a></li>
+    title="toAtoms(exp: Exp; groups: var GroupsCapture): AtomsExp">toAtoms(exp: Exp; groups: var GroupsCapture): AtomsExp</a></li>
 
   </ul>
   <ul class="simple nested-toc-section">transformExp
       <li><a class="reference" href="#transformExp%2CExp%2CGroupsCapture"
-    title="transformExp(exp: Exp; groups: var GroupsCapture): RpnExp">transformExp,<wbr>Exp,<wbr>GroupsCapture</a></li>
+    title="transformExp(exp: Exp; groups: var GroupsCapture): RpnExp">transformExp(exp: Exp; groups: var GroupsCapture): RpnExp</a></li>
 
   </ul>
 
@@ -142,7 +147,7 @@ window.addEventListener('DOMContentLoaded', main);
 <div class="section" id="7">
 <h1><a class="toc-backref" href="#7">Types</a></h1>
 <dl class="item">
-<a id="GroupsCapture"></a>
+<div id="GroupsCapture">
 <dt><pre><a href="exptransformation.html#GroupsCapture"><span class="Identifier">GroupsCapture</span></a> <span class="Other">=</span> <span class="Keyword">object</span>
   <span class="Identifier">count</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int16</span>
   <span class="Identifier">names</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">OrderedTable</span><span class="Other">[</span><span class="Identifier">string</span><span class="Other">,</span> <span class="Identifier">int16</span><span class="Other">]</span>
@@ -152,27 +157,30 @@ window.addEventListener('DOMContentLoaded', main);
 
 
 </dd>
+</div>
 
 </dl></div>
 <div class="section" id="12">
 <h1><a class="toc-backref" href="#12">Procs</a></h1>
 <dl class="item">
-<a id="toAtoms,Exp,GroupsCapture"></a>
-<dt><pre><span class="Keyword">func</span> <a href="#toAtoms%2CExp%2CGroupsCapture"><span class="Identifier">toAtoms</span></a><span class="Other">(</span><span class="Identifier">exp</span><span class="Other">:</span> <a href="exptype.html#Exp"><span class="Identifier">Exp</span></a><span class="Other">;</span> <span class="Identifier">groups</span><span class="Other">:</span> <span class="Keyword">var</span> <a href="exptransformation.html#GroupsCapture"><span class="Identifier">GroupsCapture</span></a><span class="Other">)</span><span class="Other">:</span> <a href="exptype.html#AtomsExp"><span class="Identifier">AtomsExp</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">inline</span><span class="Other">,</span>
-    <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RegexError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<div id="toAtoms,Exp,GroupsCapture">
+<dt><pre><span class="Keyword">func</span> <a href="#toAtoms%2CExp%2CGroupsCapture"><span class="Identifier">toAtoms</span></a><span class="Other">(</span><span class="Identifier">exp</span><span class="Other">:</span> <a href="exptype.html#Exp"><span class="Identifier">Exp</span></a><span class="Other">;</span> <span class="Identifier">groups</span><span class="Other">:</span> <span class="Keyword">var</span> <a href="exptransformation.html#GroupsCapture"><span class="Identifier">GroupsCapture</span></a><span class="Other">)</span><span class="Other">:</span> <a href="exptype.html#AtomsExp"><span class="Identifier">AtomsExp</span></a> {.<span class="Identifier">inline</span><span class="Other">,</span>
+    <span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RegexError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
 <dd>
 
 
 
 </dd>
-<a id="transformExp,Exp,GroupsCapture"></a>
-<dt><pre><span class="Keyword">func</span> <a href="#transformExp%2CExp%2CGroupsCapture"><span class="Identifier">transformExp</span></a><span class="Other">(</span><span class="Identifier">exp</span><span class="Other">:</span> <a href="exptype.html#Exp"><span class="Identifier">Exp</span></a><span class="Other">;</span> <span class="Identifier">groups</span><span class="Other">:</span> <span class="Keyword">var</span> <a href="exptransformation.html#GroupsCapture"><span class="Identifier">GroupsCapture</span></a><span class="Other">)</span><span class="Other">:</span> <a href="types.html#RpnExp"><span class="Identifier">RpnExp</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">inline</span><span class="Other">,</span>
-    <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RegexError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+</div>
+<div id="transformExp,Exp,GroupsCapture">
+<dt><pre><span class="Keyword">func</span> <a href="#transformExp%2CExp%2CGroupsCapture"><span class="Identifier">transformExp</span></a><span class="Other">(</span><span class="Identifier">exp</span><span class="Other">:</span> <a href="exptype.html#Exp"><span class="Identifier">Exp</span></a><span class="Other">;</span> <span class="Identifier">groups</span><span class="Other">:</span> <span class="Keyword">var</span> <a href="exptransformation.html#GroupsCapture"><span class="Identifier">GroupsCapture</span></a><span class="Other">)</span><span class="Other">:</span> <a href="types.html#RpnExp"><span class="Identifier">RpnExp</span></a> {.<span class="Identifier">inline</span><span class="Other">,</span>
+    <span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RegexError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
 <dd>
 
 
 
 </dd>
+</div>
 
 </dl></div>
 
@@ -183,7 +191,7 @@ window.addEventListener('DOMContentLoaded', main);
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br/>
-        <small style="color: var(--hint);">Made with Nim. Generated: 2021-01-06 13:01:29 UTC</small>
+        <small style="color: var(--hint);">Made with Nim. Generated: 2023-08-13 19:52:43 UTC</small>
       </div>
     </div>
   </div>

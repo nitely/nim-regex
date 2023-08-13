@@ -34,7 +34,6 @@ function main() {
     }
   }
 
-  const toggleSwitch = document.querySelector('.theme-switch input[type="checkbox"]');
   function switchTheme(e) {
       if (e.target.checked) {
           document.documentElement.setAttribute('data-theme', 'dark');
@@ -45,13 +44,19 @@ function main() {
       }
   }
 
-  toggleSwitch.addEventListener('change', switchTheme, false);
+  const toggleSwitch = document.querySelector('.theme-switch input[type="checkbox"]');
+  if (toggleSwitch !== null) {
+    toggleSwitch.addEventListener('change', switchTheme, false);
+  }
 
-  const currentTheme = localStorage.getItem('theme') ? localStorage.getItem('theme') : null;
+  var currentTheme = localStorage.getItem('theme');
+  if (!currentTheme && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+    currentTheme = 'dark';
+  }
   if (currentTheme) {
     document.documentElement.setAttribute('data-theme', currentTheme);
 
-    if (currentTheme === 'dark') {
+    if (currentTheme === 'dark' && toggleSwitch !== null) {
       toggleSwitch.checked = true;
     }
   }
@@ -65,7 +70,7 @@ window.addEventListener('DOMContentLoaded', main);
 <div class="document" id="documentId">
   <div class="container">
     <h1 class="title">Index</h1>
-    Modules: <a href="regex.html">regex</a>, <a href="regex/common.html">regex/common</a>, <a href="regex/compiler.html">regex/compiler</a>, <a href="regex/dotgraph.html">regex/dotgraph</a>, <a href="regex/exptransformation.html">regex/exptransformation</a>, <a href="regex/exptype.html">regex/exptype</a>, <a href="regex/litopt.html">regex/litopt</a>, <a href="regex/nfa.html">regex/nfa</a>, <a href="regex/nfafindall.html">regex/nfafindall</a>, <a href="regex/nfamacro.html">regex/nfamacro</a>, <a href="regex/nfamatch.html">regex/nfamatch</a>, <a href="regex/nfatype.html">regex/nfatype</a>, <a href="regex/nodematch.html">regex/nodematch</a>, <a href="regex/nodetype.html">regex/nodetype</a>, <a href="regex/parser.html">regex/parser</a>, <a href="regex/scanner.html">regex/scanner</a>, <a href="regex/types.html">regex/types</a>.<br/><p /><h2>API symbols</h2>
+    Modules: <a href="regex.html">regex</a>, <a href="regex/common.html">regex/common</a>, <a href="regex/compiler.html">regex/compiler</a>, <a href="regex/dotgraph.html">regex/dotgraph</a>, <a href="regex/exptransformation.html">regex/exptransformation</a>, <a href="regex/exptype.html">regex/exptype</a>, <a href="regex/litopt.html">regex/litopt</a>, <a href="regex/nfa.html">regex/nfa</a>, <a href="regex/nfafindall.html">regex/nfafindall</a>, <a href="regex/nfafindall2.html">regex/nfafindall2</a>, <a href="regex/nfamacro.html">regex/nfamacro</a>, <a href="regex/nfamatch.html">regex/nfamatch</a>, <a href="regex/nfamatch2.html">regex/nfamatch2</a>, <a href="regex/nfatype.html">regex/nfatype</a>, <a href="regex/nodematch.html">regex/nodematch</a>, <a href="regex/nodetype.html">regex/nodetype</a>, <a href="regex/parser.html">regex/parser</a>, <a href="regex/scanner.html">regex/scanner</a>, <a href="regex/types.html">regex/types</a>.<br/><p /><h2>API symbols</h2>
 <dl><dt><a name="%60%24%60" href="#%60%24%60"><span>`$`:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="types: `$`(n: Node): string" href="regex/types.html#%24%2CNode">types: `$`(n: Node): string</a></li>
@@ -82,6 +87,10 @@ window.addEventListener('DOMContentLoaded', main);
           </ul></dd>
 <dt><a name="%60%5B%5D%60" href="#%60%5B%5D%60"><span>`[]`:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
+          data-doc-search-tag="nfatype: `[]`(capts: Capts3; i, j: Natural): Slice[int]" href="regex/nfatype.html#%5B%5D%2CCapts3%2CNatural%2CNatural">nfatype: `[]`(capts: Capts3; i, j: Natural): Slice[int]</a></li>
+          <li><a class="reference external"
+          data-doc-search-tag="nfatype: `[]`(capts: var Capts3; i, j: Natural): var Slice[int]" href="regex/nfatype.html#%5B%5D%2CCapts3%2CNatural%2CNatural_2">nfatype: `[]`(capts: var Capts3; i, j: Natural): var Slice[int]</a></li>
+          <li><a class="reference external"
           data-doc-search-tag="nfatype: `[]`(sm: Submatches; i: int): PState" href="regex/nfatype.html#%5B%5D%2CSubmatches%2Cint">nfatype: `[]`(sm: Submatches; i: int): PState</a></li>
           </ul></dd>
 <dt><a name="add" href="#add"><span>add:</span></a></dt><dd><ul class="simple">
@@ -101,6 +110,8 @@ window.addEventListener('DOMContentLoaded', main);
 <dt><a name="bounds" href="#bounds"><span>bounds:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="nfafindall: bounds(ms: RegexMatches): Slice[int]" href="regex/nfafindall.html#bounds.i%2CRegexMatches">nfafindall: bounds(ms: RegexMatches): Slice[int]</a></li>
+          <li><a class="reference external"
+          data-doc-search-tag="nfafindall2: bounds(ms: RegexMatches2): Slice[int]" href="regex/nfafindall2.html#bounds.i%2CRegexMatches2">nfafindall2: bounds(ms: RegexMatches2): Slice[int]</a></li>
           </ul></dd>
 <dt><a name="Bounds" href="#Bounds"><span>Bounds:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -134,13 +145,25 @@ window.addEventListener('DOMContentLoaded', main);
 <li><a class="reference external"
           data-doc-search-tag="nfatype: Capts" href="regex/nfatype.html#Capts">nfatype: Capts</a></li>
           </ul></dd>
+<dt><a name="Capts3" href="#Capts3"><span>Capts3:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="nfatype: Capts3" href="regex/nfatype.html#Capts3">nfatype: Capts3</a></li>
+          </ul></dd>
+<dt><a name="CaptState" href="#CaptState"><span>CaptState:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="nfatype: CaptState" href="regex/nfatype.html#CaptState">nfatype: CaptState</a></li>
+          </ul></dd>
 <dt><a name="Captures" href="#Captures"><span>Captures:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="nfatype: Captures" href="regex/nfatype.html#Captures">nfatype: Captures</a></li>
           </ul></dd>
 <dt><a name="clear" href="#clear"><span>clear:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
+          data-doc-search-tag="nfatype: clear(capts: var Capts3)" href="regex/nfatype.html#clear%2CCapts3">nfatype: clear(capts: var Capts3)</a></li>
+          <li><a class="reference external"
           data-doc-search-tag="nfatype: clear(m: var RegexMatch)" href="regex/nfatype.html#clear%2CRegexMatch">nfatype: clear(m: var RegexMatch)</a></li>
+          <li><a class="reference external"
+          data-doc-search-tag="nfatype: clear(m: var RegexMatch2)" href="regex/nfatype.html#clear%2CRegexMatch2">nfatype: clear(m: var RegexMatch2)</a></li>
           <li><a class="reference external"
           data-doc-search-tag="nfatype: clear(sm: var Submatches)" href="regex/nfatype.html#clear%2CSubmatches">nfatype: clear(sm: var Submatches)</a></li>
           </ul></dd>
@@ -155,18 +178,28 @@ window.addEventListener('DOMContentLoaded', main);
 <dt><a name="contains" href="#contains"><span>contains:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="regex: contains(s: string; pattern: Regex): bool" href="regex.html#contains%2Cstring%2CRegex">regex: contains(s: string; pattern: Regex): bool</a></li>
+          <li><a class="reference external"
+          data-doc-search-tag="regex: contains(s: string; pattern: Regex2): bool" href="regex.html#contains%2Cstring%2CRegex2">regex: contains(s: string; pattern: Regex2): bool</a></li>
           </ul></dd>
 <dt><a name="curr" href="#curr"><span>curr:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="scanner: curr[T](sc: Scanner[T]): T" href="regex/scanner.html#curr%2CScanner%5BT%5D">scanner: curr[T](sc: Scanner[T]): T</a></li>
           </ul></dd>
+<dt><a name="diverge" href="#diverge"><span>diverge:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="nfatype: diverge(capts: var Capts3; captIdx: CaptIdx): CaptIdx" href="regex/nfatype.html#diverge%2CCapts3%2CCaptIdx">nfatype: diverge(capts: var Capts3; captIdx: CaptIdx): CaptIdx</a></li>
+          </ul></dd>
 <dt><a name="dummyMatch" href="#dummyMatch"><span>dummyMatch:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="nfafindall: dummyMatch(ms: var RegexMatches; i: int)" href="regex/nfafindall.html#dummyMatch%2CRegexMatches%2Cint">nfafindall: dummyMatch(ms: var RegexMatches; i: int)</a></li>
+          <li><a class="reference external"
+          data-doc-search-tag="nfafindall2: dummyMatch(ms: var RegexMatches2; i: int)" href="regex/nfafindall2.html#dummyMatch%2CRegexMatches2%2Cint">nfafindall2: dummyMatch(ms: var RegexMatches2; i: int)</a></li>
           </ul></dd>
 <dt><a name="endsWith" href="#endsWith"><span>endsWith:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="regex: endsWith(s: string; pattern: Regex): bool" href="regex.html#endsWith%2Cstring%2CRegex">regex: endsWith(s: string; pattern: Regex): bool</a></li>
+          <li><a class="reference external"
+          data-doc-search-tag="regex: endsWith(s: string; pattern: Regex2): bool" href="regex.html#endsWith%2Cstring%2CRegex2">regex: endsWith(s: string; pattern: Regex2): bool</a></li>
           </ul></dd>
 <dt><a name="eNfa" href="#eNfa"><span>eNfa:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -193,10 +226,16 @@ window.addEventListener('DOMContentLoaded', main);
           data-doc-search-tag="nfafindall: fillMatchImpl(m: var RegexMatch; mi: MatchItemIdx; ms: RegexMatches;
               regex: Regex)" href="regex/nfafindall.html#fillMatchImpl%2CRegexMatch%2CMatchItemIdx%2CRegexMatches%2CRegex">nfafindall: fillMatchImpl(m: var RegexMatch; mi: MatchItemIdx; ms: RegexMatches;
               regex: Regex)</a></li>
+          <li><a class="reference external"
+          data-doc-search-tag="nfafindall2: fillMatchImpl(m: var RegexMatch2; mi: MatchItemIdx; ms: RegexMatches2;
+              regex: Regex)" href="regex/nfafindall2.html#fillMatchImpl%2CRegexMatch2%2CMatchItemIdx%2CRegexMatches2%2CRegex">nfafindall2: fillMatchImpl(m: var RegexMatch2; mi: MatchItemIdx; ms: RegexMatches2;
+              regex: Regex)</a></li>
           </ul></dd>
 <dt><a name="find" href="#find"><span>find:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="regex: find(s: string; pattern: Regex; m: var RegexMatch; start = 0): bool" href="regex.html#find%2Cstring%2CRegex%2CRegexMatch%2Cint">regex: find(s: string; pattern: Regex; m: var RegexMatch; start = 0): bool</a></li>
+          <li><a class="reference external"
+          data-doc-search-tag="regex: find(s: string; pattern: Regex2; m: var RegexMatch2; start = 0): bool" href="regex.html#find%2Cstring%2CRegex2%2CRegexMatch2%2Cint">regex: find(s: string; pattern: Regex2; m: var RegexMatch2; start = 0): bool</a></li>
           <li><a class="reference external"
           data-doc-search-tag="scanner: find(sc: Scanner[Rune]; r: Rune): int" href="regex/scanner.html#find%2CScanner%5BRune%5D%2CRune">scanner: find(sc: Scanner[Rune]; r: Rune): int</a></li>
           </ul></dd>
@@ -204,13 +243,21 @@ window.addEventListener('DOMContentLoaded', main);
 <li><a class="reference external"
           data-doc-search-tag="regex: findAll(s: string; pattern: Regex; start = 0): seq[RegexMatch]" href="regex.html#findAll%2Cstring%2CRegex%2Cint">regex: findAll(s: string; pattern: Regex; start = 0): seq[RegexMatch]</a></li>
           <li><a class="reference external"
+          data-doc-search-tag="regex: findAll(s: string; pattern: Regex2; start = 0): seq[RegexMatch2]" href="regex.html#findAll%2Cstring%2CRegex2%2Cint">regex: findAll(s: string; pattern: Regex2; start = 0): seq[RegexMatch2]</a></li>
+          <li><a class="reference external"
           data-doc-search-tag="regex: findAll(s: string; pattern: Regex; start = 0): RegexMatch" href="regex.html#findAll.i%2Cstring%2CRegex%2Cint">regex: findAll(s: string; pattern: Regex; start = 0): RegexMatch</a></li>
+          <li><a class="reference external"
+          data-doc-search-tag="regex: findAll(s: string; pattern: Regex2; start = 0): RegexMatch2" href="regex.html#findAll.i%2Cstring%2CRegex2%2Cint">regex: findAll(s: string; pattern: Regex2; start = 0): RegexMatch2</a></li>
           </ul></dd>
 <dt><a name="findAllBounds" href="#findAllBounds"><span>findAllBounds:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="regex: findAllBounds(s: string; pattern: Regex; start = 0): seq[Slice[int]]" href="regex.html#findAllBounds%2Cstring%2CRegex%2Cint">regex: findAllBounds(s: string; pattern: Regex; start = 0): seq[Slice[int]]</a></li>
           <li><a class="reference external"
+          data-doc-search-tag="regex: findAllBounds(s: string; pattern: Regex2; start = 0): seq[Slice[int]]" href="regex.html#findAllBounds%2Cstring%2CRegex2%2Cint">regex: findAllBounds(s: string; pattern: Regex2; start = 0): seq[Slice[int]]</a></li>
+          <li><a class="reference external"
           data-doc-search-tag="regex: findAllBounds(s: string; pattern: Regex; start = 0): Slice[int]" href="regex.html#findAllBounds.i%2Cstring%2CRegex%2Cint">regex: findAllBounds(s: string; pattern: Regex; start = 0): Slice[int]</a></li>
+          <li><a class="reference external"
+          data-doc-search-tag="regex: findAllBounds(s: string; pattern: Regex2; start = 0): Slice[int]" href="regex.html#findAllBounds.i%2Cstring%2CRegex2%2Cint">regex: findAllBounds(s: string; pattern: Regex2; start = 0): Slice[int]</a></li>
           </ul></dd>
 <dt><a name="findAndCaptureAll" href="#findAndCaptureAll"><span>findAndCaptureAll:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -221,10 +268,18 @@ window.addEventListener('DOMContentLoaded', main);
           data-doc-search-tag="nfafindall: findSomeImpl(text: string; regex: Regex; ms: var RegexMatches;
              start: Natural = 0; flags: set[MatchFlag] = {}): int" href="regex/nfafindall.html#findSomeImpl%2Cstring%2CRegex%2CRegexMatches%2CNatural%2Cset%5BMatchFlag%5D">nfafindall: findSomeImpl(text: string; regex: Regex; ms: var RegexMatches;
              start: Natural = 0; flags: set[MatchFlag] = {}): int</a></li>
+          <li><a class="reference external"
+          data-doc-search-tag="nfafindall2: findSomeImpl(text: string; regex: Regex; ms: var RegexMatches2;
+             start: Natural = 0; flags: set[MatchFlag] = {}): int" href="regex/nfafindall2.html#findSomeImpl%2Cstring%2CRegex%2CRegexMatches2%2CNatural%2Cset%5BMatchFlag%5D">nfafindall2: findSomeImpl(text: string; regex: Regex; ms: var RegexMatches2;
+             start: Natural = 0; flags: set[MatchFlag] = {}): int</a></li>
           </ul></dd>
 <dt><a name="findSomeOptImpl" href="#findSomeOptImpl"><span>findSomeOptImpl:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="nfafindall: findSomeOptImpl(text: string; regex: Regex; ms: var RegexMatches; start: Natural): int" href="regex/nfafindall.html#findSomeOptImpl%2Cstring%2CRegex%2CRegexMatches%2CNatural">nfafindall: findSomeOptImpl(text: string; regex: Regex; ms: var RegexMatches; start: Natural): int</a></li>
+          <li><a class="reference external"
+          data-doc-search-tag="nfafindall2: findSomeOptImpl(text: string; regex: Regex; ms: var RegexMatches2;
+                start: Natural): int" href="regex/nfafindall2.html#findSomeOptImpl%2Cstring%2CRegex%2CRegexMatches2%2CNatural">nfafindall2: findSomeOptImpl(text: string; regex: Regex; ms: var RegexMatches2;
+                start: Natural): int</a></li>
           </ul></dd>
 <dt><a name="finished" href="#finished"><span>finished:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -308,6 +363,10 @@ window.addEventListener('DOMContentLoaded', main);
           <li><a class="reference external"
           data-doc-search-tag="Flag.flagVerbose" href="regex/types.html#flagVerbose">Flag.flagVerbose</a></li>
           </ul></dd>
+<dt><a name="freeze" href="#freeze"><span>freeze:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="nfatype: freeze(capts: var Capts3): CaptState" href="regex/nfatype.html#freeze%2CCapts3">nfatype: freeze(capts: var Capts3): CaptState</a></li>
+          </ul></dd>
 <dt><a name="graph" href="#graph"><span>graph:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="dotgraph: graph(nfa: Nfa): string" href="regex/dotgraph.html#graph%2CNfa">dotgraph: graph(nfa: Nfa): string</a></li>
@@ -327,6 +386,10 @@ window.addEventListener('DOMContentLoaded', main);
           data-doc-search-tag="regex: group(m: RegexMatch; s: string): seq[Slice[int]]" href="regex.html#group%2CRegexMatch%2Cstring">regex: group(m: RegexMatch; s: string): seq[Slice[int]]</a></li>
           <li><a class="reference external"
           data-doc-search-tag="regex: group(m: RegexMatch; groupName: string; text: string): seq[string]" href="regex.html#group%2CRegexMatch%2Cstring%2Cstring">regex: group(m: RegexMatch; groupName: string; text: string): seq[string]</a></li>
+          <li><a class="reference external"
+          data-doc-search-tag="regex: group(m: RegexMatch2; i: int): Slice[int]" href="regex.html#group%2CRegexMatch2%2Cint">regex: group(m: RegexMatch2; i: int): Slice[int]</a></li>
+          <li><a class="reference external"
+          data-doc-search-tag="regex: group(m: RegexMatch2; s: string): Slice[int]" href="regex.html#group%2CRegexMatch2%2Cstring">regex: group(m: RegexMatch2; s: string): Slice[int]</a></li>
           <li><a class="reference external"
           data-doc-search-tag="regex: group(m: RegexMatch; i: int): Slice[int]" href="regex.html#group.i%2CRegexMatch%2Cint">regex: group(m: RegexMatch; i: int): Slice[int]</a></li>
           <li><a class="reference external"
@@ -353,6 +416,8 @@ window.addEventListener('DOMContentLoaded', main);
 <dt><a name="groupNames" href="#groupNames"><span>groupNames:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="regex: groupNames(m: RegexMatch): seq[string]" href="regex.html#groupNames%2CRegexMatch">regex: groupNames(m: RegexMatch): seq[string]</a></li>
+          <li><a class="reference external"
+          data-doc-search-tag="regex: groupNames(m: RegexMatch2): seq[string]" href="regex.html#groupNames%2CRegexMatch2">regex: groupNames(m: RegexMatch2): seq[string]</a></li>
           </ul></dd>
 <dt><a name="GroupsCapture" href="#GroupsCapture"><span>GroupsCapture:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -361,6 +426,8 @@ window.addEventListener('DOMContentLoaded', main);
 <dt><a name="groupsCount" href="#groupsCount"><span>groupsCount:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="regex: groupsCount(m: RegexMatch): int" href="regex.html#groupsCount%2CRegexMatch">regex: groupsCount(m: RegexMatch): int</a></li>
+          <li><a class="reference external"
+          data-doc-search-tag="regex: groupsCount(m: RegexMatch2): int" href="regex.html#groupsCount%2CRegexMatch2">regex: groupsCount(m: RegexMatch2): int</a></li>
           </ul></dd>
 <dt><a name="groupStartKind" href="#groupStartKind"><span>groupStartKind:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -373,6 +440,10 @@ window.addEventListener('DOMContentLoaded', main);
 <dt><a name="hasState" href="#hasState"><span>hasState:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="nfatype: hasState(sm: Submatches; n: int16): bool" href="regex/nfatype.html#hasState%2CSubmatches%2Cint16">nfatype: hasState(sm: Submatches; n: int16): bool</a></li>
+          </ul></dd>
+<dt><a name="initCapts3" href="#initCapts3"><span>initCapts3:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="nfatype: initCapts3(groupsLen: int): Capts3" href="regex/nfatype.html#initCapts3%2Cint">nfatype: initCapts3(groupsLen: int): Capts3</a></li>
           </ul></dd>
 <dt><a name="initEoeNode" href="#initEoeNode"><span>initEoeNode:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -395,6 +466,8 @@ window.addEventListener('DOMContentLoaded', main);
 <dt><a name="initLook" href="#initLook"><span>initLook:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="nfamatch: initLook(): Lookaround" href="regex/nfamatch.html#initLook.t">nfamatch: initLook(): Lookaround</a></li>
+          <li><a class="reference external"
+          data-doc-search-tag="nfamatch2: initLook(): Lookaround" href="regex/nfamatch2.html#initLook.t">nfamatch2: initLook(): Lookaround</a></li>
           </ul></dd>
 <dt><a name="initNotSetNode" href="#initNotSetNode"><span>initNotSetNode:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -412,6 +485,8 @@ window.addEventListener('DOMContentLoaded', main);
 <li><a class="reference external"
           data-doc-search-tag="nodetype: initSkipNode(next: openArray[int16]): Node" href="regex/nodetype.html#initSkipNode%2CopenArray%5Bint16%5D">nodetype: initSkipNode(next: openArray[int16]): Node</a></li>
           <li><a class="reference external"
+          data-doc-search-tag="types: initSkipNode(): Node" href="regex/types.html#initSkipNode">types: initSkipNode(): Node</a></li>
+          <li><a class="reference external"
           data-doc-search-tag="types: initSkipNode(next: openArray[int16]): Node" href="regex/types.html#initSkipNode%2CopenArray%5Bint16%5D">types: initSkipNode(next: openArray[int16]): Node</a></li>
           </ul></dd>
 <dt><a name="invalidRune" href="#invalidRune"><span>invalidRune:</span></a></dt><dd><ul class="simple">
@@ -427,14 +502,22 @@ window.addEventListener('DOMContentLoaded', main);
 <dt><a name="isInitialized" href="#isInitialized"><span>isInitialized:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="regex: isInitialized(re: Regex): bool" href="regex.html#isInitialized%2CRegex">regex: isInitialized(re: Regex): bool</a></li>
+          <li><a class="reference external"
+          data-doc-search-tag="regex: isInitialized(re: Regex2): bool" href="regex.html#isInitialized%2CRegex2">regex: isInitialized(re: Regex2): bool</a></li>
           </ul></dd>
 <dt><a name="items" href="#items"><span>items:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="nfafindall: items(ms: RegexMatches): MatchItemIdx" href="regex/nfafindall.html#items.i%2CRegexMatches">nfafindall: items(ms: RegexMatches): MatchItemIdx</a></li>
           <li><a class="reference external"
+          data-doc-search-tag="nfafindall2: items(ms: RegexMatches2): MatchItemIdx" href="regex/nfafindall2.html#items.i%2CRegexMatches2">nfafindall2: items(ms: RegexMatches2): MatchItemIdx</a></li>
+          <li><a class="reference external"
           data-doc-search-tag="nfatype: items(sm: Submatches): PState" href="regex/nfatype.html#items.i%2CSubmatches">nfatype: items(sm: Submatches): PState</a></li>
           <li><a class="reference external"
           data-doc-search-tag="scanner: items[T](sc: Scanner[T]): T" href="regex/scanner.html#items.i%2CScanner%5BT%5D">scanner: items[T](sc: Scanner[T]): T</a></li>
+          </ul></dd>
+<dt><a name="keepAlive" href="#keepAlive"><span>keepAlive:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="nfatype: keepAlive(capts: var Capts3; captIdx: CaptIdx)" href="regex/nfatype.html#keepAlive%2CCapts3%2CCaptIdx">nfatype: keepAlive(capts: var Capts3; captIdx: CaptIdx)</a></li>
           </ul></dd>
 <dt><a name="last" href="#last"><span>last:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -471,6 +554,8 @@ window.addEventListener('DOMContentLoaded', main);
 <dt><a name="Lookaround" href="#Lookaround"><span>Lookaround:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="nfamatch: Lookaround" href="regex/nfamatch.html#Lookaround">nfamatch: Lookaround</a></li>
+          <li><a class="reference external"
+          data-doc-search-tag="nfamatch2: Lookaround" href="regex/nfamatch2.html#Lookaround">nfamatch2: Lookaround</a></li>
           </ul></dd>
 <dt><a name="lookaroundKind" href="#lookaroundKind"><span>lookaroundKind:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -479,6 +564,8 @@ window.addEventListener('DOMContentLoaded', main);
 <dt><a name="lookAroundTpl" href="#lookAroundTpl"><span>lookAroundTpl:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="nfamatch: lookAroundTpl(): untyped" href="regex/nfamatch.html#lookAroundTpl.t">nfamatch: lookAroundTpl(): untyped</a></li>
+          <li><a class="reference external"
+          data-doc-search-tag="nfamatch2: lookAroundTpl(): untyped" href="regex/nfamatch2.html#lookAroundTpl.t">nfamatch2: lookAroundTpl(): untyped</a></li>
           </ul></dd>
 <dt><a name="lookbehindKind" href="#lookbehindKind"><span>lookbehindKind:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -489,6 +576,10 @@ window.addEventListener('DOMContentLoaded', main);
           data-doc-search-tag="regex: match(s: string; pattern: Regex): bool" href="regex.html#match%2Cstring%2CRegex">regex: match(s: string; pattern: Regex): bool</a></li>
           <li><a class="reference external"
           data-doc-search-tag="regex: match(s: string; pattern: Regex; m: var RegexMatch; start = 0): bool" href="regex.html#match%2Cstring%2CRegex%2CRegexMatch%2Cint">regex: match(s: string; pattern: Regex; m: var RegexMatch; start = 0): bool</a></li>
+          <li><a class="reference external"
+          data-doc-search-tag="regex: match(s: string; pattern: Regex2): bool" href="regex.html#match%2Cstring%2CRegex2">regex: match(s: string; pattern: Regex2): bool</a></li>
+          <li><a class="reference external"
+          data-doc-search-tag="regex: match(s: string; pattern: Regex2; m: var RegexMatch2; start = 0): bool" href="regex.html#match%2Cstring%2CRegex2%2CRegexMatch2%2Cint">regex: match(s: string; pattern: Regex2; m: var RegexMatch2; start = 0): bool</a></li>
           <li><a class="reference external"
           data-doc-search-tag="regex: match(text: string; regex: RegexLit; body: untyped): untyped" href="regex.html#match.m%2Cstring%2CRegexLit%2Cuntyped">regex: match(text: string; regex: RegexLit; body: untyped): untyped</a></li>
           <li><a class="reference external"
@@ -515,6 +606,8 @@ window.addEventListener('DOMContentLoaded', main);
           data-doc-search-tag="nfamacro: matchImpl(text, expLit, body: NimNode): NimNode" href="regex/nfamacro.html#matchImpl%2CNimNode%2CNimNode%2CNimNode">nfamacro: matchImpl(text, expLit, body: NimNode): NimNode</a></li>
           <li><a class="reference external"
           data-doc-search-tag="nfamatch: matchImpl(text: string; regex: Regex; m: var RegexMatch; start = 0): bool" href="regex/nfamatch.html#matchImpl%2Cstring%2CRegex%2CRegexMatch%2Cint">nfamatch: matchImpl(text: string; regex: Regex; m: var RegexMatch; start = 0): bool</a></li>
+          <li><a class="reference external"
+          data-doc-search-tag="nfamatch2: matchImpl(text: string; regex: Regex; m: var RegexMatch2; start = 0): bool" href="regex/nfamatch2.html#matchImpl%2Cstring%2CRegex%2CRegexMatch2%2Cint">nfamatch2: matchImpl(text: string; regex: Regex; m: var RegexMatch2; start = 0): bool</a></li>
           </ul></dd>
 <dt><a name="mfAnchored" href="#mfAnchored"><span>mfAnchored:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -590,6 +683,14 @@ window.addEventListener('DOMContentLoaded', main);
           <li><a class="reference external"
           data-doc-search-tag="types: NodeUid" href="regex/types.html#NodeUid">types: NodeUid</a></li>
           </ul></dd>
+<dt><a name="nonCapture" href="#nonCapture"><span>nonCapture:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="nfatype: nonCapture" href="regex/nfatype.html#nonCapture">nfatype: nonCapture</a></li>
+          </ul></dd>
+<dt><a name="notRecyclable" href="#notRecyclable"><span>notRecyclable:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="nfatype: notRecyclable(capts: var Capts3; captIdx: CaptIdx)" href="regex/nfatype.html#notRecyclable%2CCapts3%2CCaptIdx">nfatype: notRecyclable(capts: var Capts3; captIdx: CaptIdx)</a></li>
+          </ul></dd>
 <dt><a name="opKind" href="#opKind"><span>opKind:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="nodetype: opKind" href="regex/nodetype.html#opKind">nodetype: opKind</a></li>
@@ -623,6 +724,12 @@ window.addEventListener('DOMContentLoaded', main);
           data-doc-search-tag="regex: re(s: static string): static[Regex]" href="regex.html#re%2Cstaticstring">regex: re(s: static string): static[Regex]</a></li>
           <li><a class="reference external"
           data-doc-search-tag="regex: re(s: string): Regex" href="regex.html#re%2Cstring">regex: re(s: string): Regex</a></li>
+          </ul></dd>
+<dt><a name="re2" href="#re2"><span>re2:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="regex: re2(s: static string): static[Regex2]" href="regex.html#re2%2Cstaticstring">regex: re2(s: static string): static[Regex2]</a></li>
+          <li><a class="reference external"
+          data-doc-search-tag="regex: re2(s: string): Regex2" href="regex.html#re2%2Cstring">regex: re2(s: string): Regex2</a></li>
           </ul></dd>
 <dt><a name="reAny" href="#reAny"><span>reAny:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -664,6 +771,14 @@ window.addEventListener('DOMContentLoaded', main);
 <li><a class="reference external"
           data-doc-search-tag="compiler: reCt(s: string): Regex" href="regex/compiler.html#reCt%2Cstring">compiler: reCt(s: string): Regex</a></li>
           </ul></dd>
+<dt><a name="recyclable" href="#recyclable"><span>recyclable:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="nfatype: recyclable(capts: var Capts3; captIdx: CaptIdx)" href="regex/nfatype.html#recyclable%2CCapts3%2CCaptIdx">nfatype: recyclable(capts: var Capts3; captIdx: CaptIdx)</a></li>
+          </ul></dd>
+<dt><a name="recycle" href="#recycle"><span>recycle:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="nfatype: recycle(capts: var Capts3)" href="regex/nfatype.html#recycle%2CCapts3">nfatype: recycle(capts: var Capts3)</a></li>
+          </ul></dd>
 <dt><a name="reDigit" href="#reDigit"><span>reDigit:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="NodeKind.reDigit" href="regex/nodetype.html#reDigit">NodeKind.reDigit</a></li>
@@ -700,9 +815,17 @@ window.addEventListener('DOMContentLoaded', main);
           <li><a class="reference external"
           data-doc-search-tag="NodeKind.reEoe" href="regex/types.html#reEoe">NodeKind.reEoe</a></li>
           </ul></dd>
+<dt><a name="reFlags" href="#reFlags"><span>reFlags:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="NodeKind.reFlags" href="regex/types.html#reFlags">NodeKind.reFlags</a></li>
+          </ul></dd>
 <dt><a name="Regex" href="#Regex"><span>Regex:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="nfatype: Regex" href="regex/nfatype.html#Regex">nfatype: Regex</a></li>
+          </ul></dd>
+<dt><a name="Regex2" href="#Regex2"><span>Regex2:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="nfatype: Regex2" href="regex/nfatype.html#Regex2">nfatype: Regex2</a></li>
           </ul></dd>
 <dt><a name="RegexError" href="#RegexError"><span>RegexError:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -716,9 +839,17 @@ window.addEventListener('DOMContentLoaded', main);
 <li><a class="reference external"
           data-doc-search-tag="nfatype: RegexMatch" href="regex/nfatype.html#RegexMatch">nfatype: RegexMatch</a></li>
           </ul></dd>
+<dt><a name="RegexMatch2" href="#RegexMatch2"><span>RegexMatch2:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="nfatype: RegexMatch2" href="regex/nfatype.html#RegexMatch2">nfatype: RegexMatch2</a></li>
+          </ul></dd>
 <dt><a name="RegexMatches" href="#RegexMatches"><span>RegexMatches:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="nfafindall: RegexMatches" href="regex/nfafindall.html#RegexMatches">nfafindall: RegexMatches</a></li>
+          </ul></dd>
+<dt><a name="RegexMatches2" href="#RegexMatches2"><span>RegexMatches2:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="nfafindall2: RegexMatches2" href="regex/nfafindall2.html#RegexMatches2">nfafindall2: RegexMatches2</a></li>
           </ul></dd>
 <dt><a name="reGroupEnd" href="#reGroupEnd"><span>reGroupEnd:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -763,6 +894,10 @@ window.addEventListener('DOMContentLoaded', main);
 <dt><a name="removeLast" href="#removeLast"><span>removeLast:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="nfatype: removeLast(sm: var SmLookaround)" href="regex/nfatype.html#removeLast%2CSmLookaround">nfatype: removeLast(sm: var SmLookaround)</a></li>
+          </ul></dd>
+<dt><a name="reNonCapture" href="#reNonCapture"><span>reNonCapture:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="regex: reNonCapture" href="regex.html#reNonCapture">regex: reNonCapture</a></li>
           </ul></dd>
 <dt><a name="reNotAlphaNum" href="#reNotAlphaNum"><span>reNotAlphaNum:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -861,6 +996,12 @@ window.addEventListener('DOMContentLoaded', main);
         limit = 0): string</a></li>
           <li><a class="reference external"
           data-doc-search-tag="regex: replace(s: string; pattern: Regex; by: string; limit = 0): string" href="regex.html#replace%2Cstring%2CRegex%2Cstring%2Cint">regex: replace(s: string; pattern: Regex; by: string; limit = 0): string</a></li>
+          <li><a class="reference external"
+          data-doc-search-tag="regex: replace(s: string; pattern: Regex2;
+        by: proc (m: RegexMatch2; s: string): string; limit = 0): string" href="regex.html#replace%2Cstring%2CRegex2%2Cproc%28RegexMatch2%2Cstring%29%2Cint">regex: replace(s: string; pattern: Regex2;
+        by: proc (m: RegexMatch2; s: string): string; limit = 0): string</a></li>
+          <li><a class="reference external"
+          data-doc-search-tag="regex: replace(s: string; pattern: Regex2; by: string; limit = 0): string" href="regex.html#replace%2Cstring%2CRegex2%2Cstring%2Cint">regex: replace(s: string; pattern: Regex2; by: string; limit = 0): string</a></li>
           </ul></dd>
 <dt><a name="reRepRange" href="#reRepRange"><span>reRepRange:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -907,6 +1048,10 @@ window.addEventListener('DOMContentLoaded', main);
           data-doc-search-tag="nfamatch: reversedMatchImpl(smA, smB: var Submatches; text: string; nfa: Nfa;
                   look: var Lookaround; start, limit: int): int" href="regex/nfamatch.html#reversedMatchImpl%2CSubmatches%2CSubmatches%2Cstring%2CNfa%2CLookaround%2Cint%2Cint">nfamatch: reversedMatchImpl(smA, smB: var Submatches; text: string; nfa: Nfa;
                   look: var Lookaround; start, limit: int): int</a></li>
+          <li><a class="reference external"
+          data-doc-search-tag="nfamatch2: reversedMatchImpl(smA, smB: var Submatches; text: string; nfa: Nfa;
+                  look: var Lookaround; groupsLen: int; start, limit: int): int" href="regex/nfamatch2.html#reversedMatchImpl%2CSubmatches%2CSubmatches%2Cstring%2CNfa%2CLookaround%2Cint%2Cint%2Cint">nfamatch2: reversedMatchImpl(smA, smB: var Submatches; text: string; nfa: Nfa;
+                  look: var Lookaround; groupsLen: int; start, limit: int): int</a></li>
           </ul></dd>
 <dt><a name="reWhiteSpace" href="#reWhiteSpace"><span>reWhiteSpace:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -998,19 +1143,31 @@ window.addEventListener('DOMContentLoaded', main);
 <li><a class="reference external"
           data-doc-search-tag="regex: split(s: string; sep: Regex): seq[string]" href="regex.html#split%2Cstring%2CRegex">regex: split(s: string; sep: Regex): seq[string]</a></li>
           <li><a class="reference external"
+          data-doc-search-tag="regex: split(s: string; sep: Regex2): seq[string]" href="regex.html#split%2Cstring%2CRegex2">regex: split(s: string; sep: Regex2): seq[string]</a></li>
+          <li><a class="reference external"
           data-doc-search-tag="regex: split(s: string; sep: Regex): string" href="regex.html#split.i%2Cstring%2CRegex">regex: split(s: string; sep: Regex): string</a></li>
+          <li><a class="reference external"
+          data-doc-search-tag="regex: split(s: string; sep: Regex2): string" href="regex.html#split.i%2Cstring%2CRegex2">regex: split(s: string; sep: Regex2): string</a></li>
           </ul></dd>
 <dt><a name="splitIncl" href="#splitIncl"><span>splitIncl:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="regex: splitIncl(s: string; sep: Regex): seq[string]" href="regex.html#splitIncl%2Cstring%2CRegex">regex: splitIncl(s: string; sep: Regex): seq[string]</a></li>
+          <li><a class="reference external"
+          data-doc-search-tag="regex: splitIncl(s: string; sep: Regex2): seq[string]" href="regex.html#splitIncl%2Cstring%2CRegex2">regex: splitIncl(s: string; sep: Regex2): seq[string]</a></li>
           </ul></dd>
 <dt><a name="startsWith" href="#startsWith"><span>startsWith:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="regex: startsWith(s: string; pattern: Regex; start = 0): bool" href="regex.html#startsWith%2Cstring%2CRegex%2Cint">regex: startsWith(s: string; pattern: Regex; start = 0): bool</a></li>
+          <li><a class="reference external"
+          data-doc-search-tag="regex: startsWith(s: string; pattern: Regex2; start = 0): bool" href="regex.html#startsWith%2Cstring%2CRegex2%2Cint">regex: startsWith(s: string; pattern: Regex2; start = 0): bool</a></li>
           </ul></dd>
 <dt><a name="startsWithImpl" href="#startsWithImpl"><span>startsWithImpl:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="nfamatch: startsWithImpl(text: string; regex: Regex; start: int): bool" href="regex/nfamatch.html#startsWithImpl%2Cstring%2CRegex%2Cint">nfamatch: startsWithImpl(text: string; regex: Regex; start: int): bool</a></li>
+          </ul></dd>
+<dt><a name="startsWithImpl2" href="#startsWithImpl2"><span>startsWithImpl2:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="nfamatch2: startsWithImpl2(text: string; regex: Regex; start: int): bool" href="regex/nfamatch2.html#startsWithImpl2%2Cstring%2CRegex%2Cint">nfamatch2: startsWithImpl2(text: string; regex: Regex; start: int): bool</a></li>
           </ul></dd>
 <dt><a name="SubExp" href="#SubExp"><span>SubExp:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -1066,6 +1223,10 @@ window.addEventListener('DOMContentLoaded', main);
 <li><a class="reference external"
           data-doc-search-tag="types: TransitionsAll" href="regex/types.html#TransitionsAll">types: TransitionsAll</a></li>
           </ul></dd>
+<dt><a name="unfreeze" href="#unfreeze"><span>unfreeze:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="nfatype: unfreeze(capts: var Capts3; freezeId: CaptState)" href="regex/nfatype.html#unfreeze%2CCapts3%2CCaptState">nfatype: unfreeze(capts: var Capts3; freezeId: CaptState)</a></li>
+          </ul></dd>
 <dt><a name="ZclosureStates" href="#ZclosureStates"><span>ZclosureStates:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="types: ZclosureStates" href="regex/types.html#ZclosureStates">types: ZclosureStates</a></li>
@@ -1075,7 +1236,7 @@ window.addEventListener('DOMContentLoaded', main);
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br/>
-        <small style="color: var(--hint);">Made with Nim. Generated: 2021-01-06 13:01:33 UTC</small>
+        <small style="color: var(--hint);">Made with Nim. Generated: 2023-08-13 19:52:48 UTC</small>
       </div>
     </div>
   </div>

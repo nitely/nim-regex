@@ -34,7 +34,6 @@ function main() {
     }
   }
 
-  const toggleSwitch = document.querySelector('.theme-switch input[type="checkbox"]');
   function switchTheme(e) {
       if (e.target.checked) {
           document.documentElement.setAttribute('data-theme', 'dark');
@@ -45,13 +44,19 @@ function main() {
       }
   }
 
-  toggleSwitch.addEventListener('change', switchTheme, false);
+  const toggleSwitch = document.querySelector('.theme-switch input[type="checkbox"]');
+  if (toggleSwitch !== null) {
+    toggleSwitch.addEventListener('change', switchTheme, false);
+  }
 
-  const currentTheme = localStorage.getItem('theme') ? localStorage.getItem('theme') : null;
+  var currentTheme = localStorage.getItem('theme');
+  if (!currentTheme && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+    currentTheme = 'dark';
+  }
   if (currentTheme) {
     document.documentElement.setAttribute('data-theme', currentTheme);
 
-    if (currentTheme === 'dark') {
+    if (currentTheme === 'dark' && toggleSwitch !== null) {
       toggleSwitch.checked = true;
     }
   }
@@ -102,12 +107,12 @@ window.addEventListener('DOMContentLoaded', main);
 <li>
   <a class="reference reference-toplevel" href="#7" id="57">Types</a>
   <ul class="simple simple-toc-section">
-      <li><a class="reference" href="#Exp"
-    title="Exp = object
-  s*: seq[Node]">Exp</a></li>
-  <li><a class="reference" href="#AtomsExp"
+      <li><a class="reference" href="#AtomsExp"
     title="AtomsExp = object
   s*: seq[Node]">AtomsExp</a></li>
+  <li><a class="reference" href="#Exp"
+    title="Exp = object
+  s*: seq[Node]">Exp</a></li>
 
   </ul>
 </li>
@@ -128,16 +133,7 @@ window.addEventListener('DOMContentLoaded', main);
 <div class="section" id="7">
 <h1><a class="toc-backref" href="#7">Types</a></h1>
 <dl class="item">
-<a id="Exp"></a>
-<dt><pre><a href="exptype.html#Exp"><span class="Identifier">Exp</span></a> <span class="Other">=</span> <span class="Keyword">object</span>
-  <span class="Identifier">s</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><a href="types.html#Node"><span class="Identifier">Node</span></a><span class="Other">]</span>
-</pre></dt>
-<dd>
-
-
-
-</dd>
-<a id="AtomsExp"></a>
+<div id="AtomsExp">
 <dt><pre><a href="exptype.html#AtomsExp"><span class="Identifier">AtomsExp</span></a> <span class="Other">=</span> <span class="Keyword">object</span>
   <span class="Identifier">s</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><a href="types.html#Node"><span class="Identifier">Node</span></a><span class="Other">]</span>
 </pre></dt>
@@ -146,6 +142,17 @@ window.addEventListener('DOMContentLoaded', main);
 
 
 </dd>
+</div>
+<div id="Exp">
+<dt><pre><a href="exptype.html#Exp"><span class="Identifier">Exp</span></a> <span class="Other">=</span> <span class="Keyword">object</span>
+  <span class="Identifier">s</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><a href="types.html#Node"><span class="Identifier">Node</span></a><span class="Other">]</span>
+</pre></dt>
+<dd>
+
+
+
+</dd>
+</div>
 
 </dl></div>
 
@@ -156,7 +163,7 @@ window.addEventListener('DOMContentLoaded', main);
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br/>
-        <small style="color: var(--hint);">Made with Nim. Generated: 2021-01-06 13:01:28 UTC</small>
+        <small style="color: var(--hint);">Made with Nim. Generated: 2023-08-13 19:52:43 UTC</small>
       </div>
     </div>
   </div>

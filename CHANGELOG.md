@@ -1,6 +1,7 @@
 v0.21.0
 ==================
 
+* Deprecated all of the APIs (except the macro one)
 * New API (issue #111)
 * Removed the "capture all group/submatch repetitions" feature.
   Only the last group repetition is captured.

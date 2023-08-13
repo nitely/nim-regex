@@ -110,9 +110,11 @@ window.addEventListener('DOMContentLoaded', main);
 <li><a class="reference" id="syntax-ascii-character-classes_toc" href="#syntax-ascii-character-classes">ASCII character classes</a></li>
 <li><a class="reference" id="syntax-lookaround-assertions_toc" href="#syntax-lookaround-assertions">Lookaround Assertions</a></li>
 </ul><li><a class="reference" id="examples_toc" href="#examples">Examples</a></li>
-<ul class="simple"><li><a class="reference" id="examples-captures_toc" href="#examples-captures">Captures</a></li>
-<li><a class="reference" id="examples-verbose-mode_toc" href="#examples-verbose-mode">Verbose Mode</a></li>
+<ul class="simple"><li><a class="reference" id="examples-match_toc" href="#examples-match">Match</a></li>
+<li><a class="reference" id="examples-captures_toc" href="#examples-captures">Captures</a></li>
+<li><a class="reference" id="examples-find_toc" href="#examples-find">Find</a></li>
 <li><a class="reference" id="examples-find-all_toc" href="#examples-find-all">Find All</a></li>
+<li><a class="reference" id="examples-verbose-mode_toc" href="#examples-verbose-mode">Verbose Mode</a></li>
 <li><a class="reference" id="examples-match-macro_toc" href="#examples-match-macro">Match Macro</a></li>
 </ul><li>
   <a class="reference reference-toplevel" href="#6" id="56">Imports</a>
@@ -445,23 +447,34 @@ window.addEventListener('DOMContentLoaded', main);
 <span class="Punctuation">(</span><span class="Operator">?&lt;!</span><span class="Identifier">regex</span><span class="Punctuation">)</span>  <span class="Identifier">A</span> <span class="Identifier">negative</span> <span class="Identifier">lookbehind</span> <span class="Identifier">assertion</span></pre><p>Any regex expression is a valid lookaround; groups are captured as well. Beware, lookarounds containing repetitions (<tt class="docutils literal"><span class="pre">*</span></tt>, <tt class="docutils literal"><span class="pre">+</span></tt>, and <tt class="docutils literal"><span class="pre">{n,}</span></tt>) may run in polynomial time.</p>
 
 <h1><a class="toc-backref" id="examples" href="#examples">Examples</a></h1>
-<h2><a class="toc-backref" id="examples-captures" href="#examples-captures">Captures</a></h2><p>Like most other regex engines, this library only captures the last repetition in a repeated group (<tt class="docutils literal"><span class="pre">*</span></tt>, <tt class="docutils literal"><span class="pre">+</span></tt>, <tt class="docutils literal"><span class="pre">{n}</span></tt>). The space complexity for captures is <tt class="docutils literal"><span class="pre">O(regex_len * groups_count)</span></tt>, and so it can be used to match untrusted text.</p>
+<h2><a class="toc-backref" id="examples-match" href="#examples-match">Match</a></h2><p>The <tt class="docutils literal"><span class="pre">match</span></tt> function match a text from start to end, similar to <tt class="docutils literal"><span class="pre">^regex$</span></tt>. This means the whole text needs to match the regex for this function to return <tt class="docutils literal"><span class="pre">true</span></tt>.</p>
 <pre class="listing"><span class="Keyword">let</span> <span class="Identifier">text</span> <span class="Operator">=</span> <span class="StringLit">&quot;nim c --styleCheck:hint --colors:off regex.nim&quot;</span>
 <span class="Keyword">var</span> <span class="Identifier">m</span><span class="Punctuation">:</span> <span class="Identifier">RegexMatch2</span>
 <span class="Keyword">if</span> <span class="Identifier">match</span><span class="Punctuation">(</span><span class="Identifier">text</span><span class="Punctuation">,</span> <span class="RawData">re2&quot;nim c (?:--(\w+:\w+) *)+ (\w+).nim&quot;</span><span class="Punctuation">,</span> <span class="Identifier">m</span><span class="Punctuation">)</span><span class="Punctuation">:</span>
   <span class="Identifier">doAssert</span> <span class="Identifier">text</span><span class="Punctuation">[</span><span class="Identifier">m</span><span class="Operator">.</span><span class="Identifier">group</span><span class="Punctuation">(</span><span class="DecNumber">0</span><span class="Punctuation">)</span><span class="Punctuation">]</span> <span class="Operator">==</span> <span class="StringLit">&quot;colors:off&quot;</span>
   <span class="Identifier">doAssert</span> <span class="Identifier">text</span><span class="Punctuation">[</span><span class="Identifier">m</span><span class="Operator">.</span><span class="Identifier">group</span><span class="Punctuation">(</span><span class="DecNumber">1</span><span class="Punctuation">)</span><span class="Punctuation">]</span> <span class="Operator">==</span> <span class="StringLit">&quot;regex&quot;</span>
 <span class="Keyword">else</span><span class="Punctuation">:</span>
-  <span class="Identifier">doAssert</span> <span class="Identifier">false</span><span class="Punctuation">,</span> <span class="StringLit">&quot;no match&quot;</span></pre><p>To check if a capture group didn't match you can use <tt class="docutils literal"><span class="pre">reNonCapture</span></tt>. For example <tt class="docutils literal"><span class="pre">doAssert m.group(0) == reNonCapture</span></tt>.</p>
+  <span class="Identifier">doAssert</span> <span class="Identifier">false</span><span class="Punctuation">,</span> <span class="StringLit">&quot;no match&quot;</span></pre>
+<h2><a class="toc-backref" id="examples-captures" href="#examples-captures">Captures</a></h2><p>Like most other regex engines, this library only captures the last repetition in a repeated group (<tt class="docutils literal"><span class="pre">*</span></tt>, <tt class="docutils literal"><span class="pre">+</span></tt>, <tt class="docutils literal"><span class="pre">{n}</span></tt>). Note how in the previous example both <tt class="docutils literal"><span class="pre">styleCheck:hint</span></tt> and <tt class="docutils literal"><span class="pre">colors:off</span></tt> are matched in the same group but only the last captured match (<tt class="docutils literal"><span class="pre">colors:off</span></tt>) is returned.</p>
+<p>To check if a capture group did match you can use <tt class="docutils literal"><span class="pre">reNonCapture</span></tt>. For example <tt class="docutils literal"><span class="pre">doAssert m.group(0) != reNonCapture</span></tt>. This is useful to disambiguate empty captures and non-matched captures. Since both return an empty string when slicing the text.</p>
+<p>The space complexity for captures is <tt class="docutils literal"><span class="pre">O(regex_len * groups_count)</span></tt>, and so it can be used to match untrusted text.</p>
 
-<h2><a class="toc-backref" id="examples-verbose-mode" href="#examples-verbose-mode">Verbose Mode</a></h2><p>Verbose mode <tt class="docutils literal"><span class="pre"><span class="Punctuation">(</span><span class="Operator">?</span><span class="Identifier">x</span><span class="Punctuation">)</span></span></tt> makes regexes more readable by allowing comments and multi-lines within the regular expression itself. The caveat is spaces and pound signs must be scaped to be matched.</p>
-<pre class="listing"><span class="Keyword">const</span> <span class="Identifier">exp</span> <span class="Operator">=</span> <span class="LongStringLit">re2&quot;&quot;&quot;(?x)
-\#   # the hashtag
-\w+  # hashtag words
+<h2><a class="toc-backref" id="examples-find" href="#examples-find">Find</a></h2><p>The <tt class="docutils literal"><span class="pre">find</span></tt> function will find the first piece of text that match a given regex.</p>
+<pre class="listing"><span class="Keyword">let</span> <span class="Identifier">text</span> <span class="Operator">=</span> <span class="LongStringLit">&quot;&quot;&quot;
+The Continental's email list:
+john_wick@continental.com
+winston@continental.com
+ms_perkins@continental.com
 &quot;&quot;&quot;</span>
-<span class="Keyword">let</span> <span class="Identifier">text</span> <span class="Operator">=</span> <span class="StringLit">&quot;#NimLang&quot;</span>
-<span class="Identifier">doAssert</span> <span class="Identifier">match</span><span class="Punctuation">(</span><span class="Identifier">text</span><span class="Punctuation">,</span> <span class="Identifier">exp</span><span class="Punctuation">)</span></pre>
-<h2><a class="toc-backref" id="examples-find-all" href="#examples-find-all">Find All</a></h2><p>The <tt class="docutils literal"><span class="pre"><span class="Identifier">findAll</span></span></tt> function will find all boundaries and captures that match the regular expression.</p>
+<span class="Keyword">var</span> <span class="Identifier">match</span> <span class="Operator">=</span> <span class="StringLit">&quot;&quot;</span>
+<span class="Keyword">var</span> <span class="Identifier">capture</span> <span class="Operator">=</span> <span class="StringLit">&quot;&quot;</span>
+<span class="Keyword">var</span> <span class="Identifier">m</span><span class="Punctuation">:</span> <span class="Identifier">RegexMatch2</span>
+<span class="Keyword">if</span> <span class="Identifier">find</span><span class="Punctuation">(</span><span class="Identifier">text</span><span class="Punctuation">,</span> <span class="RawData">re2&quot;(\w+)@\w+\.\w+&quot;</span><span class="Punctuation">,</span> <span class="Identifier">m</span><span class="Punctuation">)</span><span class="Punctuation">:</span>
+  <span class="Identifier">match</span> <span class="Operator">=</span> <span class="Identifier">text</span><span class="Punctuation">[</span><span class="Identifier">m</span><span class="Operator">.</span><span class="Identifier">boundaries</span><span class="Punctuation">]</span>
+  <span class="Identifier">capture</span> <span class="Operator">=</span> <span class="Identifier">text</span><span class="Punctuation">[</span><span class="Identifier">m</span><span class="Operator">.</span><span class="Identifier">group</span><span class="Punctuation">(</span><span class="DecNumber">0</span><span class="Punctuation">)</span><span class="Punctuation">]</span>
+<span class="Identifier">doAssert</span> <span class="Identifier">match</span> <span class="Operator">==</span> <span class="StringLit">&quot;john_wick@continental.com&quot;</span>
+<span class="Identifier">doAssert</span> <span class="Identifier">capture</span> <span class="Operator">==</span> <span class="StringLit">&quot;john_wick&quot;</span></pre>
+<h2><a class="toc-backref" id="examples-find-all" href="#examples-find-all">Find All</a></h2><p>The <tt class="docutils literal"><span class="pre"><span class="Identifier">findAll</span></span></tt> function will find all pieces of text that match a given regex, returning their boundaries and captures/submatches.</p>
 <pre class="listing"><span class="Keyword">let</span> <span class="Identifier">text</span> <span class="Operator">=</span> <span class="LongStringLit">&quot;&quot;&quot;
 The Continental's email list:
 john_wick@continental.com
@@ -479,6 +492,13 @@ ms_perkins@continental.com
   <span class="StringLit">&quot;ms_perkins@continental.com&quot;</span>
 <span class="Punctuation">]</span>
 <span class="Identifier">doAssert</span> <span class="Identifier">captures</span> <span class="Operator">==</span> <span class="Operator">@</span><span class="Punctuation">[</span><span class="StringLit">&quot;john_wick&quot;</span><span class="Punctuation">,</span> <span class="StringLit">&quot;winston&quot;</span><span class="Punctuation">,</span> <span class="StringLit">&quot;ms_perkins&quot;</span><span class="Punctuation">]</span></pre>
+<h2><a class="toc-backref" id="examples-verbose-mode" href="#examples-verbose-mode">Verbose Mode</a></h2><p>Verbose mode <tt class="docutils literal"><span class="pre"><span class="Punctuation">(</span><span class="Operator">?</span><span class="Identifier">x</span><span class="Punctuation">)</span></span></tt> makes regexes more readable by allowing comments and multi-lines within the regular expression itself. The caveat is spaces and pound signs must be scaped to be matched.</p>
+<pre class="listing"><span class="Keyword">const</span> <span class="Identifier">exp</span> <span class="Operator">=</span> <span class="LongStringLit">re2&quot;&quot;&quot;(?x)
+\#   # the hashtag
+\w+  # hashtag words
+&quot;&quot;&quot;</span>
+<span class="Keyword">let</span> <span class="Identifier">text</span> <span class="Operator">=</span> <span class="StringLit">&quot;#NimLang&quot;</span>
+<span class="Identifier">doAssert</span> <span class="Identifier">match</span><span class="Punctuation">(</span><span class="Identifier">text</span><span class="Punctuation">,</span> <span class="Identifier">exp</span><span class="Punctuation">)</span></pre>
 <h2><a class="toc-backref" id="examples-match-macro" href="#examples-match-macro">Match Macro</a></h2><p>The <tt class="docutils literal"><span class="pre">match</span></tt> macro is sometimes more convenient, and faster than the function version. It will run a full match on the whole string, similar to <tt class="docutils literal"><span class="pre"><span class="Operator">^</span><span class="Identifier">regex</span><span class="Operator">$</span></span></tt>.</p>
 <p>A <tt class="docutils literal"><span class="pre">matches: seq[string]</span></tt> variable is injected into the scope, and it contains the submatches for every capture group.</p>
 <pre class="listing"><span class="Keyword">var</span> <span class="Identifier">matched</span> <span class="Operator">=</span> <span class="Identifier">false</span>
@@ -1252,7 +1272,7 @@ return not matched substrings
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br/>
-        <small style="color: var(--hint);">Made with Nim. Generated: 2023-08-13 19:52:48 UTC</small>
+        <small style="color: var(--hint);">Made with Nim. Generated: 2023-08-13 20:35:32 UTC</small>
       </div>
     </div>
   </div>

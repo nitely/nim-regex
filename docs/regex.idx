@@ -68,7 +68,9 @@ Perl character classes (Unicode friendly)	regex.html#syntax-perl-character-class
 ASCII character classes	regex.html#syntax-ascii-character-classes	  ASCII character classes	
 Lookaround Assertions	regex.html#syntax-lookaround-assertions	  Lookaround Assertions	
 Examples	regex.html#examples	 Examples	
+Match	regex.html#examples-match	  Match	
 Captures	regex.html#examples-captures	  Captures	
-Verbose Mode	regex.html#examples-verbose-mode	  Verbose Mode	
+Find	regex.html#examples-find	  Find	
 Find All	regex.html#examples-find-all	  Find All	
+Verbose Mode	regex.html#examples-verbose-mode	  Verbose Mode	
 Match Macro	regex.html#examples-match-macro	  Match Macro	

@@ -1,7 +1,7 @@
 from std/unicode import runeLen
 from std/sequtils import map
 
-import ./regex
+import ../src/regex
 
 const nonCapture = reNonCapture
 

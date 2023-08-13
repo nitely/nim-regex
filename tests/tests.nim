@@ -1,6 +1,6 @@
 from std/sequtils import map
 
-import ./regex
+import ../src/regex
 
 {.push warning[Deprecated]: off.}
 

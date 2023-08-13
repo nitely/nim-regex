@@ -163,14 +163,11 @@ polynomial time.
 Examples
 ********
 
-Captures
-#################
+Match
+#####
 
-Like most other regex engines, this library only
-captures the last repetition in a repeated group
-(``*``, ``+``, ``{n}``). The space complexity for
-captures is ``O(regex_len * groups_count)``, and so
-it can be used to match untrusted text.
+The ``match`` function match a text from start to end, similar to ``^regex$``.
+This means the whole text needs to match the regex for this function to return ``true``.
 
 .. code-block:: nim
     :test:
@@ -182,31 +179,53 @@ it can be used to match untrusted text.
     else:
       doAssert false, "no match"
 
-To check if a capture group didn't match you can use ``reNonCapture``.
-For example ``doAssert m.group(0) == reNonCapture``.
+Captures
+########
 
-Verbose Mode
-############
+Like most other regex engines, this library only
+captures the last repetition in a repeated group
+(``*``, ``+``, ``{n}``). Note how in the previous example
+both ``styleCheck:hint`` and ``colors:off`` are matched in
+the same group but only the last captured match (``colors:off``)
+is returned.
 
-Verbose mode `(?x)` makes regexes more readable by allowing
-comments and multi-lines within the regular expression
-itself. The caveat is spaces and pound signs must be
-scaped to be matched.
+To check if a capture group did match you can use ``reNonCapture``.
+For example ``doAssert m.group(0) != reNonCapture``. This is useful
+to disambiguate empty captures and non-matched captures. Since both return
+an empty string when slicing the text.
+
+The space complexity for captures is ``O(regex_len * groups_count)``,
+and so it can be used to match untrusted text.
+
+Find
+####
+
+The ``find`` function will find the first piece of text that
+match a given regex.
 
 .. code-block:: nim
     :test:
-    const exp = re2"""(?x)
-    \#   # the hashtag
-    \w+  # hashtag words
+    let text = """
+    The Continental's email list:
+    john_wick@continental.com
+    winston@continental.com
+    ms_perkins@continental.com
     """
-    let text = "#NimLang"
-    doAssert match(text, exp) 
+    var match = ""
+    var capture = ""
+    var m: RegexMatch2
+    if find(text, re2"(\w+)@\w+\.\w+", m):
+      match = text[m.boundaries]
+      capture = text[m.group(0)]
+    doAssert match == "john_wick@continental.com"
+    doAssert capture == "john_wick"
 
 Find All
 ########
 
-The `findAll` function will find all boundaries
-and captures that match the regular expression.
+The `findAll` function will find all pieces of text
+that match a given regex, returning their boundaries
+and captures/submatches.
 
 .. code-block:: nim
     :test:
@@ -227,6 +246,23 @@ and captures that match the regular expression.
       "ms_perkins@continental.com"
     ]
     doAssert captures == @["john_wick", "winston", "ms_perkins"]
+
+Verbose Mode
+############
+
+Verbose mode `(?x)` makes regexes more readable by allowing
+comments and multi-lines within the regular expression
+itself. The caveat is spaces and pound signs must be
+scaped to be matched.
+
+.. code-block:: nim
+    :test:
+    const exp = re2"""(?x)
+    \#   # the hashtag
+    \w+  # hashtag words
+    """
+    let text = "#NimLang"
+    doAssert match(text, exp) 
 
 Match Macro
 ###########

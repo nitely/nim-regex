@@ -3,7 +3,7 @@
 [![Build Status](https://img.shields.io/github/actions/workflow/status/nitely/nim-regex/ci.yml?style=flat-square)](https://github.com/nitely/nim-regex/actions?query=workflow%3ACI)
 [![licence](https://img.shields.io/github/license/nitely/nim-regex.svg?style=flat-square)](https://raw.githubusercontent.com/nitely/nim-regex/master/LICENSE)
 
-A library for parsing, compiling, and executing regular expressions.
+A library for parsing, compiling, and executing regular expressions at both runtime and compile-time.
 
 Features:
 

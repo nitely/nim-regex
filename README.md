@@ -8,10 +8,10 @@ A library for parsing, compiling, and executing regular expressions.
 Features:
 
 * The match time is linear in the length of the input string
-* Regular expressions are (optionally) compiled at compile-time
+* Supports compiling regex at compile-time
+* Supports matching at compile-time
 * Unicode level-1 support
 * Descriptive error messages
-* Supports matching at compile-time (Nim +0.20)
 * PCRE syntax and semantics
 
 ## Install

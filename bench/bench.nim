@@ -3,13 +3,15 @@ import unicode
 from re import nil
 from regex import nil
 
-var text = ""
-for _ in 0 .. 100000:
-  text.add("a")
-text.add("sol")
-for _ in 0 .. 100000:
-  text.add("b")
-#text.add("ฅ")
+func genText(): string {.compileTime.} =
+  result = ""
+  for _ in 0 .. 100000:
+    result.add("a")
+  result.add("sol")
+  for _ in 0 .. 100000:
+    result.add("b")
+  #result.add("ฅ")
+const text = genText()
 
 var pattern2 = re.re"^\w*sol\w*$"
 
@@ -19,10 +21,10 @@ bench(re_sol, m):
     d = re.match(text, pattern2)
   doNotOptimizeAway(d)
 
-const pattern4 = regex.re(r"\w*sol\w*") #, {regex.RegexFlag.reAscii})
+const pattern4 = regex.re2(r"\w*sol\w*") #, {regex.RegexFlag.reAscii})
 
 benchRelative(regex_sol, m):
-  var m2: regex.RegexMatch
+  var m2: regex.RegexMatch2
   for i in 0 ..< m:
     discard regex.match(text, pattern4, m2)
   doNotOptimizeAway(m2)
@@ -44,10 +46,10 @@ bench(re_nums, m):
     d = re.match(dummyTextNums, pattern_nums)
   doNotOptimizeAway(d)
 
-const n_pattern_nums = regex.re"[0-9]+-[0-9]+-[0-9]+"
+const n_pattern_nums = regex.re2"[0-9]+-[0-9]+-[0-9]+"
 
 benchRelative(regex_nums, m):
-  var m2: regex.RegexMatch
+  var m2: regex.RegexMatch2
   for i in 0 ..< m:
     discard regex.match(dummyTextNums, n_pattern_nums, m2)
   doNotOptimizeAway(m2)
@@ -67,10 +69,10 @@ bench(re_nums2, m):
     d = re.match(dummyTextNums, pattern_nums2)
   doNotOptimizeAway(d)
 
-const n_pattern_nums2 = regex.re"[0-9]+..*"
+const n_pattern_nums2 = regex.re2"[0-9]+..*"
 
 benchRelative(regex_nums2, m):
-  var m3: regex.RegexMatch
+  var m3: regex.RegexMatch2
   for i in 0 ..< m:
     discard regex.match(dummyTextNums, n_pattern_nums2, m3)
   doNotOptimizeAway(m3)
@@ -91,10 +93,10 @@ when false:  # XXX remove
       d = re.find(text, lits_find_re)
     doNotOptimizeAway(d)
 
-  const lits_find = regex.re"do|re|mi|fa|sol"
+  const lits_find = regex.re2"do|re|mi|fa|sol"
 
   benchRelative(regex_lits_find, m):
-    var m2: regex.RegexMatch
+    var m2: regex.RegexMatch2
     for i in 0 ..< m:
       discard regex.find(text, lits_find, m2)
     doNotOptimizeAway(m2)
@@ -111,7 +113,7 @@ bench(re_email_find_all, m):
   doAssert d == 92
   doNotOptimizeAway(d)
 
-const email_find_all = regex.re"[\w\.+-]+@[\w\.-]+\.[\w\.-]+"
+const email_find_all = regex.re2"[\w\.+-]+@[\w\.-]+\.[\w\.-]+"
 
 benchRelative(regex_email_find_all, m):
   var d = 0
@@ -131,7 +133,7 @@ bench(re_uri_find_all, m):
   doAssert d == 5301
   doNotOptimizeAway(d)
 
-const uri_find_all = regex.re"[\w]+://[^/\s?#]+[^\s?#]+(?:\?[^\s#]*)?(?:#[^\s]*)?"
+const uri_find_all = regex.re2"[\w]+://[^/\s?#]+[^\s?#]+(?:\?[^\s#]*)?(?:#[^\s]*)?"
 
 benchRelative(regex_uri_find_all, m):
   var d = 0
@@ -151,7 +153,7 @@ bench(re_ip_find_all, m):
   doAssert d == 5
   doNotOptimizeAway(d)
 
-const ip_find_all = regex.re"(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9])\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9])"
+const ip_find_all = regex.re2"(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9])\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9])"
 
 benchRelative(regex_ip_find_all, m):
   var d = 0
@@ -175,3 +177,11 @@ bench(dummy, m):
 
 when isMainModule:
   runBenchmarks()
+
+#[
+# Profiling:
+# (but extract the bench to another module without nimbench)
+# open the log with KCachegrind
+
+$ nim c --debugger:native --threads:off -d:danger -d:useMalloc -o:bin/bench2 bench/bench2.nim && valgrind --tool=callgrind -v ./bin/bench2
+]#

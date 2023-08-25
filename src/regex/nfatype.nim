@@ -226,8 +226,13 @@ type
     namedGroups*: OrderedTable[string, int16]
     #flags*: set[RegexFlag]
     litOpt*: LitOpt
-  Regex2* = distinct Regex
+  Regex2* = object
     ## a compiled regular expression
+    nfa*: Nfa
+    groupsCount*: int16
+    namedGroups*: OrderedTable[string, int16]
+    #flags*: set[RegexFlag]
+    litOpt*: LitOpt
   MatchFlag* = enum
     mfShortestMatch
     mfNoCaptures
@@ -247,6 +252,12 @@ type
     captures*: seq[Slice[int]]
     namedGroups*: OrderedTable[string, int16]
     boundaries*: Slice[int]
+
+proc toRegex2*(r: Regex): Regex2 =
+  Regex2(nfa: r.nfa, groupsCount: r.groupsCount, namedGroups: r.namedGroups, litOpt: r.litOpt)
+
+proc toRegex*(r: Regex2): Regex =
+  Regex(nfa: r.nfa, groupsCount: r.groupsCount, namedGroups: r.namedGroups, litOpt: r.litOpt)
 
 func clear*(m: var RegexMatch) {.inline.} =
   if m.captures.len > 0:

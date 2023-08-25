@@ -80,7 +80,8 @@ template nextStateTpl(bwMatch = false): untyped {.dirty.} =
       if not smB.hasState n:
         smB.add (n, capt, bounds)
       break
-    for nti, nt in pairs nfa.s[n].next:
+    # issue #125
+    for nti, nt in pairs toOpenArray(nfa.s[n].next, 0, nfa.s[n].next.len-1):
       if smB.hasState nt:
         continue
       if not match(nfa.s[nt], c):

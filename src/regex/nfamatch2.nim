@@ -67,11 +67,22 @@ template lookAroundTpl*: untyped {.dirty.} =
     false
   smL.removeLast()
 
+func isEpsilonTransition(n: Node): bool {.inline.} =
+  result = case n.kind
+  of groupKind, assertionKind:
+    true
+  else:
+    false
+
+template s(nfa: openArray[Node]): untyped =
+  nfa
+
 template nextStateTpl(bwMatch = false): untyped {.dirty.} =
   template bounds2: untyped =
     when bwMatch: i .. bounds.b else: bounds.a .. i-1
   template captElm: untyped =
-    capts[captx, z.idx]
+    capts[captx, nfa.s[nt].idx]
+  template z: untyped = nfa.s[nt]
   smB.clear()
   for n, capt, bounds in items smA:
     if capt != -1:
@@ -80,24 +91,29 @@ template nextStateTpl(bwMatch = false): untyped {.dirty.} =
       if not smB.hasState n:
         smB.add (n, capt, bounds)
       break
-    for nti, nt in pairs nfa.s[n].next:
-      if smB.hasState nt:
-        continue
-      if not match(nfa.s[nt], c):
-        if not (anchored and nfa.s[nt].kind == reEoe):
-          continue
-      if nfa.t.allZ[n][nti] == -1'i16:
-        smB.add (nt, capt, bounds2)
-        continue
-      matched = true
-      captx = capt
-      for z in nfa.t.z[nfa.t.allZ[n][nti]]:
+    matched = true
+    captx = capt
+    for nti, nt in pairs toOpenArray(nfa.s[n].next, 0, nfa.s[n].next.len-1):
+      if not isEpsilonTransition(nfa.s[n]):
         if not matched:
-          break
-        case z.kind
+          matched = true
+          captx = capt
+          continue
+        if smB.hasState nt:
+          captx = capt
+          continue
+        if not match(nfa.s[nt], c):
+          if not (anchored and nfa.s[nt].kind == reEoe):
+            captx = capt
+            continue
+        smB.add (nt, captx, bounds2)
+        captx = capt
+        continue
+      if not matched:
+        continue
+      case nfa.s[nt].kind
         of reGroupStart:
-          # XXX this can be avoided on 1st z loop iteration
-          #     and also on 1st nti loop iteration
+          # XXX this can be avoided in some cases?
           captx = capts.diverge captx
           if mfReverseCapts notin flags or
               captElm.a == nonCapture.a:
@@ -109,9 +125,9 @@ template nextStateTpl(bwMatch = false): untyped {.dirty.} =
             captElm.b = i-1
         of assertionKind - lookaroundKind:
           when bwMatch:
-            matched = match(z, c, cPrev.Rune)
+            matched = match(nfa.s[nt], c, cPrev.Rune)
           else:
-            matched = match(z, cPrev.Rune, c)
+            matched = match(nfa.s[nt], cPrev.Rune, c)
         of lookaroundKind:
           let freezed = capts.freeze()
           lookAroundTpl()
@@ -121,8 +137,6 @@ template nextStateTpl(bwMatch = false): untyped {.dirty.} =
         else:
           doAssert false
           discard
-      if matched:
-        smB.add (nt, captx, bounds2)
   swap smA, smB
   capts.recycle()
 

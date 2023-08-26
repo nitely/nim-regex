@@ -253,11 +253,22 @@ type
     namedGroups*: OrderedTable[string, int16]
     boundaries*: Slice[int]
 
-proc toRegex2*(r: Regex): Regex2 =
+{.push inline, noSideEffect.}
+converter toRegex2*(r: var Regex): Regex2 =
+  result = Regex2(nfa: r.nfa, groupsCount: r.groupsCount, namedGroups: r.namedGroups, litOpt: r.litOpt)
+  r.wasMoved()
+
+converter toRegex*(r: var Regex2): Regex =
+  result = Regex(nfa: r.nfa, groupsCount: r.groupsCount, namedGroups: r.namedGroups, litOpt: r.litOpt)
+  r.wasMoved()
+
+converter toRegex2*(r: Regex): Regex2 =
   Regex2(nfa: r.nfa, groupsCount: r.groupsCount, namedGroups: r.namedGroups, litOpt: r.litOpt)
 
-proc toRegex*(r: Regex2): Regex =
+converter toRegex*(r: Regex2): Regex =
   Regex(nfa: r.nfa, groupsCount: r.groupsCount, namedGroups: r.namedGroups, litOpt: r.litOpt)
+
+{.pop.}
 
 func clear*(m: var RegexMatch) {.inline.} =
   if m.captures.len > 0:

@@ -226,13 +226,6 @@ type
     namedGroups*: OrderedTable[string, int16]
     #flags*: set[RegexFlag]
     litOpt*: LitOpt
-  Regex2* = object
-    ## a compiled regular expression
-    nfa*: Nfa
-    groupsCount*: int16
-    namedGroups*: OrderedTable[string, int16]
-    #flags*: set[RegexFlag]
-    litOpt*: LitOpt
   MatchFlag* = enum
     mfShortestMatch
     mfNoCaptures
@@ -253,22 +246,34 @@ type
     namedGroups*: OrderedTable[string, int16]
     boundaries*: Slice[int]
 
-{.push inline, noSideEffect.}
-converter toRegex2*(r: var Regex): Regex2 =
-  result = Regex2(nfa: r.nfa, groupsCount: r.groupsCount, namedGroups: r.namedGroups, litOpt: r.litOpt)
-  r.wasMoved()
+when defined(js) and (NimMajor, NimMinor) >= (1, 6) and (NimMajor, NimMinor) <= (1, 7):
+  type
+    Regex2* = object
+      ## a compiled regular expression
+      nfa*: Nfa
+      groupsCount*: int16
+      namedGroups*: OrderedTable[string, int16]
+      #flags*: set[RegexFlag]
+      litOpt*: LitOpt
 
-converter toRegex*(r: var Regex2): Regex =
-  result = Regex(nfa: r.nfa, groupsCount: r.groupsCount, namedGroups: r.namedGroups, litOpt: r.litOpt)
-  r.wasMoved()
+  {.push inline, noSideEffect.}
+  converter toRegex2*(r: Regex): Regex2 =
+    Regex2(nfa: r.nfa, groupsCount: r.groupsCount, namedGroups: r.namedGroups, litOpt: r.litOpt)
 
-converter toRegex2*(r: Regex): Regex2 =
-  Regex2(nfa: r.nfa, groupsCount: r.groupsCount, namedGroups: r.namedGroups, litOpt: r.litOpt)
+  converter toRegex*(r: Regex2): Regex =
+    Regex(nfa: r.nfa, groupsCount: r.groupsCount, namedGroups: r.namedGroups, litOpt: r.litOpt)
+  {.pop.}
+else:
+  type
+    Regex2* = distinct Regex
+      ## a compiled regular expression
 
-converter toRegex*(r: Regex2): Regex =
-  Regex(nfa: r.nfa, groupsCount: r.groupsCount, namedGroups: r.namedGroups, litOpt: r.litOpt)
+  {.push inline, noSideEffect.}
+  converter toRegex2*(r: Regex): Regex2 = Regex2(r)
 
-{.pop.}
+  converter toRegex*(r: Regex2): Regex = Regex(r)
+  {.pop.}
+
 
 func clear*(m: var RegexMatch) {.inline.} =
   if m.captures.len > 0:

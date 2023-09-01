@@ -333,7 +333,7 @@ func re2*(s: string): Regex2 {.raises: [RegexError].} =
     let pat = r"abc\w"
     let abcx3 = re2(pat)
 
-  Regex2(reImpl(s))
+  reImpl(s).toRegex2
 
 # Workaround Nim/issues/14515
 # ideally only `re2(string): Regex`
@@ -342,9 +342,9 @@ when not defined(forceRegexAtRuntime):
   func re2*(s: static string): static[Regex2] {.inline.} =
     ## Parse and compile a regular expression at compile-time
     when canUseMacro:  # VM dies on Nim < 1.1
-      Regex2(reCt(s))
+      reCt(s).toRegex2
     else:
-      Regex2(reImpl(s))
+      reImpl(s).toRegex2
 
 func group*(m: RegexMatch2, i: int): Slice[int] {.inline, raises: [].} =
   ## return slice for a given group.
@@ -430,11 +430,11 @@ func match*(
     doAssert "abcd".match(re2"abcd", m)
     doAssert not "abcd".match(re2"abc", m)
 
-  result = matchImpl(s, pattern.Regex, m, start)
+  result = matchImpl(s, pattern.toRegex, m, start)
 
 func match*(s: string, pattern: Regex2): bool {.inline, raises: [].} =
   var m: RegexMatch2
-  result = matchImpl(s, pattern.Regex, m)
+  result = matchImpl(s, pattern.toRegex, m)
 
 when defined(noRegexOpt):
   template findSomeOptTpl(s, pattern, ms, i): untyped =
@@ -470,11 +470,11 @@ iterator findAll*(
   var ms: RegexMatches2
   while i <= len(s):
     doAssert(i > i2); i2 = i
-    i = findSomeOptTpl(s, pattern.Regex, ms, i)
+    i = findSomeOptTpl(s, pattern.toRegex, ms, i)
     #debugEcho i
     if i < 0: break
     for mi in ms:
-      fillMatchImpl(m, mi, ms, pattern.Regex)
+      fillMatchImpl(m, mi, ms, pattern.toRegex)
       yield m
     if i == len(s):
       break
@@ -507,7 +507,7 @@ iterator findAllBounds*(
   var ms: RegexMatches2
   while i <= len(s):
     doAssert(i > i2); i2 = i
-    i = findSomeOptTpl(s, pattern.Regex, ms, i)
+    i = findSomeOptTpl(s, pattern.toRegex, ms, i)
     #debugEcho i
     if i < 0: break
     for ab in ms.bounds:
@@ -573,7 +573,7 @@ iterator split*(s: string, sep: Regex2): string {.inline, raises: [].} =
     ms: RegexMatches2
   while not done:
     doAssert(i > i2); i2 = i
-    i = findSomeOptTpl(s, sep.Regex, ms, i)
+    i = findSomeOptTpl(s, sep.toRegex, ms, i)
     done = i < 0 or i >= len(s)
     if done: ms.dummyMatch(s.len)
     for ab in ms.bounds:
@@ -608,11 +608,11 @@ func splitIncl*(s: string, sep: Regex2): seq[string] {.inline, raises: [].} =
     ms: RegexMatches2
   while not done:
     doAssert(i > i2); i2 = i
-    i = findSomeOptTpl(s, sep.Regex, ms, i)
+    i = findSomeOptTpl(s, sep.toRegex, ms, i)
     done = i < 0 or i >= len(s)
     if done: ms.dummyMatch(s.len)
     for mi in ms:
-      fillMatchImpl(m, mi, ms, sep.Regex)
+      fillMatchImpl(m, mi, ms, sep.toRegex)
       last = ab.a
       if ab.a > 0 or ab.a <= ab.b:  # skip first empty match
         result.add substr(s, first, last-1)
@@ -630,7 +630,7 @@ func startsWith*(
     doAssert "abc".startsWith(re2"\w")
     doAssert not "abc".startsWith(re2"\d")
 
-  startsWithImpl2(s, pattern.Regex, start)
+  startsWithImpl2(s, pattern.toRegex, start)
 
 template runeIncAt(s: string, n: var int) =
   ## increment ``n`` up to
@@ -703,7 +703,7 @@ func replace*(
   result = ""
   var
     i, j = 0
-    capts = newSeqOfCap[string](pattern.Regex.groupsCount)
+    capts = newSeqOfCap[string](pattern.toRegex.groupsCount)
   for m in findAll(s, pattern):
     result.addsubstr(s, i, m.boundaries.a-1)
     capts.setLen 0
@@ -758,7 +758,7 @@ func isInitialized*(re: Regex2): bool {.inline, raises: [].} =
     re = re2"foo"
     doAssert re.isInitialized
 
-  re.Regex.nfa.s.len > 0
+  re.toRegex.nfa.s.len > 0
 
 func escapeRe*(s: string): string {.raises: [].} =
   ## Escape special regex characters in ``s``
@@ -793,7 +793,7 @@ proc toString(
     result = "[...]"
     return
   visited.incl(nIdx)
-  let n = pattern.Regex.nfa.s[nIdx]
+  let n = pattern.toRegex.nfa.s[nIdx]
   result = "["
   result.add($n)
   for nn in n.next:
@@ -1366,7 +1366,7 @@ when isMainModule:
   doAssert(not match("A", re2"((?xi))     a"))
   doAssert(not match("A", re2"(?xi:(?xi)     )a"))
 
-  doAssert graph(Regex(re2"^a+$")) == """digraph graphname {
+  doAssert graph(re2"^a+$".toRegex) == """digraph graphname {
     0 [label="q0";color=blue];
     1 [label="q1";color=black];
     2 [label="q2";color=blue];

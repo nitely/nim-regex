@@ -226,8 +226,6 @@ type
     namedGroups*: OrderedTable[string, int16]
     #flags*: set[RegexFlag]
     litOpt*: LitOpt
-  Regex2* = distinct Regex
-    ## a compiled regular expression
   MatchFlag* = enum
     mfShortestMatch
     mfNoCaptures
@@ -247,6 +245,35 @@ type
     captures*: seq[Slice[int]]
     namedGroups*: OrderedTable[string, int16]
     boundaries*: Slice[int]
+
+when defined(js) and (NimMajor, NimMinor) >= (1, 6) and (NimMajor, NimMinor) <= (1, 7):
+  type
+    Regex2* = object
+      ## a compiled regular expression
+      nfa*: Nfa
+      groupsCount*: int16
+      namedGroups*: OrderedTable[string, int16]
+      #flags*: set[RegexFlag]
+      litOpt*: LitOpt
+
+  {.push inline, noSideEffect.}
+  converter toRegex2*(r: Regex): Regex2 =
+    Regex2(nfa: r.nfa, groupsCount: r.groupsCount, namedGroups: r.namedGroups, litOpt: r.litOpt)
+
+  converter toRegex*(r: Regex2): Regex =
+    Regex(nfa: r.nfa, groupsCount: r.groupsCount, namedGroups: r.namedGroups, litOpt: r.litOpt)
+  {.pop.}
+else:
+  type
+    Regex2* = distinct Regex
+      ## a compiled regular expression
+
+  {.push inline, noSideEffect.}
+  converter toRegex2*(r: Regex): Regex2 = Regex2(r)
+
+  converter toRegex*(r: Regex2): Regex = Regex(r)
+  {.pop.}
+
 
 func clear*(m: var RegexMatch) {.inline.} =
   if m.captures.len > 0:

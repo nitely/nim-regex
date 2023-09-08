@@ -917,7 +917,7 @@ func match*(
   pattern: Regex,
   m: var RegexMatch,
   start = 0
-): bool {.inline, raises: [], deprecated: "use match(string, Regex2, var RegexMatch) instead".} =
+): bool {.inline, raises: [], deprecated: "use match(string, Regex2, var RegexMatch2) instead".} =
   result = matchImpl(s, pattern, m, start)
 
 func match*(s: string, pattern: Regex): bool {.inline, raises: [], deprecated: "use match(string, Regex2) instead".} =

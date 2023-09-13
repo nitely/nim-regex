@@ -278,6 +278,13 @@ const
     reGroupEnd}
   groupStartKind* = {reGroupStart} + lookaroundKind
 
+func isEpsilonTransition*(n: Node): bool {.inline.} =
+  result = case n.kind
+  of groupKind, assertionKind:
+    true
+  else:
+    false
+
 func `$`*(n: Node): string =
   ## return the string representation
   ## of a `Node`. The string is always

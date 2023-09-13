@@ -67,13 +67,6 @@ template lookAroundTpl*: untyped {.dirty.} =
     false
   smL.removeLast()
 
-func isEpsilonTransition(n: Node): bool {.inline.} =
-  result = case n.kind
-  of groupKind, assertionKind:
-    true
-  else:
-    false
-
 template s(nfa: openArray[Node]): untyped =
   nfa
 
@@ -83,6 +76,7 @@ template nextStateTpl(bwMatch = false): untyped {.dirty.} =
   template captElm: untyped =
     capts[captx, nfa.s[nt].idx]
   template z: untyped = nfa.s[nt]
+  template nt: untyped = nfa.s[n].next[nti]
   smB.clear()
   for n, capt, bounds in items smA:
     if capt != -1:
@@ -91,27 +85,12 @@ template nextStateTpl(bwMatch = false): untyped {.dirty.} =
       if not smB.hasState n:
         smB.add (n, capt, bounds)
       break
-    matched = true
-    captx = capt
-    for nti, nt in pairs toOpenArray(nfa.s[n].next, 0, nfa.s[n].next.len-1):
-      if not isEpsilonTransition(nfa.s[n]):
-        if not matched:
-          matched = true
-          captx = capt
-          continue
-        if smB.hasState nt:
-          captx = capt
-          continue
-        if not match(nfa.s[nt], c):
-          if not (anchored and nfa.s[nt].kind == reEoe):
-            captx = capt
-            continue
-        smB.add (nt, captx, bounds2)
-        captx = capt
-        continue
-      if not matched:
-        continue
-      case nfa.s[nt].kind
+    var nti = 0
+    while nti <= nfa.s[n].next.len-1:
+      matched = true
+      captx = capt
+      while isEpsilonTransition(nfa.s[nt]) and matched:
+        case nfa.s[nt].kind
         of reGroupStart:
           # XXX this can be avoided in some cases?
           captx = capts.diverge captx
@@ -137,6 +116,12 @@ template nextStateTpl(bwMatch = false): untyped {.dirty.} =
         else:
           doAssert false
           discard
+        inc nti
+      if matched and
+          not smB.hasState(nt) and
+          (nfa.s[nt].match(c) or (anchored and nfa.s[nt].kind == reEoe)):
+        smB.add (nt, captx, bounds2)
+      inc nti
   swap smA, smB
   capts.recycle()
 

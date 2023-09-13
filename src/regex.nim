@@ -301,7 +301,10 @@ import ./regex/nfamatch2
 when not defined(noRegexOpt):
   import ./regex/litopt
 
-const canUseMacro = (NimMajor, NimMinor) >= (1, 1)
+when not defined(noRegexMacro):
+  const canUseMacro = (NimMajor, NimMinor) >= (1, 1)
+else:
+  const canUseMacro = false
 
 when canUseMacro:
   import ./regex/nfamacro

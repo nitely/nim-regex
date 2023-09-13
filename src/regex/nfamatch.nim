@@ -70,26 +70,19 @@ template lookAroundTpl*: untyped {.dirty.} =
 template nextStateTpl(bwMatch = false): untyped {.dirty.} =
   template bounds2: untyped =
     when bwMatch: i .. bounds.b else: bounds.a .. i-1
+  template z: untyped = nfa.s[nt]
+  template nt: untyped = nfa.s[n].next[nti]
   smB.clear()
   for n, capt, bounds in items smA:
     if anchored and nfa.s[n].kind == reEoe:
       if not smB.hasState n:
         smB.add (n, capt, bounds)
       break
-    for nti, nt in pairs nfa.s[n].next:
-      if smB.hasState nt:
-        continue
-      if not match(nfa.s[nt], c):
-        if not (anchored and nfa.s[nt].kind == reEoe):
-          continue
-      if nfa.t.allZ[n][nti] == -1'i16:
-        smB.add (nt, capt, bounds2)
-        continue
+    var nti = 0
+    while nti <= nfa.s[n].next.len-1:
       matched = true
       captx = capt
-      for z in nfa.t.z[nfa.t.allZ[n][nti]]:
-        if not matched:
-          break
+      while isEpsilonTransition(nfa.s[nt]) and matched:
         case z.kind
         of groupKind:
           capts.add CaptNode(
@@ -107,8 +100,12 @@ template nextStateTpl(bwMatch = false): untyped {.dirty.} =
         else:
           doAssert false
           discard
-      if matched:
+        inc nti
+      if matched and
+          not smB.hasState(nt) and
+          (nfa.s[nt].match(c) or (anchored and nfa.s[nt].kind == reEoe)):
         smB.add (nt, captx, bounds2)
+      inc nti
   swap smA, smB
 
 func matchImpl(

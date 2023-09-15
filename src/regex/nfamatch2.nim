@@ -38,14 +38,14 @@ template lookAroundTpl*: untyped {.dirty.} =
   template smL: untyped = look.smL
   template smLa: untyped = smL.lastA
   template smLb: untyped = smL.lastB
-  template zNfa: untyped = z.subExp.nfa
-  let flags2 = if z.subExp.reverseCapts:
+  template zNfa: untyped = ntn.subExp.nfa
+  let flags2 = if ntn.subExp.reverseCapts:
     {mfAnchored, mfReverseCapts}
   else:
     {mfAnchored}
   smL.grow()
   smL.last.setLen zNfa.s.len
-  matched = case z.kind
+  matched = case ntn.kind
   of reLookahead:
     look.ahead(
       smLa, smLb, capts, captx,
@@ -71,7 +71,9 @@ template nextStateTpl(bwMatch = false): untyped {.dirty.} =
   template bounds2: untyped =
     when bwMatch: i .. bounds.b else: bounds.a .. i-1
   template captElm: untyped =
-    capts[captx, z.idx]
+    capts[captx, nfa.s[nt].idx]
+  template nt: untyped = nfa.s[n].next[nti]
+  template ntn: untyped = nfa.s[nt]
   smB.clear()
   for n, capt, bounds in items smA:
     if capt != -1:
@@ -80,49 +82,44 @@ template nextStateTpl(bwMatch = false): untyped {.dirty.} =
       if not smB.hasState n:
         smB.add (n, capt, bounds)
       break
-    for nti, nt in pairs nfa.s[n].next:
-      if smB.hasState nt:
-        continue
-      if not match(nfa.s[nt], c):
-        if not (anchored and nfa.s[nt].kind == reEoe):
-          continue
-      if nfa.t.allZ[n][nti] == -1'i16:
-        smB.add (nt, capt, bounds2)
-        continue
+    var nti = 0
+    while nti <= nfa.s[n].next.len-1:
       matched = true
       captx = capt
-      for z in nfa.t.z[nfa.t.allZ[n][nti]]:
-        if not matched:
-          break
-        case z.kind
-        of reGroupStart:
-          # XXX this can be avoided on 1st z loop iteration
-          #     and also on 1st nti loop iteration
-          captx = capts.diverge captx
-          if mfReverseCapts notin flags or
-              captElm.a == nonCapture.a:
-            captElm.a = i
-        of reGroupEnd:
-          captx = capts.diverge captx
-          if mfReverseCapts notin flags or
-              captElm.b == nonCapture.b:
-            captElm.b = i-1
-        of assertionKind - lookaroundKind:
-          when bwMatch:
-            matched = match(z, c, cPrev.Rune)
+      while isEpsilonTransition(ntn):
+        if matched:
+          case ntn.kind
+          of reGroupStart:
+            # XXX this can be avoided in some cases?
+            captx = capts.diverge captx
+            if mfReverseCapts notin flags or
+                captElm.a == nonCapture.a:
+              captElm.a = i
+          of reGroupEnd:
+            captx = capts.diverge captx
+            if mfReverseCapts notin flags or
+                captElm.b == nonCapture.b:
+              captElm.b = i-1
+          of assertionKind - lookaroundKind:
+            when bwMatch:
+              matched = match(ntn, c, cPrev.Rune)
+            else:
+              matched = match(ntn, cPrev.Rune, c)
+          of lookaroundKind:
+            let freezed = capts.freeze()
+            lookAroundTpl()
+            capts.unfreeze freezed
+            if captx != -1:
+              capts.keepAlive captx
           else:
-            matched = match(z, cPrev.Rune, c)
-        of lookaroundKind:
-          let freezed = capts.freeze()
-          lookAroundTpl()
-          capts.unfreeze freezed
-          if captx != -1:
-            capts.keepAlive captx
-        else:
-          doAssert false
-          discard
-      if matched:
+            doAssert false
+            discard
+        inc nti
+      if matched and
+          not smB.hasState(nt) and
+          (ntn.match(c) or (anchored and ntn.kind == reEoe)):
         smB.add (nt, captx, bounds2)
+      inc nti
   swap smA, smB
   capts.recycle()
 

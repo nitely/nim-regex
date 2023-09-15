@@ -287,6 +287,8 @@ when isMainModule:
     result = "["
     result.add $n.cp
     for nn in n.next:
+      if isEpsilonTransition(nfa.s[nn]):
+        continue
       result.add ", "
       result.add toString(nfa, nn, visited)
     result.add "]"

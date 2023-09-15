@@ -146,7 +146,6 @@ func submatch(
   i: int,
   cPrev, c: int32
 ) {.inline.} =
-  template tns: untyped = regex.nfa.t
   template nfa: untyped = regex.nfa.s
   template smA: untyped = ms.a
   template smB: untyped = ms.b
@@ -155,6 +154,8 @@ func submatch(
   template capt: untyped = ms.a[smi].ci
   template bounds: untyped = ms.a[smi].bounds
   template look: untyped = ms.look
+  template nt: untyped = nfa[n].next[nti]
+  template ntn: untyped = nfa[nt]
   smB.clear()
   var captx: int32
   var matched = true
@@ -163,26 +164,21 @@ func submatch(
   while smi < smA.len:
     if capt != -1:
       capts.keepAlive capt
-    for nti, nt in nfa[n].next.pairs:
-      if smB.hasState nt:
-        continue
-      if nfa[nt].kind != reEoe and not match(nfa[nt], c.Rune):
-        continue
+    var nti = 0
+    while nti <= nfa[n].next.len-1:
       matched = true
       captx = capt
-      if tns.allZ[n][nti] > -1:
-        for z in tns.z[tns.allZ[n][nti]]:
-          if not matched:
-            break
-          case z.kind
+      while isEpsilonTransition(ntn):
+        if matched:
+          case ntn.kind
           of reGroupStart:
             captx = capts.diverge captx
-            capts[captx, z.idx].a = i
+            capts[captx, ntn.idx].a = i
           of reGroupEnd:
             captx = capts.diverge captx
-            capts[captx, z.idx].b = i-1
+            capts[captx, ntn.idx].b = i-1
           of assertionKind - lookaroundKind:
-            matched = match(z, cPrev.Rune, c.Rune)
+            matched = match(ntn, cPrev.Rune, c.Rune)
           of lookaroundKind:
             let freezed = capts.freeze()
             lookAroundTpl()
@@ -190,10 +186,13 @@ func submatch(
             if captx != -1:
               capts.keepAlive captx
           else:
-            assert false
+            doAssert false
             discard
-      if matched:
-        if nfa[nt].kind == reEoe:
+        inc nti
+      if matched and
+          not smB.hasState(nt) and
+          (ntn.match(c.Rune) or ntn.kind == reEoe):
+        if ntn.kind == reEoe:
           #debugEcho "eoe ", bounds, " ", ms.m
           ms.add (captx, bounds.a .. i-1)
           smA.clear()
@@ -203,6 +202,7 @@ func submatch(
           smi = -1
           break
         smB.add (nt, captx, bounds.a .. i-1)
+      inc nti
     inc smi
   swap smA, smB
   capts.recycle()

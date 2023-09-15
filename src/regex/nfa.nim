@@ -146,10 +146,10 @@ func eNfa*(exp: RpnExp): Enfa {.raises: [RegexError].} =
   result.s.add initSkipNode(states)
 
 type
-  Zclosure = seq[int16]
-  TeClosure = seq[(int16, Zclosure)]
+  Etransitions = seq[int16]  # xxx transitions
+  TeClosure = seq[(int16, Etransitions)]
 
-func isTransitionZ(n: Node): bool {.inline.} =
+func isEpsilonTransition2(n: Node): bool {.inline.} =
   result = case n.kind
     of groupKind:
       n.isCapturing
@@ -163,24 +163,24 @@ func teClosure(
   eNfa: Enfa,
   state: int16,
   processing: var seq[int16],
-  zTransitions: Zclosure
+  eTransitions: Etransitions
 ) =
-  var zTransitionsCurr = zTransitions
-  if isTransitionZ eNfa.s[state]:
-    zTransitionsCurr.add state
+  var eTransitionsCurr = eTransitions
+  if isEpsilonTransition2 eNfa.s[state]:
+    eTransitionsCurr.add state
   if eNfa.s[state].kind in matchableKind + {reEOE}:
-    result.add (state, zTransitionsCurr)
+    result.add (state, eTransitionsCurr)
     return
   for i, s in pairs eNfa.s[state].next:
     # Enter loops only once. "a", re"(a*)*" -> ["a", ""]
     if eNfa.s[state].kind in repetitionKind:
       if s notin processing or i == int(eNfa.s[state].isGreedy):
         processing.add s
-        teClosure(result, eNfa, s, processing, zTransitionsCurr)
+        teClosure(result, eNfa, s, processing, eTransitionsCurr)
         discard processing.pop()
       # else skip loop
     else:
-      teClosure(result, eNfa, s, processing, zTransitionsCurr)
+      teClosure(result, eNfa, s, processing, eTransitionsCurr)
 
 func teClosure(
   result: var TeClosure,
@@ -189,9 +189,9 @@ func teClosure(
   processing: var seq[int16]
 ) =
   doAssert processing.len == 0
-  var zclosure: Zclosure
+  var eTransitions: Etransitions
   for s in eNfa.s[state].next:
-    teClosure(result, eNfa, s, processing, zclosure)
+    teClosure(result, eNfa, s, processing, eTransitions)
 
 when (NimMajor, NimMinor, NimPatch) < (1,4,0) and not declared(IndexDefect):
   # avoids a warning
@@ -206,7 +206,6 @@ func eRemoval*(eNfa: Enfa): Nfa {.raises: [].} =
   #echo eNfa
   result.s = newSeq[Node](eNfa.s.len)
   result.s.setLen 0
-  result.t.allZ.setLen eNfa.s.len
   var statesMap = newSeq[int16](eNfa.s.len)
   for i in 0 .. statesMap.len-1:
     statesMap[i] = -1
@@ -214,7 +213,6 @@ func eRemoval*(eNfa: Enfa): Nfa {.raises: [].} =
   result.s.add eNfa.s[start]
   statesMap[start] = 0'i16
   var closure: TeClosure
-  var zc: seq[Node]
   var qw = initDeque[int16](2)
   qw.addFirst start
   var qu: set[int16]
@@ -228,25 +226,21 @@ func eRemoval*(eNfa: Enfa): Nfa {.raises: [].} =
       doAssert false
     closure.setLen 0
     teClosure(closure, eNfa, qa, processing)
+    doAssert statesMap[qa] > -1
     result.s[statesMap[qa]].next.setLen 0
-    for qb, zclosure in closure.items:
+    for qb, eTransitions in closure.items:
+      for eti in eTransitions:
+        if statesMap[eti] == -1:
+          result.s.add eNfa.s[eti]
+          statesMap[eti] = result.s.len.int16-1
+        result.s[statesMap[qa]].next.add statesMap[eti]
       if statesMap[qb] == -1:
         result.s.add eNfa.s[qb]
         statesMap[qb] = result.s.len.int16-1
-      doAssert statesMap[qb] > -1
-      doAssert statesMap[qa] > -1
       result.s[statesMap[qa]].next.add statesMap[qb]
-      result.t.allZ[statesMap[qa]].add -1'i16
-      zc.setLen 0
-      for z in zclosure:
-        zc.add eNfa.s[z]
-      if zc.len > 0:
-        result.t.z.add zc
-        result.t.allZ[statesMap[qa]][^1] = int16(result.t.z.len-1)
       if qb notin qu:
         qu.incl qb
         qw.addFirst qb
-  result.t.allZ.setLen result.s.len
 
 func reverse(eNfa: Enfa): Enfa =
   template state0: untyped = int16(eNfa.s.len-1)

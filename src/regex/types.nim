@@ -13,12 +13,6 @@ import ./common
 
 # XXX split nfatype.nim and nodetype.nim
 #     once acyclic imports are supported
-# XXX refactor transitions, add tIdx: int16
-#     to Node, make TransitionsAll dense;
-#     remove z and store transition Nodes in
-#     the NFA; flatten TransitionsAll to seq[int16]
-#     + delimiter (-1'i16) or set first bit of
-#     every last tn idx
 
 type
   # exptype.nim
@@ -28,14 +22,8 @@ type
   # nfatype.nim
   Enfa* = object
     s*: seq[Node]
-  TransitionsAll* = seq[seq[int16]]
-  ZclosureStates* = seq[seq[Node]]
-  Transitions* = object
-    allZ*: TransitionsAll
-    z*: ZclosureStates
   Nfa* = object
     s*: seq[Node]
-    t*: Transitions
 
   # nodetype.nim
   Flag* = enum
@@ -277,6 +265,13 @@ const
     reGroupStart,
     reGroupEnd}
   groupStartKind* = {reGroupStart} + lookaroundKind
+
+func isEpsilonTransition*(n: Node): bool {.inline.} =
+  result = case n.kind
+  of groupKind, assertionKind:
+    true
+  else:
+    false
 
 func `$`*(n: Node): string =
   ## return the string representation

@@ -4,6 +4,7 @@ import std/macros
 import std/unicode
 import std/tables
 import std/sets
+import std/algorithm
 
 import pkg/unicodedb/properties
 import pkg/unicodedb/types as utypes
@@ -268,6 +269,13 @@ func genLookaroundMatch(
     `lookaroundStmt`
     removeLast `smL`
 
+func getEpsilonTransitions(nfa: Nfa, n: Node, nti: int): seq[int] =
+  for i in countdown(nti-1, 0):
+    if not isEpsilonTransition(nfa.s[n.next[i]]):
+      break
+    result.add n.next[i]
+  result.reverse()
+
 func genMatchedBody(
   smB, ntLit, capt, bounds, matched, captx,
   capts, charIdx, cPrev, c, text: NimNode,
@@ -276,19 +284,21 @@ func genMatchedBody(
   look: Lookaround,
   flags: set[MatchFlag]
 ): NimNode =
-  template t: untyped = nfa.t
+  template n: untyped = nfa.s[i]
+  template z: untyped = nfa.s[eti]
   let bounds2 = if mfBwMatch in flags:
     quote do: `charIdx` .. `bounds`.b
   else:
     quote do: `bounds`.a .. `charIdx`-1
-  if t.allZ[i][nti] == -1'i16:
+  let eTransitions = getEpsilonTransitions(nfa, n, nti)
+  if eTransitions.len == 0:
     return quote do:
       add(`smB`, (`ntLit`, `capt`, `bounds2`))
   var matchedBody: seq[NimNode]
   matchedBody.add quote do:
     `matched` = true
     `captx` = `capt`
-  for z in t.z[t.allZ[i][nti]]:
+  for eti in eTransitions:
     case z.kind
     of groupKind:
       let zIdx = newLit z.idx
@@ -347,9 +357,13 @@ func genNextState(
   for i in 0 .. s.len-1:
     if s[i].kind == reEoe:
       continue
+    if isEpsilonTransition(s[i]):
+      continue
     var branchBodyN: seq[NimNode]
     for nti, nt in s[i].next.pairs:
       if eoeOnly and s[nt].kind != reEoe:
+        continue
+      if isEpsilonTransition(s[nt]):
         continue
       let matchCond = case s[nt].kind
         of reEoe:

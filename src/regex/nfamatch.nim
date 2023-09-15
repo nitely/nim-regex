@@ -101,6 +101,9 @@ template nextStateTpl(bwMatch = false): untyped {.dirty.} =
           doAssert false
           discard
         inc nti
+      while isEpsilonTransition(nfa.s[nt]):
+        # skip unmatched epsilons
+        inc nti
       if matched and
           not smB.hasState(nt) and
           (nfa.s[nt].match(c) or (anchored and nfa.s[nt].kind == reEoe)):

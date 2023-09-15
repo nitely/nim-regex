@@ -186,8 +186,11 @@ func submatch(
           if captx != -1:
             capts.keepAlive captx
         else:
-          assert false
+          doAssert false
           discard
+        inc nti
+      while isEpsilonTransition(nfa[nt]):
+        # skip unmatched epsilons
         inc nti
       if matched and
           not smB.hasState(nt) and

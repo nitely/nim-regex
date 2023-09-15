@@ -143,8 +143,11 @@ func submatch(
         of lookaroundKind:
           lookAroundTpl()
         else:
-          assert false
+          doAssert false
           discard
+        inc nti
+      while isEpsilonTransition(nfa[nt]):
+        # skip unmatched epsilons
         inc nti
       if matched and
           not smB.hasState(nt) and

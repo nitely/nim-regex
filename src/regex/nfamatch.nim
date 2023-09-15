@@ -38,14 +38,14 @@ template lookAroundTpl*: untyped {.dirty.} =
   template smL: untyped = look.smL
   template smLa: untyped = smL.lastA
   template smLb: untyped = smL.lastB
-  template zNfa: untyped = z.subExp.nfa
-  let flags2 = if z.subExp.reverseCapts:
+  template zNfa: untyped = ntn.subExp.nfa
+  let flags2 = if ntn.subExp.reverseCapts:
     {mfAnchored, mfReverseCapts}
   else:
     {mfAnchored}
   smL.grow()
   smL.last.setLen zNfa.s.len
-  matched = case z.kind
+  matched = case ntn.kind
   of reLookahead:
     look.ahead(
       smLa, smLb, capts, captx,
@@ -70,8 +70,8 @@ template lookAroundTpl*: untyped {.dirty.} =
 template nextStateTpl(bwMatch = false): untyped {.dirty.} =
   template bounds2: untyped =
     when bwMatch: i .. bounds.b else: bounds.a .. i-1
-  template z: untyped = nfa.s[nt]
   template nt: untyped = nfa.s[n].next[nti]
+  template ntn: untyped = nfa.s[nt]
   smB.clear()
   for n, capt, bounds in items smA:
     if anchored and nfa.s[n].kind == reEoe:
@@ -82,31 +82,29 @@ template nextStateTpl(bwMatch = false): untyped {.dirty.} =
     while nti <= nfa.s[n].next.len-1:
       matched = true
       captx = capt
-      while isEpsilonTransition(nfa.s[nt]) and matched:
-        case z.kind
-        of groupKind:
-          capts.add CaptNode(
-            parent: captx,
-            bound: i,
-            idx: z.idx)
-          captx = (capts.len-1).int32
-        of assertionKind - lookaroundKind:
-          when bwMatch:
-            matched = match(z, c, cPrev.Rune)
+      while isEpsilonTransition(ntn):
+        if matched:
+          case ntn.kind
+          of groupKind:
+            capts.add CaptNode(
+              parent: captx,
+              bound: i,
+              idx: ntn.idx)
+            captx = (capts.len-1).int32
+          of assertionKind - lookaroundKind:
+            when bwMatch:
+              matched = match(ntn, c, cPrev.Rune)
+            else:
+              matched = match(ntn, cPrev.Rune, c)
+          of lookaroundKind:
+            lookAroundTpl()
           else:
-            matched = match(z, cPrev.Rune, c)
-        of lookaroundKind:
-          lookAroundTpl()
-        else:
-          doAssert false
-          discard
-        inc nti
-      while isEpsilonTransition(nfa.s[nt]):
-        # skip unmatched epsilons
+            doAssert false
+            discard
         inc nti
       if matched and
           not smB.hasState(nt) and
-          (nfa.s[nt].match(c) or (anchored and nfa.s[nt].kind == reEoe)):
+          (ntn.match(c) or (anchored and ntn.kind == reEoe)):
         smB.add (nt, captx, bounds2)
       inc nti
   swap smA, smB

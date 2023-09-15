@@ -28,14 +28,8 @@ type
   # nfatype.nim
   Enfa* = object
     s*: seq[Node]
-  TransitionsAll* = seq[seq[int16]]
-  ZclosureStates* = seq[seq[Node]]
-  Transitions* = object
-    allZ*: TransitionsAll
-    z*: ZclosureStates
   Nfa* = object
     s*: seq[Node]
-    t*: Transitions
 
   # nodetype.nim
   Flag* = enum

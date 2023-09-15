@@ -38,14 +38,14 @@ template lookAroundTpl*: untyped {.dirty.} =
   template smL: untyped = look.smL
   template smLa: untyped = smL.lastA
   template smLb: untyped = smL.lastB
-  template zNfa: untyped = z.subExp.nfa
-  let flags2 = if z.subExp.reverseCapts:
+  template zNfa: untyped = ntn.subExp.nfa
+  let flags2 = if ntn.subExp.reverseCapts:
     {mfAnchored, mfReverseCapts}
   else:
     {mfAnchored}
   smL.grow()
   smL.last.setLen zNfa.s.len
-  matched = case z.kind
+  matched = case ntn.kind
   of reLookahead:
     look.ahead(
       smLa, smLb, capts, captx,
@@ -67,16 +67,13 @@ template lookAroundTpl*: untyped {.dirty.} =
     false
   smL.removeLast()
 
-template s(nfa: openArray[Node]): untyped =
-  nfa
-
 template nextStateTpl(bwMatch = false): untyped {.dirty.} =
   template bounds2: untyped =
     when bwMatch: i .. bounds.b else: bounds.a .. i-1
   template captElm: untyped =
     capts[captx, nfa.s[nt].idx]
-  template z: untyped = nfa.s[nt]
   template nt: untyped = nfa.s[n].next[nti]
+  template ntn: untyped = nfa.s[nt]
   smB.clear()
   for n, capt, bounds in items smA:
     if capt != -1:
@@ -89,40 +86,38 @@ template nextStateTpl(bwMatch = false): untyped {.dirty.} =
     while nti <= nfa.s[n].next.len-1:
       matched = true
       captx = capt
-      while isEpsilonTransition(nfa.s[nt]) and matched:
-        case nfa.s[nt].kind
-        of reGroupStart:
-          # XXX this can be avoided in some cases?
-          captx = capts.diverge captx
-          if mfReverseCapts notin flags or
-              captElm.a == nonCapture.a:
-            captElm.a = i
-        of reGroupEnd:
-          captx = capts.diverge captx
-          if mfReverseCapts notin flags or
-              captElm.b == nonCapture.b:
-            captElm.b = i-1
-        of assertionKind - lookaroundKind:
-          when bwMatch:
-            matched = match(nfa.s[nt], c, cPrev.Rune)
+      while isEpsilonTransition(ntn):
+        if matched:
+          case ntn.kind
+          of reGroupStart:
+            # XXX this can be avoided in some cases?
+            captx = capts.diverge captx
+            if mfReverseCapts notin flags or
+                captElm.a == nonCapture.a:
+              captElm.a = i
+          of reGroupEnd:
+            captx = capts.diverge captx
+            if mfReverseCapts notin flags or
+                captElm.b == nonCapture.b:
+              captElm.b = i-1
+          of assertionKind - lookaroundKind:
+            when bwMatch:
+              matched = match(ntn, c, cPrev.Rune)
+            else:
+              matched = match(ntn, cPrev.Rune, c)
+          of lookaroundKind:
+            let freezed = capts.freeze()
+            lookAroundTpl()
+            capts.unfreeze freezed
+            if captx != -1:
+              capts.keepAlive captx
           else:
-            matched = match(nfa.s[nt], cPrev.Rune, c)
-        of lookaroundKind:
-          let freezed = capts.freeze()
-          lookAroundTpl()
-          capts.unfreeze freezed
-          if captx != -1:
-            capts.keepAlive captx
-        else:
-          doAssert false
-          discard
-        inc nti
-      while isEpsilonTransition(nfa.s[nt]):
-        # skip unmatched epsilons
+            doAssert false
+            discard
         inc nti
       if matched and
           not smB.hasState(nt) and
-          (nfa.s[nt].match(c) or (anchored and nfa.s[nt].kind == reEoe)):
+          (ntn.match(c) or (anchored and ntn.kind == reEoe)):
         smB.add (nt, captx, bounds2)
       inc nti
   swap smA, smB

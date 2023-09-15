@@ -149,7 +149,7 @@ type
   Etransitions = seq[int16]  # xxx transitions
   TeClosure = seq[(int16, Etransitions)]
 
-func isEpsilonTransition(n: Node): bool {.inline.} =
+func isEpsilonTransition2(n: Node): bool {.inline.} =
   result = case n.kind
     of groupKind:
       n.isCapturing
@@ -166,7 +166,7 @@ func teClosure(
   eTransitions: Etransitions
 ) =
   var eTransitionsCurr = eTransitions
-  if isEpsilonTransition eNfa.s[state]:
+  if isEpsilonTransition2 eNfa.s[state]:
     eTransitionsCurr.add state
   if eNfa.s[state].kind in matchableKind + {reEOE}:
     result.add (state, eTransitionsCurr)

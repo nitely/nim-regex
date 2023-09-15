@@ -146,7 +146,6 @@ func submatch(
   i: int,
   cPrev, c: int32
 ) {.inline.} =
-  template tns: untyped = regex.nfa.t
   template nfa: untyped = regex.nfa.s
   template smA: untyped = ms.a
   template smB: untyped = ms.b
@@ -155,8 +154,8 @@ func submatch(
   template capt: untyped = ms.a[smi].ci
   template bounds: untyped = ms.a[smi].bounds
   template look: untyped = ms.look
-  template z: untyped = nfa[nt]
   template nt: untyped = nfa[n].next[nti]
+  template ntn: untyped = nfa[nt]
   smB.clear()
   var captx: int32
   var matched = true
@@ -169,33 +168,31 @@ func submatch(
     while nti <= nfa[n].next.len-1:
       matched = true
       captx = capt
-      while isEpsilonTransition(nfa[nt]) and matched:
-        case z.kind
-        of reGroupStart:
-          captx = capts.diverge captx
-          capts[captx, z.idx].a = i
-        of reGroupEnd:
-          captx = capts.diverge captx
-          capts[captx, z.idx].b = i-1
-        of assertionKind - lookaroundKind:
-          matched = match(z, cPrev.Rune, c.Rune)
-        of lookaroundKind:
-          let freezed = capts.freeze()
-          lookAroundTpl()
-          capts.unfreeze freezed
-          if captx != -1:
-            capts.keepAlive captx
-        else:
-          doAssert false
-          discard
-        inc nti
-      while isEpsilonTransition(nfa[nt]):
-        # skip unmatched epsilons
+      while isEpsilonTransition(ntn):
+        if matched:
+          case ntn.kind
+          of reGroupStart:
+            captx = capts.diverge captx
+            capts[captx, ntn.idx].a = i
+          of reGroupEnd:
+            captx = capts.diverge captx
+            capts[captx, ntn.idx].b = i-1
+          of assertionKind - lookaroundKind:
+            matched = match(ntn, cPrev.Rune, c.Rune)
+          of lookaroundKind:
+            let freezed = capts.freeze()
+            lookAroundTpl()
+            capts.unfreeze freezed
+            if captx != -1:
+              capts.keepAlive captx
+          else:
+            doAssert false
+            discard
         inc nti
       if matched and
           not smB.hasState(nt) and
-          (nfa[nt].match(c.Rune) or nfa[nt].kind == reEoe):
-        if nfa[nt].kind == reEoe:
+          (ntn.match(c.Rune) or ntn.kind == reEoe):
+        if ntn.kind == reEoe:
           #debugEcho "eoe ", bounds, " ", ms.m
           ms.add (captx, bounds.a .. i-1)
           smA.clear()

@@ -1371,10 +1371,10 @@ when isMainModule:
 
   doAssert graph(Regex(re2"^a+$")) == """digraph graphname {
     0 [label="q0";color=blue];
-    1 [label="q1";color=black];
-    2 [label="q2";color=blue];
-    0 -> 1 [label="a, {^}, i=0"];
-    1 -> 1 [label="a, i=0"];1 -> 2 [label="{eoe}, {$}, i=1"];
+    2 [label="q1";color=black];
+    4 [label="q2";color=blue];
+    0 -> 2 [label="a, {^}, i=0"];
+    2 -> 2 [label="a, i=0"];2 -> 4 [label="{eoe}, {$}, i=1"];
 }
 """
 

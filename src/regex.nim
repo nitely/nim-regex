@@ -1146,6 +1146,8 @@ proc toString(
   result = "["
   result.add($n)
   for nn in n.next:
+    if isEpsilonTransition(pattern.nfa.s[nn]):
+      continue
     result.add(", ")
     result.add(pattern.toString(nn, visited))
   result.add("]")

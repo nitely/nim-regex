@@ -2753,6 +2753,24 @@ test "tmisc3":
     "He was carefully disguised but captured quickly by police.",
     re2"\w+ly") == @["carefully", "quickly"]
 
+test "misc4":
+  check findAllBounds(r"1abab", re2"(?<=\d)ab") == @[1 .. 2]
+  check findAllBounds(r"abab", re2"(?<=\d)ab").len == 0
+  check findAllBounds(r"abab1", re2"ab(?=\d)") == @[2 .. 3]
+  check findAllBounds(r"abab", re2"ab(?=\d)").len == 0
+  check findAllBounds(r"1ab1ab", re2"(?<=\d)ab") == @[1 .. 2, 4 .. 5]
+  check findAllBounds(r"ab1ab1", re2"ab(?=\d)") == @[0 .. 1, 3 .. 4]
+  check findAllBounds(r"1abab", re2"(\d)+ab") == @[0 .. 2]
+  check findAllBounds(r"abab", re2"(\d)+ab").len == 0
+  check findAllBounds(r"abab1", re2"ab(\d)+") == @[2 .. 4]
+  check findAllBounds(r"abab", re2"ab(\d)+").len == 0
+  check findAllBounds(r"1abab", re2"(?<=\d)a") == @[1 .. 1]
+  check findAllBounds(r"abab1", re2"b(?=\d)") == @[3 .. 3]
+  check findAllBounds(r"bb1", re2"b(?=\d)") == @[1 .. 1]
+  check findAllBounds(r"b1b1", re2"b(?=\d)") == @[0 .. 0, 2 .. 2]
+  check findAllBounds(r"1a1a1", re2"(?<=\d)a\d") == @[1 .. 2, 3 .. 4]
+  check findAllBounds(r"a1a1", re2"(?<=\d)a\d") == @[2 .. 3]
+
 test "fix#83":
   block:
     let pattern = "^src/(?:[^\\/]*(?:\\/|$))*[^/]*\\.nim$"

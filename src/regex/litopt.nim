@@ -81,9 +81,9 @@ func update(
   ends[ni].setLen 0
   for n in next:
     if n == eoe:
-        ends[ni].add ni
+      ends[ni].add ni
     else:
-        ends[ni].add ends[n]
+      ends[ni].add ends[n]
 
 # Keep lits,
 # replace (...)+, (...)*, (...)?,
@@ -341,6 +341,12 @@ when isMainModule:
   doAssert lit"(?m)^" == ""  # XXX \n
   doAssert lit"(?m)$" == ""  # XXX \n
   doAssert lit"弢" == ""  # XXX support unicode
+  doAssert lit"(?<=\d)ab" == "b"
+  doAssert lit"(?<=\w)ab" == "b"
+  doAssert lit"(?<=\w+)ab" == "b"
+  doAssert lit"\dab2" == "b"
+  doAssert lit"\d+ab2" == "b"
+  doAssert lit"\wab2" == ""
 
   doAssert r"abc".prefix.toString == r"ba".toNfa.toString
   doAssert r"abcab".prefix.toString == r"ba".toNfa.toString

@@ -268,12 +268,8 @@ else:
     Regex2* = distinct Regex
       ## a compiled regular expression
 
-  {.push inline, noSideEffect.}
-  converter toRegex2*(r: Regex): Regex2 = Regex2(r)
-
-  converter toRegex*(r: Regex2): Regex = Regex(r)
-  {.pop.}
-
+  template toRegex2*(r): untyped = Regex2(r)
+  template toRegex*(r): untyped = Regex(r)
 
 func clear*(m: var RegexMatch) {.inline.} =
   if m.captures.len > 0:

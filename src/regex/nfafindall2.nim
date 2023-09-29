@@ -272,6 +272,7 @@ func findSomeOptImpl*(
   doAssert opt.nfa.s.len > 0
   initMaybeImpl(ms, regexSize, groupsLen)
   ms.clear()
+  let hasLits = opt.lits.len > 0
   var limit = start.int
   var i = start.int
   var i2 = -1
@@ -279,7 +280,10 @@ func findSomeOptImpl*(
     doAssert i > i2; i2 = i
     #debugEcho "lit=", opt.lit
     #debugEcho "i=", i
-    let litIdx = text.find(opt.lit.char, i)
+    let litIdx = if hasLits:
+      text.find(opt.lits, i)
+    else:
+      text.find(opt.lit.char, i)
     if litIdx == -1:
       return -1
     #debugEcho "litIdx=", litIdx

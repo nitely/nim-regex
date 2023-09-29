@@ -173,6 +173,36 @@ func lonelyLit(exp: RpnExp): NodeIdx =
     swap lits, litsTmp
     litsTmp.setLen 0
 
+type
+  Lits = object
+    idx: NodeIdx
+    s: string
+
+func lits(exp: RpnExp): Lits =
+  result.idx = exp.lonelyLit()
+  if result.idx == -1:
+    return
+  var litIdxStart = result.idx
+  for i in countdown(result.idx-1, 0):
+    if exp.s[i].kind != reChar:
+      break
+    if exp.s[litIdxStart].uid-1 == exp.s[i].uid:
+      litIdxStart = i.NodeIdx
+  doAssert litIdxStart <= result.idx
+  result.idx = litIdxStart
+  var litIdxEnd = litIdxStart
+  for i in litIdxStart+1 .. exp.s.len-1:
+    if exp.s[i].kind != reChar:
+      break
+    if exp.s[litIdxEnd].uid+1 == exp.s[i].uid:
+      litIdxEnd = i.NodeIdx
+  doAssert litIdxEnd >= litIdxStart
+  if litIdxEnd == litIdxStart:
+    return
+  result.s = ""
+  for i in litIdxStart .. litIdxEnd:
+    result.s.add exp.s[i].cp
+
 func prefix(eNfa: Enfa, uid: NodeUid): Enfa =
   template state0: untyped = eNfa.s.len.int16-1
   result = eNfa
@@ -224,6 +254,7 @@ func prefix(eNfa: Enfa, uid: NodeUid): Enfa =
 type
   LitOpt* = object
     lit*: Rune
+    lits*: string
     nfa*: Nfa
 
 func canOpt*(litOpt: LitOpt): bool =
@@ -235,6 +266,20 @@ func litopt2*(exp: RpnExp): LitOpt =
   if litIdx == -1:
     return
   result.lit = litNode.cp
+  result.nfa = exp
+    .subExps
+    .eNfa
+    .prefix(litNode.uid)
+    .eRemoval
+
+func litopt3*(exp: RpnExp): LitOpt =
+  template litNode: untyped = exp.s[litIdx]
+  let lits = exp.lits()
+  let litIdx = lits.idx
+  if litIdx == -1:
+    return
+  result.lit = litNode.cp
+  result.lits = lits.s
   result.nfa = exp
     .subExps
     .eNfa

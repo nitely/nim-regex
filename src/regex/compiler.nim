@@ -13,7 +13,7 @@ func reImpl*(s: string): Regex {.inline.} =
     .parse
     .transformExp(groups)
   let nfa = rpn.nfa2()
-  let opt = rpn.litopt2()
+  let opt = rpn.litopt3()
   result = Regex(
     nfa: nfa,
     groupsCount: groups.count,

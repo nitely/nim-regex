@@ -273,6 +273,7 @@ func findSomeOptImpl*(
   initMaybeImpl(ms, regexSize, groupsLen)
   ms.clear()
   let hasLits = opt.lits.len > 0
+  let step = max(1, opt.lits.len)
   var limit = start.int
   var i = start.int
   var i2 = -1
@@ -292,7 +293,7 @@ func findSomeOptImpl*(
     i = reversedMatchImpl(smA, smB, text, opt.nfa, look, groupsLen, i, limit)
     if i == -1:
       #debugEcho "not.Match=", i
-      i = litIdx+1
+      i = litIdx+step
     else:
       doAssert i <= litIdx
       #debugEcho "bounds.a=", i

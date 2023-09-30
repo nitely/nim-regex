@@ -145,8 +145,7 @@ func lonelyLit(exp: RpnExp): NodeIdx =
   var lits = newSeq[int16]()
   var stateIdx = litNfa.s.len.int16-1
   while state.kind != reEoe:
-    if state.kind == reChar and
-        state.cp.int <= 127:  # XXX support unicode
+    if state.kind == reChar:
       if state.cp notin cpSeen:
         cpSeen.incl state.cp
         lits.add stateIdx
@@ -186,22 +185,24 @@ func lits(exp: RpnExp): Lits =
   for i in countdown(result.idx-1, 0):
     if exp.s[i].kind != reChar:
       break
-    if exp.s[litIdxStart].uid-1 == exp.s[i].uid:
-      litIdxStart = i.NodeIdx
+    if exp.s[litIdxStart].uid-1 != exp.s[i].uid:
+      break
+    litIdxStart = i.NodeIdx
   doAssert litIdxStart <= result.idx
   result.idx = litIdxStart
   var litIdxEnd = litIdxStart
   for i in litIdxStart+1 .. exp.s.len-1:
     if exp.s[i].kind != reChar:
       break
-    if exp.s[litIdxEnd].uid+1 == exp.s[i].uid:
-      litIdxEnd = i.NodeIdx
+    if exp.s[litIdxEnd].uid+1 != exp.s[i].uid:
+      break
+    litIdxEnd = i.NodeIdx
   doAssert litIdxEnd >= litIdxStart
-  if litIdxEnd == litIdxStart:
-    return
-  result.s = ""
+  var lits = ""
   for i in litIdxStart .. litIdxEnd:
-    result.s.add exp.s[i].cp
+    lits.add exp.s[i].cp
+  if lits.len > 1:
+    result.s.add lits
 
 func prefix(eNfa: Enfa, uid: NodeUid): Enfa =
   template state0: untyped = eNfa.s.len.int16-1
@@ -260,18 +261,6 @@ type
 func canOpt*(litOpt: LitOpt): bool =
   return litOpt.nfa.s.len > 0
 
-func litopt2*(exp: RpnExp): LitOpt =
-  template litNode: untyped = exp.s[litIdx]
-  let litIdx = exp.lonelyLit()
-  if litIdx == -1:
-    return
-  result.lit = litNode.cp
-  result.nfa = exp
-    .subExps
-    .eNfa
-    .prefix(litNode.uid)
-    .eRemoval
-
 func litopt3*(exp: RpnExp): LitOpt =
   template litNode: untyped = exp.s[litIdx]
   let lits = exp.lits()
@@ -287,7 +276,6 @@ func litopt3*(exp: RpnExp): LitOpt =
     .eRemoval
 
 when isMainModule:
-  from unicode import toUtf8, `$`
   import parser
   import exptransformation
 
@@ -299,13 +287,19 @@ when isMainModule:
     var groups: GroupsCapture
     rpn(s, groups)
 
-  func lit(s: string): string =
-    let opt = s.rpn.litopt2
-    if not opt.canOpt: return ""
-    return opt.lit.toUtf8
+  func delim(s: string): string =
+    ## Delimiter lit
+    let idx = s.rpn.lonelyLit
+    if idx == -1: return ""
+    return s.rpn.s[idx].cp.toUtf8
+
+  func lits(s: string): string =
+    let opt = s.rpn.litopt3
+    if not opt.canOpt: return
+    return opt.lits
 
   func prefix(s: string): Nfa =
-    let opt = s.rpn.litopt2
+    let opt = s.rpn.litopt3
     if not opt.canOpt: return
     return opt.nfa
 
@@ -342,69 +336,141 @@ when isMainModule:
     var visited: set[int16]
     result = toString(nfa, 0, visited)
 
-  doAssert lit"abc" == "c"
-  doAssert lit"abcab" == "c"
-  doAssert lit"abc\wxyz" == "c"
-  doAssert lit"(abc)+" == ""
-  doAssert lit"(abc)+xyz" == "z"
-  doAssert lit"(abc)*" == ""
-  doAssert lit"(abc)*xyz" == "z"
-  doAssert lit"(a|b)" == ""
-  doAssert lit"(a+|b)" == ""
-  doAssert lit"(a+|b+)" == ""
-  doAssert lit"((abc)|(xyz))" == ""
-  doAssert lit"((abc)+|(xyz)+)" == ""
-  doAssert lit"((abc)*|(xyz)*)" == ""
-  doAssert lit"a?" == ""
-  doAssert lit"a?b" == "b"
-  doAssert lit"a" == "a"
-  doAssert lit"(a|b)xyz" == "z"
-  doAssert lit"(a|bc)xyz" == "z"
-  doAssert lit"(ab|c)xyz" == "z"
-  doAssert lit"a+b" == "b"
-  doAssert lit"a*b" == "b"
-  doAssert lit"b+b" == ""
-  doAssert lit"b*b" == ""
-  doAssert lit"\d+x" == "x"
-  doAssert lit"\d*x" == "x"
-  doAssert lit"\d?x" == "x"
-  doAssert lit"\w+x" == ""
-  doAssert lit"\w*x" == ""
-  doAssert lit"\w?x" == ""
-  doAssert lit"(\w\d)*abc" == ""
-  doAssert lit"(\w\d)+abc" == ""
-  doAssert lit"(\w\d)?abc" == ""
-  doAssert lit"z(x|y)+abc" == "z"
-  doAssert lit"((a|b)c*d?(ef)*\w\d\b@)+" == ""
-  doAssert lit"((a|b)c*d?(ef)*\w\d\b@)+&%" == "%"
-  doAssert lit"((a|b)c*d?(ef)*\w\d\b)+@&%" == "%"
-  doAssert lit"((a|b)c*d?(ef)*\w\d\bx)+" == ""
-  doAssert lit"((a|b)c*d?(ef)*\w\d\bx)+yz" == ""
-  doAssert lit"((a|b)c*d?(ef)*\w\d\b)+xyz" == ""
-  doAssert lit"^a?" == ""
-  doAssert lit"a?$" == ""
-  doAssert lit"(?m)^" == ""  # XXX \n
-  doAssert lit"(?m)$" == ""  # XXX \n
-  doAssert lit"弢" == ""  # XXX support unicode
-  doAssert lit"(?<=\d)ab" == "b"
-  doAssert lit"(?<=\w)ab" == "b"
-  doAssert lit"(?<=\w+)ab" == "b"
-  doAssert lit"\dab2" == "b"
-  doAssert lit"\d+ab2" == "b"
-  doAssert lit"\wab2" == ""
+  doAssert delim"abc" == "c"
+  doAssert delim"abcab" == "c"
+  doAssert delim"abc\wxyz" == "c"
+  doAssert delim"(abc)+" == ""
+  doAssert delim"(abc)+xyz" == "z"
+  doAssert delim"(abc)*" == ""
+  doAssert delim"(abc)*xyz" == "z"
+  doAssert delim"(a|b)" == ""
+  doAssert delim"(a+|b)" == ""
+  doAssert delim"(a+|b+)" == ""
+  doAssert delim"((abc)|(xyz))" == ""
+  doAssert delim"((abc)+|(xyz)+)" == ""
+  doAssert delim"((abc)*|(xyz)*)" == ""
+  doAssert delim"a?" == ""
+  doAssert delim"a?b" == "b"
+  doAssert delim"a" == "a"
+  doAssert delim"(a|b)xyz" == "z"
+  doAssert delim"(a|bc)xyz" == "z"
+  doAssert delim"(ab|c)xyz" == "z"
+  doAssert delim"a+b" == "b"
+  doAssert delim"a*b" == "b"
+  doAssert delim"b+b" == ""
+  doAssert delim"b*b" == ""
+  doAssert delim"\d+x" == "x"
+  doAssert delim"\d*x" == "x"
+  doAssert delim"\d?x" == "x"
+  doAssert delim"\w+x" == ""
+  doAssert delim"\w*x" == ""
+  doAssert delim"\w?x" == ""
+  doAssert delim"(\w\d)*abc" == ""
+  doAssert delim"(\w\d)+abc" == ""
+  doAssert delim"(\w\d)?abc" == ""
+  doAssert delim"z(x|y)+abc" == "z"
+  doAssert delim"((a|b)c*d?(ef)*\w\d\b@)+" == ""
+  doAssert delim"((a|b)c*d?(ef)*\w\d\b@)+&%" == "%"
+  doAssert delim"((a|b)c*d?(ef)*\w\d\b)+@&%" == "%"
+  doAssert delim"((a|b)c*d?(ef)*\w\d\bx)+" == ""
+  doAssert delim"((a|b)c*d?(ef)*\w\d\bx)+yz" == ""
+  doAssert delim"((a|b)c*d?(ef)*\w\d\b)+xyz" == ""
+  doAssert delim"^a?" == ""
+  doAssert delim"a?$" == ""
+  doAssert delim"(?m)^" == ""  # XXX \n
+  doAssert delim"(?m)$" == ""  # XXX \n
+  doAssert delim"弢" == "弢"
+  doAssert delim"(?<=\d)ab" == "b"
+  doAssert delim"(?<=\w)ab" == "b"
+  doAssert delim"(?<=\w+)ab" == "b"
+  doAssert delim"\dab2" == "b"
+  doAssert delim"\d+ab2" == "b"
+  doAssert delim"\wab2" == ""
 
-  doAssert r"abc".prefix.toString == r"ba".toNfa.toString
-  doAssert r"abcab".prefix.toString == r"ba".toNfa.toString
-  doAssert r"abc\wxyz".prefix.toString == r"ba".toNfa.toString
-  doAssert r"abccc".prefix.toString == r"ba".toNfa.toString
+  doAssert lits"a" == ""
+  doAssert lits"ab" == "ab"
+  doAssert lits"abc" == "abc"
+  doAssert lits"abcab" == "abcab"
+  doAssert lits"abc\wxyz" == "abc"
+  doAssert lits"(abc)+" == ""
+  doAssert lits"(abc)+xyz" == "xyz"
+  doAssert lits"(abc)*" == ""
+  doAssert lits"(abc)*xyz" == "xyz"
+  doAssert lits"(a|b)" == ""
+  doAssert lits"(a+|b)" == ""
+  doAssert lits"(a+|b+)" == ""
+  doAssert lits"((abc)|(xyz))" == ""
+  doAssert lits"((abc)+|(xyz)+)" == ""
+  doAssert lits"((abc)*|(xyz)*)" == ""
+  doAssert lits"a?" == ""
+  doAssert lits"a?b" == ""
+  doAssert lits"a?bc" == "bc"
+  doAssert lits"(a|b)xyz" == "xyz"
+  doAssert lits"(a|bc)xyz" == "xyz"
+  doAssert lits"(ab|c)xyz" == "xyz"
+  doAssert lits"a+b" == ""
+  doAssert lits"a+bc" == "bc"
+  doAssert lits"a*b" == ""
+  doAssert lits"a*bc" == "bc"
+  doAssert lits"b+b" == ""
+  doAssert lits"b*b" == ""
+  doAssert lits"\d+x" == ""
+  doAssert lits"\d+xy" == "xy"
+  doAssert lits"\d*x" == ""
+  doAssert lits"\d*xy" == "xy"
+  doAssert lits"\d?x" == ""
+  doAssert lits"\d?xy" == "xy"
+  doAssert lits"\w+x" == ""
+  doAssert lits"\w*x" == ""
+  doAssert lits"\w?x" == ""
+  doAssert lits"(\w\d)*abc" == ""
+  doAssert lits"(\w\d)+abc" == ""
+  doAssert lits"(\w\d)?abc" == ""
+  doAssert lits"z(x|y)+abc" == ""
+  doAssert lits"xyz(x|y)+abc" == "xyz"
+  doAssert lits"((a|b)c*d?(ef)*\w\d\b@)+" == ""
+  doAssert lits"((a|b)c*d?(ef)*\w\d\b@)+&%" == "&%"
+  doAssert lits"((a|b)c*d?(ef)*\w\d\b)+@&%" == "@&%"
+  doAssert lits"((a|b)c*d?(ef)*\w\d\bx)+" == ""
+  doAssert lits"((a|b)c*d?(ef)*\w\d\bx)+yz" == ""
+  doAssert lits"((a|b)c*d?(ef)*\w\d\b)+xyz" == ""
+  doAssert lits"^a?" == ""
+  doAssert lits"a?$" == ""
+  doAssert lits"(?m)^" == ""  # XXX \n
+  doAssert lits"(?m)$" == ""  # XXX \n
+  doAssert lits"弢" == "弢"
+  doAssert lits"(?<=\d)ab" == "ab"
+  doAssert lits"(?<=\w)ab" == "ab"
+  doAssert lits"(?<=\w+)ab" == "ab"
+  doAssert lits"\dab2" == "ab2"
+  doAssert lits"\d+ab2" == "ab2"
+  doAssert lits"\wab2" == ""
+
+  block:
+    let skipChars = {'(', ')', '+', '?', '*', '[', ']', '\\'}
+    var i = 0
+    for cp in 0 .. 127:
+      if cp.char in skipChars:
+        continue
+      doAssert lits(r"" & cp.char) == ""
+      inc i
+    doAssert i == 128-skipChars.len
+    doAssert lits(128.Rune.toUtf8).len == 2
+
+  doAssert r"abc".prefix.toString == r"".toNfa.toString
+  doAssert r"\dabc".prefix.toString == r"\d".toNfa.toString
+  doAssert r"abcab".prefix.toString == r"".toNfa.toString
+  doAssert r"\dabcab".prefix.toString == r"\d".toNfa.toString
+  doAssert r"abc\wxyz".prefix.toString == r"".toNfa.toString
+  doAssert r"\dabc\wxyz".prefix.toString == r"\d".toNfa.toString
+  doAssert r"abccc".prefix.toString == r"".toNfa.toString
+  doAssert r"\dabccc".prefix.toString == r"\d".toNfa.toString
   doAssert r"\w@".prefix.toString == r"\w".toNfa.toString
-  doAssert r"\w@&%".prefix.toString == r"&@\w".toNfa.toString
-  doAssert r"\w\d@&%".prefix.toString == r"&@\d\w".toNfa.toString
+  doAssert r"\w@&%".prefix.toString == r"\w".toNfa.toString
+  doAssert r"\w\d@&%".prefix.toString == r"\d\w".toNfa.toString
 
-  doAssert r"(a|b)xyz".prefix.toString == r"yx(a|b)".toNfa.toString
-  doAssert r"(a|ab)\w@&%".prefix.toString == r"&@\w(a|ba)".toNfa.toString
-  doAssert r"(a|ab)\w@&%".prefix.toString ==
-    "[#, [&, [@, [w, [a, eoe], [b, [a, eoe]]]]]]"
+  doAssert r"(a|b)xyz".prefix.toString == r"(a|b)".toNfa.toString
+  doAssert r"(a|ab)\w@&%".prefix.toString == r"\w(a|ba)".toNfa.toString
   doAssert r"a?b".prefix.toString == r"a?".toNfa.toString
   doAssert r"".prefix.s.len == 0
   doAssert r"a?".prefix.s.len == 0

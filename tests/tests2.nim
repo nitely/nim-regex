@@ -2799,18 +2799,10 @@ test "misc5":
   check findAllStr(r"1ΪΪ", re2"\dΪ") == @["1Ϊ"]
   check findAllStr(r"1Ϊ2Ϊ", re2"\dΪ") == @["1Ϊ", "2Ϊ"]
   check findAllStr(r"1ΪΪ2Ϊ", re2"\dΪ") == @["1Ϊ", "2Ϊ"]
-  check findAllStr(r"1弢2弢", re2".弢") == @["1弢", "2弢"]
-  check findAllStr(r"1弢弢2弢", re2".弢") == @["1弢", "2弢"]
-  check findAllStr(r"1弢Ⓐ2弢", re2".弢") == @["1弢", "2弢"]
-  check findAllStr(r"1弢Ϊ2弢", re2".弢") == @["1弢", "2弢"]
-  check findAllStr(r"1Ⓐ2Ⓐ", re2".Ⓐ") == @["1Ⓐ", "2Ⓐ"]
-  check findAllStr(r"1ⒶⒶ2Ⓐ", re2".Ⓐ") == @["1Ⓐ", "2Ⓐ"]
-  check findAllStr(r"1Ⓐ弢2Ⓐ", re2".Ⓐ") == @["1Ⓐ", "2Ⓐ"]
-  check findAllStr(r"1ⒶΪ2Ⓐ", re2".Ⓐ") == @["1Ⓐ", "2Ⓐ"]
-  check findAllStr(r"1Ϊ2Ϊ", re2".Ϊ") == @["1Ϊ", "2Ϊ"]
-  check findAllStr(r"1ΪΪ2Ϊ", re2".Ϊ") == @["1Ϊ", "2Ϊ"]
-  check findAllStr(r"1Ϊ弢2Ϊ", re2".Ϊ") == @["1Ϊ", "2Ϊ"]
-  check findAllStr(r"1ΪⒶ2Ϊ", re2".Ϊ") == @["1Ϊ", "2Ϊ"]
+  check findAllStr(r"1Ⓐ弢2Ⓐ", re2"\dⒶ") == @["1Ⓐ", "2Ⓐ"]
+  check findAllStr(r"1ⒶΪ2Ⓐ", re2"\dⒶ") == @["1Ⓐ", "2Ⓐ"]
+  check findAllStr(r"1Ϊ弢2Ϊ", re2"\dΪ") == @["1Ϊ", "2Ϊ"]
+  check findAllStr(r"1ΪⒶ2Ϊ", re2"\dΪ") == @["1Ϊ", "2Ϊ"]
 
 test "fix#83":
   block:

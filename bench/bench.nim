@@ -180,8 +180,7 @@ benchRelative(regex_url_find_all, m):
   for i in 0 ..< m:
     for _ in regex.findAll(bench_text, url_find_all):
       d += 1
-  #echo d
-  #doAssert d == 5295
+  doAssert d == 5295
   doNotOptimizeAway(d)
 
 when true:

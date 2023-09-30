@@ -137,7 +137,7 @@ func toLitNfa(exp: RpnExp): LitNfa =
 type
   NodeIdx = int16
 
-func lonelyLit(exp: RpnExp): NodeIdx =
+func delimiterLit(exp: RpnExp): NodeIdx =
   template state: untyped = litNfa.s[stateIdx]
   result = -1
   let litNfa = exp.toLitNfa()
@@ -177,32 +177,50 @@ type
     idx: NodeIdx
     s: string
 
-func lits(exp: RpnExp): Lits =
-  result.idx = exp.lonelyLit()
-  if result.idx == -1:
-    return
-  var litIdxStart = result.idx
-  for i in countdown(result.idx-1, 0):
-    if exp.s[i].kind != reChar:
+func find(nodes: seq[Node], uid: int): NodeIdx =
+  for idx in 0 .. nodes.len-1:
+    if nodes[idx].uid == uid:
+      return idx.NodeIdx
+  doAssert false
+
+func lits(res: var Lits, exp: RpnExp): bool =
+  template state: untyped = litNfa.s[stateIdx]
+  res.idx = exp.delimiterLit()
+  if res.idx == -1:
+    return false
+  let litUid = exp.s[res.idx].uid
+  let litNfa = exp.toLitNfa()
+  var lits = newSeq[int16]()
+  var stateIdx = litNfa.s.len.int16-1
+  while state.kind != reEoe:
+    if state.kind == reChar:
+      lits.add stateIdx
+    doAssert state.next.len == 1
+    stateIdx = state.next[0]
+  assert lits == sorted(lits, system.cmp)
+  var litIdxStart = -1
+  for i, stateIdx in pairs lits:
+    if state.uid == litUid:
+      litIdxStart = i
       break
-    if exp.s[litIdxStart].uid-1 != exp.s[i].uid:
+  doAssert litIdxStart != -1
+  for i in countdown(litIdxStart-1, 0):
+    if litNfa.s[lits[litIdxStart]].uid-1 != litNfa.s[lits[i]].uid:
       break
-    litIdxStart = i.NodeIdx
-  doAssert litIdxStart <= result.idx
-  result.idx = litIdxStart
+    litIdxStart = i
   var litIdxEnd = litIdxStart
-  for i in litIdxStart+1 .. exp.s.len-1:
-    if exp.s[i].kind != reChar:
+  for i in litIdxStart+1 .. lits.len-1:
+    if litNfa.s[lits[litIdxEnd]].uid+1 != litNfa.s[lits[i]].uid:
       break
-    if exp.s[litIdxEnd].uid+1 != exp.s[i].uid:
-      break
-    litIdxEnd = i.NodeIdx
+    litIdxEnd = i
   doAssert litIdxEnd >= litIdxStart
-  var lits = ""
+  var ss = ""
   for i in litIdxStart .. litIdxEnd:
-    lits.add exp.s[i].cp
-  if lits.len > 1:
-    result.s.add lits
+    ss.add litNfa.s[lits[i]].cp
+  if ss.len > 1:
+    res.idx = find(exp.s, litNfa.s[lits[litIdxStart]].uid)
+    res.s.add ss
+  return true
 
 func prefix(eNfa: Enfa, uid: NodeUid): Enfa =
   template state0: untyped = eNfa.s.len.int16-1
@@ -263,10 +281,10 @@ func canOpt*(litOpt: LitOpt): bool =
 
 func litopt3*(exp: RpnExp): LitOpt =
   template litNode: untyped = exp.s[litIdx]
-  let lits = exp.lits()
-  let litIdx = lits.idx
-  if litIdx == -1:
+  var lits: Lits
+  if not lits(lits, exp):
     return
+  let litIdx = lits.idx
   result.lit = litNode.cp
   result.lits = lits.s
   result.nfa = exp
@@ -289,7 +307,7 @@ when isMainModule:
 
   func delim(s: string): string =
     ## Delimiter lit
-    let idx = s.rpn.lonelyLit
+    let idx = s.rpn.delimiterLit
     if idx == -1: return ""
     return s.rpn.s[idx].cp.toUtf8
 
@@ -386,6 +404,17 @@ when isMainModule:
   doAssert delim"\dab2" == "b"
   doAssert delim"\d+ab2" == "b"
   doAssert delim"\wab2" == ""
+  doAssert delim"abcd?" == "c"
+  doAssert delim"abcd+" == "c"
+  doAssert delim"abcd*" == "c"
+  doAssert delim"a?bc" == "c"
+  doAssert delim"a*bc" == "c"
+  doAssert delim"a+bc" == "c"
+  doAssert delim"ab(c)" == "b"  # XXX c
+  doAssert delim"(ab)c" == "b"  # XXX c
+  doAssert delim"abc?d" == "b"
+  doAssert delim"abc*d" == "b"
+  doAssert delim"abc+d" == "b"
 
   doAssert lits"a" == ""
   doAssert lits"ab" == "ab"
@@ -445,6 +474,17 @@ when isMainModule:
   doAssert lits"\dab2" == "ab2"
   doAssert lits"\d+ab2" == "ab2"
   doAssert lits"\wab2" == ""
+  doAssert lits"abcd?" == "abc"
+  doAssert lits"abcd*" == "abc"
+  doAssert lits"abcd+" == "abc"
+  doAssert lits"a?bc" == "bc"
+  doAssert lits"a*bc" == "bc"
+  doAssert lits"a+bc" == "bc"
+  doAssert lits"ab(c)" == "ab"  # XXX abc
+  doAssert lits"(ab)c" == "ab"  # XXX abc
+  doAssert lits"abc?d" == "ab"
+  doAssert lits"abc*d" == "ab"
+  doAssert lits"abc+d" == "ab"
 
   block:
     let skipChars = {'(', ')', '+', '?', '*', '[', ']', '\\'}

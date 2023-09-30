@@ -2771,6 +2771,47 @@ test "misc4":
   check findAllBounds(r"1a1a1", re2"(?<=\d)a\d") == @[1 .. 2, 3 .. 4]
   check findAllBounds(r"a1a1", re2"(?<=\d)a\d") == @[2 .. 3]
 
+test "misc5":
+  check findAllStr(r"x 弢 x 弢", re2"弢") == @["弢", "弢"]
+  check findAllStr(r"x Ⓐ x Ⓐ", re2"Ⓐ") == @["Ⓐ", "Ⓐ"]
+  check findAllStr(r"x Ϊ x Ϊ", re2"Ϊ") == @["Ϊ", "Ϊ"]
+  check findAllStr(r"x ΪⒶ弢 x", re2"ΪⒶ弢") == @["ΪⒶ弢"]
+  check findAllStr(r"x ΪⒶ弢 x ΪⒶ弢", re2"ΪⒶ弢") ==
+    @["ΪⒶ弢", "ΪⒶ弢"]
+  check findAllStr(r"ΪⒶ弢 x ΪⒶ弢 x ΪⒶ弢", re2"ΪⒶ弢") ==
+    @["ΪⒶ弢", "ΪⒶ弢", "ΪⒶ弢"]
+  check findAllStr(r"1弢2弢", re2"\d弢") == @["1弢", "2弢"]
+  check findAllStr(r"1弢弢2弢", re2"\d弢") == @["1弢", "2弢"]
+  check findAllStr(r"1弢Ⓐ2弢", re2"\d弢") == @["1弢", "2弢"]
+  check findAllStr(r"1弢Ϊ2弢", re2"\d弢") == @["1弢", "2弢"]
+  check findAllStr(r"1Ⓐ弢Ⓐ弢", re2"\dⒶ弢") == @["1Ⓐ弢"]
+  check findAllStr(r"1Ⓐ弢2Ⓐ弢", re2"\dⒶ弢") == @["1Ⓐ弢", "2Ⓐ弢"]
+  check findAllStr(r"1Ⓐ弢Ⓐ弢2Ⓐ弢", re2"\dⒶ弢") == @["1Ⓐ弢", "2Ⓐ弢"]
+  check findAllStr(r"1Ϊ弢Ϊ弢", re2"\dΪ弢") == @["1Ϊ弢"]
+  check findAllStr(r"1Ϊ弢2Ϊ弢", re2"\dΪ弢") == @["1Ϊ弢", "2Ϊ弢"]
+  check findAllStr(r"1Ϊ弢Ϊ弢2Ϊ弢", re2"\dΪ弢") == @["1Ϊ弢", "2Ϊ弢"]
+  check findAllStr(r"1ΪⒶΪⒶ", re2"\dΪⒶ") == @["1ΪⒶ"]
+  check findAllStr(r"1ΪⒶ2ΪⒶ", re2"\dΪⒶ") == @["1ΪⒶ", "2ΪⒶ"]
+  check findAllStr(r"1ΪⒶΪⒶ2ΪⒶ", re2"\dΪⒶ") == @["1ΪⒶ", "2ΪⒶ"]
+  check findAllStr(r"1ⒶⒶ", re2"\dⒶ") == @["1Ⓐ"]
+  check findAllStr(r"1Ⓐ2Ⓐ", re2"\dⒶ") == @["1Ⓐ", "2Ⓐ"]
+  check findAllStr(r"1ⒶⒶ2Ⓐ", re2"\dⒶ") == @["1Ⓐ", "2Ⓐ"]
+  check findAllStr(r"1ΪΪ", re2"\dΪ") == @["1Ϊ"]
+  check findAllStr(r"1Ϊ2Ϊ", re2"\dΪ") == @["1Ϊ", "2Ϊ"]
+  check findAllStr(r"1ΪΪ2Ϊ", re2"\dΪ") == @["1Ϊ", "2Ϊ"]
+  check findAllStr(r"1弢2弢", re2".弢") == @["1弢", "2弢"]
+  check findAllStr(r"1弢弢2弢", re2".弢") == @["1弢", "2弢"]
+  check findAllStr(r"1弢Ⓐ2弢", re2".弢") == @["1弢", "2弢"]
+  check findAllStr(r"1弢Ϊ2弢", re2".弢") == @["1弢", "2弢"]
+  check findAllStr(r"1Ⓐ2Ⓐ", re2".Ⓐ") == @["1Ⓐ", "2Ⓐ"]
+  check findAllStr(r"1ⒶⒶ2Ⓐ", re2".Ⓐ") == @["1Ⓐ", "2Ⓐ"]
+  check findAllStr(r"1Ⓐ弢2Ⓐ", re2".Ⓐ") == @["1Ⓐ", "2Ⓐ"]
+  check findAllStr(r"1ⒶΪ2Ⓐ", re2".Ⓐ") == @["1Ⓐ", "2Ⓐ"]
+  check findAllStr(r"1Ϊ2Ϊ", re2".Ϊ") == @["1Ϊ", "2Ϊ"]
+  check findAllStr(r"1ΪΪ2Ϊ", re2".Ϊ") == @["1Ϊ", "2Ϊ"]
+  check findAllStr(r"1Ϊ弢2Ϊ", re2".Ϊ") == @["1Ϊ", "2Ϊ"]
+  check findAllStr(r"1ΪⒶ2Ϊ", re2".Ϊ") == @["1Ϊ", "2Ϊ"]
+
 test "fix#83":
   block:
     let pattern = "^src/(?:[^\\/]*(?:\\/|$))*[^/]*\\.nim$"

@@ -163,6 +163,27 @@ benchRelative(regex_ip_find_all, m):
   doAssert d == 5
   doNotOptimizeAway(d)
 
+var url_find_all_re = re.re"https?://[^/\s?#]+[^\s?#]+(?:\?[^\s#]*)?(?:#[^\s]*)?"
+
+bench(re_url_find_all, m):
+  var d = 0
+  for i in 0 ..< m:
+    for _ in re.findAll(bench_text, url_find_all_re):
+      d += 1
+  doAssert d == 5295
+  doNotOptimizeAway(d)
+
+const url_find_all = regex.re2"https?://[^/\s?#]+[^\s?#]+(?:\?[^\s#]*)?(?:#[^\s]*)?"
+
+benchRelative(regex_url_find_all, m):
+  var d = 0
+  for i in 0 ..< m:
+    for _ in regex.findAll(bench_text, url_find_all):
+      d += 1
+  #echo d
+  #doAssert d == 5295
+  doNotOptimizeAway(d)
+
 when true:
   bench(runes, m):
     var d = 0

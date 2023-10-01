@@ -1,57 +1,63 @@
-nonCapture	regex/nfatype.html#nonCapture	nfatype: nonCapture	
-CaptState	regex/nfatype.html#CaptState	nfatype: CaptState	
-CaptIdx	regex/nfatype.html#CaptIdx	nfatype: CaptIdx	
-Capts3	regex/nfatype.html#Capts3	nfatype: Capts3	
-`[]`	regex/nfatype.html#[],Capts3,Natural,Natural	nfatype: `[]`(capts: Capts3; i, j: Natural): Slice[int]	
-`[]`	regex/nfatype.html#[],Capts3,Natural,Natural_2	nfatype: `[]`(capts: var Capts3; i, j: Natural): var Slice[int]	
-initCapts3	regex/nfatype.html#initCapts3,int	nfatype: initCapts3(groupsLen: int): Capts3	
-keepAlive	regex/nfatype.html#keepAlive,Capts3,CaptIdx	nfatype: keepAlive(capts: var Capts3; captIdx: CaptIdx)	
-freeze	regex/nfatype.html#freeze,Capts3	nfatype: freeze(capts: var Capts3): CaptState	
-unfreeze	regex/nfatype.html#unfreeze,Capts3,CaptState	nfatype: unfreeze(capts: var Capts3; freezeId: CaptState)	
-diverge	regex/nfatype.html#diverge,Capts3,CaptIdx	nfatype: diverge(capts: var Capts3; captIdx: CaptIdx): CaptIdx	
-recycle	regex/nfatype.html#recycle,Capts3	nfatype: recycle(capts: var Capts3)	
-notRecyclable	regex/nfatype.html#notRecyclable,Capts3,CaptIdx	nfatype: notRecyclable(capts: var Capts3; captIdx: CaptIdx)	
-recyclable	regex/nfatype.html#recyclable,Capts3,CaptIdx	nfatype: recyclable(capts: var Capts3; captIdx: CaptIdx)	
-clear	regex/nfatype.html#clear,Capts3	nfatype: clear(capts: var Capts3)	
-CaptNode	regex/nfatype.html#CaptNode	nfatype: CaptNode	
-Capts	regex/nfatype.html#Capts	nfatype: Capts	
-Captures	regex/nfatype.html#Captures	nfatype: Captures	
-constructSubmatches	regex/nfatype.html#constructSubmatches,Captures,Capts,int,int	nfatype: constructSubmatches(captures: var Captures; capts: Capts; capt, size: int)	
-reverse	regex/nfatype.html#reverse,Capts,int32,int32	nfatype: reverse(capts: var Capts; a, b: int32): int32	
-RegexLit	regex/nfatype.html#RegexLit	nfatype: RegexLit	
-Regex	regex/nfatype.html#Regex	nfatype: Regex	
-Regex2	regex/nfatype.html#Regex2	nfatype: Regex2	
-mfShortestMatch	regex/nfatype.html#mfShortestMatch	MatchFlag.mfShortestMatch	
-mfNoCaptures	regex/nfatype.html#mfNoCaptures	MatchFlag.mfNoCaptures	
-mfFindMatch	regex/nfatype.html#mfFindMatch	MatchFlag.mfFindMatch	
-mfFindMatchOpt	regex/nfatype.html#mfFindMatchOpt	MatchFlag.mfFindMatchOpt	
-mfAnchored	regex/nfatype.html#mfAnchored	MatchFlag.mfAnchored	
-mfBwMatch	regex/nfatype.html#mfBwMatch	MatchFlag.mfBwMatch	
-mfReverseCapts	regex/nfatype.html#mfReverseCapts	MatchFlag.mfReverseCapts	
-MatchFlag	regex/nfatype.html#MatchFlag	nfatype: MatchFlag	
-MatchFlags	regex/nfatype.html#MatchFlags	nfatype: MatchFlags	
-RegexMatch	regex/nfatype.html#RegexMatch	nfatype: RegexMatch	
-RegexMatch2	regex/nfatype.html#RegexMatch2	nfatype: RegexMatch2	
-clear	regex/nfatype.html#clear,RegexMatch	nfatype: clear(m: var RegexMatch)	
-clear	regex/nfatype.html#clear,RegexMatch2	nfatype: clear(m: var RegexMatch2)	
-NodeIdx	regex/nfatype.html#NodeIdx	nfatype: NodeIdx	
-Bounds	regex/nfatype.html#Bounds	nfatype: Bounds	
-PState	regex/nfatype.html#PState	nfatype: PState	
-Submatches	regex/nfatype.html#Submatches	nfatype: Submatches	
-newSubmatches	regex/nfatype.html#newSubmatches,int	nfatype: newSubmatches(size: int): Submatches	
-`[]`	regex/nfatype.html#[],Submatches,int	nfatype: `[]`(sm: Submatches; i: int): PState	
-hasState	regex/nfatype.html#hasState,Submatches,int16	nfatype: hasState(sm: Submatches; n: int16): bool	
-add	regex/nfatype.html#add,Submatches,PState	nfatype: add(sm: var Submatches; item: PState)	
-len	regex/nfatype.html#len,Submatches	nfatype: len(sm: Submatches): int	
-clear	regex/nfatype.html#clear,Submatches	nfatype: clear(sm: var Submatches)	
-items	regex/nfatype.html#items.i,Submatches	nfatype: items(sm: Submatches): PState	
-cap	regex/nfatype.html#cap,Submatches	nfatype: cap(sm: Submatches): int	
-setLen	regex/nfatype.html#setLen,Submatches,int	nfatype: setLen(sm: var Submatches; size: int)	
-SmLookaroundItem	regex/nfatype.html#SmLookaroundItem	nfatype: SmLookaroundItem	
-SmLookaround	regex/nfatype.html#SmLookaround	nfatype: SmLookaround	
-setLen	regex/nfatype.html#setLen,SmLookaroundItem,int	nfatype: setLen(item: var SmLookaroundItem; size: int)	
-last	regex/nfatype.html#last.t,SmLookaround	nfatype: last(sm: var SmLookaround): untyped	
-lastA	regex/nfatype.html#lastA.t,SmLookaround	nfatype: lastA(sm: var SmLookaround): untyped	
-lastB	regex/nfatype.html#lastB.t,SmLookaround	nfatype: lastB(sm: var SmLookaround): untyped	
-grow	regex/nfatype.html#grow,SmLookaround	nfatype: grow(sm: var SmLookaround)	
-removeLast	regex/nfatype.html#removeLast,SmLookaround	nfatype: removeLast(sm: var SmLookaround)	
+nimTitle	nfatype	regex/nfatype.html	module regex/nfatype		0
+nim	nonCapture	regex/nfatype.html#nonCapture	const nonCapture		12
+nim	CaptState	regex/nfatype.html#CaptState	type CaptState		15
+nim	CaptIdx	regex/nfatype.html#CaptIdx	type CaptIdx		25
+nim	Capts3	regex/nfatype.html#Capts3	object Capts3		26
+nim	`[]`	regex/nfatype.html#[],Capts3,Natural,Natural	proc `[]`(capts: Capts3; i, j: Natural): Slice[int]		42
+nim	`[]`	regex/nfatype.html#[],Capts3,Natural,Natural_2	proc `[]`(capts: var Capts3; i, j: Natural): var Slice[int]		47
+nim	initCapts3	regex/nfatype.html#initCapts3,int	proc initCapts3(groupsLen: int): Capts3		69
+nim	keepAlive	regex/nfatype.html#keepAlive,Capts3,CaptIdx	proc keepAlive(capts: var Capts3; captIdx: CaptIdx)		106
+nim	freeze	regex/nfatype.html#freeze,Capts3	proc freeze(capts: var Capts3): CaptState		113
+nim	unfreeze	regex/nfatype.html#unfreeze,Capts3,CaptState	proc unfreeze(capts: var Capts3; freezeId: CaptState)		125
+nim	diverge	regex/nfatype.html#diverge,Capts3,CaptIdx	proc diverge(capts: var Capts3; captIdx: CaptIdx): CaptIdx		133
+nim	recycle	regex/nfatype.html#recycle,Capts3	proc recycle(capts: var Capts3)		149
+nim	notRecyclable	regex/nfatype.html#notRecyclable,Capts3,CaptIdx	proc notRecyclable(capts: var Capts3; captIdx: CaptIdx)		162
+nim	recyclable	regex/nfatype.html#recyclable,Capts3,CaptIdx	proc recyclable(capts: var Capts3; captIdx: CaptIdx)		165
+nim	clear	regex/nfatype.html#clear,Capts3	proc clear(capts: var Capts3)		168
+nim	CaptNode	regex/nfatype.html#CaptNode	object CaptNode		175
+nim	Capts	regex/nfatype.html#Capts	type Capts		179
+nim	Captures	regex/nfatype.html#Captures	type Captures		180
+nim	constructSubmatches	regex/nfatype.html#constructSubmatches,Captures,Capts,int,int	proc constructSubmatches(captures: var Captures; capts: Capts; capt, size: int)		182
+nim	reverse	regex/nfatype.html#reverse,Capts,int32,int32	proc reverse(capts: var Capts; a, b: int32): int32		207
+nim	RegexLit	regex/nfatype.html#RegexLit	type RegexLit		220
+nim	Regex	regex/nfatype.html#Regex	object Regex		222
+nim	mfShortestMatch	regex/nfatype.html#mfShortestMatch	MatchFlag.mfShortestMatch		229
+nim	mfNoCaptures	regex/nfatype.html#mfNoCaptures	MatchFlag.mfNoCaptures		229
+nim	mfFindMatch	regex/nfatype.html#mfFindMatch	MatchFlag.mfFindMatch		229
+nim	mfFindMatchOpt	regex/nfatype.html#mfFindMatchOpt	MatchFlag.mfFindMatchOpt		229
+nim	mfAnchored	regex/nfatype.html#mfAnchored	MatchFlag.mfAnchored		229
+nim	mfBwMatch	regex/nfatype.html#mfBwMatch	MatchFlag.mfBwMatch		229
+nim	mfReverseCapts	regex/nfatype.html#mfReverseCapts	MatchFlag.mfReverseCapts		229
+nim	MatchFlag	regex/nfatype.html#MatchFlag	enum MatchFlag		229
+nim	MatchFlags	regex/nfatype.html#MatchFlags	type MatchFlags		237
+nim	RegexMatch	regex/nfatype.html#RegexMatch	object RegexMatch		238
+nim	RegexMatch2	regex/nfatype.html#RegexMatch2	object RegexMatch2		243
+nim	Regex2	regex/nfatype.html#Regex2	type Regex2		268
+nim	toRegex2	regex/nfatype.html#toRegex2.t	template toRegex2(r): untyped		271
+nim	toRegex	regex/nfatype.html#toRegex.t	template toRegex(r): untyped		272
+nim	clear	regex/nfatype.html#clear,RegexMatch	proc clear(m: var RegexMatch)		274
+nim	clear	regex/nfatype.html#clear,RegexMatch2	proc clear(m: var RegexMatch2)		281
+nim	NodeIdx	regex/nfatype.html#NodeIdx	type NodeIdx		289
+nim	Bounds	regex/nfatype.html#Bounds	type Bounds		290
+nim	PState	regex/nfatype.html#PState	tuple PState		291
+nim	Submatches	regex/nfatype.html#Submatches	type Submatches		295
+nim	newSubmatches	regex/nfatype.html#newSubmatches,int	proc newSubmatches(size: int): Submatches		302
+nim	`[]`	regex/nfatype.html#[],Submatches,int	proc `[]`(sm: Submatches; i: int): PState		311
+nim	hasState	regex/nfatype.html#hasState,Submatches,int16	proc hasState(sm: Submatches; n: int16): bool		315
+nim	add	regex/nfatype.html#add,Submatches,PState	proc add(sm: var Submatches; item: PState)		318
+nim	len	regex/nfatype.html#len,Submatches	proc len(sm: Submatches): int		327
+nim	clear	regex/nfatype.html#clear,Submatches	proc clear(sm: var Submatches)		330
+nim	items	regex/nfatype.html#items.i,Submatches	iterator items(sm: Submatches): PState		333
+nim	cap	regex/nfatype.html#cap,Submatches	proc cap(sm: Submatches): int		342
+nim	setLen	regex/nfatype.html#setLen,Submatches,int	proc setLen(sm: var Submatches; size: int)		345
+nim	SmLookaroundItem	regex/nfatype.html#SmLookaroundItem	object SmLookaroundItem		354
+nim	SmLookaround	regex/nfatype.html#SmLookaround	object SmLookaround		356
+nim	setLen	regex/nfatype.html#setLen,SmLookaroundItem,int	proc setLen(item: var SmLookaroundItem; size: int)		360
+nim	last	regex/nfatype.html#last.t,SmLookaround	template last(sm: var SmLookaround): untyped		370
+nim	lastA	regex/nfatype.html#lastA.t,SmLookaround	template lastA(sm: var SmLookaround): untyped		373
+nim	lastB	regex/nfatype.html#lastB.t,SmLookaround	template lastB(sm: var SmLookaround): untyped		376
+nim	grow	regex/nfatype.html#grow,SmLookaround	proc grow(sm: var SmLookaround)		379
+nim	removeLast	regex/nfatype.html#removeLast,SmLookaround	proc removeLast(sm: var SmLookaround)		385
+nimgrp	setlen	regex/nfatype.html#setLen-procs-all	proc		345
+nimgrp	clear	regex/nfatype.html#clear-procs-all	proc		168
+nimgrp	[]	regex/nfatype.html#[]-procs-all	proc		42

@@ -1,7 +1,8 @@
-RegexMatches	regex/nfafindall.html#RegexMatches	nfafindall: RegexMatches	
-bounds	regex/nfafindall.html#bounds.i,RegexMatches	nfafindall: bounds(ms: RegexMatches): Slice[int]	
-items	regex/nfafindall.html#items.i,RegexMatches	nfafindall: items(ms: RegexMatches): MatchItemIdx	
-fillMatchImpl	regex/nfafindall.html#fillMatchImpl,RegexMatch,MatchItemIdx,RegexMatches,Regex	nfafindall: fillMatchImpl(m: var RegexMatch; mi: MatchItemIdx; ms: RegexMatches;\n              regex: Regex)	
-dummyMatch	regex/nfafindall.html#dummyMatch,RegexMatches,int	nfafindall: dummyMatch(ms: var RegexMatches; i: int)	
-findSomeImpl	regex/nfafindall.html#findSomeImpl,string,Regex,RegexMatches,Natural,set[MatchFlag]	nfafindall: findSomeImpl(text: string; regex: Regex; ms: var RegexMatches;\n             start: Natural = 0; flags: set[MatchFlag] = {}): int	
-findSomeOptImpl	regex/nfafindall.html#findSomeOptImpl,string,Regex,RegexMatches,Natural	nfafindall: findSomeOptImpl(text: string; regex: Regex; ms: var RegexMatches; start: Natural): int	
+nimTitle	nfafindall	regex/nfafindall.html	module regex/nfafindall		0
+nim	RegexMatches	regex/nfafindall.html#RegexMatches	object RegexMatches		21
+nim	bounds	regex/nfafindall.html#bounds.i,RegexMatches	iterator bounds(ms: RegexMatches): Slice[int]		76
+nim	items	regex/nfafindall.html#items.i,RegexMatches	iterator items(ms: RegexMatches): MatchItemIdx		80
+nim	fillMatchImpl	regex/nfafindall.html#fillMatchImpl,RegexMatch,MatchItemIdx,RegexMatches,Regex	proc fillMatchImpl(m: var RegexMatch; mi: MatchItemIdx; ms: RegexMatches;\n              regex: Regex)		84
+nim	dummyMatch	regex/nfafindall.html#dummyMatch,RegexMatches,int	proc dummyMatch(ms: var RegexMatches; i: int)		96
+nim	findSomeImpl	regex/nfafindall.html#findSomeImpl,string,Regex,RegexMatches,Natural,set[MatchFlag]	proc findSomeImpl(text: string; regex: Regex; ms: var RegexMatches;\n             start: Natural = 0; flags: set[MatchFlag] = {}): int		166
+nim	findSomeOptImpl	regex/nfafindall.html#findSomeOptImpl,string,Regex,RegexMatches,Natural	proc findSomeOptImpl(text: string; regex: Regex; ms: var RegexMatches; start: Natural): int		216

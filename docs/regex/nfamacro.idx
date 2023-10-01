@@ -1,1 +1,2 @@
-matchImpl	regex/nfamacro.html#matchImpl,NimNode,NimNode,NimNode	nfamacro: matchImpl(text, expLit, body: NimNode): NimNode	
+nimTitle	nfamacro	regex/nfamacro.html	module regex/nfamacro		0
+nim	matchImpl	regex/nfamacro.html#matchImpl,NimNode,NimNode,NimNode	proc matchImpl(text, expLit, body: NimNode): NimNode		576

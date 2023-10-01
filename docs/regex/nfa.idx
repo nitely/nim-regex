@@ -1,4 +1,5 @@
-eNfa	regex/nfa.html#eNfa,RpnExp	nfa: eNfa(exp: RpnExp): Enfa	
-eRemoval	regex/nfa.html#eRemoval,Enfa	nfa: eRemoval(eNfa: Enfa): Nfa	
-subExps	regex/nfa.html#subExps,RpnExp	nfa: subExps(exp: RpnExp): RpnExp	
-nfa2	regex/nfa.html#nfa2,RpnExp	nfa: nfa2(exp: RpnExp): Nfa	
+nimTitle	nfa	regex/nfa.html	module regex/nfa		0
+nim	eNfa	regex/nfa.html#eNfa,RpnExp	proc eNfa(exp: RpnExp): Enfa		50
+nim	eRemoval	regex/nfa.html#eRemoval,Enfa	proc eRemoval(eNfa: Enfa): Nfa		200
+nim	subExps	regex/nfa.html#subExps,RpnExp	proc subExps(exp: RpnExp): RpnExp		292
+nim	nfa2	regex/nfa.html#nfa2,RpnExp	proc nfa2(exp: RpnExp): Nfa		313

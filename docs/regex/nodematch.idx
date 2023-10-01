@@ -1,3 +1,5 @@
-match	regex/nodematch.html#match,Node,Rune,Rune	nodematch: match(n: Node; r: Rune; nxt: Rune): bool	
-swapCase	regex/nodematch.html#swapCase,Rune	nodematch: swapCase(r: Rune): Rune	
-match	regex/nodematch.html#match,Node,Rune	nodematch: match(n: Node; r: Rune): bool	
+nimTitle	nodematch	regex/nodematch.html	module regex/nodematch		0
+nim	match	regex/nodematch.html#match,Node,Rune,Rune	proc match(n: Node; r: Rune; nxt: Rune): bool		42
+nim	swapCase	regex/nodematch.html#swapCase,Rune	proc swapCase(r: Rune): Rune		104
+nim	match	regex/nodematch.html#match,Node,Rune	proc match(n: Node; r: Rune): bool		110
+nimgrp	match	regex/nodematch.html#match-procs-all	proc		42

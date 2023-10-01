@@ -1,3 +1,4 @@
-GroupsCapture	regex/exptransformation.html#GroupsCapture	exptransformation: GroupsCapture	
-toAtoms	regex/exptransformation.html#toAtoms,Exp,GroupsCapture	exptransformation: toAtoms(exp: Exp; groups: var GroupsCapture): AtomsExp	
-transformExp	regex/exptransformation.html#transformExp,Exp,GroupsCapture	exptransformation: transformExp(exp: Exp; groups: var GroupsCapture): RpnExp	
+nimTitle	exptransformation	regex/exptransformation.html	module regex/exptransformation		0
+nim	GroupsCapture	regex/exptransformation.html#GroupsCapture	object GroupsCapture		61
+nim	toAtoms	regex/exptransformation.html#toAtoms,Exp,GroupsCapture	proc toAtoms(exp: Exp; groups: var GroupsCapture): AtomsExp		487
+nim	transformExp	regex/exptransformation.html#transformExp,Exp,GroupsCapture	proc transformExp(exp: Exp; groups: var GroupsCapture): RpnExp		500

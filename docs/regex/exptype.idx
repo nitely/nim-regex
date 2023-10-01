@@ -1,2 +1,3 @@
-Exp	regex/exptype.html#Exp	exptype: Exp	
-AtomsExp	regex/exptype.html#AtomsExp	exptype: AtomsExp	
+nimTitle	exptype	regex/exptype.html	module regex/exptype		0
+nim	Exp	regex/exptype.html#Exp	object Exp		4
+nim	AtomsExp	regex/exptype.html#AtomsExp	object AtomsExp		6

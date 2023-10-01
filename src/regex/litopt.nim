@@ -183,12 +183,12 @@ func find(nodes: seq[Node], uid: int): NodeIdx =
       return idx.NodeIdx
   doAssert false
 
-func lits(res: var Lits, exp: RpnExp): bool =
+func lits(exp: RpnExp): Lits =
   template state: untyped = litNfa.s[stateIdx]
-  res.idx = exp.delimiterLit()
-  if res.idx == -1:
-    return false
-  let litUid = exp.s[res.idx].uid
+  result.idx = exp.delimiterLit()
+  if result.idx == -1:
+    return
+  let litUid = exp.s[result.idx].uid
   let litNfa = exp.toLitNfa()
   var lits = newSeq[int16]()
   var stateIdx = litNfa.s.len.int16-1
@@ -218,9 +218,8 @@ func lits(res: var Lits, exp: RpnExp): bool =
   for i in litIdxStart .. litIdxEnd:
     ss.add litNfa.s[lits[i]].cp
   if ss.len > 1:
-    res.idx = find(exp.s, litNfa.s[lits[litIdxStart]].uid)
-    res.s.add ss
-  return true
+    result.idx = find(exp.s, litNfa.s[lits[litIdxStart]].uid)
+    result.s.add ss
 
 func prefix(eNfa: Enfa, uid: NodeUid): Enfa =
   template state0: untyped = eNfa.s.len.int16-1
@@ -280,13 +279,12 @@ func canOpt*(litOpt: LitOpt): bool =
   return litOpt.nfa.s.len > 0
 
 func litopt3*(exp: RpnExp): LitOpt =
-  template litNode: untyped = exp.s[litIdx]
-  var lits: Lits
-  if not lits(lits, exp):
+  template litNode: untyped = exp.s[lits2.idx]
+  let lits2 = exp.lits()
+  if lits2.idx == -1:
     return
-  let litIdx = lits.idx
   result.lit = litNode.cp
-  result.lits = lits.s
+  result.lits = lits2.s
   result.nfa = exp
     .subExps
     .eNfa

@@ -567,6 +567,7 @@ test "trepetition_cycle":
   check "aaabbbaaa".isMatch(re2"((a*|b*))*")
   check raises(r"a*****")
   check raises(r"a*{,}")
+  check raises(r"\")
   check "aaa".isMatch(re2"(a?)*")
   check "aaaa".isMatch(re2"((a)*(a)*)*")
   # Same as PCRE "^(a*)*?$"
@@ -2803,6 +2804,26 @@ test "misc5":
   check findAllStr(r"1ⒶΪ2Ⓐ", re2"\dⒶ") == @["1Ⓐ", "2Ⓐ"]
   check findAllStr(r"1Ϊ弢2Ϊ", re2"\dΪ") == @["1Ϊ", "2Ϊ"]
   check findAllStr(r"1ΪⒶ2Ϊ", re2"\dΪ") == @["1Ϊ", "2Ϊ"]
+  check findAllStr(r"abde", re2"abc?de") == @["abde"]
+  check findAllStr(r"abcde", re2"abc?de") == @["abcde"]
+  check findAllStr(r"abde1", re2"abc?de\d") == @["abde1"]
+  check findAllStr(r"abcde1", re2"abc?de\d") == @["abcde1"]
+  check findAllStr(r"abde1 abde2 abcde3", re2"abc?de\d") ==
+    @["abde1", "abde2", "abcde3"]
+
+test "misc6_sanitycheck":
+  block:
+    let skipChars = {
+      '(', ')', '+', '?', '*', '[',
+      ']', '\\', '.', '$', '^', '|'
+    }
+    var i = 0
+    for cp in 0 .. 127:
+      if cp.char in skipChars:
+        continue
+      doAssert findAllStr("弢", re2(r"" & cp.char)).len == 0
+      inc i
+    check i == 128-skipChars.len
 
 test "fix#83":
   block:

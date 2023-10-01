@@ -227,7 +227,7 @@ func parseUnicodeName(sc: Scanner[Rune]): Node =
 
 func parseEscapedSeq(sc: Scanner[Rune]): Node =
   ## Parse a escaped sequence
-  case sc.curr
+  case sc.peek
   of "u".toRune:
     discard sc.next()
     result = parseUnicodeLit(sc, 4)
@@ -250,6 +250,9 @@ func parseEscapedSeq(sc: Scanner[Rune]): Node =
     discard sc.next()
     result = parseUnicodeName(sc)
     result.kind = reNotUCC
+  of invalidRune:
+    let startPos = sc.pos
+    prettyCheck(false, "Nothing to escape")
   else:
     result = next(sc).toEscapedNode
 

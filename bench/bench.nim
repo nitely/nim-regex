@@ -203,6 +203,26 @@ benchRelative(regex_url_find_all, m):
   doAssert d == 5295
   doNotOptimizeAway(d)
 
+var unicode_find_all_re = re.re"\smůžete\s"
+
+bench(re_unicode_find_all, m):
+  var d = 0
+  for i in 0 ..< m:
+    for _ in re.findAll(bench_text, unicode_find_all_re):
+      d += 1
+  doAssert d == 25
+  doNotOptimizeAway(d)
+
+const unicode_find_all = regex.re2"\smůžete\s"
+
+benchRelative(regex_unicode_find_all, m):
+  var d = 0
+  for i in 0 ..< m:
+    for _ in regex.findAll(bench_text, unicode_find_all):
+      d += 1
+  doAssert d == 25
+  doNotOptimizeAway(d)
+
 when true:
   bench(runes, m):
     var d = 0

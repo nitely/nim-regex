@@ -484,17 +484,6 @@ when isMainModule:
   doAssert lits"abc*d" == "ab"
   doAssert lits"abc+d" == "ab"
 
-  block:
-    let skipChars = {'(', ')', '+', '?', '*', '[', ']', '\\'}
-    var i = 0
-    for cp in 0 .. 127:
-      if cp.char in skipChars:
-        continue
-      doAssert lits(r"" & cp.char) == ""
-      inc i
-    doAssert i == 128-skipChars.len
-    doAssert lits(128.Rune.toUtf8).len == 2
-
   doAssert r"abc".prefix.toString == r"".toNfa.toString
   doAssert r"\dabc".prefix.toString == r"\d".toNfa.toString
   doAssert r"abcab".prefix.toString == r"".toNfa.toString
@@ -506,6 +495,7 @@ when isMainModule:
   doAssert r"\w@".prefix.toString == r"\w".toNfa.toString
   doAssert r"\w@&%".prefix.toString == r"\w".toNfa.toString
   doAssert r"\w\d@&%".prefix.toString == r"\d\w".toNfa.toString
+  doAssert r"\w\d@&%".prefix.toString == "[#, [d, [w, eoe]]]"
 
   doAssert r"(a|b)xyz".prefix.toString == r"(a|b)".toNfa.toString
   doAssert r"(a|ab)\w@&%".prefix.toString == r"\w(a|ba)".toNfa.toString
@@ -531,5 +521,17 @@ when isMainModule:
   doAssert r"\w*\d+?@".prefix.toString == r"\d+\w*".toNfa.toString
   doAssert r"\w*?\d+@".prefix.toString == r"\d+\w*".toNfa.toString
   doAssert r"\w*?\d+?@".prefix.toString == r"\d+\w*".toNfa.toString
+
+  # sanity check
+  block:
+    let skipChars = {'(', ')', '+', '?', '*', '[', ']', '\\'}
+    var i = 0
+    for cp in 0 .. 127:
+      if cp.char in skipChars:
+        continue
+      doAssert lits(r"" & cp.char).len == 0
+      inc i
+    doAssert i == 128-skipChars.len
+    doAssert lits(128.Rune.toUtf8).len == 2
 
   echo "litopt ok"

@@ -2821,7 +2821,7 @@ test "misc6_sanitycheck":
     for cp in 0 .. 127:
       if cp.char in skipChars:
         continue
-      doAssert findAllStr("弢", re2(r"" & cp.char)).len == 0
+      check findAllStr("弢", re2(r"" & cp.char)).len == 0
       inc i
     check i == 128-skipChars.len
 

@@ -2832,6 +2832,19 @@ test "misc5":
     @["abcdef", "hij"]
   check findAllStr(r"1abc2abc34", re2"\dabc\d\d") == @["2abc34"]
   check findAllStr(r"1ΪⒶ弢2ΪⒶ弢34", re2"\dΪⒶ弢\d\d") == @["2ΪⒶ弢34"]
+  check findAllStr(r"1abc2abc34", re2"\dabc\d4") == @["2abc34"]
+  check findAllStr(r"1a0c2a0c34", re2"\da0c\d\d") == @["2a0c34"]
+  check findAllStr(r"1abc23abc4", re2"\dabc\d\d") == @["1abc23"]
+  check findAllStr(r"1abc23abc45abc6", re2"\dabc\d\d") == @["1abc23"]
+  check findAllStr(r"1abc23abc45abc67", re2"\dabc\d\d") ==
+    @["1abc23", "5abc67"]
+  check findAllStr(r"1ΪⒶ弢2ΪⒶ弢34", re2"\dΪⒶ弢\d4") == @["2ΪⒶ弢34"]
+  check findAllStr(r"1Ϊ0弢2Ϊ0弢34", re2"\dΪ0弢\d\d") == @["2Ϊ0弢34"]
+  check findAllStr(r"1ΪⒶ弢23ΪⒶ弢4", re2"\dΪⒶ弢\d\d") == @["1ΪⒶ弢23"]
+  check findAllStr(r"1ΪⒶ弢23ΪⒶ弢45ΪⒶ弢6", re2"\dΪⒶ弢\d\d") ==
+    @["1ΪⒶ弢23"]
+  check findAllStr(r"1ΪⒶ弢23ΪⒶ弢45ΪⒶ弢67", re2"\dΪⒶ弢\d\d") ==
+    @["1ΪⒶ弢23", "5ΪⒶ弢67"]
 
 test "misc6_sanitycheck":
   block:

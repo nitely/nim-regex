@@ -2826,6 +2826,12 @@ test "misc5":
   check findAllStr(r"ΪⒶ弢ΪⒶ弢x", re2"ΪⒶ弢\w") == @["ΪⒶ弢Ϊ"]
   check findAllStr(r"弢弢弢Ⓐ", re2"弢\w") == @["弢弢", "弢Ⓐ"]
   check findAllStr(r"1弢2弢3弢4", re2"\w弢\w") == @["1弢2", "3弢4"]
+  check findAllStr(r"abcdefhij", re2"((abc|def)|(hij))") ==
+    @["abc", "def", "hij"]
+  check findAllStr(r"abcdefhij", re2"((abc|def)+|(hij)+)") ==
+    @["abcdef", "hij"]
+  check findAllStr(r"1abc2abc34", re2"\dabc\d\d") == @["2abc34"]
+  check findAllStr(r"1ΪⒶ弢2ΪⒶ弢34", re2"\dΪⒶ弢\d\d") == @["2ΪⒶ弢34"]
 
 test "misc6_sanitycheck":
   block:

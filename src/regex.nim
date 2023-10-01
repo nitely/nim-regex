@@ -290,8 +290,8 @@ This lib makes no effort to handle bad/malformed UTF-8 input text.
 The behaviour on bad input is currently undefined, and it will
 likely result in an internal AssertionDefect or some other error.
 
-What can be done about this is validating the input text before
-passing it to the match function.
+What can be done about this is validating the input text to avoid
+passing a bad input to the match function.
 
 .. code-block:: nim
     :test:
@@ -305,7 +305,7 @@ Match binary data
 #################
 
 Matching on arbitrary binary data (i.e: not utf-8) is not currently supported.
-Both the regex and the input text are assumed to be valid utf-8.
+Both the regex and the input text are expected to be valid utf-8.
 The input text is treated as utf-8, and setting the regex to ASCII mode
 won't help.
 

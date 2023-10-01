@@ -1,3 +1,2 @@
-nimTitle	compiler	regex/compiler.html	module regex/compiler		0
-nim	reImpl	regex/compiler.html#reImpl,string	proc reImpl(s: string): Regex		10
-nim	reCt	regex/compiler.html#reCt,string	proc reCt(s: string): Regex		26
+reImpl	regex/compiler.html#reImpl,string	compiler: reImpl(s: string): Regex	
+reCt	regex/compiler.html#reCt,string	compiler: reCt(s: string): Regex	

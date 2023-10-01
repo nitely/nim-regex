@@ -1,101 +1,78 @@
-nimTitle	regex	regex.html	module regex		0
-nim	reNonCapture	regex.html#reNonCapture	const reNonCapture		347
-nim	rex	regex.html#rex,string	proc rex(s: string): RegexLit		350
-nim	re2	regex.html#re2,string	proc re2(s: string): Regex2		354
-nim	re2	regex.html#re2,staticstring	proc re2(s: static string): static[Regex2]		368
-nim	group	regex.html#group,RegexMatch2,int	proc group(m: RegexMatch2; i: int): Slice[int]		375
-nim	group	regex.html#group,RegexMatch2,string	proc group(m: RegexMatch2; s: string): Slice[int]		388
-nim	groupsCount	regex.html#groupsCount,RegexMatch2	proc groupsCount(m: RegexMatch2): int		400
-nim	groupNames	regex.html#groupNames,RegexMatch2	proc groupNames(m: RegexMatch2): seq[string]		409
-nim	match	regex.html#match.m,string,RegexLit,untyped	macro match(text: string; regex: RegexLit; body: untyped): untyped		420
-nim	match	regex.html#match,string,Regex2,RegexMatch2,int	proc match(s: string; pattern: Regex2; m: var RegexMatch2; start = 0): bool		444
-nim	match	regex.html#match,string,Regex2	proc match(s: string; pattern: Regex2): bool		461
-nim	findAll	regex.html#findAll.i,string,Regex2,int	iterator findAll(s: string; pattern: Regex2; start = 0): RegexMatch2		475
-nim	findAll	regex.html#findAll,string,Regex2,int	proc findAll(s: string; pattern: Regex2; start = 0): seq[RegexMatch2]		508
-nim	findAllBounds	regex.html#findAllBounds.i,string,Regex2,int	iterator findAllBounds(s: string; pattern: Regex2; start = 0): Slice[int]		516
-nim	findAllBounds	regex.html#findAllBounds,string,Regex2,int	proc findAllBounds(s: string; pattern: Regex2; start = 0): seq[Slice[int]]		544
-nim	find	regex.html#find,string,Regex2,RegexMatch2,int	proc find(s: string; pattern: Regex2; m: var RegexMatch2; start = 0): bool		552
-nim	contains	regex.html#contains,string,Regex2	proc contains(s: string; pattern: Regex2): bool		577
-nim	split	regex.html#split.i,string,Regex2	iterator split(s: string; sep: Regex2): string		587
-nim	split	regex.html#split,string,Regex2	proc split(s: string; sep: Regex2): seq[string]		611
-nim	splitIncl	regex.html#splitIncl,string,Regex2	proc splitIncl(s: string; sep: Regex2): seq[string]		620
-nim	startsWith	regex.html#startsWith,string,Regex2,int	proc startsWith(s: string; pattern: Regex2; start = 0): bool		650
-nim	endsWith	regex.html#endsWith,string,Regex2	proc endsWith(s: string; pattern: Regex2): bool		670
-nim	replace	regex.html#replace,string,Regex2,string,int	proc replace(s: string; pattern: Regex2; by: string; limit = 0): string		706
-nim	replace	regex.html#replace,string,Regex2,proc(RegexMatch2,string),int	proc replace(s: string; pattern: Regex2;\n        by: proc (m: RegexMatch2; s: string): string; limit = 0): string		750
-nim	isInitialized	regex.html#isInitialized,Regex2	proc isInitialized(re: Regex2): bool		779
-nim	escapeRe	regex.html#escapeRe,string	proc escapeRe(s: string): string		789
-nim	re	regex.html#re,string	proc re(s: string): Regex		846
-nim	re	regex.html#re,staticstring	proc re(s: static string): static[Regex]		852
-nim	toPattern	regex.html#toPattern,string	proc toPattern(s: string): Regex		860
-nim	group	regex.html#group.i,RegexMatch,int	iterator group(m: RegexMatch; i: int): Slice[int]		865
-nim	group	regex.html#group,RegexMatch,int	proc group(m: RegexMatch; i: int): seq[Slice[int]]		869
-nim	group	regex.html#group,RegexMatch,int,string	proc group(m: RegexMatch; i: int; text: string): seq[string]		872
-nim	groupFirstCapture	regex.html#groupFirstCapture,RegexMatch,int,string	proc groupFirstCapture(m: RegexMatch; i: int; text: string): string		879
-nim	groupLastCapture	regex.html#groupLastCapture,RegexMatch,int,string	proc groupLastCapture(m: RegexMatch; i: int; text: string): string		885
-nim	group	regex.html#group.i,RegexMatch,string	iterator group(m: RegexMatch; s: string): Slice[int]		893
-nim	group	regex.html#group,RegexMatch,string	proc group(m: RegexMatch; s: string): seq[Slice[int]]		899
-nim	group	regex.html#group,RegexMatch,string,string	proc group(m: RegexMatch; groupName: string; text: string): seq[string]		904
-nim	groupFirstCapture	regex.html#groupFirstCapture,RegexMatch,string,string	proc groupFirstCapture(m: RegexMatch; groupName: string; text: string): string		913
-nim	groupLastCapture	regex.html#groupLastCapture,RegexMatch,string,string	proc groupLastCapture(m: RegexMatch; groupName: string; text: string): string		924
-nim	groupsCount	regex.html#groupsCount,RegexMatch	proc groupsCount(m: RegexMatch): int		935
-nim	groupNames	regex.html#groupNames,RegexMatch	proc groupNames(m: RegexMatch): seq[string]		938
-nim	match	regex.html#match,string,Regex,RegexMatch,int	proc match(s: string; pattern: Regex; m: var RegexMatch; start = 0): bool		941
-nim	match	regex.html#match,string,Regex	proc match(s: string; pattern: Regex): bool		949
-nim	findAll	regex.html#findAll.i,string,Regex,int	iterator findAll(s: string; pattern: Regex; start = 0): RegexMatch		953
-nim	findAll	regex.html#findAll,string,Regex,int	proc findAll(s: string; pattern: Regex; start = 0): seq[RegexMatch]		973
-nim	findAllBounds	regex.html#findAllBounds.i,string,Regex,int	iterator findAllBounds(s: string; pattern: Regex; start = 0): Slice[int]		981
-nim	findAllBounds	regex.html#findAllBounds,string,Regex,int	proc findAllBounds(s: string; pattern: Regex; start = 0): seq[Slice[int]]		999
-nim	findAndCaptureAll	regex.html#findAndCaptureAll,string,Regex	proc findAndCaptureAll(s: string; pattern: Regex): seq[string]		1007
-nim	contains	regex.html#contains,string,Regex	proc contains(s: string; pattern: Regex): bool		1013
-nim	find	regex.html#find,string,Regex,RegexMatch,int	proc find(s: string; pattern: Regex; m: var RegexMatch; start = 0): bool		1018
-nim	split	regex.html#split.i,string,Regex	iterator split(s: string; sep: Regex): string		1032
-nim	split	regex.html#split,string,Regex	proc split(s: string; sep: Regex): seq[string]		1049
-nim	splitIncl	regex.html#splitIncl,string,Regex	proc splitIncl(s: string; sep: Regex): seq[string]		1053
-nim	startsWith	regex.html#startsWith,string,Regex,int	proc startsWith(s: string; pattern: Regex; start = 0): bool		1076
-nim	endsWith	regex.html#endsWith,string,Regex	proc endsWith(s: string; pattern: Regex): bool		1082
-nim	replace	regex.html#replace,string,Regex,string,int	proc replace(s: string; pattern: Regex; by: string; limit = 0): string		1112
-nim	replace	regex.html#replace,string,Regex,proc(RegexMatch,string),int	proc replace(s: string; pattern: Regex; by: proc (m: RegexMatch; s: string): string;\n        limit = 0): string		1137
-nim	isInitialized	regex.html#isInitialized,Regex	proc isInitialized(re: Regex): bool		1153
-nimgrp	contains	regex.html#contains-procs-all	proc		577
-nimgrp	isinitialized	regex.html#isInitialized-procs-all	proc		779
-nimgrp	replace	regex.html#replace-procs-all	proc		706
-nimgrp	split	regex.html#split-procs-all	proc		611
-nimgrp	startswith	regex.html#startsWith-procs-all	proc		650
-nimgrp	splitincl	regex.html#splitIncl-procs-all	proc		620
-nimgrp	match	regex.html#match-procs-all	proc		444
-nimgrp	re2	regex.html#re2-procs-all	proc		354
-nimgrp	findall	regex.html#findAll-procs-all	proc		508
-nimgrp	findallbounds	regex.html#findAllBounds-procs-all	proc		544
-nimgrp	grouplastcapture	regex.html#groupLastCapture-procs-all	proc		885
-nimgrp	group	regex.html#group-procs-all	proc		375
-nimgrp	groupnames	regex.html#groupNames-procs-all	proc		409
-nimgrp	endswith	regex.html#endsWith-procs-all	proc		670
-nimgrp	re	regex.html#re-procs-all	proc		846
-nimgrp	groupfirstcapture	regex.html#groupFirstCapture-procs-all	proc		879
-nimgrp	find	regex.html#find-procs-all	proc		552
-nimgrp	groupscount	regex.html#groupsCount-procs-all	proc		400
-nimgrp	split	regex.html#split-iterators-all	iterator		587
-nimgrp	findall	regex.html#findAll-iterators-all	iterator		475
-nimgrp	findallbounds	regex.html#findAllBounds-iterators-all	iterator		516
-nimgrp	group	regex.html#group-iterators-all	iterator		865
-heading	Syntax	regex.html#syntax	 Syntax		0
-heading	Matching one character	regex.html#syntax-matching-one-character	  Matching one character		0
-heading	Character classes	regex.html#syntax-character-classes	  Character classes		0
-heading	Composites	regex.html#syntax-composites	  Composites		0
-heading	Repetitions	regex.html#syntax-repetitions	  Repetitions		0
-heading	Empty matches	regex.html#syntax-empty-matches	  Empty matches		0
-heading	Grouping and flags	regex.html#syntax-grouping-and-flags	  Grouping and flags		0
-heading	Escape sequences	regex.html#syntax-escape-sequences	  Escape sequences		0
-heading	Perl character classes (Unicode friendly)	regex.html#syntax-perl-character-classes-unicode-friendly	  Perl character classes (Unicode friendly)		0
-heading	ASCII character classes	regex.html#syntax-ascii-character-classes	  ASCII character classes		0
-heading	Lookaround Assertions	regex.html#syntax-lookaround-assertions	  Lookaround Assertions		0
-heading	Examples	regex.html#examples	 Examples		0
-heading	Match	regex.html#examples-match	  Match		0
-heading	Captures	regex.html#examples-captures	  Captures		0
-heading	Find	regex.html#examples-find	  Find		0
-heading	Find All	regex.html#examples-find-all	  Find All		0
-heading	Verbose Mode	regex.html#examples-verbose-mode	  Verbose Mode		0
-heading	Match Macro	regex.html#examples-match-macro	  Match Macro		0
-heading	Bad UTF-8 input text	regex.html#examples-bad-utfminus8-input-text	  Bad UTF-8 input text		0
-heading	Match binary data	regex.html#examples-match-binary-data	  Match binary data		0
+reNonCapture	regex.html#reNonCapture	regex: reNonCapture	
+rex	regex.html#rex,string	regex: rex(s: string): RegexLit	
+re2	regex.html#re2,string	regex: re2(s: string): Regex2	
+re2	regex.html#re2,staticstring	regex: re2(s: static string): static[Regex2]	
+group	regex.html#group,RegexMatch2,int	regex: group(m: RegexMatch2; i: int): Slice[int]	
+group	regex.html#group,RegexMatch2,string	regex: group(m: RegexMatch2; s: string): Slice[int]	
+groupsCount	regex.html#groupsCount,RegexMatch2	regex: groupsCount(m: RegexMatch2): int	
+groupNames	regex.html#groupNames,RegexMatch2	regex: groupNames(m: RegexMatch2): seq[string]	
+match	regex.html#match.m,string,RegexLit,untyped	regex: match(text: string; regex: RegexLit; body: untyped): untyped	
+match	regex.html#match,string,Regex2,RegexMatch2,int	regex: match(s: string; pattern: Regex2; m: var RegexMatch2; start = 0): bool	
+match	regex.html#match,string,Regex2	regex: match(s: string; pattern: Regex2): bool	
+findAll	regex.html#findAll.i,string,Regex2,int	regex: findAll(s: string; pattern: Regex2; start = 0): RegexMatch2	
+findAll	regex.html#findAll,string,Regex2,int	regex: findAll(s: string; pattern: Regex2; start = 0): seq[RegexMatch2]	
+findAllBounds	regex.html#findAllBounds.i,string,Regex2,int	regex: findAllBounds(s: string; pattern: Regex2; start = 0): Slice[int]	
+findAllBounds	regex.html#findAllBounds,string,Regex2,int	regex: findAllBounds(s: string; pattern: Regex2; start = 0): seq[Slice[int]]	
+find	regex.html#find,string,Regex2,RegexMatch2,int	regex: find(s: string; pattern: Regex2; m: var RegexMatch2; start = 0): bool	
+contains	regex.html#contains,string,Regex2	regex: contains(s: string; pattern: Regex2): bool	
+split	regex.html#split.i,string,Regex2	regex: split(s: string; sep: Regex2): string	
+split	regex.html#split,string,Regex2	regex: split(s: string; sep: Regex2): seq[string]	
+splitIncl	regex.html#splitIncl,string,Regex2	regex: splitIncl(s: string; sep: Regex2): seq[string]	
+startsWith	regex.html#startsWith,string,Regex2,int	regex: startsWith(s: string; pattern: Regex2; start = 0): bool	
+endsWith	regex.html#endsWith,string,Regex2	regex: endsWith(s: string; pattern: Regex2): bool	
+replace	regex.html#replace,string,Regex2,string,int	regex: replace(s: string; pattern: Regex2; by: string; limit = 0): string	
+replace	regex.html#replace,string,Regex2,proc(RegexMatch2,string),int	regex: replace(s: string; pattern: Regex2;\n        by: proc (m: RegexMatch2; s: string): string; limit = 0): string	
+isInitialized	regex.html#isInitialized,Regex2	regex: isInitialized(re: Regex2): bool	
+escapeRe	regex.html#escapeRe,string	regex: escapeRe(s: string): string	
+re	regex.html#re,string	regex: re(s: string): Regex	
+re	regex.html#re,staticstring	regex: re(s: static string): static[Regex]	
+toPattern	regex.html#toPattern,string	regex: toPattern(s: string): Regex	
+group	regex.html#group.i,RegexMatch,int	regex: group(m: RegexMatch; i: int): Slice[int]	
+group	regex.html#group,RegexMatch,int	regex: group(m: RegexMatch; i: int): seq[Slice[int]]	
+group	regex.html#group,RegexMatch,int,string	regex: group(m: RegexMatch; i: int; text: string): seq[string]	
+groupFirstCapture	regex.html#groupFirstCapture,RegexMatch,int,string	regex: groupFirstCapture(m: RegexMatch; i: int; text: string): string	
+groupLastCapture	regex.html#groupLastCapture,RegexMatch,int,string	regex: groupLastCapture(m: RegexMatch; i: int; text: string): string	
+group	regex.html#group.i,RegexMatch,string	regex: group(m: RegexMatch; s: string): Slice[int]	
+group	regex.html#group,RegexMatch,string	regex: group(m: RegexMatch; s: string): seq[Slice[int]]	
+group	regex.html#group,RegexMatch,string,string	regex: group(m: RegexMatch; groupName: string; text: string): seq[string]	
+groupFirstCapture	regex.html#groupFirstCapture,RegexMatch,string,string	regex: groupFirstCapture(m: RegexMatch; groupName: string; text: string): string	
+groupLastCapture	regex.html#groupLastCapture,RegexMatch,string,string	regex: groupLastCapture(m: RegexMatch; groupName: string; text: string): string	
+groupsCount	regex.html#groupsCount,RegexMatch	regex: groupsCount(m: RegexMatch): int	
+groupNames	regex.html#groupNames,RegexMatch	regex: groupNames(m: RegexMatch): seq[string]	
+match	regex.html#match,string,Regex,RegexMatch,int	regex: match(s: string; pattern: Regex; m: var RegexMatch; start = 0): bool	
+match	regex.html#match,string,Regex	regex: match(s: string; pattern: Regex): bool	
+findAll	regex.html#findAll.i,string,Regex,int	regex: findAll(s: string; pattern: Regex; start = 0): RegexMatch	
+findAll	regex.html#findAll,string,Regex,int	regex: findAll(s: string; pattern: Regex; start = 0): seq[RegexMatch]	
+findAllBounds	regex.html#findAllBounds.i,string,Regex,int	regex: findAllBounds(s: string; pattern: Regex; start = 0): Slice[int]	
+findAllBounds	regex.html#findAllBounds,string,Regex,int	regex: findAllBounds(s: string; pattern: Regex; start = 0): seq[Slice[int]]	
+findAndCaptureAll	regex.html#findAndCaptureAll,string,Regex	regex: findAndCaptureAll(s: string; pattern: Regex): seq[string]	
+contains	regex.html#contains,string,Regex	regex: contains(s: string; pattern: Regex): bool	
+find	regex.html#find,string,Regex,RegexMatch,int	regex: find(s: string; pattern: Regex; m: var RegexMatch; start = 0): bool	
+split	regex.html#split.i,string,Regex	regex: split(s: string; sep: Regex): string	
+split	regex.html#split,string,Regex	regex: split(s: string; sep: Regex): seq[string]	
+splitIncl	regex.html#splitIncl,string,Regex	regex: splitIncl(s: string; sep: Regex): seq[string]	
+startsWith	regex.html#startsWith,string,Regex,int	regex: startsWith(s: string; pattern: Regex; start = 0): bool	
+endsWith	regex.html#endsWith,string,Regex	regex: endsWith(s: string; pattern: Regex): bool	
+replace	regex.html#replace,string,Regex,string,int	regex: replace(s: string; pattern: Regex; by: string; limit = 0): string	
+replace	regex.html#replace,string,Regex,proc(RegexMatch,string),int	regex: replace(s: string; pattern: Regex; by: proc (m: RegexMatch; s: string): string;\n        limit = 0): string	
+isInitialized	regex.html#isInitialized,Regex	regex: isInitialized(re: Regex): bool	
+Syntax	regex.html#syntax	 Syntax	
+Matching one character	regex.html#syntax-matching-one-character	  Matching one character	
+Character classes	regex.html#syntax-character-classes	  Character classes	
+Composites	regex.html#syntax-composites	  Composites	
+Repetitions	regex.html#syntax-repetitions	  Repetitions	
+Empty matches	regex.html#syntax-empty-matches	  Empty matches	
+Grouping and flags	regex.html#syntax-grouping-and-flags	  Grouping and flags	
+Escape sequences	regex.html#syntax-escape-sequences	  Escape sequences	
+Perl character classes (Unicode friendly)	regex.html#syntax-perl-character-classes-unicode-friendly	  Perl character classes (Unicode friendly)	
+ASCII character classes	regex.html#syntax-ascii-character-classes	  ASCII character classes	
+Lookaround Assertions	regex.html#syntax-lookaround-assertions	  Lookaround Assertions	
+Examples	regex.html#examples	 Examples	
+Match	regex.html#examples-match	  Match	
+Captures	regex.html#examples-captures	  Captures	
+Find	regex.html#examples-find	  Find	
+Find All	regex.html#examples-find-all	  Find All	
+Verbose Mode	regex.html#examples-verbose-mode	  Verbose Mode	
+Match Macro	regex.html#examples-match-macro	  Match Macro	
+Bad UTF-8 input text	regex.html#examples-bad-utfminus8-input-text	  Bad UTF-8 input text	
+Match binary data	regex.html#examples-match-binary-data	  Match binary data	

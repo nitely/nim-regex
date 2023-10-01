@@ -1,7 +1,6 @@
-nimTitle	nfamatch	regex/nfamatch.html	module regex/nfamatch		0
-nim	Lookaround	regex/nfamatch.html#Lookaround	object Lookaround		32
-nim	lookAroundTpl	regex/nfamatch.html#lookAroundTpl.t	template lookAroundTpl(): untyped		37
-nim	reversedMatchImpl	regex/nfamatch.html#reversedMatchImpl,Submatches,Submatches,string,Nfa,Lookaround,int,int	proc reversedMatchImpl(smA, smB: var Submatches; text: string; nfa: Nfa;\n                  look: var Lookaround; start, limit: int): int		199
-nim	initLook	regex/nfamatch.html#initLook.t	template initLook(): Lookaround		211
-nim	matchImpl	regex/nfamatch.html#matchImpl,string,Regex,RegexMatch,int	proc matchImpl(text: string; regex: Regex; m: var RegexMatch; start = 0): bool		216
-nim	startsWithImpl	regex/nfamatch.html#startsWithImpl,string,Regex,int	proc startsWithImpl(text: string; regex: Regex; start: int): bool		238
+Lookaround	regex/nfamatch.html#Lookaround	nfamatch: Lookaround	
+lookAroundTpl	regex/nfamatch.html#lookAroundTpl.t	nfamatch: lookAroundTpl(): untyped	
+reversedMatchImpl	regex/nfamatch.html#reversedMatchImpl,Submatches,Submatches,string,Nfa,Lookaround,int,int	nfamatch: reversedMatchImpl(smA, smB: var Submatches; text: string; nfa: Nfa;\n                  look: var Lookaround; start, limit: int): int	
+initLook	regex/nfamatch.html#initLook.t	nfamatch: initLook(): Lookaround	
+matchImpl	regex/nfamatch.html#matchImpl,string,Regex,RegexMatch,int	nfamatch: matchImpl(text: string; regex: Regex; m: var RegexMatch; start = 0): bool	
+startsWithImpl	regex/nfamatch.html#startsWithImpl,string,Regex,int	nfamatch: startsWithImpl(text: string; regex: Regex; start: int): bool	

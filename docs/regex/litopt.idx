@@ -1,4 +1,3 @@
-nimTitle	litopt	regex/litopt.html	module regex/litopt		0
-nim	LitOpt	regex/litopt.html#LitOpt	object LitOpt		273
-nim	canOpt	regex/litopt.html#canOpt,LitOpt	proc canOpt(litOpt: LitOpt): bool		278
-nim	litopt3	regex/litopt.html#litopt3,RpnExp	proc litopt3(exp: RpnExp): LitOpt		281
+LitOpt	regex/litopt.html#LitOpt	litopt: LitOpt	
+canOpt	regex/litopt.html#canOpt,LitOpt	litopt: canOpt(litOpt: LitOpt): bool	
+litopt3	regex/litopt.html#litopt3,RpnExp	litopt: litopt3(exp: RpnExp): LitOpt	

@@ -1,18 +1,15 @@
-nimTitle	scanner	regex/scanner.html	module regex/scanner		0
-nim	Scanner	regex/scanner.html#Scanner	type Scanner		7
-nim	newScanner	regex/scanner.html#newScanner,seq[T]	proc newScanner[T](s: seq[T]): Scanner[T]		14
-nim	scan	regex/scanner.html#scan,seq[T]	proc scan[T](s: seq[T]): Scanner[T]		17
-nim	scan	regex/scanner.html#scan,string	proc scan(raw: string): Scanner[Rune]		20
-nim	items	regex/scanner.html#items.i,Scanner[T]	iterator items[T](sc: Scanner[T]): T		26
-nim	mitems	regex/scanner.html#mitems.i,Scanner[T]	iterator mitems[T](sc: var Scanner[T]): var T		32
-nim	finished	regex/scanner.html#finished,Scanner[T]	proc finished[T](sc: Scanner[T]): bool		38
-nim	prev	regex/scanner.html#prev,Scanner[T]	proc prev[T](sc: Scanner[T]): T		41
-nim	curr	regex/scanner.html#curr,Scanner[T]	proc curr[T](sc: Scanner[T]): T		44
-nim	next	regex/scanner.html#next,Scanner[T]	proc next[T](sc: Scanner[T]): T		47
-nim	peek	regex/scanner.html#peek,Scanner[Rune]	proc peek(sc: Scanner[Rune]): Rune		61
-nim	peek	regex/scanner.html#peek,Scanner[Node]	proc peek(sc: Scanner[Node]): Node		64
-nim	peek	regex/scanner.html#peek.i,Scanner[T]	iterator peek[T](sc: Scanner[T]): (T, T)		67
-nim	peek	regex/scanner.html#peek,Scanner[Rune],int	proc peek(sc: Scanner[Rune]; n: int): Rune		71
-nim	find	regex/scanner.html#find,Scanner[Rune],Rune	proc find(sc: Scanner[Rune]; r: Rune): int		77
-nimgrp	scan	regex/scanner.html#scan-procs-all	proc		17
-nimgrp	peek	regex/scanner.html#peek-procs-all	proc		61
+Scanner	regex/scanner.html#Scanner	scanner: Scanner	
+newScanner	regex/scanner.html#newScanner,seq[T]	scanner: newScanner[T](s: seq[T]): Scanner[T]	
+scan	regex/scanner.html#scan,seq[T]	scanner: scan[T](s: seq[T]): Scanner[T]	
+scan	regex/scanner.html#scan,string	scanner: scan(raw: string): Scanner[Rune]	
+items	regex/scanner.html#items.i,Scanner[T]	scanner: items[T](sc: Scanner[T]): T	
+mitems	regex/scanner.html#mitems.i,Scanner[T]	scanner: mitems[T](sc: var Scanner[T]): var T	
+finished	regex/scanner.html#finished,Scanner[T]	scanner: finished[T](sc: Scanner[T]): bool	
+prev	regex/scanner.html#prev,Scanner[T]	scanner: prev[T](sc: Scanner[T]): T	
+curr	regex/scanner.html#curr,Scanner[T]	scanner: curr[T](sc: Scanner[T]): T	
+next	regex/scanner.html#next,Scanner[T]	scanner: next[T](sc: Scanner[T]): T	
+peek	regex/scanner.html#peek,Scanner[Rune]	scanner: peek(sc: Scanner[Rune]): Rune	
+peek	regex/scanner.html#peek,Scanner[Node]	scanner: peek(sc: Scanner[Node]): Node	
+peek	regex/scanner.html#peek.i,Scanner[T]	scanner: peek[T](sc: Scanner[T]): (T, T)	
+peek	regex/scanner.html#peek,Scanner[Rune],int	scanner: peek(sc: Scanner[Rune]; n: int): Rune	
+find	regex/scanner.html#find,Scanner[Rune],Rune	scanner: find(sc: Scanner[Rune]; r: Rune): int	

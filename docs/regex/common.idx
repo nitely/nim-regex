@@ -1,12 +1,10 @@
-nimTitle	common	regex/common.html	module regex/common		0
-nim	RegexError	regex/common.html#RegexError	object RegexError		12
-nim	invalidRune	regex/common.html#invalidRune	const invalidRune		24
-nim	lineBreakRune	regex/common.html#lineBreakRune	const lineBreakRune		27
-nim	toRune	regex/common.html#toRune,string	proc toRune(s: string): Rune		29
-nim	`<=`	regex/common.html#<=,Rune,Rune	proc `<=`(x, y: Rune): bool		32
-nim	cmp	regex/common.html#cmp,Rune,Rune	proc cmp(x, y: Rune): int		35
-nim	bwRuneAt	regex/common.html#bwRuneAt,string,int	proc bwRuneAt(s: string; n: int): Rune		38
-nim	bwFastRuneAt	regex/common.html#bwFastRuneAt.t,string,int,Rune	template bwFastRuneAt(s: string; n: var int; result: var Rune): untyped		47
-nim	`%%`	regex/common.html#%%,string,openArray[string]	proc `%%`(formatstr: string; a: openArray[string]): string		58
-nim	`%%`	regex/common.html#%%,string,string	proc `%%`(formatstr: string; a: string): string		69
-nimgrp	%%	regex/common.html#%%-procs-all	proc		58
+RegexError	regex/common.html#RegexError	common: RegexError	
+invalidRune	regex/common.html#invalidRune	common: invalidRune	
+lineBreakRune	regex/common.html#lineBreakRune	common: lineBreakRune	
+toRune	regex/common.html#toRune,string	common: toRune(s: string): Rune	
+`&lt;=`	regex/common.html#<=,Rune,Rune	common: `&lt;=`(x, y: Rune): bool	
+cmp	regex/common.html#cmp,Rune,Rune	common: cmp(x, y: Rune): int	
+bwRuneAt	regex/common.html#bwRuneAt,string,int	common: bwRuneAt(s: string; n: int): Rune	
+bwFastRuneAt	regex/common.html#bwFastRuneAt.t,string,int,Rune	common: bwFastRuneAt(s: string; n: var int; result: var Rune): untyped	
+`%%`	regex/common.html#%%,string,openArray[string]	common: `%%`(formatstr: string; a: openArray[string]): string	
+`%%`	regex/common.html#%%,string,string	common: `%%`(formatstr: string; a: string): string	

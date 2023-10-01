@@ -1,5 +1,3 @@
-nimTitle	dotgraph	regex/dotgraph.html	module regex/dotgraph		0
-nim	graph	regex/dotgraph.html#graph,Nfa	proc graph(nfa: Nfa): string		14
-nim	graph	regex/dotgraph.html#graph,Regex	proc graph(regex: Regex): string		48
-nim	graphToFile	regex/dotgraph.html#graphToFile,Regex,string	proc graphToFile(regex: Regex; dir: string)		52
-nimgrp	graph	regex/dotgraph.html#graph-procs-all	proc		14
+graph	regex/dotgraph.html#graph,Nfa	dotgraph: graph(nfa: Nfa): string	
+graph	regex/dotgraph.html#graph,Regex	dotgraph: graph(regex: Regex): string	
+graphToFile	regex/dotgraph.html#graphToFile,Regex,string	dotgraph: graphToFile(regex: Regex; dir: string)	

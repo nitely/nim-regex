@@ -1,2 +1,1 @@
-nimTitle	parser	regex/parser.html	module regex/parser		0
-nim	parse	regex/parser.html#parse,string	proc parse(expression: string): Exp		745
+parse	regex/parser.html#parse,string	parser: parse(expression: string): Exp	

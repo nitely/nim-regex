@@ -2813,7 +2813,7 @@ test "misc5":
   check findAllStr(r"1abc2abc3", re2"\wabc\w") == @["1abc2"]
   check findAllStr(r"1abc2abc3abc4", re2"\wabc\w") == @["1abc2", "3abc4"]
   check findAllStr(r"1abcabc", re2"\wabc") == @["1abc"]
-  check findAllStr(r"abcabc", re2"abc\w") == @["abca"]
+  check findAllStr(r"abcabcx", re2"abc\w") == @["abca"]
   check findAllStr(r"abcabcabcd", re2"abc\w") == @["abca", "abcd"]
   check findAllStr(r"aaab", re2"a\w") == @["aa", "ab"]
   check findAllStr(r"1a2a3a4", re2"\wa\w") == @["1a2", "3a4"]
@@ -2823,7 +2823,7 @@ test "misc5":
   check findAllStr(r"1Ⓐ2Ⓐ3", re2"\wⒶ\w") == @["1Ⓐ2"]
   check findAllStr(r"1弢2弢3", re2"\w弢\w") == @["1弢2"]
   check findAllStr(r"1ΪⒶ弢ΪⒶ弢", re2"\wΪⒶ弢") == @["1ΪⒶ弢"]
-  check findAllStr(r"ΪⒶ弢ΪⒶ弢", re2"ΪⒶ弢\w") == @["ΪⒶ弢Ϊ"]
+  check findAllStr(r"ΪⒶ弢ΪⒶ弢x", re2"ΪⒶ弢\w") == @["ΪⒶ弢Ϊ"]
   check findAllStr(r"弢弢弢Ⓐ", re2"弢\w") == @["弢弢", "弢Ⓐ"]
   check findAllStr(r"1弢2弢3弢4", re2"\w弢\w") == @["1弢2", "3弢4"]
 

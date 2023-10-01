@@ -163,6 +163,66 @@ benchRelative(regex_ip_find_all, m):
   doAssert d == 5
   doNotOptimizeAway(d)
 
+var sql_find_all_re = re.re"mysql://[^/\s?#]+[^\s?#]+(?:\?[^\s#]*)?(?:#[^\s]*)?"
+
+bench(re_sql_find_all, m):
+  var d = 0
+  for i in 0 ..< m:
+    for _ in re.findAll(bench_text, sql_find_all_re):
+      d += 1
+  doAssert d == 4
+  doNotOptimizeAway(d)
+
+const sql_find_all = regex.re2"mysql://[^/\s?#]+[^\s?#]+(?:\?[^\s#]*)?(?:#[^\s]*)?"
+
+benchRelative(regex_sql_find_all, m):
+  var d = 0
+  for i in 0 ..< m:
+    for _ in regex.findAll(bench_text, sql_find_all):
+      d += 1
+  doAssert d == 4
+  doNotOptimizeAway(d)
+
+var url_find_all_re = re.re"https?://[^/\s?#]+[^\s?#]+(?:\?[^\s#]*)?(?:#[^\s]*)?"
+
+bench(re_url_find_all, m):
+  var d = 0
+  for i in 0 ..< m:
+    for _ in re.findAll(bench_text, url_find_all_re):
+      d += 1
+  doAssert d == 5295
+  doNotOptimizeAway(d)
+
+const url_find_all = regex.re2"https?://[^/\s?#]+[^\s?#]+(?:\?[^\s#]*)?(?:#[^\s]*)?"
+
+benchRelative(regex_url_find_all, m):
+  var d = 0
+  for i in 0 ..< m:
+    for _ in regex.findAll(bench_text, url_find_all):
+      d += 1
+  doAssert d == 5295
+  doNotOptimizeAway(d)
+
+var unicode_find_all_re = re.re"\smůžete\s"
+
+bench(re_unicode_find_all, m):
+  var d = 0
+  for i in 0 ..< m:
+    for _ in re.findAll(bench_text, unicode_find_all_re):
+      d += 1
+  doAssert d == 25
+  doNotOptimizeAway(d)
+
+const unicode_find_all = regex.re2"\smůžete\s"
+
+benchRelative(regex_unicode_find_all, m):
+  var d = 0
+  for i in 0 ..< m:
+    for _ in regex.findAll(bench_text, unicode_find_all):
+      d += 1
+  doAssert d == 25
+  doNotOptimizeAway(d)
+
 when true:
   bench(runes, m):
     var d = 0

@@ -567,6 +567,7 @@ test "trepetition_cycle":
   check "aaabbbaaa".isMatch(re2"((a*|b*))*")
   check raises(r"a*****")
   check raises(r"a*{,}")
+  check raises(r"\")
   check "aaa".isMatch(re2"(a?)*")
   check "aaaa".isMatch(re2"((a)*(a)*)*")
   # Same as PCRE "^(a*)*?$"
@@ -2770,6 +2771,75 @@ test "misc4":
   check findAllBounds(r"b1b1", re2"b(?=\d)") == @[0 .. 0, 2 .. 2]
   check findAllBounds(r"1a1a1", re2"(?<=\d)a\d") == @[1 .. 2, 3 .. 4]
   check findAllBounds(r"a1a1", re2"(?<=\d)a\d") == @[2 .. 3]
+
+test "misc5":
+  check findAllStr(r"x 弢 x 弢", re2"弢") == @["弢", "弢"]
+  check findAllStr(r"x Ⓐ x Ⓐ", re2"Ⓐ") == @["Ⓐ", "Ⓐ"]
+  check findAllStr(r"x Ϊ x Ϊ", re2"Ϊ") == @["Ϊ", "Ϊ"]
+  check findAllStr(r"x ΪⒶ弢 x", re2"ΪⒶ弢") == @["ΪⒶ弢"]
+  check findAllStr(r"x ΪⒶ弢 x ΪⒶ弢", re2"ΪⒶ弢") ==
+    @["ΪⒶ弢", "ΪⒶ弢"]
+  check findAllStr(r"ΪⒶ弢 x ΪⒶ弢 x ΪⒶ弢", re2"ΪⒶ弢") ==
+    @["ΪⒶ弢", "ΪⒶ弢", "ΪⒶ弢"]
+  check findAllStr(r"1弢2弢", re2"\d弢") == @["1弢", "2弢"]
+  check findAllStr(r"1弢弢2弢", re2"\d弢") == @["1弢", "2弢"]
+  check findAllStr(r"1弢Ⓐ2弢", re2"\d弢") == @["1弢", "2弢"]
+  check findAllStr(r"1弢Ϊ2弢", re2"\d弢") == @["1弢", "2弢"]
+  check findAllStr(r"1Ⓐ弢Ⓐ弢", re2"\dⒶ弢") == @["1Ⓐ弢"]
+  check findAllStr(r"1Ⓐ弢2Ⓐ弢", re2"\dⒶ弢") == @["1Ⓐ弢", "2Ⓐ弢"]
+  check findAllStr(r"1Ⓐ弢Ⓐ弢2Ⓐ弢", re2"\dⒶ弢") == @["1Ⓐ弢", "2Ⓐ弢"]
+  check findAllStr(r"1Ϊ弢Ϊ弢", re2"\dΪ弢") == @["1Ϊ弢"]
+  check findAllStr(r"1Ϊ弢2Ϊ弢", re2"\dΪ弢") == @["1Ϊ弢", "2Ϊ弢"]
+  check findAllStr(r"1Ϊ弢Ϊ弢2Ϊ弢", re2"\dΪ弢") == @["1Ϊ弢", "2Ϊ弢"]
+  check findAllStr(r"1ΪⒶΪⒶ", re2"\dΪⒶ") == @["1ΪⒶ"]
+  check findAllStr(r"1ΪⒶ2ΪⒶ", re2"\dΪⒶ") == @["1ΪⒶ", "2ΪⒶ"]
+  check findAllStr(r"1ΪⒶΪⒶ2ΪⒶ", re2"\dΪⒶ") == @["1ΪⒶ", "2ΪⒶ"]
+  check findAllStr(r"1ⒶⒶ", re2"\dⒶ") == @["1Ⓐ"]
+  check findAllStr(r"1Ⓐ2Ⓐ", re2"\dⒶ") == @["1Ⓐ", "2Ⓐ"]
+  check findAllStr(r"1ⒶⒶ2Ⓐ", re2"\dⒶ") == @["1Ⓐ", "2Ⓐ"]
+  check findAllStr(r"1ΪΪ", re2"\dΪ") == @["1Ϊ"]
+  check findAllStr(r"1Ϊ2Ϊ", re2"\dΪ") == @["1Ϊ", "2Ϊ"]
+  check findAllStr(r"1ΪΪ2Ϊ", re2"\dΪ") == @["1Ϊ", "2Ϊ"]
+  check findAllStr(r"1Ⓐ弢2Ⓐ", re2"\dⒶ") == @["1Ⓐ", "2Ⓐ"]
+  check findAllStr(r"1ⒶΪ2Ⓐ", re2"\dⒶ") == @["1Ⓐ", "2Ⓐ"]
+  check findAllStr(r"1Ϊ弢2Ϊ", re2"\dΪ") == @["1Ϊ", "2Ϊ"]
+  check findAllStr(r"1ΪⒶ2Ϊ", re2"\dΪ") == @["1Ϊ", "2Ϊ"]
+  check findAllStr(r"abde", re2"abc?de") == @["abde"]
+  check findAllStr(r"abcde", re2"abc?de") == @["abcde"]
+  check findAllStr(r"abde1", re2"abc?de\d") == @["abde1"]
+  check findAllStr(r"abcde1", re2"abc?de\d") == @["abcde1"]
+  check findAllStr(r"abde1 abde2 abcde3", re2"abc?de\d") ==
+    @["abde1", "abde2", "abcde3"]
+  check findAllStr(r"1abc2abc3", re2"\wabc\w") == @["1abc2"]
+  check findAllStr(r"1abc2abc3abc4", re2"\wabc\w") == @["1abc2", "3abc4"]
+  check findAllStr(r"1abcabc", re2"\wabc") == @["1abc"]
+  check findAllStr(r"abcabcx", re2"abc\w") == @["abca"]
+  check findAllStr(r"abcabcabcd", re2"abc\w") == @["abca", "abcd"]
+  check findAllStr(r"aaab", re2"a\w") == @["aa", "ab"]
+  check findAllStr(r"1a2a3a4", re2"\wa\w") == @["1a2", "3a4"]
+  check findAllStr(r"1ΪⒶ弢2ΪⒶ弢3", re2"\wΪⒶ弢\w") == @["1ΪⒶ弢2"]
+  check findAllStr(r"1Ϊ弢2Ϊ弢3", re2"\wΪ弢\w") == @["1Ϊ弢2"]
+  check findAllStr(r"1Ϊ2Ϊ3", re2"\wΪ\w") == @["1Ϊ2"]
+  check findAllStr(r"1Ⓐ2Ⓐ3", re2"\wⒶ\w") == @["1Ⓐ2"]
+  check findAllStr(r"1弢2弢3", re2"\w弢\w") == @["1弢2"]
+  check findAllStr(r"1ΪⒶ弢ΪⒶ弢", re2"\wΪⒶ弢") == @["1ΪⒶ弢"]
+  check findAllStr(r"ΪⒶ弢ΪⒶ弢x", re2"ΪⒶ弢\w") == @["ΪⒶ弢Ϊ"]
+  check findAllStr(r"弢弢弢Ⓐ", re2"弢\w") == @["弢弢", "弢Ⓐ"]
+  check findAllStr(r"1弢2弢3弢4", re2"\w弢\w") == @["1弢2", "3弢4"]
+
+test "misc6_sanitycheck":
+  block:
+    let skipChars = {
+      '(', ')', '+', '?', '*', '[',
+      ']', '\\', '.', '$', '^', '|'
+    }
+    var i = 0
+    for cp in 0 .. 127:
+      if cp.char in skipChars:
+        continue
+      check findAllStr("弢", re2(r"" & cp.char)).len == 0
+      inc i
+    check i == 128-skipChars.len
 
 test "fix#83":
   block:

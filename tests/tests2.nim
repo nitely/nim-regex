@@ -2810,6 +2810,16 @@ test "misc5":
   check findAllStr(r"abcde1", re2"abc?de\d") == @["abcde1"]
   check findAllStr(r"abde1 abde2 abcde3", re2"abc?de\d") ==
     @["abde1", "abde2", "abcde3"]
+  check findAllStr(r"1abc2abc3", re2"\wabc\w") == @["1abc2"]
+  check findAllStr(r"1abcabc", re2"\wabc") == @["1abc"]
+  check findAllStr(r"abcabc", re2"abc\w") == @["abca"]
+  check findAllStr(r"1ΪⒶ弢2ΪⒶ弢3", re2"\wΪⒶ弢\w") == @["1ΪⒶ弢2"]
+  check findAllStr(r"1Ϊ弢2Ϊ弢3", re2"\wΪ弢\w") == @["1Ϊ弢2"]
+  check findAllStr(r"1Ϊ2Ϊ3", re2"\wΪ\w") == @["1Ϊ2"]
+  check findAllStr(r"1Ⓐ2Ⓐ3", re2"\wⒶ\w") == @["1Ⓐ2"]
+  check findAllStr(r"1弢2弢3", re2"\w弢\w") == @["1弢2"]
+  check findAllStr(r"1ΪⒶ弢ΪⒶ弢", re2"\wΪⒶ弢") == @["1ΪⒶ弢"]
+  check findAllStr(r"ΪⒶ弢ΪⒶ弢", re2"ΪⒶ弢\w") == @["ΪⒶ弢Ϊ"]
 
 test "misc6_sanitycheck":
   block:

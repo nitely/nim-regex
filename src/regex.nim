@@ -301,6 +301,11 @@ passing a bad input to the match function.
     # bad input text
     doAssert validateUtf8("\xf8\xa1\xa1\xa1\xa1") != -1
 
+Note at the time of writting this, Nim's `validateUtf8`
+`is not strict enough <https://github.com/nim-lang/Nim/issues/19333>`_
+and so you are better off using `nim-unicodeplus's <https://github.com/nitely/nim-unicodeplus>`_
+`verifyUtf8` function.
+
 Match binary data
 #################
 

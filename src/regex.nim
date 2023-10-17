@@ -286,12 +286,13 @@ the scope, and it contains the submatches for every capture group.
 Bad UTF-8 input text
 ####################
 
-This lib makes no effort to handle bad/malformed UTF-8 input text.
-The behaviour on bad input is currently undefined, and it will
-likely result in an internal AssertionDefect or some other error.
+This lib makes no effort to handle invalid UTF-8 input text
+(i.e: malformed or corrupted). The behaviour on invalid input
+is currently undefined, and it will likely result in an
+internal AssertionDefect or some other error.
 
 What can be done about this is validating the input text to avoid
-passing a bad input to the match function.
+passing invalid input to the match function.
 
 .. code-block:: nim
     :test:

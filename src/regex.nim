@@ -352,6 +352,13 @@ export
 
 const reNonCapture* = nonCapture
 
+template debugCheckUtf8(s: untyped): untyped =
+  ## This is for input strings. Regex are already checked.
+  ## On release/danger the behaviour on invalid utf-8 input
+  ## is undefined
+  when not defined(release):
+    assert(verifyUtf8(s) == -1, "Invalid utf-8 input")
+
 when canUseMacro:
   func rex*(s: string): RegexLit =
     ## Raw regex literal string
@@ -462,9 +469,11 @@ func match*(
     doAssert "abcd".match(re2"abcd", m)
     doAssert not "abcd".match(re2"abc", m)
 
+  debugCheckUtf8 s
   result = matchImpl(s, toRegex(pattern), m, start)
 
 func match*(s: string, pattern: Regex2): bool {.inline, raises: [].} =
+  debugCheckUtf8 s
   var m: RegexMatch2
   result = matchImpl(s, toRegex(pattern), m)
 
@@ -496,6 +505,7 @@ iterator findAll*(
     doAssert bounds == @[1 .. 2, 4 .. 5]
     doAssert found == @["bc", "bc"]
 
+  debugCheckUtf8 s
   var i = start
   var i2 = start-1
   var m: RegexMatch2
@@ -534,6 +544,7 @@ iterator findAllBounds*(
       bounds.add bd
     doAssert bounds == @[1 .. 2, 4 .. 5]
 
+  debugCheckUtf8 s
   var i = start
   var i2 = start-1
   var ms: RegexMatches2
@@ -598,6 +609,7 @@ iterator split*(s: string, sep: Regex2): string {.inline, raises: [].} =
       found.add s
     doAssert found == @["", "a", "Ϊ", "Ⓐ", "弢", ""]
 
+  debugCheckUtf8 s
   var
     first, last, i = 0
     i2 = -1
@@ -632,6 +644,7 @@ func splitIncl*(s: string, sep: Regex2): seq[string] {.inline, raises: [].} =
     doAssert parts == expected
 
   template ab: untyped = m.boundaries
+  debugCheckUtf8 s
   var
     first, last, i = 0
     i2 = -1
@@ -662,6 +675,7 @@ func startsWith*(
     doAssert "abc".startsWith(re2"\w")
     doAssert not "abc".startsWith(re2"\d")
 
+  debugCheckUtf8 s
   startsWithImpl2(s, toRegex(pattern), start)
 
 template runeIncAt(s: string, n: var int) =
@@ -680,6 +694,7 @@ func endsWith*(s: string, pattern: Regex2): bool {.inline, raises: [].} =
     doAssert "abc".endsWith(re2"\w")
     doAssert not "abc".endsWith(re2"\d")
 
+  debugCheckUtf8 s
   result = false
   var
     m: RegexMatch2
@@ -732,7 +747,8 @@ func replace*(
     doAssert "Nim is awesome!".replace(re2"(\w\B)", "$1_") ==
       "N_i_m i_s a_w_e_s_o_m_e!"
 
-  result = ""
+  debugCheckUtf8 s
+  result = newStringOfCap(s.len)
   var
     i, j = 0
     capts = newSeqOfCap[string](toRegex(pattern).groupsCount)
@@ -772,7 +788,8 @@ func replace*(
     let text = "**this is a test**"
     doAssert text.replace(re2"(\*)", removeStars) == "this is a test"
 
-  result = ""
+  debugCheckUtf8 s
+  result = newStringOfCap(s.len)
   var i, j = 0
   for m in findAll(s, pattern):
     result.addsubstr(s, i, m.boundaries.a-1)
@@ -800,7 +817,8 @@ func escapeRe*(s: string): string {.raises: [].} =
   #
   # utf-8 ascii code-points cannot be part of multi-byte
   # code-points, so we can read/match byte by byte
-  result = ""
+  debugCheckUtf8 s
+  result = newStringOfCap(s.len)
   for c in s:
     case c
     of ' ', '#', '$', '&', '(',
@@ -950,9 +968,11 @@ func match*(
   m: var RegexMatch,
   start = 0
 ): bool {.inline, raises: [], deprecated: "use match(string, Regex2, var RegexMatch2) instead".} =
+  debugCheckUtf8 s
   result = matchImpl(s, pattern, m, start)
 
 func match*(s: string, pattern: Regex): bool {.inline, raises: [], deprecated: "use match(string, Regex2) instead".} =
+  debugCheckUtf8 s
   var m: RegexMatch
   result = matchImpl(s, pattern, m)
 
@@ -961,6 +981,7 @@ iterator findAll*(
   pattern: Regex,
   start = 0
 ): RegexMatch {.inline, raises: [], deprecated: "use findAll(string, Regex2) instead".} =
+  debugCheckUtf8 s
   var i = start
   var i2 = start-1
   var m: RegexMatch
@@ -989,6 +1010,7 @@ iterator findAllBounds*(
   pattern: Regex,
   start = 0
 ): Slice[int] {.inline, raises: [], deprecated: "use findAllBounds(string, Regex2) instead".} =
+  debugCheckUtf8 s
   var i = start
   var i2 = start-1
   var ms: RegexMatches
@@ -1036,6 +1058,7 @@ func find*(
   return false
 
 iterator split*(s: string, sep: Regex): string {.inline, raises: [], deprecated: "use split(string, Regex2) instead".} =
+  debugCheckUtf8 s
   var
     first, last, i = 0
     i2 = -1
@@ -1058,6 +1081,7 @@ func split*(s: string, sep: Regex): seq[string] {.inline, raises: [], deprecated
 
 func splitIncl*(s: string, sep: Regex): seq[string] {.inline, raises: [], deprecated: "use splitIncl(string, Regex2) instead".} =
   template ab: untyped = m.boundaries
+  debugCheckUtf8 s
   var
     first, last, i = 0
     i2 = -1
@@ -1082,10 +1106,11 @@ func splitIncl*(s: string, sep: Regex): seq[string] {.inline, raises: [], deprec
 func startsWith*(
   s: string, pattern: Regex, start = 0
 ): bool {.inline, raises: [], deprecated: "use startsWith(string, Regex2) instead".} =
+  debugCheckUtf8 s
   startsWithImpl(s, pattern, start)
 
-# XXX use findAll and check last match bounds
 func endsWith*(s: string, pattern: Regex): bool {.inline, raises: [], deprecated: "use endsWith(string, Regex2) instead".} =
+  debugCheckUtf8 s
   result = false
   var
     m: RegexMatch
@@ -1121,6 +1146,7 @@ func replace*(
   by: string,
   limit = 0
 ): string {.inline, raises: [ValueError], deprecated: "use replace(string, Regex2, string) instead".} =
+  debugCheckUtf8 s
   result = ""
   var
     i, j = 0
@@ -1145,7 +1171,8 @@ func replace*(
   pattern: Regex,
   by: proc (m: RegexMatch, s: string): string,
   limit = 0
-): string {.inline, raises: [], effectsOf: by, deprecated: "use replace(string, Regex2, proc(RegexMatch2, string) :string) instead".} =
+): string {.inline, raises: [], effectsOf: by, deprecated: "use replace(string, Regex2, proc(RegexMatch2, string): string) instead".} =
+  debugCheckUtf8 s
   result = ""
   var i, j = 0
   for m in findAll(s, pattern):
@@ -1439,6 +1466,7 @@ when isMainModule:
     doAssert re2"\w" in "弢"
     doAssert "2222".find(re2"(22)*", m) and
       m.group(0) == 2 .. 3
+    doAssert raisesMsg("\xff") == "Invalid utf-8 regex"
     doAssert raisesMsg(r"[a-\w]") ==
       "Invalid set range. Range can't contain " &
       "a character-class or assertion\n" &

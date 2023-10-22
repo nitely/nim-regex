@@ -1,5 +1,6 @@
 from std/unicode import runeLen
 from std/sequtils import map
+from std/strutils import contains
 
 import ../src/regex
 
@@ -1499,7 +1500,7 @@ test "tstarts_with":
   check(not "abc".startsWith(re2"bc"))
   check startsWith("弢ⒶΪ", re2"弢Ⓐ")
   check startsWith("弢", re2("\xF0\xAF\xA2\x94"))
-  check(not startsWith("弢", re2("\xF0\xAF\xA2")))
+  #check(not startsWith("弢", re2("\xF0\xAF\xA2")))
   check "abc".startsWith(re2"\w")
   check(not "abc".startsWith(re2"\d"))
   check "abc".startsWith(re2"(a|b)")
@@ -1515,7 +1516,7 @@ test "tends_with":
   check(not "abc".endsWith(re2"ab"))
   check endsWith("弢ⒶΪ", re2"ⒶΪ")
   check endsWith("弢", re2("\xF0\xAF\xA2\x94"))
-  check(not endsWith("弢", re2("\xAF\xA2\x94")))
+  #check(not endsWith("弢", re2("\xAF\xA2\x94")))
   check "abc".endsWith(re2"(b|c)")
   check "ab".endsWith(re2"(b|c)")
   check(not "a".endsWith(re2"(b|c)"))
@@ -2914,7 +2915,7 @@ test "escapere2":
   check match("$", re2(escapeRe"$"))
   block:
     var s = ""
-    for c in 0 .. 255:
+    for c in 0 .. 127:
       s.add c.char
     discard re2(escapeRe(s))
 
@@ -3025,3 +3026,27 @@ test "tlookaround_captures":
     m.captures == @[0 .. 0, 1 .. 3, nonCapture, nonCapture]
   check match("aaab", re2"(\w)(\w+)|\w+(?<=^(\w)(\w)(\w+))b", m) and
     m.captures == @[0 .. 0, 1 .. 3, nonCapture, nonCapture, nonCapture]
+
+template raisesInvalidUtf8(exp: untyped): untyped =
+  try:
+    discard exp
+    check false
+  except AssertionDefect:
+    check "Invalid utf-8 input" in getCurrentExceptionMsg()
+
+test "tverifyutf8":
+  check raisesMsg("\xff") == "Invalid utf-8 regex"
+  raisesInvalidUtf8 match("\xff", re2"abc")
+  block:
+    var m: RegexMatch2
+    raisesInvalidUtf8 match("\xff", re2"abc", m)
+  raisesInvalidUtf8 findAll("\xff", re2"abc")
+  raisesInvalidUtf8 findAllBounds("\xff", re2"abc")
+  raisesInvalidUtf8 split("\xff", re2"abc")
+  raisesInvalidUtf8 splitIncl("\xff", re2"abc")
+  raisesInvalidUtf8 startsWith("\xff", re2"abc")
+  raisesInvalidUtf8 endsWith("\xff", re2"abc")
+  raisesInvalidUtf8 replace("\xff", re2"abc", "abc")
+  raisesInvalidUtf8 replace("\xff", re2"abc",
+    (proc (m: RegexMatch2, s: string): string = discard))
+  raisesInvalidUtf8 escapeRe("\xff")

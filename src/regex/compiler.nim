@@ -1,3 +1,4 @@
+import ./common
 import ./parser
 import ./exptransformation
 import ./types
@@ -8,6 +9,8 @@ when defined(regexDotDir):
   import ./dotgraph
 
 func reImpl*(s: string): Regex {.inline.} =
+  if verifyUtf8(s) != -1:
+    raise newException(RegexError, "Invalid utf-8 regex")
   var groups: GroupsCapture
   let rpn = s
     .parse

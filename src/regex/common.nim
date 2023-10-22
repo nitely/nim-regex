@@ -69,27 +69,46 @@ proc `%%`*(
 proc `%%`*(formatstr: string, a: string): string =
   formatstr %% [a]
 
-# XXX this is to support literal optimization
-#     for unicode. It needs testing
-when false:
-  # XXX impl simpler find when memchr is not available?
-  func find*(s: string, r: Rune, start: Natural = 0): int =
-    ## Find unicode rune in a string.
-    if r.ord < 0xff:
-      return find(s, r.char, start)
-    let c = (r.ord and 0xff).char
-    let rsize = r.size()
-    var i = start+rsize-1
-    var r2 = 0'u32
-    doAssert rsize >= 1 and rsize <= 4
-    while i < len(s):
-      i = find(s, c, i)
-      if i == -1:
-        return -1
-      for j in i-rsize-1 .. i:
-        r2 = (r2 shl 8) or s[j].uint32
-      if r.uint32 == r2:
-        return i-rsize-1
-      r2 = 0
-      inc i
-    return -1
+type
+  verifyUtf8State = enum
+    vusError, vusStart, vusA, vusB, vusC, vusD, vusE, vusF, vusG
+
+# Taken from nim-unicodeplus
+func verifyUtf8*(s: string): int =
+  ## Return `-1` if `s` is a valid utf-8 string.
+  ## Otherwise, return the index of the first bad char.
+  var state = vusStart
+  var i = 0
+  let L = s.len
+  while i < L:
+    case state:
+    of vusStart:
+      result = i
+      state = if uint8(s[i]) in 0x00'u8 .. 0x7F'u8: vusStart
+      elif uint8(s[i]) in 0xC2'u8 .. 0xDF'u8: vusA
+      elif uint8(s[i]) in 0xE1'u8 .. 0xEC'u8 or uint8(s[i]) in 0xEE'u8 .. 0xEF'u8: vusB
+      elif uint8(s[i]) == 0xE0'u8: vusC
+      elif uint8(s[i]) == 0xED'u8: vusD
+      elif uint8(s[i]) in 0xF1'u8 .. 0xF3'u8: vusE
+      elif uint8(s[i]) == 0xF0'u8: vusF
+      elif uint8(s[i]) == 0xF4'u8: vusG
+      else: vusError
+    of vusA:
+      state = if uint8(s[i]) in 0x80'u8 .. 0xBF'u8: vusStart else: vusError
+    of vusB:
+      state = if uint8(s[i]) in 0x80'u8 .. 0xBF'u8: vusA else: vusError
+    of vusC:
+      state = if uint8(s[i]) in 0xA0'u8 .. 0xBF'u8: vusA else: vusError
+    of vusD:
+      state = if uint8(s[i]) in 0x80'u8 .. 0x9F'u8: vusA else: vusError
+    of vusE:
+      state = if uint8(s[i]) in 0x80'u8 .. 0xBF'u8: vusB else: vusError
+    of vusF:
+      state = if uint8(s[i]) in 0x90'u8 .. 0xBF'u8: vusB else: vusError
+    of vusG:
+      state = if uint8(s[i]) in 0x80'u8 .. 0x8F'u8: vusB else: vusError
+    of vusError:
+      break
+    inc i
+  if state == vusStart:
+    result = -1

@@ -24,8 +24,7 @@ task test2, "Test":
   # the docker image for CI has it since Nim 1.0.4,
   # so I'll only test it there
   when (NimMajor, NimMinor, NimPatch) >= (1, 0, 4) and
-      (NimMajor, NimMinor) != (1, 4) and  # issue #88
-      (NimMajor, NimMinor) != (1, 6):  # issue #123
+      (NimMajor, NimMinor) != (1, 4):  # issue #88
     exec "nim js -r src/regex.nim"
     exec "nim js -r tests/tests2.nim"
     exec "nim js -r -d:forceRegexAtRuntime tests/tests2.nim"
@@ -48,8 +47,7 @@ task oldtest, "Test":
   # the docker image for CI has it since Nim 1.0.4,
   # so I'll only test it there
   when (NimMajor, NimMinor, NimPatch) >= (1, 0, 4) and
-      (NimMajor, NimMinor) != (1, 4) and  # issue #88
-      (NimMajor, NimMinor) != (1, 6):
+      (NimMajor, NimMinor) != (1, 4):  # issue #88
     exec "nim js -r tests/tests.nim"
     exec "nim js -r -d:forceRegexAtRuntime tests/tests.nim"
 

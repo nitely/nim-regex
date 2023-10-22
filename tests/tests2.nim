@@ -3027,11 +3027,16 @@ test "tlookaround_captures":
   check match("aaab", re2"(\w)(\w+)|\w+(?<=^(\w)(\w)(\w+))b", m) and
     m.captures == @[0 .. 0, 1 .. 3, nonCapture, nonCapture, nonCapture]
 
+when (NimMajor, NimMinor) >= (2, 0):
+  type MyAssertionDefect = ref AssertionDefect
+else:
+  type MyAssertionDefect = ref AssertionError
+
 template raisesInvalidUtf8(exp: untyped): untyped =
   try:
     discard exp
     check false
-  except AssertionDefect:
+  except MyAssertionDefect:
     check "Invalid utf-8 input" in getCurrentExceptionMsg()
 
 test "tverifyutf8":

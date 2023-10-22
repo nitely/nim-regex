@@ -29,6 +29,9 @@ task test2, "Test":
     exec "nim js -r src/regex.nim"
     exec "nim js -r tests/tests2.nim"
     exec "nim js -r -d:forceRegexAtRuntime tests/tests2.nim"
+  # test release/danger mode
+  exec "nim c -r -d:release -o:bin/regex src/regex.nim"
+  exec "nim c -r -d:danger -o:bin/regex src/regex.nim"
   # Test runnable examples
   when (NimMajor, NimMinor) >= (1, 1):
     exec "nim doc -o:./docs/ugh/ugh.html ./src/regex.nim"

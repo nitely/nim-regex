@@ -1,3 +1,14 @@
+v0.23.0
+==================
+
+* Verify input is utf-8 (#131)
+
+v0.22.0
+==================
+
+* Literals substring optimization (#130) 
+* Refactor epsilon transitions (#129)
+
 v0.21.0
 ==================
 

@@ -20,6 +20,10 @@ task test2, "Test":
   exec "nim c -r -d:noRegexOpt tests/tests2.nim"
   when (NimMajor, NimMinor, NimPatch) >= (0, 20, 2):
     exec "nim c -d:runTestAtCT tests/tests2.nim"
+  exec "nim c -r tests/tests_misc.nim"
+  exec "nim c -r -d:forceRegexAtRuntime tests/tests_misc.nim"
+  exec "nim c -r -d:forceRegexAtRuntime -d:noRegexOpt tests/tests_misc.nim"
+  exec "nim c -r -d:noRegexOpt tests/tests_misc.nim"
   # js target should work in older versions, but
   # the docker image for CI has it since Nim 1.0.4,
   # so I'll only test it there
@@ -28,6 +32,8 @@ task test2, "Test":
     exec "nim js -r src/regex.nim"
     exec "nim js -r tests/tests2.nim"
     exec "nim js -r -d:forceRegexAtRuntime tests/tests2.nim"
+    exec "nim js -r tests/tests_misc.nim"
+    exec "nim js -r -d:forceRegexAtRuntime tests/tests_misc.nim"
   # test release/danger mode
   exec "nim c -r -d:release -o:bin/regex src/regex.nim"
   exec "nim c -r -d:danger -o:bin/regex src/regex.nim"

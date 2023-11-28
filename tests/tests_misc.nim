@@ -25,6 +25,32 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
+
+Copyright (c) 2014 The Rust Project Developers
+
+Permission is hereby granted, free of charge, to any
+person obtaining a copy of this software and associated
+documentation files (the "Software"), to deal in the
+Software without restriction, including without
+limitation the rights to use, copy, modify, merge,
+publish, distribute, sublicense, and/or sell copies of
+the Software, and to permit persons to whom the Software
+is furnished to do so, subject to the following
+conditions:
+
+The above copyright notice and this permission notice
+shall be included in all copies or substantial portions
+of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF
+ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED
+TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT
+SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR
+IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+DEALINGS IN THE SOFTWARE.
 ]#
 
 from std/sequtils import map
@@ -478,3 +504,195 @@ test "fowler_basic":
   check findAllBounds(r"\000", re2".*(\\000).*") == @[0 .. 3]
   check findAllCapt(r"\000", re2".*(\\000).*") == @[@[0 .. 3]]
   check findAllBounds(r"\000", re2"\\000") == @[0 .. 3]
+
+test "fowler_categorize":
+  check findAllBounds("xaxaax", re2"aa*") == @[1 .. 1, 3 .. 4]
+  check findAllBounds("abc", re2"(a*)(ab)*(b*)") == @[0 .. 1, 2 .. 1, 3 .. 2]
+  check findAllCapt("abc", re2"(a*)(ab)*(b*)") ==
+    @[@[0 .. 0, nonCapture, 1 .. 1],
+      @[2 .. 1, nonCapture, 2 .. 1],
+      @[3 .. 2, nonCapture, 3 .. 2]]
+  check findAllBounds("aba", re2"((a*)(ab)*)((b*)(a*))") == @[0 .. 2, 3 .. 2]
+  check findAllCapt("aba", re2"((a*)(ab)*)((b*)(a*))") ==
+    @[@[0 .. 0, 0 .. 0, nonCapture, 1 .. 2, 1 .. 1, 2 .. 2],
+      @[3 .. 2, 3 .. 2, nonCapture, 3 .. 2, 3 .. 2, 3 .. 2]]
+  check findAllBounds("xxxxxx", re2"(...?.?)*") == @[0 .. 5, 6 .. 5]
+  check findAllCapt("xxxxxx", re2"(...?.?)*") == @[@[4 .. 5], @[nonCapture]]
+  check findAllBounds("abcabc", re2"(a|ab)(bc|c)") == @[0 .. 2, 3 .. 5]
+  check findAllCapt("abcabc", re2"(a|ab)(bc|c)") == 
+    @[@[0 .. 0, 1 .. 2], @[3 .. 3, 4 .. 5]]
+  check findAllBounds("ababa", re2"(aba|a*b)(aba|a*b)") == @[0 .. 3]
+  check findAllCapt("ababa", re2"(aba|a*b)(aba|a*b)") == 
+    @[@[0 .. 2, 3 .. 3]]
+  check findAllBounds("a", re2"(a*)*") == @[0 .. 0, 1 .. 0]
+  check findAllCapt("a", re2"(a*)*") == @[@[1 .. 0], @[1 .. 0]]  # XXX ?
+  check findAllBounds("ababa", re2"(aba|a*b)*") == @[0 .. 3, 4 .. 3, 5 .. 4]
+  check findAllCapt("ababa", re2"(aba|a*b)*") ==
+    @[@[3 .. 3], @[nonCapture], @[nonCapture]]
+  check findAllBounds("aba", re2"(a(b)?)+") == @[0 .. 2]
+  check findAllCapt("aba", re2"(a(b)?)+") == @[@[2 .. 2, 1 .. 1]]  # same as python
+  check findAllBounds("abab", re2"(a?)((ab)?)(b?)a?(ab)?b?") == @[0 .. 3, 4 .. 3]
+  check findAllCapt("abab", re2"(a?)((ab)?)(b?)a?(ab)?b?") ==
+    @[@[0 .. 0, 1 .. 0, nonCapture, 1 .. 1, nonCapture],
+      @[4 .. 3, 4 .. 3, nonCapture, 4 .. 3, nonCapture]]  # same as python
+  check findAllBounds("ab", re2".*(.*)") == @[0 .. 1, 2 .. 1]
+  check findAllCapt("ab", re2".*(.*)") == @[@[2 .. 1], @[2 .. 1]]
+
+test "fowler_nullsubexpr":
+  check findAllBounds("aaaaaa", re2"(a*)*") == @[0 .. 5, 6 .. 5]
+  check findAllCapt("aaaaaa", re2"(a*)*") == @[@[6 .. 5], @[6 .. 5]]
+  check findAllBounds("a", re2"(a*)+") == @[0 .. 0, 1 .. 0]
+  check findAllCapt("a", re2"(a*)+") == @[@[1 .. 0], @[1 .. 0]]
+  check findAllBounds("a", re2"(a+)*") == @[0 .. 0, 1 .. 0]
+  check findAllCapt("a", re2"(a+)*") == @[@[0 .. 0], @[nonCapture]]
+  check findAllBounds("a", re2"(a+)+") == @[0 .. 0]
+  check findAllCapt("a", re2"(a+)+") == @[@[0 .. 0]]
+  check findAllBounds("a", re2"([a]*)*") == @[0 .. 0, 1 .. 0]
+  check findAllCapt("a", re2"([a]*)*") == @[@[1 .. 0], @[1 .. 0]]
+  check findAllBounds("aaaaaab", re2"([^b]*)*") == @[0 .. 5, 6 .. 5, 7 .. 6]
+  check findAllCapt("aaaaaab", re2"([^b]*)*") ==
+    @[@[6 .. 5], @[6 .. 5], @[7 .. 6]]
+  check findAllBounds("zabcde", re2"((z)+|a)*") ==
+    @[0 .. 1, 2 .. 1, 3 .. 2, 4 .. 3, 5 .. 4, 6 .. 5]
+  check findAllCapt("zabcde", re2"((z)+|a)*") ==
+    @[@[1 .. 1, 0 .. 0],
+      @[nonCapture, nonCapture],
+      @[nonCapture, nonCapture],
+      @[nonCapture, nonCapture],
+      @[nonCapture, nonCapture],
+      @[nonCapture, nonCapture]]
+  check findAllBounds("axa", re2"(a*)*(x)") == @[0 .. 1]
+  check findAllCapt("axa", re2"(a*)*(x)") == @[@[1 .. 0, 1 .. 1]]
+  check findAllBounds("axa", re2"(a*)+(x)") == @[0 .. 1]
+  check findAllCapt("axa", re2"(a*)+(x)") == @[@[1 .. 0, 1 .. 1]]
+
+test "fowler_repetition":
+  check findAllBounds("", re2"((..)|(.))").len == 0
+  check findAllCapt("", re2"((..)|(.))").len == 0
+  check findAllBounds("", re2"((..)|(.))*") == @[0 .. -1]
+  check findAllCapt("", re2"((..)|(.))*") ==
+    @[@[nonCapture, nonCapture, nonCapture]]
+  check findAllBounds("a", re2"((..)|(.))") == @[0 .. 0]
+  check findAllCapt("a", re2"((..)|(.))") ==
+    @[@[0 .. 0, nonCapture, 0 .. 0]]
+  check findAllBounds("a", re2"((..)|(.))*") == @[0 .. 0, 1 .. 0]
+  check findAllCapt("a", re2"((..)|(.))*") ==
+    @[@[0 .. 0, nonCapture, 0 .. 0],
+      @[nonCapture, nonCapture, nonCapture]]
+  check findAllBounds("aa", re2"((..)|(.))") == @[0 .. 1]
+  check findAllCapt("aa", re2"((..)|(.))") ==
+    @[@[0 .. 1, 0 .. 1, nonCapture]]
+  check findAllBounds("X1234567Y", re2"X(.?){0,}Y") == @[0 .. 8]
+  check findAllCapt("X1234567Y", re2"X(.?){0,}Y") == @[@[8 .. 7]]
+  check findAllBounds("X1234567Y", re2"X(.?){7,}Y") == @[0 .. 8]
+  check findAllCapt("X1234567Y", re2"X(.?){7,}Y") == @[@[8 .. 7]]
+  check findAllBounds("X1234567Y", re2"X(.?){8,}Y") == @[0 .. 8]
+  check findAllCapt("X1234567Y", re2"X(.?){8,}Y") == @[@[8 .. 7]]
+  check findAllBounds("X1234567Y", re2"X(.?){0,8}Y") == @[0 .. 8]
+  check findAllCapt("X1234567Y", re2"X(.?){0,8}Y") == @[@[8 .. 7]]
+  check findAllBounds("X1234567Y", re2"X(.?){1,8}Y") == @[0 .. 8]
+  check findAllCapt("X1234567Y", re2"X(.?){1,8}Y") == @[@[8 .. 7]]
+  check findAllBounds("X1234567Y", re2"X(.?){8,8}Y") == @[0 .. 8]
+  check findAllCapt("X1234567Y", re2"X(.?){8,8}Y") == @[@[8 .. 7]]
+  check findAllBounds("ababcd", re2"(a|ab|c|bcd){0,}(d*)") ==
+    @[0 .. 0, 1 .. 0, 2 .. 5, 6 .. 5]
+  check findAllCapt("ababcd", re2"(a|ab|c|bcd){0,}(d*)") ==
+    @[@[0 .. 0, 1 .. 0],
+      @[nonCapture, 1 .. 0],
+      @[3 .. 5, 6 .. 5],
+      @[nonCapture, 6 .. 5]]
+  check findAllBounds("ababcd", re2"(a|ab|c|bcd){1,}(d*)") == @[0 .. 0, 2 .. 5]
+  check findAllCapt("ababcd", re2"(a|ab|c|bcd){1,}(d*)") ==
+    @[@[0 .. 0, 1 .. 0], @[3 .. 5, 6 .. 5]]
+  check findAllBounds("ababcd", re2"(a|ab|c|bcd){2,}(d*)") == @[0 .. 5]
+  check findAllCapt("ababcd", re2"(a|ab|c|bcd){2,}(d*)") ==
+    @[@[3 .. 5, 6 .. 5]]
+  check findAllBounds("ababcd", re2"(a|ab|c|bcd){3,}(d*)") == @[0 .. 5]
+  check findAllCapt("ababcd", re2"(a|ab|c|bcd){3,}(d*)") ==
+    @[@[3 .. 5, 6 .. 5]]
+  check findAllBounds("ababcd", re2"(a|ab|c|bcd){4,}(d*)").len == 0
+  check findAllCapt("ababcd", re2"(a|ab|c|bcd){4,}(d*)").len == 0
+  check findAllBounds("ababcd", re2"(ab|a|c|bcd){0,}(d*)") == @[0 .. 5, 6 .. 5]
+  check findAllCapt("ababcd", re2"(ab|a|c|bcd){0,}(d*)") ==
+    @[@[4 .. 4, 5 .. 5], @[nonCapture, 6 .. 5]]
+  check findAllBounds("ababcd", re2"(ab|a|c|bcd){1,}(d*)") == @[0 .. 5]
+  check findAllCapt("ababcd", re2"(ab|a|c|bcd){1,}(d*)") ==
+    @[@[4 .. 4, 5 .. 5]]
+  check findAllBounds("ababcd", re2"(ab|a|c|bcd){2,}(d*)") == @[0 .. 5]
+  check findAllCapt("ababcd", re2"(ab|a|c|bcd){2,}(d*)") ==
+    @[@[4 .. 4, 5 .. 5]]
+  check findAllBounds("ababcd", re2"(ab|a|c|bcd){3,}(d*)") == @[0 .. 5]
+  check findAllCapt("ababcd", re2"(ab|a|c|bcd){3,}(d*)") ==
+    @[@[4 .. 4, 5 .. 5]]
+  check findAllBounds("ababcd", re2"(ab|a|c|bcd){4,}(d*)").len == 0
+  check findAllCapt("ababcd", re2"(ab|a|c|bcd){4,}(d*)").len == 0
+
+test "rust_regression":
+  check findAllBounds("A_", re2"(?i-u)[a_]+") == @[0 .. 1]
+  check findAllBounds("a_", re2"(?i-u)[a_]+") == @[0 .. 1]
+  check findAllBounds("x", re2"(?i)[^x]").len == 0
+  check findAllBounds("X", re2"(?i)[^x]").len == 0
+  check findAllBounds("_", re2"[[:word:]]") == @[0 .. 0]
+  check findAllBounds("abx", re2"([a-f]){2}(?P<foo>[x-z])") == @[0 .. 2]
+  check findAllCapt("abx", re2"([a-f]){2}(?P<foo>[x-z])") == @[@[1 .. 1, 2 .. 2]]
+  check findAllBounds("az", re2"ab?|$") == @[0 .. 0, 2 .. 1]
+  check findAllBounds("azb", re2"z*azb") == @[0 .. 2]
+  check findAllBounds("int", re2"1|2|3|4|5|6|7|8|9|10|int") == @[0 .. 2]
+  check findAllBounds("Should this (work?)", re2"\b") ==
+    @[0 .. -1, 6 .. 5, 7 .. 6, 11 .. 10, 13 .. 12, 17 .. 16]
+  check findAllBounds("a b c", re2"\b") ==
+    @[0 .. -1, 1 .. 0, 2 .. 1, 3 .. 2, 4 .. 3, 5 .. 4]
+  check findAllBounds("ba", re2"^a|b") == @[0 .. 0]
+  check findAllBounds("yyyyya", re2"^a|z").len == 0
+  check findAllBounds("ayyyyy", re2"a$|z").len == 0
+  check findAllBounds("CDAX", re2"(?:ABC|CDA|BC)X") == @[0 .. 3]
+  check findAllBounds("CIMG2341", re2"((IMG|CAM|MG|MB2)_|(DSCN|CIMG))(?P<n>[0-9]+)$") ==
+    @[0 .. 7]
+  check findAllCapt("CIMG2341", re2"((IMG|CAM|MG|MB2)_|(DSCN|CIMG))(?P<n>[0-9]+)$") ==
+    @[@[0 .. 3, nonCapture, 0 .. 3, 4 .. 7]]
+  check findAllBounds("abcbX", re2"a(b*(X|$))?") == @[0 .. 0]
+  check findAllBounds("a0.0c", re2"(a)\d*\.?\d+\b") == @[0 .. 1]
+  check findAllCapt("a0.0c", re2"(a)\d*\.?\d+\b") == @[@[0 .. 0]]
+  check findAllBounds("test", re2"typename type\-parameter\-[0-9]+\-[0-9]+::.+").len == 0
+  check findAllBounds("foo Foo bar Bar", re2"(?:(?i)foo)|Bar") ==
+    @[0 .. 2, 4 .. 6, 12 .. 14]
+  check findAllBounds("I have 12, he has 2!", re2"\b..\b") ==
+    @[0 .. 1, 7 .. 8, 9 .. 10, 11 .. 12, 17 .. 18]
+  check findAllBounds("153.230000", re2"[0-4][0-4][0-4]000") == @[4 .. 9]
+  check findAllBounds("153.230000\n", re2"[0-4][0-4][0-4]000") == @[4 .. 9]
+  check findAllBounds("line1\nline2", re2"(?m)^(?:[^ ]+?)$") == @[0 .. 4, 6 .. 10]
+  check findAllBounds("A\nB", re2"(?m)^(?:[^ ]+?)$") == @[0 .. 0, 2 .. 2]
+  check findAllBounds("a ", re2"^a[[:^space:]]").len == 0
+  check findAllBounds("foo boo a", re2"^a[[:^space:]]").len == 0
+  check findAllBounds("r-f", re2"^-[a-z]").len == 0
+  check findAllBounds("ab", re2"(a$)b$").len == 0
+  check findAllBounds("ab", re2"^(a|ab)$") == @[0 .. 1]
+  check findAllCapt("ab", re2"^(a|ab)$") == @[@[0 .. 1]]
+  check findAllBounds("h", re2"(?:(?-u:\b)|(?u:h))+") == @[0 .. -1, 1 .. 0]
+  check findAllBounds("鋸", re2"(?u:\B)").len == 0
+  check findAllBounds("oB", re2"(?:(?u:\b)|(?s-u:.))+") == @[0 .. -1, 1 .. 1, 2 .. 1]
+  check findAllBounds("\u{FEF80}", re2"(?:(?-u:\B)|(?su:.))+") == @[0 .. -1, 4 .. 3]
+  check findAllBounds("\n‣", re2"(?m:$)(?m:^)(?su:.)") == @[0 .. 0]
+  check findAllBounds("\n", re2"(?m:$)^(?m:^)") == @[0 .. -1]
+  check findAllBounds("dodo", re2"(?P<kp>(?iu:do)(?m:$))*") ==
+    @[0 .. -1, 1 .. 0, 2 .. 3, 4 .. 3]
+  check findAllCapt("dodo", re2"(?P<kp>(?iu:do)(?m:$))*") ==
+    @[@[nonCapture], @[nonCapture], @[2 .. 3], @[nonCapture]]
+  check findAllBounds("\n\n", re2"((?m:$)(?-u:\B)(?s-u:.)(?-u:\B)$)") == @[1 .. 1]
+  check findAllCapt("\n\n", re2"((?m:$)(?-u:\B)(?s-u:.)(?-u:\B)$)") == @[@[1 .. 1]]
+  check findAllBounds("\n\u0081¨\u200a", re2"(?m:$)(?m:$)^(?su:.)") == @[0 .. 0]
+  check findAllBounds("0\n", re2"(?-u:\B)(?m:^)") == @[2 .. 1]
+  check findAllBounds("0", re2"(?:(?u:\b)|(?-u:.))+") == @[0 .. -1, 1 .. 0]
+  check findAllBounds("ubi-Darwin-x86_64.tar.gz", re2"(?i:(?:\b|_)win(?:32|64|dows)?(?:\b|_))").len == 0
+  check findAllBounds("ubi-Windows-x86_64.zip", re2"(?i:(?:\b|_)win(?:32|64|dows)?(?:\b|_))") ==
+    @[4 .. 10]
+  check findAllBounds("B", re2".*[^\s\S]A|B") == @[0 .. 0]
+  check findAllBounds("Zeee.eZZZZZZZZeee>eeeeeee>", re2"e..+e.ee>") == @[1 .. 25]
+  check findAllBounds("102:12:39", re2"(?:(\d+)[:.])?(\d{1,2})[:.](\d{2})") == @[0 .. 8]
+  check findAllCapt("102:12:39", re2"(?:(\d+)[:.])?(\d{1,2})[:.](\d{2})") ==
+    @[@[0 .. 2, 4 .. 5, 7 .. 8]]
+  check findAllBounds("β77\n", re2".+\b\n") == @[0 .. 4]
+  check findAllBounds("a-b", re2"^[[:alnum:]./-]+$") == @[0 .. 2]
+  check findAllBounds(r"hiya \N{snowman} bye", re2"(\\N\{[^}]+})|([{}])") == @[5 .. 15]
+  check findAllCapt(r"hiya \N{snowman} bye", re2"(\\N\{[^}]+})|([{}])") ==
+    @[@[5 .. 15, nonCapture]]

@@ -1690,6 +1690,14 @@ test "treplace":
   check "aaa".replace(re2"a", "b", 1) == "baa"
   check "Nim is awesome!".replace(re2"(\w\B)", "$1_") ==
     "N_i_m i_s a_w_e_s_o_m_e!"
+  check "a".replace(re2"(a)|(b)", "m($1)") == "m(a)"
+  check "a".replace(re2"(a)|(b)", "m($2)") == "m()"
+  check "a".replace(re2"(b)|(a)", "m($2)") == "m(a)"
+  check "a".replace(re2"(b)|(a)", "m($1)") == "m()"
+  check "a".replace(re2"(a)|()", "m($1)") == "m(a)m()"
+  check "a".replace(re2"(a)|()", "m($2)") == "m()m()"
+  check "a".replace(re2"()|(a)", "m($2)") == "m()am()"
+  check "a".replace(re2"()|(a)", "m($1)") == "m()am()"
 
   block:
     proc by(m: RegexMatch2, s: string): string =

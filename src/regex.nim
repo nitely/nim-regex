@@ -359,6 +359,14 @@ template debugCheckUtf8(s: untyped): untyped =
   when not defined(release):
     assert(verifyUtf8(s) == -1, "Invalid utf-8 input")
 
+template debugCheckUtf8(s: string, flags: RegexMatchFlags): untyped =
+  when not defined(release):
+    assert(
+      regexMatchBytesInput in flags or
+      verifyUtf8(s) == -1,
+      "Invalid utf-8 input"
+    )
+
 when canUseMacro:
   func rex*(s: string): RegexLit =
     ## Raw regex literal string
@@ -429,6 +437,10 @@ func groupNames*(m: RegexMatch2): seq[string] {.inline, raises: [].} =
 
   result = toSeq(m.namedGroups.keys)
 
+func toMatchFlags(fgs: RegexMatchFlags): MatchFlags =
+  if regexMatchBytesInput in fgs:
+    result.incl mfBytesInput
+
 when canUseMacro:
   macro match*(
     text: string,
@@ -458,7 +470,8 @@ func match*(
   s: string,
   pattern: Regex2,
   m: var RegexMatch2,
-  start = 0
+  start = 0,
+  flags: RegexMatchFlags = {}
 ): bool {.inline, raises: [].} =
   ## return a match if the whole string
   ## matches the regular expression. This
@@ -469,28 +482,34 @@ func match*(
     doAssert "abcd".match(re2"abcd", m)
     doAssert not "abcd".match(re2"abc", m)
 
-  debugCheckUtf8 s
-  result = matchImpl(s, toRegex(pattern), m, start)
+  debugCheckUtf8(s, flags)
+  result = matchImpl(s, pattern.toRegex, m, start, flags.toMatchFlags)
 
-func match*(s: string, pattern: Regex2): bool {.inline, raises: [].} =
-  debugCheckUtf8 s
+func match*(
+  s: string,
+  pattern: Regex2,
+  start = 0,
+  flags: RegexMatchFlags = {}
+): bool {.inline, raises: [].} =
+  debugCheckUtf8(s, flags)
   var m: RegexMatch2
-  result = matchImpl(s, toRegex(pattern), m)
+  result = matchImpl(s, pattern.toRegex, m, start, flags.toMatchFlags)
 
 when defined(noRegexOpt):
-  template findSomeOptTpl(s, pattern, ms, i): untyped =
-    findSomeImpl(s, pattern, ms, i)
+  template findSomeOptTpl(s, pattern, ms, i, flags): untyped =
+    findSomeImpl(s, pattern, ms, i, flags)
 else:
-  template findSomeOptTpl(s, pattern, ms, i): untyped =
+  template findSomeOptTpl(s, pattern, ms, i, flags): untyped =
     if pattern.litOpt.canOpt:
-      findSomeOptImpl(s, pattern, ms, i)
+      findSomeOptImpl(s, pattern, ms, i, flags)
     else:
-      findSomeImpl(s, pattern, ms, i)
+      findSomeImpl(s, pattern, ms, i, flags)
 
 iterator findAll*(
   s: string,
   pattern: Regex2,
-  start = 0
+  start = 0,
+  flags: RegexMatchFlags = {}
 ): RegexMatch2 {.inline, raises: [].} =
   ## search through the string and
   ## return each match. Empty matches
@@ -505,14 +524,15 @@ iterator findAll*(
     doAssert bounds == @[1 .. 2, 4 .. 5]
     doAssert found == @["bc", "bc"]
 
-  debugCheckUtf8 s
+  debugCheckUtf8(s, flags)
+  let fgs = flags.toMatchFlags
   var i = start
   var i2 = start-1
   var m: RegexMatch2
   var ms: RegexMatches2
   while i <= len(s):
     doAssert(i > i2); i2 = i
-    i = findSomeOptTpl(s, toRegex(pattern), ms, i)
+    i = findSomeOptTpl(s, toRegex(pattern), ms, i, fgs)
     #debugEcho i
     if i < 0: break
     for mi in ms:
@@ -524,15 +544,17 @@ iterator findAll*(
 func findAll*(
   s: string,
   pattern: Regex2,
-  start = 0
+  start = 0,
+  flags: RegexMatchFlags = {}
 ): seq[RegexMatch2] {.inline, raises: [].} =
-  for m in findAll(s, pattern, start):
+  for m in findAll(s, pattern, start, flags):
     result.add m
 
 iterator findAllBounds*(
   s: string,
   pattern: Regex2,
-  start = 0
+  start = 0,
+  flags: RegexMatchFlags = {}
 ): Slice[int] {.inline, raises: [].} =
   ## search through the string and
   ## return each match. Empty matches
@@ -544,13 +566,14 @@ iterator findAllBounds*(
       bounds.add bd
     doAssert bounds == @[1 .. 2, 4 .. 5]
 
-  debugCheckUtf8 s
+  debugCheckUtf8(s, flags)
+  let fgs = flags.toMatchFlags
   var i = start
   var i2 = start-1
   var ms: RegexMatches2
   while i <= len(s):
     doAssert(i > i2); i2 = i
-    i = findSomeOptTpl(s, toRegex(pattern), ms, i)
+    i = findSomeOptTpl(s, toRegex(pattern), ms, i, fgs)
     #debugEcho i
     if i < 0: break
     for ab in ms.bounds:
@@ -561,16 +584,18 @@ iterator findAllBounds*(
 func findAllBounds*(
   s: string,
   pattern: Regex2,
-  start = 0
+  start = 0,
+  flags: RegexMatchFlags = {}
 ): seq[Slice[int]] {.inline, raises: [].} =
-  for m in findAllBounds(s, pattern, start):
+  for m in findAllBounds(s, pattern, start, flags):
     result.add m
 
 func find*(
   s: string,
   pattern: Regex2,
   m: var RegexMatch2,
-  start = 0
+  start = 0,
+  flags: RegexMatchFlags = {}
 ): bool {.inline, raises: [].} =
   ## search through the string looking for the first
   ## location where there is a match
@@ -583,7 +608,7 @@ func find*(
       m.group(0) == 2 .. 3
 
   m.clear()
-  for m2 in findAll(s, pattern, start):
+  for m2 in findAll(s, pattern, start, flags):
     m.captures = m2.captures
     m.namedGroups = m2.namedGroups
     m.boundaries = m2.boundaries
@@ -601,7 +626,11 @@ func contains*(s: string, pattern: Regex2): bool {.inline, raises: [].} =
     return true
   return false
 
-iterator split*(s: string, sep: Regex2): string {.inline, raises: [].} =
+iterator split*(
+  s: string,
+  sep: Regex2,
+  flags: RegexMatchFlags = {}
+): string {.inline, raises: [].} =
   ## return not matched substrings
   runnableExamples:
     var found = newSeq[string]()
@@ -609,7 +638,8 @@ iterator split*(s: string, sep: Regex2): string {.inline, raises: [].} =
       found.add s
     doAssert found == @["", "a", "Ϊ", "Ⓐ", "弢", ""]
 
-  debugCheckUtf8 s
+  debugCheckUtf8(s, flags)
+  let fgs = flags.toMatchFlags
   var
     first, last, i = 0
     i2 = -1
@@ -617,7 +647,7 @@ iterator split*(s: string, sep: Regex2): string {.inline, raises: [].} =
     ms: RegexMatches2
   while not done:
     doAssert(i > i2); i2 = i
-    i = findSomeOptTpl(s, toRegex(sep), ms, i)
+    i = findSomeOptTpl(s, sep.toRegex, ms, i, fgs)
     done = i < 0 or i >= len(s)
     if done: ms.dummyMatch(s.len)
     for ab in ms.bounds:
@@ -626,16 +656,24 @@ iterator split*(s: string, sep: Regex2): string {.inline, raises: [].} =
         yield substr(s, first, last-1)
       first = ab.b+1
 
-func split*(s: string, sep: Regex2): seq[string] {.inline, raises: [].} =
+func split*(
+  s: string,
+  sep: Regex2,
+  flags: RegexMatchFlags = {}
+): seq[string] {.inline, raises: [].} =
   ## return not matched substrings
   runnableExamples:
     doAssert split("11a22Ϊ33Ⓐ44弢55", re2"\d+") ==
       @["", "a", "Ϊ", "Ⓐ", "弢", ""]
 
-  for w in split(s, sep):
+  for w in split(s, sep, flags):
     result.add w
 
-func splitIncl*(s: string, sep: Regex2): seq[string] {.inline, raises: [].} =
+func splitIncl*(
+  s: string,
+  sep: Regex2,
+  flags: RegexMatchFlags = {}
+): seq[string] {.inline, raises: [].} =
   ## return not matched substrings, including captured groups
   runnableExamples:
     let
@@ -644,7 +682,8 @@ func splitIncl*(s: string, sep: Regex2): seq[string] {.inline, raises: [].} =
     doAssert parts == expected
 
   template ab: untyped = m.boundaries
-  debugCheckUtf8 s
+  debugCheckUtf8(s, flags)
+  let fgs = flags.toMatchFlags
   var
     first, last, i = 0
     i2 = -1
@@ -653,11 +692,11 @@ func splitIncl*(s: string, sep: Regex2): seq[string] {.inline, raises: [].} =
     ms: RegexMatches2
   while not done:
     doAssert(i > i2); i2 = i
-    i = findSomeOptTpl(s, toRegex(sep), ms, i)
+    i = findSomeOptTpl(s, sep.toRegex, ms, i, fgs)
     done = i < 0 or i >= len(s)
     if done: ms.dummyMatch(s.len)
     for mi in ms:
-      fillMatchImpl(m, mi, ms, toRegex(sep))
+      fillMatchImpl(m, mi, ms, sep.toRegex)
       last = ab.a
       if ab.a > 0 or ab.a <= ab.b:  # skip first empty match
         result.add substr(s, first, last-1)
@@ -667,7 +706,10 @@ func splitIncl*(s: string, sep: Regex2): seq[string] {.inline, raises: [].} =
       first = ab.b+1
 
 func startsWith*(
-  s: string, pattern: Regex2, start = 0
+  s: string,
+  pattern: Regex2,
+  start = 0,
+  flags: RegexMatchFlags = {}
 ): bool {.inline, raises: [].} =
   ## return whether the string
   ## starts with the pattern or not
@@ -675,8 +717,8 @@ func startsWith*(
     doAssert "abc".startsWith(re2"\w")
     doAssert not "abc".startsWith(re2"\d")
 
-  debugCheckUtf8 s
-  startsWithImpl2(s, toRegex(pattern), start)
+  debugCheckUtf8(s, flags)
+  startsWithImpl2(s, pattern.toRegex, start, flags.toMatchFlags)
 
 template runeIncAt(s: string, n: var int) =
   ## increment ``n`` up to
@@ -687,20 +729,24 @@ template runeIncAt(s: string, n: var int) =
     n = s.len+1
 
 # XXX use findAll and check last match bounds
-func endsWith*(s: string, pattern: Regex2): bool {.inline, raises: [].} =
+func endsWith*(
+  s: string,
+  pattern: Regex2,
+  flags: RegexMatchFlags = {}
+): bool {.inline, raises: [].} =
   ## return whether the string
   ## ends with the pattern or not
   runnableExamples:
     doAssert "abc".endsWith(re2"\w")
     doAssert not "abc".endsWith(re2"\d")
 
-  debugCheckUtf8 s
+  debugCheckUtf8(s, flags)
   result = false
   var
     m: RegexMatch2
     i = 0
   while i < s.len:
-    result = match(s, pattern, m, i)
+    result = match(s, pattern, m, i, flags)
     if result: return
     s.runeIncAt(i)
 
@@ -728,7 +774,8 @@ func replace*(
   s: string,
   pattern: Regex2,
   by: string,
-  limit = 0
+  limit = 0,
+  flags: RegexMatchFlags = {}
 ): string {.inline, raises: [ValueError].} =
   ## Replace matched substrings.
   ##
@@ -747,12 +794,12 @@ func replace*(
     doAssert "Nim is awesome!".replace(re2"(\w\B)", "$1_") ==
       "N_i_m i_s a_w_e_s_o_m_e!"
 
-  debugCheckUtf8 s
+  debugCheckUtf8(s, flags)
   result = newStringOfCap(s.len)
   var
     i, j = 0
     capts = newSeqOfCap[string](toRegex(pattern).groupsCount)
-  for m in findAll(s, pattern):
+  for m in findAll(s, pattern, flags = flags):
     result.addsubstr(s, i, m.boundaries.a-1)
     capts.setLen 0
     for c in m.captures:
@@ -773,7 +820,8 @@ func replace*(
   s: string,
   pattern: Regex2,
   by: proc (m: RegexMatch2, s: string): string,
-  limit = 0
+  limit = 0,
+  flags: RegexMatchFlags = {}
 ): string {.inline, raises: [], effectsOf: by.} =
   ## Replace matched substrings.
   ##
@@ -788,10 +836,10 @@ func replace*(
     let text = "**this is a test**"
     doAssert text.replace(re2"(\*)", removeStars) == "this is a test"
 
-  debugCheckUtf8 s
+  debugCheckUtf8(s, flags)
   result = newStringOfCap(s.len)
   var i, j = 0
-  for m in findAll(s, pattern):
+  for m in findAll(s, pattern, flags = flags):
     result.addsubstr(s, i, m.boundaries.a-1)
     result.add by(m, s)
     i = m.boundaries.b+1
@@ -866,6 +914,16 @@ proc toString(pattern: Regex2): string {.used.} =
 # below deprecated funcs call each other,
 # so turn warnings
 {.push warning[Deprecated]: off.}
+
+when defined(noRegexOpt):
+  template findSomeOptTpl(s, pattern, ms, i): untyped =
+    findSomeImpl(s, pattern, ms, i)
+else:
+  template findSomeOptTpl(s, pattern, ms, i): untyped =
+    if pattern.litOpt.canOpt:
+      findSomeOptImpl(s, pattern, ms, i)
+    else:
+      findSomeImpl(s, pattern, ms, i)
 
 func re*(
   s: string
@@ -1426,6 +1484,11 @@ when isMainModule:
   doAssert match("A", re2"(?xi)     a")
   doAssert(not match("A", re2"((?xi))     a"))
   doAssert(not match("A", re2"(?xi:(?xi)     )a"))
+
+  block:
+    let flags = {regexMatchBytesInput}
+    doAssert match("\xff", re2"\xff", flags = flags)
+    doAssert replace("\xff", re2"\xff", "abc", flags = flags) == "abc"
 
   doAssert graph(toRegex(re2"^a+$")) == """digraph graphname {
     0 [label="q0";color=blue];

@@ -144,7 +144,8 @@ func submatch(
   text: string,
   regex: Regex,
   i: int,
-  cPrev, c: int32
+  cPrev, c: int32,
+  flags: MatchFlags
 ) {.inline.} =
   template nfa: untyped = regex.nfa.s
   template smA: untyped = ms.a
@@ -212,7 +213,7 @@ func findSomeImpl*(
   regex: Regex,
   ms: var RegexMatches2,
   start: Natural = 0,
-  flags: set[MatchFlag] = {}
+  flags: MatchFlags = {}
 ): int =
   template smA: untyped = ms.a
   initMaybeImpl(ms, regex)
@@ -222,16 +223,22 @@ func findSomeImpl*(
     cPrev = -1'i32
     i = start.int
     iPrev = start.int
+  let
     optFlag = mfFindMatchOpt in flags
+    binFlag = mfBytesInput in flags
   smA.add (0'i16, -1'i32, i .. i-1)
   if start-1 in 0 .. text.len-1:
-    cPrev = bwRuneAt(text, start-1).int32
+    cPrev = if binFlag:
+      text[start-1].int32
+    else:
+      bwRuneAt(text, start-1).int32
   while i < text.len:
-    #debugEcho "it= ", i, " ", cPrev
-    fastRuneAt(text, i, c, true)
-    #c = text[i].Rune
-    #i += 1
-    submatch(ms, text, regex, iPrev, cPrev, c.int32)
+    if binFlag:
+      c = text[i].Rune
+      inc i
+    else:
+      fastRuneAt(text, i, c, true)
+    submatch(ms, text, regex, iPrev, cPrev, c.int32, flags)
     if smA.len == 0:
       # avoid returning right before final zero-match
       if i < len(text):
@@ -244,7 +251,7 @@ func findSomeImpl*(
     smA.add (0'i16, -1'i32, i .. i-1)
     iPrev = i
     cPrev = c.int32
-  submatch(ms, text, regex, iPrev, cPrev, -1'i32)
+  submatch(ms, text, regex, iPrev, cPrev, -1'i32, flags)
   doAssert smA.len == 0
   if ms.hasMatches():
     #debugEcho "m= ", ms.m.s
@@ -260,7 +267,8 @@ func findSomeOptImpl*(
   text: string,
   regex: Regex,
   ms: var RegexMatches2,
-  start: Natural
+  start: Natural,
+  flags: MatchFlags = {}
 ): int =
   template regexSize: untyped =
     max(regex.litOpt.nfa.s.len, regex.nfa.s.len)
@@ -272,6 +280,8 @@ func findSomeOptImpl*(
   doAssert opt.nfa.s.len > 0
   initMaybeImpl(ms, regexSize, groupsLen)
   ms.clear()
+  let binFlag = mfBytesInput in flags
+  let flags = flags + {mfFindMatchOpt}
   let hasLits = opt.lits.len > 0
   let step = max(1, opt.lits.len)
   var limit = start.int
@@ -281,23 +291,25 @@ func findSomeOptImpl*(
     doAssert i > i2; i2 = i
     #debugEcho "lit=", opt.lit
     #debugEcho "i=", i
-    let litIdx = if hasLits:
+    let litIdx = if not hasLits:
+      text.find(opt.lit.char, i)
+    elif not binFlag:
       text.find(opt.lits, i)
     else:
-      text.find(opt.lit.char, i)
+      text.find(opt.bytelits, i)
     if litIdx == -1:
       return -1
     #debugEcho "litIdx=", litIdx
     doAssert litIdx >= i
     i = litIdx
-    i = reversedMatchImpl(smA, smB, text, opt.nfa, look, groupsLen, i, limit)
+    i = reversedMatchImpl(smA, smB, text, opt.nfa, look, groupsLen, i, limit, flags)
     if i == -1:
       #debugEcho "not.Match=", i
       i = litIdx+step
     else:
       doAssert i <= litIdx
       #debugEcho "bounds.a=", i
-      i = findSomeImpl(text, regex, ms, i, {mfFindMatchOpt})
+      i = findSomeImpl(text, regex, ms, i, flags)
       #debugEcho "bounds.b=", i
       if ms.hasMatches:
         return i

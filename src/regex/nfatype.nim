@@ -234,7 +234,11 @@ type
     mfAnchored
     mfBwMatch
     mfReverseCapts
+    mfBytesInput
   MatchFlags* = set[MatchFlag]
+  RegexMatchFlag* = enum
+    regexMatchBytesInput
+  RegexMatchFlags* = set[RegexMatchFlag]
   RegexMatch* = object
     ## deprecated
     captures*: Captures

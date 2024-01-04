@@ -322,7 +322,8 @@ func expandArbitrayBytes(exp: Exp, flags: RegexFlags): Exp =
       var node2 = node
       node2.cp = Rune((node.cp.uint32 and (0xff'u32 shl (i * 8))) shr (i * 8))
       result.s.add node2
-  result.s = newSeqOfCap[Node](exp.s.len)
+  result.s = newSeq[Node](exp.s.len)
+  result.s.setLen 0
   for node in exp.s:
     if node.kind notin {reChar, reCharCi}:
       result.s.add node

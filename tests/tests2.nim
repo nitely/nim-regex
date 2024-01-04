@@ -3119,3 +3119,20 @@ when not defined(js) or NimMajor >= 2:
     check replace("\xF0\xAF\xA2\x94\x94", re2(r"弢{2}", flags), "abc") == "abc"
     check replace("\xF0\xAF\xA2\x94\x94", re2(r"弢+", flags), "abc") == "abc"
     check replace("\x02\xF8\x95\x02\xF8\x95", re2(r"\x{2F895}{2}", flags), "abc") == "abc"
+    check match("\xF0\xAF\xA2\x94", re2(r".{4}", flags))
+    check match("\x02\xF8\x95", re2(r".+(?<=\x{2F895})", flags))
+    check(not match("\x02\xF8\x95\x95", re2(r".+(?<=\x{2F895})", flags)))
+    check match("\x02\xF8\x95\x02\xF8\x95", re2(r".+(?<=\x{2F895}+)", flags))
+    check match("\x02\xF8\x95\x02\xF8\x95", re2(r".+(?<=\x{2F895}{2})", flags))
+    check match("弢", re2(r".+(?<=弢)", flags))
+    check match("\xF0\xAF\xA2\x94", re2(r".+(?<=弢)", flags))
+    check match("弢", re2(r".+(?<=\xF0\xAF\xA2\x94)", flags))
+    check match("\xF0\xAF\xA2\x94", re2(r".+(?<=弢)", flags))
+    check match("\xF0\xAF\xA2\x94", re2(r".{4}(?<=弢)", flags))
+    check match("\xF0\xAF\xA2\x94", re2(r".{4}(?<=.{4})", flags))
+    block:
+      var m: RegexMatch2
+      check match("a", re2(r"a", flags)) and
+        m.groupsCount == 0
+      check match("\x02\xF8\x95", re2(r"\x{2F895}", flags)) and 
+        m.groupsCount == 0

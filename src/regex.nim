@@ -1450,6 +1450,10 @@ when isMainModule:
       doAssert replace("\xff", re2(r"\xff", flags), "abc") == "abc"
       doAssert match("\xff\xff", re2(r"\xff\xff", flags))
       doAssert replace("\xff\xff", re2(r"\xff\xff", flags), "abc") == "abc"
+      doAssert match("\xff\xff", re2(r"\xff+", flags))
+      doAssert replace("\xff\xff", re2(r"\xff", flags), "abc") == "abcabc"
+      doAssert(not match("\xf0", re2(r"\xff", flags)))
+      doAssert replace("\xf0", re2(r"\xff", flags), "abc") == "\xf0"
 
   doAssert graph(toRegex(re2"^a+$")) == """digraph graphname {
     0 [label="q0";color=blue];

@@ -243,7 +243,7 @@ const
     reNotWhiteSpaceAscii}
   matchableKind* = {
     reChar,
-    reCharCI,
+    reCharCi,
     reWord,
     reDigit,
     reWhiteSpace,

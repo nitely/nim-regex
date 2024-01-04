@@ -314,6 +314,38 @@ func expandRepRange(exp: Exp): Exp =
          "char, shorthand (i.e: \\w), group, or set " &
          "expected before repetition range"))
 
+func expandArbitrayBytes(exp: Exp, flags: RegexFlags): Exp =
+  if regexArbitraryBytes notin flags:
+    return exp
+  template addBytes(result, node, n: untyped): untyped =
+    for i in countdown(n-1, 0):
+      var node2 = node
+      node2.cp = Rune((node.cp.uint32 and (0xff'u32 shl (i * 8))) shr (i * 8))
+      result.s.add node2
+  result.s = newSeqOfCap[Node](exp.s.len)
+  for node in exp.s:
+    if node.kind notin {reChar, reCharCi}:
+      result.s.add node
+      continue
+    if node.cp.uint32 <= 0xff'u32:
+      result.s.add node
+      continue
+    result.s.add Node(
+      kind: reGroupStart,
+      cp: Rune '(',
+      isCapturing: false
+    )
+    if node.cp.uint32 <= 0xffff'u32:
+      addBytes(result, node, 2)
+    elif node.cp.uint32 <= 0xffffff'u32:
+      addBytes(result, node, 3)
+    else:
+      addBytes(result, node, 4)
+    result.s.add Node(
+      kind: reGroupEnd,
+      cp: Rune ')'
+    )
+
 func populateUid(exp: Exp): Exp =
   check(
     exp.s.high < NodeUid.high,
@@ -486,22 +518,25 @@ func subExps(exp: AtomsExp, parentKind = reLookahead): AtomsExp =
 
 func toAtoms*(
   exp: Exp,
-  groups: var GroupsCapture
-): AtomsExp {.inline.} =
+  groups: var GroupsCapture,
+  flags: RegexFlags = {}
+): AtomsExp =
   result = exp
     .fixEmptyOps
     .fillGroups(groups)
     .greediness
     .applyFlags
     .expandRepRange
+    .expandArbitrayBytes(flags)
     .populateUid
     .joinAtoms
 
 func transformExp*(
   exp: Exp,
-  groups: var GroupsCapture
-): RpnExp {.inline.} =
+  groups: var GroupsCapture,
+  flags: RegexFlags = {}
+): RpnExp =
   result = exp
-    .toAtoms(groups)
+    .toAtoms(groups, flags)
     .subExps
     .rpn

@@ -3063,3 +3063,59 @@ test "tverifyutf8":
   raisesInvalidUtf8 replace("\xff", re2"abc",
     (proc (m: RegexMatch2, s: string): string = discard))
   raisesInvalidUtf8 escapeRe("\xff")
+
+# bug: raises invalid utf8 regex in Nim 1.0 + js target
+when not defined(js) or NimMajor >= 2:
+  test "tarbitrary_bytes":
+    let flags = {regexArbitraryBytes}
+    check match("a", re2(r"a", flags))
+    check(not match("b", re2(r"a", flags)))
+    check match("\xff", re2(r"\xff", flags))
+    check replace("\xff", re2(r"\xff", flags), "abc") == "abc"
+    check match("\xff\xff", re2(r"\xff\xff", flags))
+    check replace("\xff\xff", re2(r"\xff\xff", flags), "abc") == "abc"
+    check match("\xff\xff", re2(r"\xff+", flags))
+    check replace("\xff\xff", re2(r"\xff", flags), "abc") == "abcabc"
+    check(not match("\xf0", re2(r"\xff", flags)))
+    check replace("\xf0", re2(r"\xff", flags), "abc") == "\xf0"
+    check match("弢", re2(r"弢", flags))
+    check match("弢", re2(r"弢?", flags))
+    check match("弢", re2(r"弢*", flags))
+    check match("弢", re2(r"弢+", flags))
+    check match("", re2(r"(弢)?", flags))
+    check match("弢弢", re2(r"(弢)*", flags))
+    check match("弢弢", re2(r"(弢)+", flags))
+    check match("弢弢", re2(r"(弢){2}", flags))
+    check match("\xF0\xAF\xA2\x94", re2(r"弢", flags))
+    check match("弢\x94\x94", re2(r"弢+", flags))
+    check match("\xF0\xAF\xA2\x94", re2(r"弢?", flags))
+    check match("\xF0\xAF\xA2", re2(r"弢?", flags))
+    check(not match("", re2(r"弢?", flags)))
+    check match("\xF0\xAF\xA2\x94", re2(r"弢*", flags))
+    check match("\xF0\xAF\xA2", re2(r"弢*", flags))
+    check match("\xF0\xAF\xA2\x94\x94", re2(r"弢*", flags))
+    check(not match("弢弢", re2(r"弢*", flags)))
+    check(not match("", re2(r"弢*", flags)))
+    check match("\xF0\xAF\xA2\x94", re2(r"弢+", flags))
+    check match("\xF0\xAF\xA2\x94\x94", re2(r"弢+", flags))
+    check(not match("弢弢", re2(r"弢+", flags)))
+    check match("\x02\xF8\x95", re2(r"\x{2F895}", flags))
+    check match("\x02\xF8\x95\x02\xF8\x95", re2(r"\x{2F895}*", flags))
+    check match("", re2(r"\x{2F895}*", flags))
+    check match("\x02\xF8\x95\x02\xF8\x95", re2(r"\x{2F895}+", flags))
+    check replace("\x02\xF8\x95", re2(r"\x{2F895}", flags), "abc") == "abc"
+    check replace("\x02\xF8\x95", re2(r"\x{2F895}+", flags), "abc") == "abc"
+    check replace("\x02\xF8\x95\x95", re2(r"\x{2F895}+", flags), "abc") == "abc\x95"
+    check replace("\x02\xF8\x95\x02", re2(r"\x{2F895}", flags), "abc") == "abc\x02"
+    check replace("\x02\xF8\x95\x02\xF8", re2(r"\x{2F895}", flags), "abc") == "abc\x02\xF8"
+    check replace("\x02\xF8\x95\x02\xF8\x95", re2(r"\x{2F895}+", flags), "abc") == "abc"
+    check replace("\x02\xF8\x95", re2(r"\xF8", flags), "abc") == "\x02abc\x95"
+    check replace("\xF0\xAF\xA2\x94", re2(r"\xAF", flags), "abc") == "\xF0abc\xA2\x94"
+    check replace("弢", re2(r"\xAF", flags), "abc") == "\xF0abc\xA2\x94"
+    check replace("弢弢", re2(r"弢", flags), "abc") == "abcabc"
+    check replace("弢弢", re2(r"(弢){2}", flags), "abc") == "abc"
+    check replace("弢弢", re2(r"(弢)+", flags), "abc") == "abc"
+    check replace("\xF0\xAF\xA2\x94", re2(r"弢", flags), "abc") == "abc"
+    check replace("\xF0\xAF\xA2\x94\x94", re2(r"弢{2}", flags), "abc") == "abc"
+    check replace("\xF0\xAF\xA2\x94\x94", re2(r"弢+", flags), "abc") == "abc"
+    check replace("\x02\xF8\x95\x02\xF8\x95", re2(r"\x{2F895}{2}", flags), "abc") == "abc"

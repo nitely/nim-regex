@@ -308,7 +308,7 @@ when isMainModule:
   ): RpnExp =
     result = s
       .parse(flags)
-      .transformExp(groups)
+      .transformExp(groups, flags)
 
   func rpn(s: string, flags: RegexFlags = {}): RpnExp =
     var groups: GroupsCapture
@@ -519,8 +519,23 @@ when isMainModule:
   doAssert bytelits"\xff" == ""
   doAssert bytelits"\x00" == ""
   doAssert bytelits"弢" == "弢"
-  # XXX this needs to throw a regex compile error
-  #doAssert bytelits"\x{2F895}" == "弢"
+  doAssert bytelits"弢" == "\xF0\xAF\xA2\x94"
+  # this is not a bug, regex is interpreted as bytes not utf8
+  doAssert bytelits"弢?" == "\xF0\xAF\xA2"
+  doAssert bytelits"弢*" == "\xF0\xAF\xA2"
+  doAssert bytelits"弢+" == "\xF0\xAF\xA2"
+  # but /x{ffffff} works as expected
+  doAssert bytelits"\x{2F895}" == "\x02\xF8\x95"
+  doAssert bytelits"\x{2F895}?" == ""
+  doAssert bytelits"\x{2F895}*" == ""
+  doAssert bytelits"\x{2F895}+" == ""
+  # XXX need to skip group nodes between lits
+  doAssert bytelits"\x{2F895}\x{2F895}" == "\x02\xF8\x95"  # XXX \x02\xF8\x95\x02\xF8\x95
+  doAssert bytelits"\x{2F895}{2}" == "\x02\xF8\x95"  # XXX \x02\xF8\x95\x02\xF8\x95
+  doAssert bytelits"\xff{2}" == "\xff\xff"
+  doAssert bytelits"\x{2F895}?\x02\xF8\x95" == ""
+  doAssert bytelits"\x{2F895}*\x02\xF8\x95" == ""
+  doAssert bytelits"\x{2F895}+\x02\xF8\x95" == ""
 
   doAssert r"abc".prefix.toString == r"".toNfa.toString
   doAssert r"\dabc".prefix.toString == r"\d".toNfa.toString

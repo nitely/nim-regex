@@ -14,7 +14,7 @@ func reImpl*(s: string, flags: RegexFlags = {}): Regex {.inline.} =
   var groups: GroupsCapture
   let rpn = s
     .parse(flags)
-    .transformExp(groups)
+    .transformExp(groups, flags)
   let nfa = rpn.nfa2()
   let opt = rpn.litopt3(flags)
   result = Regex(

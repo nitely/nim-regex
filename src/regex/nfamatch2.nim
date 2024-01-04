@@ -255,6 +255,7 @@ func matchImpl*(
   flags: MatchFlags = {}
 ): bool =
   m.clear()
+  let flags = regex.flags.toMatchFlags + flags
   var
     smA = newSubmatches(regex.nfa.s.len)
     smB = newSubmatches(regex.nfa.s.len)
@@ -279,11 +280,10 @@ func matchImpl*(
 func startsWithImpl2*(
   text: string,
   regex: Regex,
-  start: int,
-  flags: MatchFlags = {}
+  start: int
 ): bool =
   # XXX optimize mfShortestMatch, mfNoCaptures
-  let flags = flags + {mfAnchored, mfShortestMatch, mfNoCaptures}
+  let flags = regex.flags.toMatchFlags + {mfAnchored, mfShortestMatch, mfNoCaptures}
   var
     smA = newSubmatches(regex.nfa.s.len)
     smB = newSubmatches(regex.nfa.s.len)

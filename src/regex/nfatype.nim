@@ -217,15 +217,9 @@ func reverse*(capts: var Capts, a, b: int32): int32 =
   return parent
 
 type
-  RegexLit* = distinct string
-    ## raw regex literal string
-  Regex* = object
-    ## deprecated
-    nfa*: Nfa
-    groupsCount*: int16
-    namedGroups*: OrderedTable[string, int16]
-    #flags*: set[RegexFlag]
-    litOpt*: LitOpt
+  RegexFlag* = enum
+    regexArbitraryBytes
+  RegexFlags* = set[RegexFlag]
   MatchFlag* = enum
     mfShortestMatch
     mfNoCaptures
@@ -236,9 +230,21 @@ type
     mfReverseCapts
     mfBytesInput
   MatchFlags* = set[MatchFlag]
-  RegexMatchFlag* = enum
-    regexMatchBytesInput
-  RegexMatchFlags* = set[RegexMatchFlag]
+
+func toMatchFlags*(f: RegexFlags): MatchFlags =
+  if regexArbitraryBytes in f:
+    result.incl mfBytesInput
+
+type
+  RegexLit* = distinct string
+    ## raw regex literal string
+  Regex* = object
+    ## deprecated
+    nfa*: Nfa
+    groupsCount*: int16
+    namedGroups*: OrderedTable[string, int16]
+    flags*: RegexFlags
+    litOpt*: LitOpt
   RegexMatch* = object
     ## deprecated
     captures*: Captures

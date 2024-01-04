@@ -224,6 +224,7 @@ func findSomeImpl*(
     i = start.int
     iPrev = start.int
   let
+    flags = regex.flags.toMatchFlags + flags
     optFlag = mfFindMatchOpt in flags
     binFlag = mfBytesInput in flags
   smA.add (0'i16, -1'i32, i .. i-1)
@@ -267,8 +268,7 @@ func findSomeOptImpl*(
   text: string,
   regex: Regex,
   ms: var RegexMatches2,
-  start: Natural,
-  flags: MatchFlags = {}
+  start: Natural
 ): int =
   template regexSize: untyped =
     max(regex.litOpt.nfa.s.len, regex.nfa.s.len)
@@ -280,8 +280,8 @@ func findSomeOptImpl*(
   doAssert opt.nfa.s.len > 0
   initMaybeImpl(ms, regexSize, groupsLen)
   ms.clear()
+  let flags = regex.flags.toMatchFlags + {mfFindMatchOpt}
   let binFlag = mfBytesInput in flags
-  let flags = flags + {mfFindMatchOpt}
   let hasLits = opt.lits.len > 0
   let step = max(1, opt.lits.len)
   var limit = start.int

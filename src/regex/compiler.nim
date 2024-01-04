@@ -8,7 +8,7 @@ import ./litopt
 when defined(regexDotDir):
   import ./dotgraph
 
-func reImpl*(s: string): Regex {.inline.} =
+func reImpl*(s: string, flags: RegexFlags = {}): Regex {.inline.} =
   if verifyUtf8(s) != -1:
     raise newException(RegexError, "Invalid utf-8 regex")
   var groups: GroupsCapture
@@ -21,10 +21,12 @@ func reImpl*(s: string): Regex {.inline.} =
     nfa: nfa,
     groupsCount: groups.count,
     namedGroups: groups.names,
-    litOpt: opt)
+    flags: flags,
+    litOpt: opt
+  )
   when defined(regexDotDir) and (NimMajor, NimMinor) >= (1, 2):
     const regexDotDir {.strdefine.} = ""
     graphToFile(result, regexDotDir)
 
-func reCt*(s: string): Regex {.compileTime.} =
-  reImpl(s)
+func reCt*(s: string, flags: RegexFlags = {}): Regex {.compileTime.} =
+  reImpl(s, flags)

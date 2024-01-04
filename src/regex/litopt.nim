@@ -194,7 +194,7 @@ func addBytes(s: var string, cp: uint32) =
     s.add (cp and 0xff'u32).char
     cp = cp shr 8
 
-func lits(exp: RpnExp): Lits =
+func lits(exp: RpnExp, bytesMode: bool): Lits =
   template state: untyped = litNfa.s[stateIdx]
   result.idx = exp.delimiterLit()
   if result.idx == -1:
@@ -226,16 +226,16 @@ func lits(exp: RpnExp): Lits =
     litIdxEnd = i
   doAssert litIdxEnd >= litIdxStart
   var ss = ""
-  var ssb = ""
-  for i in litIdxStart .. litIdxEnd:
-    let cp = litNfa.s[lits[i]].cp
-    ss.add cp
-    ssb.addBytes cp.uint32
+  if bytesMode:
+    for i in litIdxStart .. litIdxEnd:
+      ss.addBytes litNfa.s[lits[i]].cp.uint32
+  else:
+    for i in litIdxStart .. litIdxEnd:
+      ss.add litNfa.s[lits[i]].cp
   # true for non ascii chars (>127) and lit sequences
   if ss.len > 1:
     result.idx = find(exp.s, litNfa.s[lits[litIdxStart]].uid)
     result.s.add ss
-    result.sb.add ssb
 
 func prefix(eNfa: Enfa, uid: NodeUid): Enfa =
   template state0: untyped = eNfa.s.len.int16-1
@@ -295,14 +295,13 @@ type
 func canOpt*(litOpt: LitOpt): bool =
   return litOpt.nfa.s.len > 0
 
-func litopt3*(exp: RpnExp): LitOpt =
+func litopt3*(exp: RpnExp, bytesMode = false): LitOpt =
   template litNode: untyped = exp.s[lits2.idx]
-  let lits2 = exp.lits()
+  let lits2 = exp.lits(bytesMode)
   if lits2.idx == -1:
     return
   result.lit = litNode.cp
   result.lits = lits2.s
-  result.bytelits = lits2.sb
   result.nfa = exp
     .subExps
     .eNfa
@@ -333,9 +332,14 @@ when isMainModule:
     return opt.lits
 
   func bytelits(s: string): string =
-    let opt = s.rpn.litopt3
+    let opt = s.rpn.litopt3(bytesMode = true)
     if not opt.canOpt: return
-    return opt.bytelits
+    return opt.lits
+
+  func lit(s: string): Rune =
+    let opt = s.rpn.litopt3
+    if not opt.canOpt: return  # beware Rune(0) is valid
+    return opt.lit
 
   func prefix(s: string): Nfa =
     let opt = s.rpn.litopt3
@@ -512,8 +516,11 @@ when isMainModule:
   doAssert bytelits"\xff\x0f" == "\xff\x0f"
   doAssert bytelits"\x80\x80" == "\x80\x80"
   doAssert bytelits"\x00\x00" == "\x00\x00"
-  doAssert bytelits"\x80" == "\x80"  # 128
-  doAssert bytelits"\x7F" == ""  # 127
+  doAssert lit"\xff" == '\xff'.Rune
+  doAssert lit"\x80" == '\x80'.Rune  # 128
+  doAssert lit"\x7F" == '\x7F'.Rune  # 127
+  doAssert bytelits"\xff" == ""
+  doAssert bytelits"\x00" == ""
 
   doAssert r"abc".prefix.toString == r"".toNfa.toString
   doAssert r"\dabc".prefix.toString == r"\d".toNfa.toString

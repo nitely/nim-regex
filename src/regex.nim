@@ -1446,6 +1446,8 @@ when isMainModule:
     let flags = {regexArbitraryBytes}
     doAssert match("\xff", re2(r"\xff", flags))
     doAssert replace("\xff", re2(r"\xff", flags), "abc") == "abc"
+    doAssert match("\xff\xff", re2(r"\xff\xff", flags))
+    doAssert replace("\xff\xff", re2(r"\xff\xff", flags), "abc") == "abc"
 
   doAssert graph(toRegex(re2"^a+$")) == """digraph graphname {
     0 [label="q0";color=blue];

@@ -281,7 +281,6 @@ func findSomeOptImpl*(
   initMaybeImpl(ms, regexSize, groupsLen)
   ms.clear()
   let flags = regex.flags.toMatchFlags + {mfFindMatchOpt}
-  let binFlag = mfBytesInput in flags
   let hasLits = opt.lits.len > 0
   let step = max(1, opt.lits.len)
   var limit = start.int
@@ -291,12 +290,10 @@ func findSomeOptImpl*(
     doAssert i > i2; i2 = i
     #debugEcho "lit=", opt.lit
     #debugEcho "i=", i
-    let litIdx = if not hasLits:
-      text.find(opt.lit.char, i)
-    elif not binFlag:
+    let litIdx = if hasLits:
       text.find(opt.lits, i)
     else:
-      text.find(opt.bytelits, i)
+      text.find(opt.lit.char, i)
     if litIdx == -1:
       return -1
     #debugEcho "litIdx=", litIdx

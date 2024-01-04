@@ -16,7 +16,8 @@ func reImpl*(s: string, flags: RegexFlags = {}): Regex {.inline.} =
     .parse
     .transformExp(groups)
   let nfa = rpn.nfa2()
-  let opt = rpn.litopt3()
+  let bytesMode = regexArbitraryBytes in flags
+  let opt = rpn.litopt3(bytesMode)
   result = Regex(
     nfa: nfa,
     groupsCount: groups.count,

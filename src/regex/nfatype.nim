@@ -217,9 +217,6 @@ func reverse*(capts: var Capts, a, b: int32): int32 =
   return parent
 
 type
-  RegexFlag* = enum
-    regexArbitraryBytes
-  RegexFlags* = set[RegexFlag]
   MatchFlag* = enum
     mfShortestMatch
     mfNoCaptures

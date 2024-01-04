@@ -13,11 +13,10 @@ func reImpl*(s: string, flags: RegexFlags = {}): Regex {.inline.} =
     raise newException(RegexError, "Invalid utf-8 regex")
   var groups: GroupsCapture
   let rpn = s
-    .parse
+    .parse(flags)
     .transformExp(groups)
   let nfa = rpn.nfa2()
-  let bytesMode = regexArbitraryBytes in flags
-  let opt = rpn.litopt3(bytesMode)
+  let opt = rpn.litopt3(flags)
   result = Regex(
     nfa: nfa,
     groupsCount: groups.count,

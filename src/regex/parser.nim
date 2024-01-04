@@ -742,13 +742,14 @@ func verbosity(
   else:
     discard
 
-func parse*(expression: string): Exp =
+func parse*(expression: string, flags: RegexFlags = {}): Exp =
   ## convert a ``string`` regex expression
   ## into a ``Node`` expression
   result.s = newSeq[Node](expression.len)
   result.s.setLen 0
   var vb = newSeq[bool]()
-  let sc = expression.scan()
+  let bytesMode = regexArbitraryBytes in flags
+  let sc = expression.scan(bytesMode)
   for _ in sc:
     if sc.skipWhiteSpace(vb): continue
     result.s.add sc.subParse()

@@ -183,17 +183,7 @@ func find(nodes: seq[Node], uid: int): NodeIdx =
       return idx.NodeIdx
   doAssert false
 
-func addBytes(s: var string, cp: uint32) =
-  ## Add cp as byte array to s
-  if cp == 0'u32:
-    s.add 0.char
-    return
-  var cp = cp
-  while cp > 0'u32:
-    s.add (cp and 0xff'u32).char
-    cp = cp shr 8
-
-func lits(exp: RpnExp, bytesMode: bool): Lits =
+func lits(exp: RpnExp, flags: RegexFlags): Lits =
   template state: untyped = litNfa.s[stateIdx]
   result.idx = exp.delimiterLit()
   if result.idx == -1:
@@ -225,9 +215,9 @@ func lits(exp: RpnExp, bytesMode: bool): Lits =
     litIdxEnd = i
   doAssert litIdxEnd >= litIdxStart
   var ss = ""
-  if bytesMode:
+  if regexArbitraryBytes in flags:
     for i in litIdxStart .. litIdxEnd:
-      ss.addBytes litNfa.s[lits[i]].cp.uint32
+      ss.add litNfa.s[lits[i]].cp.char
   else:
     for i in litIdxStart .. litIdxEnd:
       ss.add litNfa.s[lits[i]].cp
@@ -294,9 +284,9 @@ type
 func canOpt*(litOpt: LitOpt): bool =
   return litOpt.nfa.s.len > 0
 
-func litopt3*(exp: RpnExp, bytesMode = false): LitOpt =
+func litopt3*(exp: RpnExp, flags: RegexFlags = {}): LitOpt =
   template litNode: untyped = exp.s[lits2.idx]
-  let lits2 = exp.lits(bytesMode)
+  let lits2 = exp.lits(flags)
   if lits2.idx == -1:
     return
   result.lit = litNode.cp
@@ -311,13 +301,18 @@ when isMainModule:
   import parser
   import exptransformation
 
-  func rpn(s: string, groups: var GroupsCapture): RpnExp =
+  func rpn(
+    s: string,
+    groups: var GroupsCapture,
+    flags: RegexFlags = {}
+  ): RpnExp =
     result = s
-      .parse
+      .parse(flags)
       .transformExp(groups)
-  func rpn(s: string): RpnExp =
+
+  func rpn(s: string, flags: RegexFlags = {}): RpnExp =
     var groups: GroupsCapture
-    rpn(s, groups)
+    rpn(s, groups, flags)
 
   func delim(s: string): string =
     ## Delimiter lit
@@ -331,7 +326,10 @@ when isMainModule:
     return opt.lits
 
   func bytelits(s: string): string =
-    let opt = s.rpn.litopt3(bytesMode = true)
+    let flags = {regexArbitraryBytes}
+    let opt = s
+      .rpn(flags)
+      .litopt3(flags)
     if not opt.canOpt: return
     return opt.lits
 
@@ -520,6 +518,9 @@ when isMainModule:
   doAssert lit"\x7F" == '\x7F'.Rune  # 127
   doAssert bytelits"\xff" == ""
   doAssert bytelits"\x00" == ""
+  doAssert bytelits"弢" == "弢"
+  # XXX this needs to throw a regex compile error
+  #doAssert bytelits"\x{2F895}" == "弢"
 
   doAssert r"abc".prefix.toString == r"".toNfa.toString
   doAssert r"\dabc".prefix.toString == r"\d".toNfa.toString

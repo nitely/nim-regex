@@ -1442,12 +1442,14 @@ when isMainModule:
   doAssert(not match("A", re2"((?xi))     a"))
   doAssert(not match("A", re2"(?xi:(?xi)     )a"))
 
-  block:
-    let flags = {regexArbitraryBytes}
-    doAssert match("\xff", re2(r"\xff", flags))
-    doAssert replace("\xff", re2(r"\xff", flags), "abc") == "abc"
-    doAssert match("\xff\xff", re2(r"\xff\xff", flags))
-    doAssert replace("\xff\xff", re2(r"\xff\xff", flags), "abc") == "abc"
+  # bug: raises invalid utf8 regex in Nim 1.0 + js target
+  when not defined(js) or NimMajor >= 2:
+    block:
+      let flags = {regexArbitraryBytes}
+      doAssert match("\xff", re2(r"\xff", flags))
+      doAssert replace("\xff", re2(r"\xff", flags), "abc") == "abc"
+      doAssert match("\xff\xff", re2(r"\xff\xff", flags))
+      doAssert replace("\xff\xff", re2(r"\xff\xff", flags), "abc") == "abc"
 
   doAssert graph(toRegex(re2"^a+$")) == """digraph graphname {
     0 [label="q0";color=blue];

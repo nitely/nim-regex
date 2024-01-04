@@ -176,7 +176,6 @@ type
   Lits = object
     idx: NodeIdx
     s: string
-    sb: string
 
 func find(nodes: seq[Node], uid: int): NodeIdx =
   for idx in 0 .. nodes.len-1:
@@ -186,11 +185,11 @@ func find(nodes: seq[Node], uid: int): NodeIdx =
 
 func addBytes(s: var string, cp: uint32) =
   ## Add cp as byte array to s
-  if cp == 0:
+  if cp == 0'u32:
     s.add 0.char
     return
   var cp = cp
-  while cp > 0:
+  while cp > 0'u32:
     s.add (cp and 0xff'u32).char
     cp = cp shr 8
 

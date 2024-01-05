@@ -318,17 +318,17 @@ This flag makes ascii mode ``(?-u)`` the default.
 .. code-block:: nim
     :test:
     let flags = {regexArbitraryBytes}
-    doAssert match("\xff", re2(r"\xff", flags)
-    doAssert match("\xf8\xa1\xa1\xa1\xa1", re2(r".+", flags)
+    doAssert match("\xff", re2(r"\xff", flags))
+    doAssert match("\xf8\xa1\xa1\xa1\xa1", re2(r".+", flags))
 
 Beware of (un)expected behaviour when mixin UTF-8 characters.
 
 .. code-block:: nim
     :test:
     let flags = {regexArbitraryBytes}
-    doAssert match("Ⓐ", re2(r"Ⓐ", flags)
-    doAssert match("ⒶⒶ", re2(r"(Ⓐ)+", flags)
-    doAssert not match("ⒶⒶ", re2(r"Ⓐ+", flags)  # ???
+    doAssert match("Ⓐ", re2(r"Ⓐ", flags))
+    doAssert match("ⒶⒶ", re2(r"(Ⓐ)+", flags))
+    doAssert not match("ⒶⒶ", re2(r"Ⓐ+", flags))  # ???
 
 The last line in the above example won't match because the
 regex is parsed as a byte sequence. The ``Ⓐ`` character

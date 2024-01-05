@@ -3,6 +3,11 @@ import std/unicode
 import ./types
 import ./common
 
+func toByteRunes(s: string): seq[Rune] =
+  result = newSeqOfCap[Rune](s.len)
+  for c in s:
+    result.add Rune(c)
+
 type
   Scanner*[T: Rune|Node] = ref object
     ## A scanner is a common
@@ -17,10 +22,14 @@ proc newScanner*[T](s: seq[T]): Scanner[T] =
 proc scan*[T](s: seq[T]): Scanner[T] =
   newScanner(s)
 
-proc scan*(raw: string): Scanner[Rune] =
+proc scan*(raw: string, bytesMode = false): Scanner[Rune] =
+  let s = if bytesMode:
+    raw.toByteRunes
+  else:
+    raw.toRunes
   Scanner[Rune](
     raw: raw,
-    s: raw.toRunes,
+    s: s,
     pos: 0)
 
 iterator items*[T](sc: Scanner[T]): T =

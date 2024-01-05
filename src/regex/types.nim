@@ -15,6 +15,13 @@ import ./common
 #     once acyclic imports are supported
 
 type
+  # needed by litopt and nfatype
+  # which would create a cyclic dep
+  # if defined in nfatype
+  RegexFlag* = enum
+    regexArbitraryBytes
+  RegexFlags* = set[RegexFlag]
+
   # exptype.nim
   RpnExp* = object
     s*: seq[Node]
@@ -236,7 +243,7 @@ const
     reNotWhiteSpaceAscii}
   matchableKind* = {
     reChar,
-    reCharCI,
+    reCharCi,
     reWord,
     reDigit,
     reWhiteSpace,

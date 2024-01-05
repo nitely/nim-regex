@@ -17,7 +17,7 @@ type
     nfa: Nfa,
     look: var Lookaround,
     start: int,
-    flags: set[MatchFlag]
+    flags: MatchFlags
   ): bool {.noSideEffect, raises: [].}
   BehindSig = proc (
     smA, smB: var Submatches,
@@ -27,7 +27,7 @@ type
     nfa: Nfa,
     look: var Lookaround,
     start, limit: int,
-    flags: set[MatchFlag]
+    flags: MatchFlags
   ): int {.noSideEffect, raises: [].}
   Lookaround* = object
     ahead*: AheadSig
@@ -39,10 +39,11 @@ template lookAroundTpl*: untyped {.dirty.} =
   template smLa: untyped = smL.lastA
   template smLb: untyped = smL.lastB
   template zNfa: untyped = ntn.subExp.nfa
-  let flags2 = if ntn.subExp.reverseCapts:
-    {mfAnchored, mfReverseCapts}
-  else:
-    {mfAnchored}
+  var flags2 = {mfAnchored}
+  if ntn.subExp.reverseCapts:
+    flags2.incl mfReverseCapts
+  if mfBytesInput in flags:
+    flags2.incl mfBytesInput
   smL.grow()
   smL.last.setLen zNfa.s.len
   matched = case ntn.kind
@@ -131,7 +132,7 @@ func matchImpl(
   nfa: Nfa,
   look: var Lookaround,
   start = 0,
-  flags: set[MatchFlag] = {}
+  flags: MatchFlags = {}
 ): bool =
   var
     c = Rune(-1)
@@ -140,13 +141,22 @@ func matchImpl(
     iNext = start
     captx = -1'i32
     matched = false
+  let
     anchored = mfAnchored in flags
+    binFlag = mfBytesInput in flags
   if start-1 in 0 .. text.len-1:
-    cPrev = bwRuneAt(text, start-1).int32
+    cPrev = if binFlag:
+      text[start-1].int32
+    else:
+      bwRuneAt(text, start-1).int32
   smA.clear()
   smA.add (0'i16, captIdx, i .. i-1)
   while i < text.len:
-    fastRuneAt(text, iNext, c, true)
+    if binFlag:
+      c = text[iNext].Rune
+      inc iNext
+    else:
+      fastRuneAt(text, iNext, c, true)
     nextStateTpl()
     if smA.len == 0:
       return false
@@ -169,7 +179,7 @@ func reversedMatchImpl(
   look: var Lookaround,
   start: int,
   limit = 0,
-  flags: set[MatchFlag] = {}
+  flags: MatchFlags = {}
 ): int =
   #doAssert start < len(text)
   doAssert start >= limit
@@ -181,12 +191,20 @@ func reversedMatchImpl(
     captx: int32
     matched = false
     anchored = true
+  let binFlag = mfBytesInput in flags
   if start in 0 .. text.len-1:
-    cPrev = text.runeAt(start).int32
+    cPrev = if binFlag:
+      text[start].int32
+    else:
+      runeAt(text, start).int32
   smA.clear()
   smA.add (0'i16, captIdx, i .. i-1)
   while iNext > limit:
-    bwFastRuneAt(text, iNext, c)
+    if binFlag:
+      c = text[iNext-1].Rune
+      dec iNext
+    else:
+      bwFastRuneAt(text, iNext, c)
     nextStateTpl(bwMatch = true)
     if smA.len == 0:
       return -1
@@ -196,7 +214,11 @@ func reversedMatchImpl(
     cPrev = c.int32
   c = Rune(-1)
   if iNext > 0:
-    bwFastRuneAt(text, iNext, c)
+    if binFlag:
+      c = text[iNext-1].Rune
+      dec iNext
+    else:
+      bwFastRuneAt(text, iNext, c)
   nextStateTpl(bwMatch = true)
   for n, capt, bounds in items smA:
     if nfa.s[n].kind == reEoe:
@@ -210,25 +232,30 @@ func reversedMatchImpl*(
   nfa: Nfa,
   look: var Lookaround,
   groupsLen: int,
-  start, limit: int
+  start, limit: int,
+  flags: MatchFlags = {}
 ): int =
   var capts = initCapts3(groupsLen)
   var captIdx = -1'i32
   reversedMatchImpl(
-    smA, smB, capts, captIdx, text, nfa, look, start, limit)
+    smA, smB, capts, captIdx, text, nfa, look, start, limit, flags
+  )
 
 template initLook*: Lookaround =
   Lookaround(
     ahead: matchImpl,
-    behind: reversedMatchImpl)
+    behind: reversedMatchImpl
+  )
 
 func matchImpl*(
   text: string,
   regex: Regex,
   m: var RegexMatch2,
-  start = 0
+  start = 0,
+  flags: MatchFlags = {}
 ): bool =
   m.clear()
+  let flags = regex.flags.toMatchFlags + flags
   var
     smA = newSubmatches(regex.nfa.s.len)
     smB = newSubmatches(regex.nfa.s.len)
@@ -236,7 +263,8 @@ func matchImpl*(
     captIdx = -1'i32
     look = initLook()
   result = matchImpl(
-    smA, smB, capts, captIdx, text, regex.nfa, look, start)
+    smA, smB, capts, captIdx, text, regex.nfa, look, start, flags
+  )
   if result:
     m.captures.setLen regex.groupsCount
     if captIdx != -1:
@@ -249,9 +277,13 @@ func matchImpl*(
       m.namedGroups = regex.namedGroups
     m.boundaries = smA[0].bounds
 
-func startsWithImpl2*(text: string, regex: Regex, start: int): bool =
+func startsWithImpl2*(
+  text: string,
+  regex: Regex,
+  start: int
+): bool =
   # XXX optimize mfShortestMatch, mfNoCaptures
-  template flags: untyped = {mfAnchored, mfShortestMatch, mfNoCaptures}
+  let flags = regex.flags.toMatchFlags + {mfAnchored, mfShortestMatch, mfNoCaptures}
   var
     smA = newSubmatches(regex.nfa.s.len)
     smB = newSubmatches(regex.nfa.s.len)
@@ -259,4 +291,5 @@ func startsWithImpl2*(text: string, regex: Regex, start: int): bool =
     captIdx = -1'i32
     look = initLook()
   result = matchImpl(
-    smA, smB, capts, captIdx, text, regex.nfa, look, start, flags)
+    smA, smB, capts, captIdx, text, regex.nfa, look, start, flags
+  )

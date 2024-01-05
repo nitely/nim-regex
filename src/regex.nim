@@ -283,13 +283,14 @@ the scope, and it contains the submatches for every capture group.
       matched = true
     doAssert matched
 
-Bad UTF-8 input text
-####################
+Invalid UTF-8 input text
+########################
 
-This lib makes no effort to handle invalid UTF-8 input text
-(i.e: malformed or corrupted). The behaviour on invalid input
-is currently undefined, and it will likely result in an
-internal AssertionDefect or some other error.
+There is a UTF-8 validation for the input text,
+but for perf reason this is only done in debug mode.
+The behaviour on invalid UTF-8 input (i.e: malformed, corrupted, truncated, etc)
+when compiling in release/danger mode is currently undefined,
+and it will likely result in an internal AssertionDefect or some other error.
 
 What can be done about this is validating the input text to avoid
 passing invalid input to the match function.
@@ -302,18 +303,37 @@ passing invalid input to the match function.
     # bad input text
     doAssert validateUtf8("\xf8\xa1\xa1\xa1\xa1") != -1
 
-Note at the time of writting this, Nim's `validateUtf8`
+Note at the time of writting this, Nim's ``validateUtf8``
 `is not strict enough <https://github.com/nim-lang/Nim/issues/19333>`_
 and so you are better off using `nim-unicodeplus's <https://github.com/nitely/nim-unicodeplus>`_
-`verifyUtf8` function.
+``verifyUtf8`` function.
 
-Match binary data
-#################
+Match arbitrary bytes
+#####################
 
-Matching on arbitrary binary data (i.e: not utf-8) is not currently supported.
-Both the regex and the input text are expected to be valid utf-8.
-The input text is treated as utf-8, and setting the regex to ASCII mode
-won't help.
+Setting the ``regexArbitraryBytes`` flag will
+treat both the regex and the input text as byte sequences.
+This flag makes ascii mode ``(?-u)`` the default.
+
+.. code-block:: nim
+    :test:
+    let flags = {regexArbitraryBytes}
+    doAssert match("\xff", re2(r"\xff", flags))
+    #doAssert match("\xf8\xa1\xa1\xa1\xa1", re2(r".+", flags))
+
+Beware of (un)expected behaviour when mixin UTF-8 characters.
+
+.. code-block:: nim
+    :test:
+    let flags = {regexArbitraryBytes}
+    doAssert match("Ⓐ", re2(r"Ⓐ", flags))
+    doAssert match("ⒶⒶ", re2(r"(Ⓐ)+", flags))
+    doAssert not match("ⒶⒶ", re2(r"Ⓐ+", flags))  # ???
+
+The last line in the above example won't match because the
+regex is parsed as a byte sequence. The ``Ⓐ`` character
+is composed of multiple bytes (``\xe2\x92\xb6``),
+and only the last byte is affected by the ``+`` operator.
 
 ]##
 
@@ -344,6 +364,8 @@ export
   Regex2,
   RegexMatch,
   RegexMatch2,
+  RegexFlag,
+  RegexFlags,
   RegexError
 
 #
@@ -359,12 +381,20 @@ template debugCheckUtf8(s: untyped): untyped =
   when not defined(release):
     assert(verifyUtf8(s) == -1, "Invalid utf-8 input")
 
+template debugCheckUtf8(s: string, pat: Regex2): untyped =
+  when not defined(release):
+    assert(
+      regexArbitraryBytes in pat.toRegex.flags or
+      verifyUtf8(s) == -1,
+      "Invalid utf-8 input"
+    )
+
 when canUseMacro:
   func rex*(s: string): RegexLit =
     ## Raw regex literal string
     RegexLit s
 
-func re2*(s: string): Regex2 {.raises: [RegexError].} =
+func re2*(s: string, flags: RegexFlags = {}): Regex2 {.raises: [RegexError].} =
   ## Parse and compile a regular expression at run-time
   runnableExamples:
     let abcx = re2"abc\w"
@@ -372,18 +402,21 @@ func re2*(s: string): Regex2 {.raises: [RegexError].} =
     let pat = r"abc\w"
     let abcx3 = re2(pat)
 
-  toRegex2 reImpl(s)
+  toRegex2 reImpl(s, flags)
 
 # Workaround Nim/issues/14515
 # ideally only `re2(string): Regex`
 # would be needed (without static)
 when not defined(forceRegexAtRuntime):
-  func re2*(s: static string): static[Regex2] {.inline.} =
+  func re2*(
+    s: static string,
+    flags: static RegexFlags = {}
+  ): static[Regex2] {.inline.} =
     ## Parse and compile a regular expression at compile-time
     when canUseMacro:  # VM dies on Nim < 1.1
-      toRegex2 reCt(s)
+      toRegex2 reCt(s, flags)
     else:
-      toRegex2 reImpl(s)
+      toRegex2 reImpl(s, flags)
 
 func group*(m: RegexMatch2, i: int): Slice[int] {.inline, raises: [].} =
   ## return slice for a given group.
@@ -469,13 +502,13 @@ func match*(
     doAssert "abcd".match(re2"abcd", m)
     doAssert not "abcd".match(re2"abc", m)
 
-  debugCheckUtf8 s
-  result = matchImpl(s, toRegex(pattern), m, start)
+  debugCheckUtf8(s, pattern)
+  result = matchImpl(s, pattern.toRegex, m, start)
 
 func match*(s: string, pattern: Regex2): bool {.inline, raises: [].} =
-  debugCheckUtf8 s
+  debugCheckUtf8(s, pattern)
   var m: RegexMatch2
-  result = matchImpl(s, toRegex(pattern), m)
+  result = matchImpl(s, pattern.toRegex, m)
 
 when defined(noRegexOpt):
   template findSomeOptTpl(s, pattern, ms, i): untyped =
@@ -505,18 +538,18 @@ iterator findAll*(
     doAssert bounds == @[1 .. 2, 4 .. 5]
     doAssert found == @["bc", "bc"]
 
-  debugCheckUtf8 s
+  debugCheckUtf8(s, pattern)
   var i = start
   var i2 = start-1
   var m: RegexMatch2
   var ms: RegexMatches2
   while i <= len(s):
     doAssert(i > i2); i2 = i
-    i = findSomeOptTpl(s, toRegex(pattern), ms, i)
+    i = findSomeOptTpl(s, pattern.toRegex, ms, i)
     #debugEcho i
     if i < 0: break
     for mi in ms:
-      fillMatchImpl(m, mi, ms, toRegex(pattern))
+      fillMatchImpl(m, mi, ms, pattern.toRegex)
       yield m
     if i == len(s):
       break
@@ -544,13 +577,13 @@ iterator findAllBounds*(
       bounds.add bd
     doAssert bounds == @[1 .. 2, 4 .. 5]
 
-  debugCheckUtf8 s
+  debugCheckUtf8(s, pattern)
   var i = start
   var i2 = start-1
   var ms: RegexMatches2
   while i <= len(s):
     doAssert(i > i2); i2 = i
-    i = findSomeOptTpl(s, toRegex(pattern), ms, i)
+    i = findSomeOptTpl(s, pattern.toRegex, ms, i)
     #debugEcho i
     if i < 0: break
     for ab in ms.bounds:
@@ -609,7 +642,7 @@ iterator split*(s: string, sep: Regex2): string {.inline, raises: [].} =
       found.add s
     doAssert found == @["", "a", "Ϊ", "Ⓐ", "弢", ""]
 
-  debugCheckUtf8 s
+  debugCheckUtf8(s, sep)
   var
     first, last, i = 0
     i2 = -1
@@ -617,7 +650,7 @@ iterator split*(s: string, sep: Regex2): string {.inline, raises: [].} =
     ms: RegexMatches2
   while not done:
     doAssert(i > i2); i2 = i
-    i = findSomeOptTpl(s, toRegex(sep), ms, i)
+    i = findSomeOptTpl(s, sep.toRegex, ms, i)
     done = i < 0 or i >= len(s)
     if done: ms.dummyMatch(s.len)
     for ab in ms.bounds:
@@ -644,7 +677,7 @@ func splitIncl*(s: string, sep: Regex2): seq[string] {.inline, raises: [].} =
     doAssert parts == expected
 
   template ab: untyped = m.boundaries
-  debugCheckUtf8 s
+  debugCheckUtf8(s, sep)
   var
     first, last, i = 0
     i2 = -1
@@ -653,11 +686,11 @@ func splitIncl*(s: string, sep: Regex2): seq[string] {.inline, raises: [].} =
     ms: RegexMatches2
   while not done:
     doAssert(i > i2); i2 = i
-    i = findSomeOptTpl(s, toRegex(sep), ms, i)
+    i = findSomeOptTpl(s, sep.toRegex, ms, i)
     done = i < 0 or i >= len(s)
     if done: ms.dummyMatch(s.len)
     for mi in ms:
-      fillMatchImpl(m, mi, ms, toRegex(sep))
+      fillMatchImpl(m, mi, ms, sep.toRegex)
       last = ab.a
       if ab.a > 0 or ab.a <= ab.b:  # skip first empty match
         result.add substr(s, first, last-1)
@@ -667,7 +700,9 @@ func splitIncl*(s: string, sep: Regex2): seq[string] {.inline, raises: [].} =
       first = ab.b+1
 
 func startsWith*(
-  s: string, pattern: Regex2, start = 0
+  s: string,
+  pattern: Regex2,
+  start = 0
 ): bool {.inline, raises: [].} =
   ## return whether the string
   ## starts with the pattern or not
@@ -675,8 +710,8 @@ func startsWith*(
     doAssert "abc".startsWith(re2"\w")
     doAssert not "abc".startsWith(re2"\d")
 
-  debugCheckUtf8 s
-  startsWithImpl2(s, toRegex(pattern), start)
+  debugCheckUtf8(s, pattern)
+  startsWithImpl2(s, pattern.toRegex, start)
 
 template runeIncAt(s: string, n: var int) =
   ## increment ``n`` up to
@@ -694,7 +729,7 @@ func endsWith*(s: string, pattern: Regex2): bool {.inline, raises: [].} =
     doAssert "abc".endsWith(re2"\w")
     doAssert not "abc".endsWith(re2"\d")
 
-  debugCheckUtf8 s
+  debugCheckUtf8(s, pattern)
   result = false
   var
     m: RegexMatch2
@@ -747,11 +782,11 @@ func replace*(
     doAssert "Nim is awesome!".replace(re2"(\w\B)", "$1_") ==
       "N_i_m i_s a_w_e_s_o_m_e!"
 
-  debugCheckUtf8 s
+  debugCheckUtf8(s, pattern)
   result = newStringOfCap(s.len)
   var
     i, j = 0
-    capts = newSeqOfCap[string](toRegex(pattern).groupsCount)
+    capts = newSeqOfCap[string](pattern.toRegex.groupsCount)
   for m in findAll(s, pattern):
     result.addsubstr(s, i, m.boundaries.a-1)
     capts.setLen 0
@@ -788,7 +823,7 @@ func replace*(
     let text = "**this is a test**"
     doAssert text.replace(re2"(\*)", removeStars) == "this is a test"
 
-  debugCheckUtf8 s
+  debugCheckUtf8(s, pattern)
   result = newStringOfCap(s.len)
   var i, j = 0
   for m in findAll(s, pattern):
@@ -1426,6 +1461,19 @@ when isMainModule:
   doAssert match("A", re2"(?xi)     a")
   doAssert(not match("A", re2"((?xi))     a"))
   doAssert(not match("A", re2"(?xi:(?xi)     )a"))
+
+  # bug: raises invalid utf8 regex in Nim 1.0 + js target
+  when not defined(js) or NimMajor >= 2:
+    block:
+      let flags = {regexArbitraryBytes}
+      doAssert match("\xff", re2(r"\xff", flags))
+      doAssert replace("\xff", re2(r"\xff", flags), "abc") == "abc"
+      doAssert match("\xff\xff", re2(r"\xff\xff", flags))
+      doAssert replace("\xff\xff", re2(r"\xff\xff", flags), "abc") == "abc"
+      doAssert match("\xff\xff", re2(r"\xff+", flags))
+      doAssert replace("\xff\xff", re2(r"\xff", flags), "abc") == "abcabc"
+      doAssert(not match("\xf0", re2(r"\xff", flags)))
+      doAssert replace("\xf0", re2(r"\xff", flags), "abc") == "\xf0"
 
   doAssert graph(toRegex(re2"^a+$")) == """digraph graphname {
     0 [label="q0";color=blue];

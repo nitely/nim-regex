@@ -183,7 +183,7 @@ func find(nodes: seq[Node], uid: int): NodeIdx =
       return idx.NodeIdx
   doAssert false
 
-func lits(exp: RpnExp): Lits =
+func lits(exp: RpnExp, flags: RegexFlags): Lits =
   template state: untyped = litNfa.s[stateIdx]
   result.idx = exp.delimiterLit()
   if result.idx == -1:
@@ -215,8 +215,13 @@ func lits(exp: RpnExp): Lits =
     litIdxEnd = i
   doAssert litIdxEnd >= litIdxStart
   var ss = ""
-  for i in litIdxStart .. litIdxEnd:
-    ss.add litNfa.s[lits[i]].cp
+  if regexArbitraryBytes in flags:
+    for i in litIdxStart .. litIdxEnd:
+      ss.add litNfa.s[lits[i]].cp.char
+  else:
+    for i in litIdxStart .. litIdxEnd:
+      ss.add litNfa.s[lits[i]].cp
+  # true for non ascii chars (>127) and lit sequences
   if ss.len > 1:
     result.idx = find(exp.s, litNfa.s[lits[litIdxStart]].uid)
     result.s.add ss
@@ -273,14 +278,15 @@ type
   LitOpt* = object
     lit*: Rune
     lits*: string
+    bytelits*: string
     nfa*: Nfa
 
 func canOpt*(litOpt: LitOpt): bool =
   return litOpt.nfa.s.len > 0
 
-func litopt3*(exp: RpnExp): LitOpt =
+func litopt3*(exp: RpnExp, flags: RegexFlags = {}): LitOpt =
   template litNode: untyped = exp.s[lits2.idx]
-  let lits2 = exp.lits()
+  let lits2 = exp.lits(flags)
   if lits2.idx == -1:
     return
   result.lit = litNode.cp
@@ -295,13 +301,18 @@ when isMainModule:
   import parser
   import exptransformation
 
-  func rpn(s: string, groups: var GroupsCapture): RpnExp =
+  func rpn(
+    s: string,
+    groups: var GroupsCapture,
+    flags: RegexFlags = {}
+  ): RpnExp =
     result = s
-      .parse
-      .transformExp(groups)
-  func rpn(s: string): RpnExp =
+      .parse(flags)
+      .transformExp(groups, flags)
+
+  func rpn(s: string, flags: RegexFlags = {}): RpnExp =
     var groups: GroupsCapture
-    rpn(s, groups)
+    rpn(s, groups, flags)
 
   func delim(s: string): string =
     ## Delimiter lit
@@ -313,6 +324,19 @@ when isMainModule:
     let opt = s.rpn.litopt3
     if not opt.canOpt: return
     return opt.lits
+
+  func bytelits(s: string): string =
+    let flags = {regexArbitraryBytes}
+    let opt = s
+      .rpn(flags)
+      .litopt3(flags)
+    if not opt.canOpt: return
+    return opt.lits
+
+  func lit(s: string): Rune =
+    let opt = s.rpn.litopt3
+    if not opt.canOpt: return  # beware Rune(0) is valid
+    return opt.lit
 
   func prefix(s: string): Nfa =
     let opt = s.rpn.litopt3
@@ -483,6 +507,35 @@ when isMainModule:
   doAssert lits"abc?d" == "ab"
   doAssert lits"abc*d" == "ab"
   doAssert lits"abc+d" == "ab"
+
+  doAssert bytelits"\xff\xff" == "\xff\xff"
+  doAssert bytelits"\x0f\xff" == "\x0f\xff"
+  doAssert bytelits"\xff\x0f" == "\xff\x0f"
+  doAssert bytelits"\x80\x80" == "\x80\x80"
+  doAssert bytelits"\x00\x00" == "\x00\x00"
+  doAssert lit"\xff" == '\xff'.Rune
+  doAssert lit"\x80" == '\x80'.Rune  # 128
+  doAssert lit"\x7F" == '\x7F'.Rune  # 127
+  doAssert bytelits"\xff" == ""
+  doAssert bytelits"\x00" == ""
+  doAssert bytelits"弢" == "弢"
+  doAssert bytelits"弢" == "\xF0\xAF\xA2\x94"
+  # this is not a bug, regex is interpreted as bytes not utf8
+  doAssert bytelits"弢?" == "\xF0\xAF\xA2"
+  doAssert bytelits"弢*" == "\xF0\xAF\xA2"
+  doAssert bytelits"弢+" == "\xF0\xAF\xA2"
+  # but /x{ffffff} works as expected
+  doAssert bytelits"\x{2F895}" == "\x02\xF8\x95"
+  doAssert bytelits"\x{2F895}?" == ""
+  doAssert bytelits"\x{2F895}*" == ""
+  doAssert bytelits"\x{2F895}+" == ""
+  # XXX need to skip group nodes between lits
+  doAssert bytelits"\x{2F895}\x{2F895}" == "\x02\xF8\x95"  # XXX \x02\xF8\x95\x02\xF8\x95
+  doAssert bytelits"\x{2F895}{2}" == "\x02\xF8\x95"  # XXX \x02\xF8\x95\x02\xF8\x95
+  doAssert bytelits"\xff{2}" == "\xff\xff"
+  doAssert bytelits"\x{2F895}?\x02\xF8\x95" == ""
+  doAssert bytelits"\x{2F895}*\x02\xF8\x95" == ""
+  doAssert bytelits"\x{2F895}+\x02\xF8\x95" == ""
 
   doAssert r"abc".prefix.toString == r"".toNfa.toString
   doAssert r"\dabc".prefix.toString == r"\d".toNfa.toString

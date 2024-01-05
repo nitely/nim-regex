@@ -3136,3 +3136,48 @@ when not defined(js) or NimMajor >= 2:
         m.groupsCount == 0
       check match("\x02\xF8\x95", re2(r"\x{2F895}", flags)) and 
         m.groupsCount == 0
+
+  test "tarbitrary_bytes_misc5_subset":
+    let flags = {regexArbitraryBytes}
+    check findAllStr(r"x 弢 x 弢", re2(r"弢", flags)) == @["弢", "弢"]
+    check findAllStr(r"x Ⓐ x Ⓐ", re2(r"Ⓐ", flags)) == @["Ⓐ", "Ⓐ"]
+    check findAllStr(r"x Ϊ x Ϊ", re2(r"Ϊ", flags)) == @["Ϊ", "Ϊ"]
+    check findAllStr(r"x ΪⒶ弢 x", re2(r"ΪⒶ弢", flags)) == @["ΪⒶ弢"]
+    check findAllStr(r"x ΪⒶ弢 x ΪⒶ弢", re2(r"ΪⒶ弢", flags)) ==
+      @["ΪⒶ弢", "ΪⒶ弢"]
+    check findAllStr(r"1ΪⒶΪⒶ", re2(r"\dΪⒶ", flags)) == @["1ΪⒶ"]
+    check findAllStr(r"1ΪⒶ2ΪⒶ", re2(r"\dΪⒶ", flags)) == @["1ΪⒶ", "2ΪⒶ"]
+    check findAllStr(r"1ΪⒶΪⒶ2ΪⒶ", re2(r"\dΪⒶ", flags)) == @["1ΪⒶ", "2ΪⒶ"]
+    check findAllStr(r"1ⒶⒶ", re2(r"\dⒶ", flags)) == @["1Ⓐ"]
+    check findAllStr(r"1Ⓐ2Ⓐ", re2(r"\dⒶ", flags)) == @["1Ⓐ", "2Ⓐ"]
+    check findAllStr(r"1ⒶⒶ2Ⓐ", re2(r"\dⒶ", flags)) == @["1Ⓐ", "2Ⓐ"]
+    check findAllStr(r"abde", re2(r"abc?de", flags)) == @["abde"]
+    check findAllStr(r"abcde", re2(r"abc?de", flags)) == @["abcde"]
+    check findAllStr(r"abde1", re2(r"abc?de\d", flags)) == @["abde1"]
+    check findAllStr(r"abcde1", re2(r"abc?de\d", flags)) == @["abcde1"]
+    check findAllStr(r"abde1 abde2 abcde3", re2(r"abc?de\d", flags)) ==
+      @["abde1", "abde2", "abcde3"]
+    check findAllStr(r"1abc2abc3", re2(r"\wabc\w", flags)) == @["1abc2"]
+    check findAllStr(r"1abc2abc3abc4", re2(r"\wabc\w", flags)) == @["1abc2", "3abc4"]
+    check findAllStr(r"1abcabc", re2(r"\wabc", flags)) == @["1abc"]
+    check findAllStr(r"abcabcx", re2(r"abc\w", flags)) == @["abca"]
+    check findAllStr(r"abcabcabcd", re2(r"abc\w", flags)) == @["abca", "abcd"]
+    check findAllStr(r"aaab", re2(r"a\w", flags)) == @["aa", "ab"]
+    check findAllStr(r"1a2a3a4", re2(r"\wa\w", flags)) == @["1a2", "3a4"]
+    check findAllStr(r"1ΪⒶ弢2ΪⒶ弢3", re2(r"\wΪⒶ弢\w", flags)) == @["1ΪⒶ弢2"]
+    check findAllStr(r"1Ϊ弢2Ϊ弢3", re2(r"\wΪ弢\w", flags)) == @["1Ϊ弢2"]
+    check findAllStr(r"1Ϊ2Ϊ3", re2(r"\wΪ\w", flags)) == @["1Ϊ2"]
+    check findAllStr(r"1Ⓐ2Ⓐ3", re2(r"\wⒶ\w", flags)) == @["1Ⓐ2"]
+    check findAllStr(r"1弢2弢3", re2(r"\w弢\w", flags)) == @["1弢2"]
+    check findAllStr(r"1弢2弢3弢4", re2(r"\w弢\w", flags)) == @["1弢2", "3弢4"]
+    check findAllStr(r"abcdefhij", re2(r"((abc|def)|(hij))", flags)) ==
+      @["abc", "def", "hij"]
+    check findAllStr(r"abcdefhij", re2(r"((abc|def)+|(hij)+)", flags)) ==
+      @["abcdef", "hij"]
+    check findAllStr(r"1ΪⒶ弢2ΪⒶ弢34", re2(r"\dΪⒶ弢\d4", flags)) == @["2ΪⒶ弢34"]
+    check findAllStr(r"1Ϊ0弢2Ϊ0弢34", re2(r"\dΪ0弢\d\d", flags)) == @["2Ϊ0弢34"]
+    check findAllStr(r"1ΪⒶ弢23ΪⒶ弢4", re2(r"\dΪⒶ弢\d\d", flags)) == @["1ΪⒶ弢23"]
+    check findAllStr(r"1ΪⒶ弢23ΪⒶ弢45ΪⒶ弢6", re2(r"\dΪⒶ弢\d\d", flags)) ==
+      @["1ΪⒶ弢23"]
+    check findAllStr(r"1ΪⒶ弢23ΪⒶ弢45ΪⒶ弢67", re2(r"\dΪⒶ弢\d\d", flags)) ==
+      @["1ΪⒶ弢23", "5ΪⒶ弢67"]

@@ -3144,6 +3144,37 @@ when not defined(js) or NimMajor >= 2:
       check match("\x02\xF8\x95", re2(r"\x{2F895}", flags)) and 
         m.groupsCount == 0
 
+  test "tarbitrary_bytes_flags":
+    let flags = {regexArbitraryBytes}
+    check match("abcd", re2(r".{4}", flags))
+    check match("abcd", re2(r"(?u).{4}", flags))
+    check match("abcd", re2(r"(?-u).{4}", flags))
+    check match("abcd", re2(r"(?s).{4}", flags))
+    check match("abcd", re2(r"(?-s).{4}", flags))
+    check match("abcd", re2(r"(?su).{4}", flags))
+    check match("abcd", re2(r"(?-su).{4}", flags))
+    check match("abcd", re2(r"(?s-u).{4}", flags))
+    check match("abcd", re2(r"(?u-s).{4}", flags))
+    #check match("弢", re2(r".{4}", flags))  # XXX should match
+    check match("弢", re2(r"(?u).{4}", flags))
+    check(not match("弢", re2(r"(?-u).{4}", flags)))
+    check(not match("\n", re2(r".", flags)))
+    check match("\n", re2(r"(?s).", flags))
+    check(not match("\n", re2(r"(?u).", flags)))
+    check(not match("\n", re2(r"(?-u).", flags)))
+    check match("\n", re2(r"(?su).", flags))
+    check match("\n", re2(r"(?s-u).", flags))
+    check(not match("\n", re2(r"(?-s).", flags)))
+    check(not match("\n", re2(r"(?-su).", flags)))
+    check(not match("\n", re2(r"(?u-s).", flags)))
+    check match("\xCE", re2(r"(?u)\w", flags))
+    check match("\xCE", re2(r"(?us)\w", flags))
+    check match("\xCE", re2(r"(?u-s)\w", flags))
+    check(not match("\xCE", re2(r"\w", flags)))
+    check(not match("\xCE", re2(r"(?-u)\w", flags)))
+    check(not match("\xCE", re2(r"(?-us)\w", flags)))
+    check(not match("\xCE", re2(r"(?s-u)\w", flags)))
+
   test "tarbitrary_bytes_misc5_subset":
     let flags = {regexArbitraryBytes}
     check findAllStr(r"x 弢 x 弢", re2(r"弢", flags)) == @["弢", "弢"]

@@ -313,6 +313,7 @@ Match arbitrary bytes
 
 Setting the ``regexArbitraryBytes`` flag will
 treat both the regex and the input text as byte sequences.
+This flag makes ascii mode ``(?-u)`` the default.
 
 .. code-block:: nim
     :test:

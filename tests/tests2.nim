@@ -3130,6 +3130,7 @@ when not defined(js) or NimMajor >= 2:
     check match("\xF0\xAF\xA2\x94", re2(r".+(?<=弢)", flags))
     check match("\xF0\xAF\xA2\x94", re2(r".{4}(?<=弢)", flags))
     check match("\xF0\xAF\xA2\x94", re2(r".{4}(?<=.{4})", flags))
+    check findAllStr(r"ΪⒶ弢ΪⒶ弢x", re2(r"ΪⒶ弢\w", flags)) == @["ΪⒶ弢x"]
     block:
       var m: RegexMatch2
       check match("a", re2(r"a", flags)) and

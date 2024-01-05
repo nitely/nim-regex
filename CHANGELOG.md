@@ -1,3 +1,9 @@
+v0.24.0
+==================
+
+* Fix dot to match anything in ascii mode (#135)
+* Match arbitrary bytes (#134)
+
 v0.23.0
 ==================
 

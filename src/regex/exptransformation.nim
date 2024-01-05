@@ -213,12 +213,12 @@ func applyFlag(n: var Node, f: Flag) =
       flagVerbose,
       flagNotVerbose}
 
-func applyFlags(exp: Exp, reflags: RegexFlags): Exp =
+func applyFlags(exp: Exp, fls: RegexFlags): Exp =
   ## apply flags to each group
   result.s = newSeq[Node](exp.s.len)
   result.s.setLen 0
   var flags = newSeq[seq[Flag]]()
-  if regexArbitraryBytes in reflags:
+  if regexArbitraryBytes in fls:
     flags.add @[flagNotUnicode]
   var sc = exp.s.scan()
   for n in sc.mitems():

@@ -84,8 +84,6 @@ type
     reNotAlphaNumAscii,  # \W ascii only
     reNotDigitAscii,  # \D ascii only
     reNotWhiteSpaceAscii,  # \S ascii only
-    reAnyAscii,  # . ascii only
-    reAnyNlAscii,  # . new-line ascii only
     reInSet,  # [abc]
     reNotSet,  # [^abc]
     reLookahead,  # (?=...)
@@ -261,9 +259,7 @@ const
     reWhiteSpaceAscii,
     reNotAlphaNumAscii,
     reNotDigitAscii,
-    reNotWhiteSpaceAscii,
-    reAnyAscii,
-    reAnyNLAscii}
+    reNotWhiteSpaceAscii}
   repetitionKind* = {
     reZeroOrMore,
     reOneOrMore,
@@ -310,7 +306,7 @@ func `$`*(n: Node): string =
   of reNotDigit, reNotDigitAscii: r"\D"
   of reNotWhiteSpace, reNotWhiteSpaceAscii: r"\S"
   of reNotUCC: r"\PN"
-  of reAny, reAnyNl, reAnyAscii, reAnyNlAscii: "."
+  of reAny, reAnyNl: "."
   of reInSet, reNotSet:
     var str = ""
     str.add '['

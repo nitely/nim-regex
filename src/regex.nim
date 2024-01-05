@@ -319,7 +319,7 @@ This flag makes ascii mode ``(?-u)`` the default.
     :test:
     let flags = {regexArbitraryBytes}
     doAssert match("\xff", re2(r"\xff", flags))
-    #doAssert match("\xf8\xa1\xa1\xa1\xa1", re2(r".+", flags))
+    doAssert match("\xf8\xa1\xa1\xa1\xa1", re2(r".+", flags))
 
 Beware of (un)expected behaviour when mixin UTF-8 characters.
 
@@ -1581,6 +1581,7 @@ when isMainModule:
     doAssert match("aΪ", re2"\w(?<=a)Ϊ")
     doAssert match("Ϊb", re2"\w(?<=Ϊ)b")
     doAssert match("弢Ⓐ", re2"\w(?<=弢)Ⓐ")
+    doAssert match("弢", re2"(?-u).+")
     block:  # Follows Nim re's behaviour
       doAssert match("abc", re2"(?<=a)bc", m, start = 1)
       doAssert(not match("abc", re2"(?<=x)bc", m, start = 1))

@@ -95,10 +95,6 @@ func isDigitAscii(r: Rune): bool {.inline.} =
   else:
     false
 
-func isAnyAscii(r: Rune): bool {.inline.} =
-  (r.int <= int8.high and
-   r != lineBreakRune)
-
 # todo: can not use unicodeplus due to
 # https://github.com/nim-lang/Nim/issues/7059
 func swapCase*(r: Rune): Rune =
@@ -160,10 +156,6 @@ func match*(n: Node, r: Rune): bool {.inline.} =
     not r.isWhiteSpaceAscii()
   of reNotUCC:
     r.unicodeCategory() notin n.cc
-  of reAnyAscii:
-    r.isAnyAscii()
-  of reAnyNLAscii:
-    r.isAnyAscii() or r == lineBreakRune
   else:
     assert n.kind == reChar
     n.cp == r

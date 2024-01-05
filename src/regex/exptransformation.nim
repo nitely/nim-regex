@@ -118,10 +118,6 @@ func toAsciiKind(k: NodeKind): NodeKind =
     reNotDigitAscii
   of reNotWhiteSpace:
     reNotWhiteSpaceAscii
-  of reAny:
-    reAnyAscii
-  of reAnyNL:
-    reAnyNLAscii
   else:
     k
 

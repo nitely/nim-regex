@@ -120,12 +120,8 @@ func genMatch(c: NimNode, n: Node): NimNode =
       quote do: not `whiteSpaceMatch`
     of reAny:
       quote do: `c` != '\L'.ord
-    of reAnyAscii:
-      quote do: `c` <= 128 and `c` != '\L'.ord
     of reAnyNL:
       quote do: true
-    of reAnyNlAscii:
-      quote do: `c` <= 128
     of reCharCI:
       let cp2Lit = newLit n.cp.swapCase().int32
       quote do: `c` == `cpLit` or `c` == `cp2Lit`

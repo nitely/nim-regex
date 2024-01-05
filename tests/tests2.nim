@@ -1232,6 +1232,8 @@ test "tflags":
   check(not "Ǝ".isMatch(re2"(?-u)[\w]"))
   check(not "\t".isMatch(re2"(?-u)[\w]"))
   check "ƎƎ".isMatch(re2"(?-u)[^\w](?u)\w")
+  check isMatch("弢", re2"(?u).+")
+  check isMatch("弢", re2"(?-u).+")
 
   check "a".isMatch(re2"(?x)a")
   check "a".isMatch(re2"(?x)a ")
@@ -3156,9 +3158,8 @@ when not defined(js) or NimMajor >= 2:
     check match("abcd", re2(r"(?-su).{4}", flags))
     check match("abcd", re2(r"(?s-u).{4}", flags))
     check match("abcd", re2(r"(?u-s).{4}", flags))
-    #check match("弢", re2(r".{4}", flags))  # XXX should match
+    check match("弢", re2(r".{4}", flags))
     check match("弢", re2(r"(?u).{4}", flags))
-    check(not match("弢", re2(r"(?-u).{4}", flags)))
     check(not match("\n", re2(r".", flags)))
     check match("\n", re2(r"(?s).", flags))
     check(not match("\n", re2(r"(?u).", flags)))

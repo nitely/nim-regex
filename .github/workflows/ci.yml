@@ -15,7 +15,7 @@ jobs:
         # xxx trim to on use latest in each branch eg 1.0.10, 1.2.8 etc
         nim: [1.0.0, 1.0.2, 1.0.4, 1.0.10, 1.2.0, 1.2.2, 1.2.4, 1.2.6, 1.2.12, 1.4.0, 1.4.2, 1.4.8, 1.6.14, 2.0.0]
     steps:
-    #- uses: actions/checkout@v2
+    - uses: actions/checkout@v2
     #- name: Run Tests
     #  run: |
     #    docker pull nimlang/nim:${{ matrix.nim }}
@@ -24,7 +24,7 @@ jobs:
       if: matrix.nim == '2.0.0'
       run: |
         docker pull nimlang/nim:${{ matrix.nim }}
-        docker run --rm -v `pwd`:/usr/src/app -w /usr/src/app nimlang/nim:${{ matrix.nim }} /bin/bash -c "git config --global --add safe.directory /usr/src/app; nimble install -y; nimble docs"
+        docker run --rm -v `pwd`:/usr/src/app -w /usr/src/app nimlang/nim:${{ matrix.nim }} /bin/bash -c "git config --global --add safe.directory /usr/src/app; nimble docs"
     - name: Deploy docs
       # to view docs on your own fork: push a gh-pages branch on your fork,
       # enable gh-pages in your fork

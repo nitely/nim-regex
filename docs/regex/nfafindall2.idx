@@ -1,7 +1,0 @@
-RegexMatches2	regex/nfafindall2.html#RegexMatches2	nfafindall2: RegexMatches2	
-bounds	regex/nfafindall2.html#bounds.i,RegexMatches2	nfafindall2: bounds(ms: RegexMatches2): Slice[int]	
-items	regex/nfafindall2.html#items.i,RegexMatches2	nfafindall2: items(ms: RegexMatches2): MatchItemIdx	
-fillMatchImpl	regex/nfafindall2.html#fillMatchImpl,RegexMatch2,MatchItemIdx,RegexMatches2,Regex	nfafindall2: fillMatchImpl(m: var RegexMatch2; mi: MatchItemIdx; ms: RegexMatches2;\n              regex: Regex)	
-dummyMatch	regex/nfafindall2.html#dummyMatch,RegexMatches2,int	nfafindall2: dummyMatch(ms: var RegexMatches2; i: int)	
-findSomeImpl	regex/nfafindall2.html#findSomeImpl,string,Regex,RegexMatches2,Natural,set[MatchFlag]	nfafindall2: findSomeImpl(text: string; regex: Regex; ms: var RegexMatches2;\n             start: Natural = 0; flags: set[MatchFlag] = {}): int	
-findSomeOptImpl	regex/nfafindall2.html#findSomeOptImpl,string,Regex,RegexMatches2,Natural	nfafindall2: findSomeOptImpl(text: string; regex: Regex; ms: var RegexMatches2;\n                start: Natural): int	

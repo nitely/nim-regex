@@ -1,6 +1,0 @@
-Lookaround	regex/nfamatch2.html#Lookaround	nfamatch2: Lookaround	
-lookAroundTpl	regex/nfamatch2.html#lookAroundTpl.t	nfamatch2: lookAroundTpl(): untyped	
-reversedMatchImpl	regex/nfamatch2.html#reversedMatchImpl,Submatches,Submatches,string,Nfa,Lookaround,int,int,int	nfamatch2: reversedMatchImpl(smA, smB: var Submatches; text: string; nfa: Nfa;\n                  look: var Lookaround; groupsLen: int; start, limit: int): int	
-initLook	regex/nfamatch2.html#initLook.t	nfamatch2: initLook(): Lookaround	
-matchImpl	regex/nfamatch2.html#matchImpl,string,Regex,RegexMatch2,int	nfamatch2: matchImpl(text: string; regex: Regex; m: var RegexMatch2; start = 0): bool	
-startsWithImpl2	regex/nfamatch2.html#startsWithImpl2,string,Regex,int	nfamatch2: startsWithImpl2(text: string; regex: Regex; start: int): bool	

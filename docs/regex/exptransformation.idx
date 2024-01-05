@@ -1,3 +1,0 @@
-GroupsCapture	regex/exptransformation.html#GroupsCapture	exptransformation: GroupsCapture	
-toAtoms	regex/exptransformation.html#toAtoms,Exp,GroupsCapture	exptransformation: toAtoms(exp: Exp; groups: var GroupsCapture): AtomsExp	
-transformExp	regex/exptransformation.html#transformExp,Exp,GroupsCapture	exptransformation: transformExp(exp: Exp; groups: var GroupsCapture): RpnExp	

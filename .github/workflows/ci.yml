@@ -24,7 +24,7 @@ jobs:
       if: matrix.nim == '2.0.0'
       run: |
         docker pull nimlang/nim:${{ matrix.nim }}
-        docker run --rm -v `pwd`:/usr/src/app -w /usr/src/app nimlang/nim:${{ matrix.nim }} /bin/bash -c "git config --global --add safe.directory /usr/src/app; nimble docs"
+        docker run --rm -v `pwd`:/usr/src/app -w /usr/src/app nimlang/nim:${{ matrix.nim }} /bin/bash -c "git config --global --add safe.directory /usr/src/app; nimble install -y; nimble docs"
     - name: Deploy docs
       # to view docs on your own fork: push a gh-pages branch on your fork,
       # enable gh-pages in your fork

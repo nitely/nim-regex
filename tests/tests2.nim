@@ -3160,6 +3160,7 @@ when not defined(js) or NimMajor >= 2:
     check match("abcd", re2(r"(?u-s).{4}", flags))
     check match("弢", re2(r".{4}", flags))
     check match("弢", re2(r"(?u).{4}", flags))
+    check match("弢", re2(r"(?-u).{4}", flags))
     check(not match("\n", re2(r".", flags)))
     check match("\n", re2(r"(?s).", flags))
     check(not match("\n", re2(r"(?u).", flags)))

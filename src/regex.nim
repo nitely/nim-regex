@@ -283,13 +283,14 @@ the scope, and it contains the submatches for every capture group.
       matched = true
     doAssert matched
 
-Bad UTF-8 input text
-####################
+Invalid UTF-8 input text
+########################
 
-This lib makes no effort to handle invalid UTF-8 input text
-(i.e: malformed or corrupted). The behaviour on invalid input
-is currently undefined, and it will likely result in an
-internal AssertionDefect or some other error.
+There is a UTF-8 validation for the input text,
+but for perf reason this is only done in debug mode.
+The behaviour on invalid UTF-8 input (i.e: malformed, corrupted, truncated, etc)
+when compiling in release/danger mode is currently undefined,
+and it will likely result in an internal AssertionDefect or some other error.
 
 What can be done about this is validating the input text to avoid
 passing invalid input to the match function.
@@ -302,18 +303,36 @@ passing invalid input to the match function.
     # bad input text
     doAssert validateUtf8("\xf8\xa1\xa1\xa1\xa1") != -1
 
-Note at the time of writting this, Nim's `validateUtf8`
+Note at the time of writting this, Nim's ``validateUtf8``
 `is not strict enough <https://github.com/nim-lang/Nim/issues/19333>`_
 and so you are better off using `nim-unicodeplus's <https://github.com/nitely/nim-unicodeplus>`_
-`verifyUtf8` function.
+``verifyUtf8`` function.
 
-Match binary data
-#################
+Match arbitrary bytes
+#####################
 
-Matching on arbitrary binary data (i.e: not utf-8) is not currently supported.
-Both the regex and the input text are expected to be valid utf-8.
-The input text is treated as utf-8, and setting the regex to ASCII mode
-won't help.
+Setting the ``regexArbitraryBytes`` flag will
+treat both the regex and the input text as byte sequences.
+
+.. code-block:: nim
+    :test:
+    let flags = {regexArbitraryBytes}
+    doAssert match("\xff", re2(r"\xff", flags)
+    doAssert match("\xf8\xa1\xa1\xa1\xa1", re2(r".+", flags)
+
+Beware of (un)expected behaviour when mixin UTF-8 characters.
+
+.. code-block:: nim
+    :test:
+    let flags = {regexArbitraryBytes}
+    doAssert match("Ⓐ", re2(r"Ⓐ", flags)
+    doAssert match("ⒶⒶ", re2(r"(Ⓐ)+", flags)
+    doAssert not match("ⒶⒶ", re2(r"Ⓐ+", flags)  # ???
+
+The last line in the above example won't match because the
+regex is parsed as a byte sequence. The ``Ⓐ`` character
+is composed of multiple bytes (``\xe2\x92\xb6``),
+and only the last byte is affected by the ``+`` operator.
 
 ]##
 

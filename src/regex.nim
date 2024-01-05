@@ -286,8 +286,7 @@ the scope, and it contains the submatches for every capture group.
 Invalid UTF-8 input text
 ########################
 
-There is a UTF-8 validation for the input text,
-but for perf reason this is only done in debug mode.
+UTF-8 validation on the input text is only done in debug mode for perf reasons.
 The behaviour on invalid UTF-8 input (i.e: malformed, corrupted, truncated, etc)
 when compiling in release/danger mode is currently undefined,
 and it will likely result in an internal AssertionDefect or some other error.

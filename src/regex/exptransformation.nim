@@ -213,11 +213,13 @@ func applyFlag(n: var Node, f: Flag) =
       flagVerbose,
       flagNotVerbose}
 
-func applyFlags(exp: Exp): Exp =
+func applyFlags(exp: Exp, reflags: RegexFlags): Exp =
   ## apply flags to each group
   result.s = newSeq[Node](exp.s.len)
   result.s.setLen 0
   var flags = newSeq[seq[Flag]]()
+  if regexArbitraryBytes in reflags:
+    flags.add @[flagNotUnicode]
   var sc = exp.s.scan()
   for n in sc.mitems():
     # (?flags)
@@ -526,7 +528,7 @@ func toAtoms*(
     .fixEmptyOps
     .fillGroups(groups)
     .greediness
-    .applyFlags
+    .applyFlags(flags)
     .expandRepRange
     .expandArbitrayBytes(flags)
     .populateUid

@@ -38,7 +38,7 @@ task test2, "Test":
   exec "nim c -r -d:release -o:bin/regex src/regex.nim"
   exec "nim c -r -d:danger -o:bin/regex src/regex.nim"
   # Test runnable examples
-  when (NimMajor, NimMinor) >= (1, 1):
+  when (NimMajor, NimMinor) >= (1, 6):
     exec "nim doc -o:./docs/ugh/ugh.html ./src/regex.nim"
 
 task oldtest, "Test":

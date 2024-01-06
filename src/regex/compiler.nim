@@ -9,7 +9,7 @@ when defined(regexDotDir):
   import ./dotgraph
 
 func reImpl*(s: string, flags: RegexFlags = {}): Regex {.inline.} =
-  if verifyUtf8(s) != -1:
+  if regexArbitraryBytes notin flags and verifyUtf8(s) != -1:
     raise newException(RegexError, "Invalid utf-8 regex")
   var groups: GroupsCapture
   let rpn = s

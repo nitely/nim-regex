@@ -3073,11 +3073,19 @@ when not defined(js) or NimMajor >= 2:
     check match("a", re2(r"a", flags))
     check(not match("b", re2(r"a", flags)))
     check match("\xff", re2(r"\xff", flags))
+    check match("\xff", re2("\xff", flags))
+    check match("\xf8\xa1\xa1\xa1\xa1", re2(r"\xf8\xa1\xa1\xa1\xa1", flags))
+    check match("\xf8\xa1\xa1\xa1\xa1", re2("\xf8\xa1\xa1\xa1\xa1", flags))
     check replace("\xff", re2(r"\xff", flags), "abc") == "abc"
+    check replace("\xff", re2("\xff", flags), "abc") == "abc"
     check match("\xff\xff", re2(r"\xff\xff", flags))
+    check match("\xff\xff", re2("\xff\xff", flags))
     check replace("\xff\xff", re2(r"\xff\xff", flags), "abc") == "abc"
+    check replace("\xff\xff", re2("\xff\xff", flags), "abc") == "abc"
     check match("\xff\xff", re2(r"\xff+", flags))
+    check match("\xff\xff", re2("\xff+", flags))
     check replace("\xff\xff", re2(r"\xff", flags), "abc") == "abcabc"
+    check replace("\xff\xff", re2("\xff", flags), "abc") == "abcabc"
     check(not match("\xf0", re2(r"\xff", flags)))
     check replace("\xf0", re2(r"\xff", flags), "abc") == "\xf0"
     check match("弢", re2(r"弢", flags))

@@ -1,3 +1,8 @@
+v0.24.1
+==================
+
+* Disable utf8 regex check for arbitrary bytes (#136)
+
 v0.24.0
 ==================
 

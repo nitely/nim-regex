@@ -1522,6 +1522,32 @@ test "tends_with":
   check "abc".endsWith(re2"(b|c)")
   check "ab".endsWith(re2"(b|c)")
   check(not "a".endsWith(re2"(b|c)"))
+  check(not "".endsWith(re2"a"))
+  check "a".endsWith(re2"a?")
+  check "".endsWith(re2"a?")
+  check re2"a?$" in ""
+  check "xyz".endsWith(re2"a?")
+  check re2"a?$" in "xyz"
+  check "a".endsWith(re2"a*")
+  check "".endsWith(re2"a*")
+  check re2"a*$" in ""
+  check "xyz".endsWith(re2"a*")
+  check re2"a*$" in "xyz"
+  check(not "".endsWith(re2"\b"))
+  check re2"\b$" notin ""
+  check "a".endsWith(re2"\b")
+  check re2"\b$" in "a"
+  check "".endsWith(re2"\B")
+  check re2"\B$" in ""
+  check(not "a".endsWith(re2"\B"))
+  check re2"\B$" notin "a"
+  check "aba".endsWith(re2"a")
+  check "aba".endsWith(re2"a*")
+  check "aba".endsWith(re2"a?")
+  check endsWith("", re2"")
+  check re2"$" in ""
+  check endsWith("a", re2"")
+  check re2"$" in "a"
 
 test "tliterals":
   check "a".isMatch(re2"\u0061")

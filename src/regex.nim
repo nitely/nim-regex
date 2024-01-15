@@ -717,15 +717,6 @@ func startsWith*(
   debugCheckUtf8(s, pattern)
   startsWithImpl2(s, pattern.toRegex, start)
 
-template runeIncAt(s: string, n: var int) =
-  ## increment ``n`` up to
-  ## next rune's index
-  if n < s.len:
-    inc(n, runeLenAt(s, n))
-  else:
-    n = s.len+1
-
-# XXX use findAll and check last match bounds
 func endsWith*(s: string, pattern: Regex2): bool {.inline, raises: [].} =
   ## return whether the string
   ## ends with the pattern or not
@@ -733,19 +724,10 @@ func endsWith*(s: string, pattern: Regex2): bool {.inline, raises: [].} =
     doAssert "abc".endsWith(re2"\w")
     doAssert not "abc".endsWith(re2"\d")
 
-  debugCheckUtf8(s, pattern)
-  result = false
-  let binFlag = regexArbitraryBytes in pattern.toRegex.flags
-  var
-    m: RegexMatch2
-    i = 0
-  while i < s.len:
-    result = match(s, pattern, m, i)
-    if result: return
-    if binFlag:
-      inc i
-    else:
-      s.runeIncAt(i)
+  var lastBounds = -2 .. -2
+  for bounds in findAllBounds(s, pattern):
+    lastBounds = bounds
+  return lastBounds.b == s.len-1 
 
 func addsubstr(
   result: var string, s: string, first, last: int
@@ -1151,6 +1133,14 @@ func startsWith*(
 ): bool {.inline, raises: [], deprecated: "use startsWith(string, Regex2) instead".} =
   debugCheckUtf8 s
   startsWithImpl(s, pattern, start)
+
+template runeIncAt(s: string, n: var int) =
+  ## increment ``n`` up to
+  ## next rune's index
+  if n < s.len:
+    inc(n, runeLenAt(s, n))
+  else:
+    n = s.len+1
 
 func endsWith*(s: string, pattern: Regex): bool {.inline, raises: [], deprecated: "use endsWith(string, Regex2) instead".} =
   debugCheckUtf8 s

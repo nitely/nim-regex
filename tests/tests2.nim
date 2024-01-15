@@ -3154,6 +3154,15 @@ when not defined(js) or NimMajor >= 2:
         m.groupsCount == 0
       check match("\x02\xF8\x95", re2(r"\x{2F895}", flags)) and 
         m.groupsCount == 0
+    check startsWith("\xff\xf0", re2(r"\xff", flags))
+    check(not startsWith("\xf0\xff", re2(r"\xff", flags)))
+    check endsWith("\xf0\xff", re2(r"\xff", flags))
+    check(not endsWith("\xff\xf0", re2(r"\xff", flags)))
+    check split("\xf0\xff\xf0", re2(r"\xff", flags)) == @["\xf0", "\xf0"]
+    check splitIncl("\xf0\xff\xf0", re2(r"(\xff)", flags)) ==
+      @["\xf0", "\xff", "\xf0"]
+    check contains("\xf0\xff\xf0", re2(r"\xff", flags))
+    check(not contains("\xf0\xf0", re2(r"\xff", flags)))
 
   test "tarbitrary_bytes_flags":
     let flags = {regexArbitraryBytes}

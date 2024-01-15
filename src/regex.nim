@@ -735,13 +735,17 @@ func endsWith*(s: string, pattern: Regex2): bool {.inline, raises: [].} =
 
   debugCheckUtf8(s, pattern)
   result = false
+  let binFlag = regexArbitraryBytes in pattern.toRegex.flags
   var
     m: RegexMatch2
     i = 0
   while i < s.len:
     result = match(s, pattern, m, i)
     if result: return
-    s.runeIncAt(i)
+    if binFlag:
+      inc i
+    else:
+      s.runeIncAt(i)
 
 func addsubstr(
   result: var string, s: string, first, last: int

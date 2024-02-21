@@ -23,13 +23,13 @@ type
   RegexFlags* = set[RegexFlag]
 
   # exptype.nim
-  RpnExp* = object
+  RpnExp* {.acyclic.} = object
     s*: seq[Node]
 
   # nfatype.nim
   Enfa* = object
     s*: seq[Node]
-  Nfa* = object
+  Nfa* {.acyclic.} = object
     s*: seq[Node]
 
   # nodetype.nim
@@ -93,7 +93,7 @@ type
     reSkip,  # dummy
     reEoe  # End of expression
   NodeUid* = int16
-  Node* = object
+  Node* {.acyclic.} = object
     kind*: NodeKind
     cp*: Rune
     next*: seq[int16]
@@ -115,7 +115,7 @@ type
     # reLookahead, reLookbehind,
     # reNotLookahead, reNotLookbehind
     subExp*: SubExp
-  SubExp* = object
+  SubExp* {.acyclic.} = object
     nfa*: Nfa
     rpn*: RpnExp
     reverseCapts*: bool

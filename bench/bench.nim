@@ -1,7 +1,7 @@
-import nimbench
-import unicode
-from re import nil
-from regex import nil
+import pkg/nimbench
+import std/unicode
+from std/re import nil
+from ../src/regex import nil
 
 func genText(): string {.compileTime.} =
   result = ""

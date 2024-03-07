@@ -34,35 +34,43 @@ type
     behind*: BehindSig
     smL*: SmLookaround
 
-template lookAroundTpl*: untyped {.dirty.} =
+func lookAround*(
+  ntn: Node,
+  capts: var Capts3,
+  captIdx: var int32,
+  text: string,
+  look: var Lookaround,
+  start: int,
+  flags: MatchFlags
+): bool =
   template smL: untyped = look.smL
   template smLa: untyped = smL.lastA
   template smLb: untyped = smL.lastB
-  template zNfa: untyped = ntn.subExp.nfa
+  template subNfa: untyped = ntn.subExp.nfa
   var flags2 = {mfAnchored}
   if ntn.subExp.reverseCapts:
     flags2.incl mfReverseCapts
   if mfBytesInput in flags:
     flags2.incl mfBytesInput
   smL.grow()
-  smL.last.setLen zNfa.s.len
-  matched = case ntn.kind
+  smL.last.setLen subNfa.s.len
+  result = case ntn.kind
   of reLookahead:
     look.ahead(
-      smLa, smLb, capts, captx,
-      text, zNfa, look, i, flags2)
+      smLa, smLb, capts, captIdx, text, subNfa, look, start, flags2
+    )
   of reNotLookahead:
     not look.ahead(
-      smLa, smLb, capts, captx,
-      text, zNfa, look, i, flags2)
+      smLa, smLb, capts, captIdx, text, subNfa, look, start, flags2
+    )
   of reLookbehind:
     look.behind(
-      smLa, smLb, capts, captx,
-      text, zNfa, look, i, 0, flags2) != -1
+      smLa, smLb, capts, captIdx, text, subNfa, look, start, 0, flags2
+    ) != -1
   of reNotLookbehind:
     look.behind(
-      smLa, smLb, capts, captx,
-      text, zNfa, look, i, 0, flags2) == -1
+      smLa, smLb, capts, captIdx, text, subNfa, look, start, 0, flags2
+    ) == -1
   else:
     doAssert false
     false
@@ -108,7 +116,7 @@ template nextStateTpl(bwMatch = false): untyped {.dirty.} =
               matched = match(ntn, cPrev.Rune, c)
           of lookaroundKind:
             let freezed = capts.freeze()
-            lookAroundTpl()
+            matched = lookAround(ntn, capts, captx, text, look, i, flags)
             capts.unfreeze freezed
             if captx != -1:
               capts.keepAlive captx

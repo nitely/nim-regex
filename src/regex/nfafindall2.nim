@@ -117,7 +117,7 @@ func fillMatchImpl*(
   mi: MatchItemIdx,
   ms: RegexMatches2,
   regex: Regex
-) {.inline.} =
+) =
   template capt: untyped = ms.m[mi].capt
   if m.namedGroups.len != regex.namedGroups.len:
     m.namedGroups = regex.namedGroups
@@ -130,7 +130,7 @@ func fillMatchImpl*(
       m.captures[i] = nonCapture
   m.boundaries = ms.m[mi].bounds
 
-func dummyMatch*(ms: var RegexMatches2, i: int) {.inline.} =
+func dummyMatch*(ms: var RegexMatches2, i: int) =
   ## hack to support `split` last value.
   ## we need to add the end boundary if
   ## it has not matched the end
@@ -182,7 +182,7 @@ func submatch(
             matched = match(ntn, cPrev.Rune, c.Rune)
           of lookaroundKind:
             let freezed = capts.freeze()
-            lookAroundTpl()
+            matched = lookAround(ntn, capts, captx, text, look, i, flags)
             capts.unfreeze freezed
             if captx != -1:
               capts.keepAlive captx

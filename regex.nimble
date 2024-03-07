@@ -1,13 +1,13 @@
 # Package
 
-version = "0.24.1"
+version = "0.24.2"
 author = "Esteban Castro Borsani (@nitely)"
 description = "Linear time regex matching"
 license = "MIT"
 srcDir = "src"
 skipDirs = @["tests", "bench", "docs"]
 
-requires "nim >= 1.0.0"
+requires "nim >= 1.6.0"
 requires "unicodedb >= 0.7.2"
 
 task test2, "Test":
@@ -18,28 +18,22 @@ task test2, "Test":
   exec "nim c -r -d:forceRegexAtRuntime tests/tests2.nim"
   exec "nim c -r -d:forceRegexAtRuntime -d:noRegexOpt tests/tests2.nim"
   exec "nim c -r -d:noRegexOpt tests/tests2.nim"
-  when (NimMajor, NimMinor, NimPatch) >= (0, 20, 2):
-    exec "nim c -d:runTestAtCT tests/tests2.nim"
+  exec "nim c -d:runTestAtCT tests/tests2.nim"
   exec "nim c -r tests/tests_misc.nim"
   exec "nim c -r -d:forceRegexAtRuntime tests/tests_misc.nim"
   exec "nim c -r -d:forceRegexAtRuntime -d:noRegexOpt tests/tests_misc.nim"
   exec "nim c -r -d:noRegexOpt tests/tests_misc.nim"
-  # js target should work in older versions, but
-  # the docker image for CI has it since Nim 1.0.4,
-  # so I'll only test it there
-  when (NimMajor, NimMinor, NimPatch) >= (1, 0, 4) and
-      (NimMajor, NimMinor) != (1, 4):  # issue #88
-    exec "nim js -r src/regex.nim"
-    exec "nim js -r tests/tests2.nim"
-    exec "nim js -r -d:forceRegexAtRuntime tests/tests2.nim"
-    exec "nim js -r tests/tests_misc.nim"
-    exec "nim js -r -d:forceRegexAtRuntime tests/tests_misc.nim"
+  # JS
+  exec "nim js -r src/regex.nim"
+  exec "nim js -r tests/tests2.nim"
+  exec "nim js -r -d:forceRegexAtRuntime tests/tests2.nim"
+  exec "nim js -r tests/tests_misc.nim"
+  exec "nim js -r -d:forceRegexAtRuntime tests/tests_misc.nim"
   # test release/danger mode
   exec "nim c -r -d:release -o:bin/regex src/regex.nim"
   exec "nim c -r -d:danger -o:bin/regex src/regex.nim"
   # Test runnable examples
-  when (NimMajor, NimMinor) >= (1, 6):
-    exec "nim doc -o:./docs/ugh/ugh.html ./src/regex.nim"
+  exec "nim doc -o:./docs/ugh/ugh.html ./src/regex.nim"
 
 task oldtest, "Test":
   # OLD DEPRECATED API TESTS
@@ -47,15 +41,9 @@ task oldtest, "Test":
   exec "nim c -r -d:forceRegexAtRuntime tests/tests.nim"
   exec "nim c -r -d:forceRegexAtRuntime -d:noRegexOpt tests/tests.nim"
   exec "nim c -r -d:noRegexOpt tests/tests.nim"
-  when (NimMajor, NimMinor, NimPatch) >= (0, 20, 2):
-    exec "nim c -d:runTestAtCT tests/tests.nim"
-  # js target should work in older versions, but
-  # the docker image for CI has it since Nim 1.0.4,
-  # so I'll only test it there
-  when (NimMajor, NimMinor, NimPatch) >= (1, 0, 4) and
-      (NimMajor, NimMinor) != (1, 4):  # issue #88
-    exec "nim js -r tests/tests.nim"
-    exec "nim js -r -d:forceRegexAtRuntime tests/tests.nim"
+  exec "nim c -d:runTestAtCT tests/tests.nim"
+  exec "nim js -r tests/tests.nim"
+  exec "nim js -r -d:forceRegexAtRuntime tests/tests.nim"
 
 task test, "Test":
   exec "nimble test2"

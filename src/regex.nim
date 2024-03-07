@@ -357,11 +357,8 @@ import ./regex/nfamatch2
 when not defined(noRegexOpt):
   import ./regex/litopt
 
-const canUseMacro = (NimMajor, NimMinor) >= (1, 1)
-
-when canUseMacro:
-  import ./regex/nfamacro
-  export RegexLit
+import ./regex/nfamacro
+export RegexLit
 
 export
   Regex,
@@ -393,10 +390,9 @@ template debugCheckUtf8(s: string, pat: Regex2): untyped =
       "Invalid utf-8 input"
     )
 
-when canUseMacro:
-  func rex*(s: string): RegexLit =
-    ## Raw regex literal string
-    RegexLit s
+func rex*(s: string): RegexLit =
+  ## Raw regex literal string
+  RegexLit s
 
 func re2*(s: string, flags: RegexFlags = {}): Regex2 {.raises: [RegexError].} =
   ## Parse and compile a regular expression at run-time
@@ -417,10 +413,7 @@ when not defined(forceRegexAtRuntime):
     flags: static RegexFlags = {}
   ): static[Regex2] {.inline.} =
     ## Parse and compile a regular expression at compile-time
-    when canUseMacro:  # VM dies on Nim < 1.1
-      toRegex2 reCt(s, flags)
-    else:
-      toRegex2 reImpl(s, flags)
+    toRegex2 reCt(s, flags)
 
 func group*(m: RegexMatch2, i: int): Slice[int] {.inline, raises: [].} =
   ## return slice for a given group.
@@ -466,30 +459,29 @@ func groupNames*(m: RegexMatch2): seq[string] {.inline, raises: [].} =
 
   result = toSeq(m.namedGroups.keys)
 
-when canUseMacro:
-  macro match*(
-    text: string,
-    regex: RegexLit,
-    body: untyped
-  ): untyped =
-    ## return a match if the whole string
-    ## matches the regular expression. This is
-    ## similar to the ``match`` function, but
-    ## faster. Notice it requires a raw regex *literal*
-    ## string as second parameter; the regex must be
-    ## known at compile time, and cannot be a var/let/const
-    ##
-    ## A ``matches: seq[string]`` variable is injected into
-    ## the scope, and it contains the submatches for every capture
-    ## group. If a group is repeated (ex: `(\\w)+`), it will
-    ## contain the last capture for that group.
-    ##
-    ## Note: Only available in Nim +1.1
-    runnableExamples:
-      match "abc", rex"(a(b)c)":
-        doAssert matches == @["abc", "b"]
+macro match*(
+  text: string,
+  regex: RegexLit,
+  body: untyped
+): untyped =
+  ## return a match if the whole string
+  ## matches the regular expression. This is
+  ## similar to the ``match`` function, but
+  ## faster. Notice it requires a raw regex *literal*
+  ## string as second parameter; the regex must be
+  ## known at compile time, and cannot be a var/let/const
+  ##
+  ## A ``matches: seq[string]`` variable is injected into
+  ## the scope, and it contains the submatches for every capture
+  ## group. If a group is repeated (ex: `(\\w)+`), it will
+  ## contain the last capture for that group.
+  ##
+  ## Note: Only available in Nim +1.1
+  runnableExamples:
+    match "abc", rex"(a(b)c)":
+      doAssert matches == @["abc", "b"]
 
-    matchImpl(text, regex, body)
+  matchImpl(text, regex, body)
 
 func match*(
   s: string,
@@ -901,10 +893,7 @@ when not defined(forceRegexAtRuntime):
   func re*(
     s: static string
   ): static[Regex] {.inline, deprecated: "use re2(static string) instead".} =
-    when canUseMacro:  # VM dies on Nim < 1.1
-      reCt(s)
-    else:
-      reImpl(s)
+    reCt(s)
 
 func toPattern*(
   s: string
@@ -1604,62 +1593,61 @@ when isMainModule:
       m.captures == @[0 .. 3, reNonCapture]
     doAssert match("aaab", re2"(\w+)|\w+(?<=^(\w)(\w+))b", m) and
       m.captures == @[0 .. 3, reNonCapture, reNonCapture]
-    when canUseMacro:
-      block:
-        var m = false
-        var matches: seq[string]
-        match "abc", rex"(\w+)":
-          doAssert matches == @["abc"]
-          m = true
-        doAssert m
-        doAssert matches.len == 0
-      block:
-        var m = false
-        match "abc", rex"(\w)+":
-          doAssert matches == @["c"]
-          m = true
-        doAssert m
-      block:
-        var m = false
-        match "abc", rex"(a(b)c)":
-          doAssert matches == @["abc", "b"]
-          m = true
-        doAssert m
-      block:
-        var m = false
-        match "x", rex"y":
-          m = true
-        doAssert not m
-        match "y", rex"y":
-          m = true
-        doAssert m
-      block:
-        template myRegex: untyped =
-          rex"""(?x)
-            abc  # verbose mode
-          """
-        var m = false
-        match "abc", myRegex:
-          m = true
-        doAssert m
-      block:
-        var m = false
-        var txt = "abc"
-        match txt, rex"(\w)+":
-          m = true
-        doAssert m
-      block:
-        var matched = false
-        let text = "[my link](https://example.com)"
-        match text, rex"\[([a-z ]*)\]\((https?://[^)]+)\)":
-          doAssert matches == @["my link", "https://example.com"]
-          matched = true
-        doAssert matched
-      block:
-        var matched = false
-        match "abcdefg", rex"\w+(?<=(ab)(?=(cd)))\w+":
-          doAssert matches == @["ab", "cd"]
-          matched = true
-        doAssert matched
+    block:
+      var m = false
+      var matches: seq[string]
+      match "abc", rex"(\w+)":
+        doAssert matches == @["abc"]
+        m = true
+      doAssert m
+      doAssert matches.len == 0
+    block:
+      var m = false
+      match "abc", rex"(\w)+":
+        doAssert matches == @["c"]
+        m = true
+      doAssert m
+    block:
+      var m = false
+      match "abc", rex"(a(b)c)":
+        doAssert matches == @["abc", "b"]
+        m = true
+      doAssert m
+    block:
+      var m = false
+      match "x", rex"y":
+        m = true
+      doAssert not m
+      match "y", rex"y":
+        m = true
+      doAssert m
+    block:
+      template myRegex: untyped =
+        rex"""(?x)
+          abc  # verbose mode
+        """
+      var m = false
+      match "abc", myRegex:
+        m = true
+      doAssert m
+    block:
+      var m = false
+      var txt = "abc"
+      match txt, rex"(\w)+":
+        m = true
+      doAssert m
+    block:
+      var matched = false
+      let text = "[my link](https://example.com)"
+      match text, rex"\[([a-z ]*)\]\((https?://[^)]+)\)":
+        doAssert matches == @["my link", "https://example.com"]
+        matched = true
+      doAssert matched
+    block:
+      var matched = false
+      match "abcdefg", rex"\w+(?<=(ab)(?=(cd)))\w+":
+        doAssert matches == @["ab", "cd"]
+        matched = true
+      doAssert matched
 
   echo "ok regex.nim"

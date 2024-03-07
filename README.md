@@ -22,7 +22,7 @@ nimble install regex
 
 # Compatibility
 
-Nim +1.0.0
+Nim +1.6.0
 
 ## Docs
 

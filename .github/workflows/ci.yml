@@ -13,7 +13,7 @@ jobs:
     strategy:
       matrix:
         # xxx trim to on use latest in each branch eg 1.0.10, 1.2.8 etc
-        nim: [1.0.10, 1.2.12, 1.4.8, 1.6.14, 2.0.0]
+        nim: [1.6.18, 2.0.0]
     steps:
     - uses: actions/checkout@v2
     - name: Run Tests
@@ -21,7 +21,7 @@ jobs:
         docker pull nimlang/nim:${{ matrix.nim }}
         docker run --rm -v `pwd`:/usr/src/app -w /usr/src/app nimlang/nim:${{ matrix.nim }} /bin/bash -c "git config --global --add safe.directory /usr/src/app; nimble install -y; nimble test"
     - name: Build docs
-      if: matrix.nim == '1.6.14'
+      if: matrix.nim == '1.6.18'
       run: |
         docker pull nimlang/nim:${{ matrix.nim }}
         docker run --rm -v `pwd`:/usr/src/app -w /usr/src/app nimlang/nim:${{ matrix.nim }} /bin/bash -c "git config --global --add safe.directory /usr/src/app; nimble install -y; nimble docs"
@@ -31,7 +31,7 @@ jobs:
       # and remove `github.ref == 'refs/heads/master'` below
       if: |
         github.event_name == 'push' && github.ref == 'refs/heads/master' &&
-        matrix.nim == '1.6.14'
+        matrix.nim == '1.6.18'
       uses: crazy-max/ghaction-github-pages@v1
       with:
         build_dir: docs

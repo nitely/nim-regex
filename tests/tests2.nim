@@ -3286,6 +3286,7 @@ test "tvarflags":
     check match("a\L", re2"(?s)a.")
     check(not match("a\L", re2"a."))
   block:
+    var m: RegexMatch2
     check match("aa", re2(r"(a*)(a*)", {regexUngreedy}), m) and
       m.captures == @[0 .. -1, 0 .. 1]
     check match("aa", re2"(?U)(a*)(a*)", m) and

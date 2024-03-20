@@ -92,9 +92,25 @@ clears both the x and y flags.
   s  allow . to match \L (new line)
   U  swap the meaning of x* and x*? (un-greedy mode)
   u  Unicode support (enabled by default)
-  x  ignore whitespace and allow line comments (starting with `#`)
+  x  ignore whitespace and allow line comments (starting with #)
 
-`All flags are disabled by default unless stated otherwise`
+.. note::
+  All flags are disabled by default unless stated otherwise
+
+The regex accepts passing a set of flags to set global flags:
+
+.. code-block::
+  regexCaseless        same as (?i)
+  regexMultiline       same as (?m)
+  regexDotAll          same as (?s)
+  regexUngreedy        same as (?U)
+  regexAscii           same as (?-u)
+  regexExtended        same as (?x)
+  regexArbitraryBytes  treat both the regex and the input text as arbitrary byte sequences
+
+.. note::
+  Read the `Match arbitrary bytes`_ section
+  to learn more about the arbitrary bytes mode and ascii mode
 
 Escape sequences
 ################

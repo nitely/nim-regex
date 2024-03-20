@@ -19,7 +19,13 @@ type
   # which would create a cyclic dep
   # if defined in nfatype
   RegexFlag* = enum
-    regexArbitraryBytes
+    regexArbitraryBytes,
+    regexAscii,
+    regexCaseless,
+    regexDotAll,
+    regexExtended,
+    regexMultiline,
+    regexUngreedy
   RegexFlags* = set[RegexFlag]
 
   # exptype.nim
@@ -337,3 +343,23 @@ func toString*(n: seq[Node]): string =
   result = newStringOfCap(n.len)
   for nn in n:
     result.add $nn
+
+func toFlag*(fl: RegexFlag): Flag =
+  ## Public flag to internal flag
+  result = case fl
+  of regexArbitraryBytes: flagNotUnicode
+  of regexAscii: flagNotUnicode
+  of regexCaseless: flagCaseInsensitive
+  of regexDotAll: flagAnyMatchNewLine
+  of regexExtended: flagVerbose
+  of regexMultiline: flagMultiLine
+  of regexUngreedy: flagUnGreedy
+
+func toFlags*(fls: RegexFlags): set[Flag] =
+  ## Public flags to internal flags
+  result = {}
+  for f in fls:
+    result.incl f.toFlag()
+
+func toFlagsSeq*(fls: RegexFlags): seq[Flag] =
+  toSeq fls.toFlags()

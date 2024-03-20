@@ -3265,3 +3265,55 @@ when not defined(js) or NimMajor >= 2:
       @["1ΪⒶ弢23"]
     check findAllStr(r"1ΪⒶ弢23ΪⒶ弢45ΪⒶ弢67", re2(r"\dΪⒶ弢\d\d", flags)) ==
       @["1ΪⒶ弢23", "5ΪⒶ弢67"]
+
+test "tvarflags":
+  block:
+    check findAllBounds("a\n  b\n c\n  ", re2(r"^", {regexMultiline})) ==
+      @[0 .. -1, 2 .. 1, 6 .. 5, 9 .. 8]
+    check findAllBounds("a\n  b\n c\n  ", re2(r"(?-m)^", {regexMultiline})) ==
+      @[0 .. -1]
+    check findAllBounds("a\n  b\n c\n  ", re2"(?m)^") ==
+      @[0 .. -1, 2 .. 1, 6 .. 5, 9 .. 8]
+    check findAllBounds("a\n  b\n c\n  ", re2"(?-m)^") ==
+      @[0 .. -1]
+  block:
+    check match("AaA", re2(r"a+", {regexCaseless}))
+    check match("AaA", re2"(?i)a+")
+    check(not match("AaA", re2(r"(?-i)a+", {regexCaseless})))
+    check(not match("AaA", re2"(?-i)a+"))
+  block:
+    check match("a\L", re2(r"a.", {regexDotAll}))
+    check match("a\L", re2"(?s)a.")
+    check(not match("a\L", re2"a."))
+  block:
+    check match("aa", re2(r"(a*)(a*)", {regexUngreedy}), m) and
+      m.captures == @[0 .. -1, 0 .. 1]
+    check match("aa", re2"(?U)(a*)(a*)", m) and
+      m.captures == @[0 .. -1, 0 .. 1]
+    check match("aa", re2(r"(?-U)(a*)(a*)", {regexUngreedy}), m) and
+      m.captures == @[0 .. 1, 2 .. 1]
+    check match("aa", re2"(?-U)(a*)(a*)", m) and
+      m.captures == @[0 .. 1, 2 .. 1]
+  block:
+    check match("a", re2(r"\w", {regexAscii}))
+    check match("a", re2"(?-u)\w")
+    check match("Ǝ", re2(r"(?u)\w", {regexAscii}))
+    check match("Ǝ", re2"(?u)\w")
+    check(not match("Ǝ", re2(r"\w", {regexAscii})))
+    check(not match("Ǝ", re2"(?-u)\w"))
+  block:
+    check match("a", re2(r"a  # foo", {regexExtended}))
+    check match("a", re2"(?x)a  # foo")
+    check match("a# foo", re2(r"a  (?-x)# foo", {regexExtended}))
+    check match("a# foo", re2"(?x)a  (?-x)# foo")
+    check match("a# foo", re2(r"a  (?-x)# foo(?x)# bar", {regexExtended}))
+    check match("a# foo", re2"(?x)a  (?-x)# foo(?x)# bar")
+    check(not match("a", re2(r"(?-x)a  # foo", {regexExtended})))
+    check(not match("a", re2"a  # foo"))
+    check(not match("a", re2(r"a(?-x)  # foo", {regexExtended})))
+    check(not match("a", re2"(?x)a(?-x)  # foo"))
+  block:
+    check match("a\Lb\L", re2(r"a.b(?s-m:.)", {regexDotAll, regexMultiline}))
+    check match("a\Lb\L", re2"(?ms)a.b(?s-m:.)")
+    check(not match("a\Lb\L", re2(r"a.b(?-sm:.)", {regexDotAll, regexMultiline})))
+    check(not match("a\Lb\L", re2"(?ms)a.b(?-sm:.)"))

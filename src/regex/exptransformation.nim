@@ -214,8 +214,8 @@ func applyFlags(exp: Exp, fls: RegexFlags): Exp =
   result.s = newSeq[Node](exp.s.len)
   result.s.setLen 0
   var flags = newSeq[seq[Flag]]()
-  if regexArbitraryBytes in fls:
-    flags.add @[flagNotUnicode]
+  if fls.len > 0:
+    flags.add fls.toFlagsSeq
   var sc = exp.s.scan()
   for n in sc.mitems():
     # (?flags)

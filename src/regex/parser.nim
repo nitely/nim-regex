@@ -683,9 +683,8 @@ func subParse(sc: Scanner[Rune]): Node =
 
 func skipWhiteSpace(sc: Scanner[Rune], vb: seq[bool]): bool =
   ## skip white-spaces and comments on verbose mode
-  result = false
   if vb.len == 0 or not vb[vb.len-1]:
-    return
+    return false
   result = case sc.prev
   of " ".toRune,
       "\t".toRune,
@@ -748,6 +747,8 @@ func parse*(expression: string, flags: RegexFlags = {}): Exp =
   result.s = newSeq[Node](expression.len)
   result.s.setLen 0
   var vb = newSeq[bool]()
+  if regexExtended in flags:
+    vb.add true
   let bytesMode = regexArbitraryBytes in flags
   let sc = expression.scan(bytesMode)
   for _ in sc:

@@ -355,16 +355,16 @@ regex is parsed as a byte sequence. The ``Ⓐ`` character
 is composed of multiple bytes (``\xe2\x92\xb6``),
 and only the last byte is affected by the ``+`` operator.
 
-Compile the regex expression at compile time
-############################################
+Compile the regex at compile time
+#################################
 
-Passing a regex literal or assigning the Regex
-object to a ``const`` will compile the regex
-expression at compile time.
+Passing a regex literal or assigning it to a ``const``
+will compile the regex at compile time. Errors in the
+expression will be catched at compile time this way.
 
-Most other regex libs only support this at runtime, which
-usually requires some sort of cache (a thread-var for example)
-to avoid compiling the expression more than once.
+Do not confuse the regex compilation with the matching operation.
+The following examples do the matching at runtime. But matching
+at compile-time is supported as well.
 
 .. code-block:: nim
     :test:
@@ -374,6 +374,11 @@ to avoid compiling the expression more than once.
       doAssert match(text, rexp)
     block:
       doAssert match(text, re2".+")
+    block:
+      func myFn(s: string, exp: static string) =
+        const rexp = re2(exp)
+        doAssert match(s, rexp)
+      myFn(text, r".+")
 
 Using a ``const`` can avoid confusion when passing flags:
 
@@ -390,6 +395,40 @@ Using a ``const`` can avoid confusion when passing flags:
       # because flags is a var, avoid it!
       let flags = {regexDotAll}
       doAssert match(text, re2(r".+", flags))
+
+Compile the regex at runtime
+############################
+
+.. note::
+    Consider `compiling the regex at compile-time <#examples-compile-the-regex-at-compile-time>`_
+    whenever possible.
+
+Most of the time compiling the regex at runtime can be avoided,
+and it should be avoided. Nim has really good compile-time
+capabilities like reading files, constructing strings,
+and so on. However, it cannot be helped in cases where
+the regex is passed to the program at runtime (from terminal input,
+network, or text files).
+
+To compile the regex at runtime define the regex literal
+as a ``var/let``, or pass the string expression as a ``var``.
+
+.. code-block:: nim
+    :test:
+    let text = "abc"
+    block:
+      var rexp = re2".+"
+      doAssert match(text, rexp)
+    block:
+      let rexp = re2".+"
+      doAssert match(text, rexp)
+    block:
+      var exp = r".+"
+      doAssert match(text, re2(exp))
+    block:
+      func myFn(s: string, exp: string) =
+        doAssert match(s, re2(exp))
+      myFn(text, r".+")
 
 ]##
 

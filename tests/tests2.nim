@@ -3285,6 +3285,12 @@ test "tvarflags":
     check match("a\L", re2(r"a.", {regexDotAll}))
     check match("a\L", re2"(?s)a.")
     check(not match("a\L", re2"a."))
+  block:  # force compile time
+    const rexp = re2(r"a.", {regexDotAll})
+    check match("a\L", rexp)
+  block:  # force run time
+    var flags = {regexDotAll}
+    check match("a\L", re2(r"a.", flags))
   block:
     var m: RegexMatch2
     check match("aa", re2(r"(a*)(a*)", {regexUngreedy}), m) and

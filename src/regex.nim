@@ -94,10 +94,9 @@ clears both the x and y flags.
   u  Unicode support (enabled by default)
   x  ignore whitespace and allow line comments (starting with #)
 
-.. note::
-  All flags are disabled by default unless stated otherwise
+All flags are disabled by default unless stated otherwise
 
-The regex accepts passing a set of flags to set global flags:
+The regex accepts passing a set of flags:
 
 .. code-block::
   regexCaseless        same as (?i)
@@ -106,10 +105,11 @@ The regex accepts passing a set of flags to set global flags:
   regexUngreedy        same as (?U)
   regexAscii           same as (?-u)
   regexExtended        same as (?x)
-  regexArbitraryBytes  treat both the regex and the input text as arbitrary byte sequences
+  regexArbitraryBytes  treat both the regex and the input text
+                       as arbitrary byte sequences
 
 .. note::
-  Read the `Match arbitrary bytes`_ section
+  Read the `Match arbitrary bytes <#examples-match-arbitrary-bytes>`_ section
   to learn more about the arbitrary bytes mode and ascii mode
 
 Escape sequences
@@ -337,7 +337,7 @@ This flag makes ascii mode the default.
 
 .. code-block:: nim
     :test:
-    let flags = {regexArbitraryBytes}
+    const flags = {regexArbitraryBytes}
     doAssert match("\xff", re2(r"\xff", flags))
     doAssert match("\xf8\xa1\xa1\xa1\xa1", re2(r".+", flags))
 
@@ -345,7 +345,7 @@ Beware of (un)expected behaviour when mixin UTF-8 characters.
 
 .. code-block:: nim
     :test:
-    let flags = {regexArbitraryBytes}
+    const flags = {regexArbitraryBytes}
     doAssert match("Ⓐ", re2(r"Ⓐ", flags))
     doAssert match("ⒶⒶ", re2(r"(Ⓐ)+", flags))
     doAssert not match("ⒶⒶ", re2(r"Ⓐ+", flags))  # ???
@@ -354,6 +354,42 @@ The last line in the above example won't match because the
 regex is parsed as a byte sequence. The ``Ⓐ`` character
 is composed of multiple bytes (``\xe2\x92\xb6``),
 and only the last byte is affected by the ``+`` operator.
+
+Compile the regex expression at compile time
+############################################
+
+Passing a regex literal or assigning the Regex
+object to a ``const`` will compile the regex
+expression at compile time.
+
+Most other regex libs only support this at runtime, which
+usually requires some sort of cache (a thread-var for example)
+to avoid compiling the expression more than once.
+
+.. code-block:: nim
+    :test:
+    let text = "abc"
+    block:
+      const rexp = re2".+"
+      doAssert match(text, rexp)
+    block:
+      doAssert match(text, re2".+")
+
+Using a ``const`` can avoid confusion when passing flags:
+
+.. code-block:: nim
+    :test:
+    let text = "abc"
+    block:
+      const rexp = re2(r".+", {regexDotAll})
+      doAssert match(text, rexp)
+    block:
+      doAssert match(text, re2(r".+", {regexDotAll}))
+    block:
+      # this will compile the expression at runtime
+      # because flags is a var, avoid it!
+      let flags = {regexDotAll}
+      doAssert match(text, re2(r".+", flags))
 
 ]##
 

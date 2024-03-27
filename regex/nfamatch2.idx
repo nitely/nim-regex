@@ -1,0 +1,6 @@
+Lookaround	regex/nfamatch2.html#Lookaround	nfamatch2: Lookaround	
+lookAround	regex/nfamatch2.html#lookAround,Node,Capts3,int32,string,Lookaround,int,MatchFlags	nfamatch2: lookAround(ntn: Node; capts: var Capts3; captIdx: var int32; text: string;\n           look: var Lookaround; start: int; flags: MatchFlags): bool	
+reversedMatchImpl	regex/nfamatch2.html#reversedMatchImpl,Submatches,Submatches,string,Nfa,Lookaround,int,int,int,MatchFlags	nfamatch2: reversedMatchImpl(smA, smB: var Submatches; text: string; nfa: Nfa;\n                  look: var Lookaround; groupsLen: int; start, limit: int;\n                  flags: MatchFlags = {}): int	
+initLook	regex/nfamatch2.html#initLook.t	nfamatch2: initLook(): Lookaround	
+matchImpl	regex/nfamatch2.html#matchImpl,string,Regex,RegexMatch2,int,MatchFlags	nfamatch2: matchImpl(text: string; regex: Regex; m: var RegexMatch2; start = 0;\n          flags: MatchFlags = {}): bool	
+startsWithImpl2	regex/nfamatch2.html#startsWithImpl2,string,Regex,int	nfamatch2: startsWithImpl2(text: string; regex: Regex; start: int): bool	

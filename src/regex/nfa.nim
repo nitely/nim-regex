@@ -4,10 +4,6 @@ import std/algorithm
 import ./types
 import ./common
 
-func check(cond: bool, msg: string) =
-  if not cond:
-    raise newException(RegexError, msg)
-
 type
   End = seq[int16]
     ## store the last
@@ -62,8 +58,9 @@ func eNfa*(exp: RpnExp): Enfa {.raises: [RegexError].} =
     doAssert n.next.len == 0
     check(
       result.s.high < int16.high,
-      ("The expression is too long, " &
-       "limit is ~$#") %% $int16.high)
+      "The expression is too long, " &
+      "limit is ~" & $int16.high
+    )
     let ni = result.s.len.int16
     case n.kind
     of matchableKind, assertionKind, reSkip:
@@ -141,13 +138,13 @@ func eNfa*(exp: RpnExp): Enfa {.raises: [RegexError].} =
       result.s.add n
       states.add stateA
     else:
-      doAssert(false, "Unhandled node: $#" %% $n.kind)
+      doAssert(false, "Unhandled node: " & $n.kind)
   doAssert states.len == 1
   result.s.add initSkipNode(states)
 
 type
-  Etransitions = seq[int16]  # xxx transitions
-  TeClosure = seq[(int16, Etransitions)]
+  Epsilons = seq[int16]
+  TeClosure = seq[(int16, Epsilons)]
 
 func isEpsilonTransition2(n: Node): bool {.inline.} =
   result = case n.kind
@@ -158,40 +155,45 @@ func isEpsilonTransition2(n: Node): bool {.inline.} =
     else:
       false
 
-func teClosure(
+func teClosure2(
   result: var TeClosure,
   eNfa: Enfa,
   state: int16,
   processing: var seq[int16],
-  eTransitions: Etransitions
+  epsilons: var Epsilons
 ) =
-  var eTransitionsCurr = eTransitions
-  if isEpsilonTransition2 eNfa.s[state]:
-    eTransitionsCurr.add state
   if eNfa.s[state].kind in matchableKind + {reEOE}:
-    result.add (state, eTransitionsCurr)
+    var tmpEpsilons = epsilons
+    result.add (state, tmpEpsilons)
     return
+  if isEpsilonTransition2 eNfa.s[state]:
+    epsilons.add state
   for i, s in pairs eNfa.s[state].next:
     # Enter loops only once. "a", re"(a*)*" -> ["a", ""]
     if eNfa.s[state].kind in repetitionKind:
       if s notin processing or i == int(eNfa.s[state].isGreedy):
         processing.add s
-        teClosure(result, eNfa, s, processing, eTransitionsCurr)
+        teClosure2(result, eNfa, s, processing, epsilons)
         discard processing.pop()
       # else skip loop
     else:
-      teClosure(result, eNfa, s, processing, eTransitionsCurr)
+      teClosure2(result, eNfa, s, processing, epsilons)
+  if isEpsilonTransition2 eNfa.s[state]:
+    discard epsilons.pop()
 
 func teClosure(
   result: var TeClosure,
   eNfa: Enfa,
   state: int16,
-  processing: var seq[int16]
+  processing: var seq[int16],
+  epsilons: var Epsilons
 ) =
   doAssert processing.len == 0
-  var eTransitions: Etransitions
+  doAssert epsilons.len == 0
   for s in eNfa.s[state].next:
-    teClosure(result, eNfa, s, processing, eTransitions)
+    teClosure2(result, eNfa, s, processing, epsilons)
+    doAssert processing.len == 0
+    doAssert epsilons.len == 0
 
 when (NimMajor, NimMinor, NimPatch) < (1,4,0) and not declared(IndexDefect):
   # avoids a warning
@@ -219,17 +221,18 @@ func eRemoval*(eNfa: Enfa): Nfa {.raises: [].} =
   qu.incl start
   var qa: int16
   var processing = newSeqOfCap[int16](8)
+  var epsilons = newSeqOfCap[int16](8)
   while qw.len > 0:
     try:
       qa = qw.popLast()
     except IndexDefect:
       doAssert false
     closure.setLen 0
-    teClosure(closure, eNfa, qa, processing)
+    teClosure(closure, eNfa, qa, processing, epsilons)
     doAssert statesMap[qa] > -1
     result.s[statesMap[qa]].next.setLen 0
-    for qb, eTransitions in closure.items:
-      for eti in eTransitions:
+    for qb, eps in closure.items:
+      for eti in eps:
         if statesMap[eti] == -1:
           result.s.add eNfa.s[eti]
           statesMap[eti] = result.s.len.int16-1

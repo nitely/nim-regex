@@ -10,10 +10,6 @@ import ./types
 import ./common
 import ./scanner
 
-func check(cond: bool, msg: string) {.inline.} =
-  if not cond:
-    raise newException(RegexError, msg)
-
 func isAsciiPrintable(s: string): bool =
   result = true
   for c in s.runes:
@@ -48,8 +44,10 @@ func check(cond: bool, msg: string, at: int, exp: string) =
     expMsg.add(strutils.align("^", mark))
     raise newException(RegexError, expMsg)
 
-template prettyCheck(cond: bool, msg: string) {.dirty.} =
-  check(cond, msg, startPos, sc.raw)
+template prettyCheck(cond: bool, msg: untyped) {.dirty.} =
+  {.line: instantiationInfo(fullPaths = true).}:
+    if not cond:
+      check(cond, msg, startPos, sc.raw)
 
 func toShorthandNode(r: Rune): Node =
   ## the given character must be a shorthand or

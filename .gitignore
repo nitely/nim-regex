@@ -9,6 +9,7 @@ tests/tests2
 tests/tests2.js
 tests/tests_misc
 tests/tests_misc.js
+tests/test_bug
 docs/ugh
 bin/*
 bench/bench

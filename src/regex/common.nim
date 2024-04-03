@@ -13,6 +13,11 @@ type
   ## raised when the pattern
   ## is not a valid regex
 
+template check*(cond: bool, msg: untyped) =
+  {.line: instantiationInfo(fullPaths = true).}:
+    if not cond:
+      raise newException(RegexError, msg)
+
 const
   # This is used as start
   # and end of string. It should

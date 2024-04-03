@@ -20,9 +20,10 @@ func swapCase(r: Rune): Rune =
   else:
     result = r
 
-func check(cond: bool, msg: string) =
-  if not cond:
-    raise newException(RegexError, msg)
+template check(cond: bool, msg: untyped) =
+  {.line: instantiationInfo(fullPaths = true).}:
+    if not cond:
+      raise newException(RegexError, msg)
 
 func fixEmptyOps(exp: Exp): Exp =
   ## Handle "|", "(|)", "a|", "|b", "||", "a||b", ...
@@ -93,8 +94,8 @@ func fillGroups(
       discard
     check(
       groups.count < int16.high,
-      ("Invalid number of capturing groups, " &
-       "the limit is $#") %% $(int16.high - 1))
+      "Invalid number of capturing groups, " &
+      "the limit is " & $(int16.high - 1))
   check(
     gs.len == 0,
     "Invalid capturing group. " &
@@ -348,8 +349,9 @@ func expandArbitrayBytes(exp: Exp, flags: RegexFlags): Exp =
 func populateUid(exp: Exp): Exp =
   check(
     exp.s.high < NodeUid.high,
-    ("The expression is too long, " &
-     "limit is ~$#") %% $NodeUid.high)
+    "The expression is too long, " &
+    "limit is ~" & $NodeUid.high
+  )
   result = exp
   var uid = 1.NodeUid
   for n in mitems result.s:

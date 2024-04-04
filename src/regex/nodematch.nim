@@ -1,5 +1,4 @@
 import std/unicode
-import std/sets
 
 import pkg/unicodedb/properties
 import pkg/unicodedb/types as utypes

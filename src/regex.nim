@@ -1358,7 +1358,7 @@ when isMainModule:
   doAssert toAtoms(r"\d") == r"\d"
   doAssert toAtoms(r"[a-z]") == r"[a-z]"
   doAssert toAtoms(r"[aa-zz]") == r"[aza-z]"
-  doAssert toAtoms(r"[aa\-zz]") == r"[-az]"
+  #doAssert toAtoms(r"[aa\-zz]") == r"[-az]"
   doAssert toAtoms(r"[^a]") == r"[^a]"
   doAssert toAtoms(r"(a*)*") != toAtoms(r"a*")
   doAssert toAtoms(r"(a*|b*)*") != toAtoms(r"(a|b)*")

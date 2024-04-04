@@ -1,6 +1,5 @@
 import std/unicode
 import std/strutils
-import std/sets
 import std/parseutils
 
 import pkg/unicodedb/properties
@@ -298,12 +297,12 @@ func parseAsciiSet(sc: Scanner[Rune]): Node =
     result.ranges.add(
       "\x00".toRune .. "\x7F".toRune)
   of "blank":
-    result.cps.incl(toHashSet([
-      "\t".toRune, " ".toRune]))
+    result.cps.add([
+      "\t".toRune, " ".toRune])
   of "cntrl":
     result.ranges.add(
       "\x00".toRune .. "\x1F".toRune)
-    result.cps.incl("\x7F".toRune)
+    result.cps.add("\x7F".toRune)
   of "digit":
     result.ranges.add(
       "0".toRune .. "9".toRune)
@@ -323,9 +322,9 @@ func parseAsciiSet(sc: Scanner[Rune]): Node =
       "[".toRune .. "`".toRune,
       "{".toRune .. "~".toRune])
   of "space":
-    result.cps.incl(toHashSet([
+    result.cps.add([
       "\t".toRune, "\L".toRune, "\v".toRune,
-      "\f".toRune, "\r".toRune, " ".toRune]))
+      "\f".toRune, "\r".toRune, " ".toRune])
   of "upper":
     result.ranges.add(
       "A".toRune .. "Z".toRune)
@@ -334,7 +333,7 @@ func parseAsciiSet(sc: Scanner[Rune]): Node =
       "0".toRune .. "9".toRune,
       "a".toRune .. "z".toRune,
       "A".toRune .. "Z".toRune])
-    result.cps.incl("_".toRune)
+    result.cps.add("_".toRune)
   of "xdigit":
     result.ranges.add([
       "0".toRune .. "9".toRune,
@@ -421,8 +420,7 @@ func parseSet(sc: Scanner[Rune]): Node =
         cps.add(cp)
     else:
       cps.add(cp)
-  # todo: use ref and set to nil when empty
-  result.cps.incl(cps.toHashSet)
+  result.cps.add(cps)
   prettyCheck(
     hasEnd,
     "Invalid set. Missing `]`")

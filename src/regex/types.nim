@@ -3,7 +3,6 @@ when NimMajor >= 1:
   {.used.}
 
 import std/unicode
-import std/sets
 from std/algorithm import sorted
 from std/sequtils import toSeq
 
@@ -113,7 +112,7 @@ type
     # reRepRange
     min*, max*: int16
     # reInSet, reNotSet
-    cps*: HashSet[Rune]
+    cps*: seq[Rune]  # HashSet[Rune]
     ranges*: seq[Slice[Rune]]  # todo: interval tree
     shorthands*: seq[Node]
     # reUCC, reNotUCC
@@ -130,11 +129,7 @@ func initNode(
   kind: NodeKind,
   cp: Rune
 ): Node =
-  Node(
-    kind: kind,
-    cp: cp,
-    cps: initHashSet[Rune](initialSize = 0)
-  )
+  Node(kind: kind, cp: cp)
 
 func toCharNode*(r: Rune): Node =
   ## return a ``Node`` that is meant to be matched

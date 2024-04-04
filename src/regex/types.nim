@@ -126,32 +126,37 @@ type
     rpn*: RpnExp
     reverseCapts*: bool
 
+func initNode(
+  kind: NodeKind,
+  cp: Rune
+): Node =
+  Node(
+    kind: kind,
+    cp: cp,
+    cps: initHashSet[Rune](initialSize = 0)
+  )
+
 func toCharNode*(r: Rune): Node =
   ## return a ``Node`` that is meant to be matched
   ## against text characters
-  Node(kind: reChar, cp: r)
+  result = initNode(reChar, r)
 
 func initJoinerNode*(): Node =
   ## return a ``Node`` of ``reJoiner`` kind.
   ## Joiners are temporary nodes,
   ## they serve to generate the NFA
   ## but they are never part of it
-  Node(kind: reJoiner, cp: "~".toRune)
+  initNode(reJoiner, "~".toRune)
 
 func initEoeNode*(): Node =
   ## return the end-of-expression ``Node``.
   ## This is a dummy node that marks a match as successful
-  Node(kind: reEoe, cp: "#".toRune)
+  initNode(reEoe, "#".toRune)
 
 template initSetNodeImpl(result: var Node, k: NodeKind) =
   ## base node
   assert k in {reInSet, reNotSet}
-  result = Node(
-    kind: k,
-    cp: "#".toRune,
-    cps: initHashSet[Rune](2),
-    ranges: @[],
-    shorthands: @[])
+  result = initNode(k, "#".toRune)
 
 func initSetNode*(): Node =
   ## return a set ``Node``,
@@ -164,29 +169,24 @@ func initNotSetNode*(): Node =
   initSetNodeImpl(result, reNotSet)
 
 func initGroupStart*(
-  name: string = "",
+  name = "",
   flags: seq[Flag] = @[],
   isCapturing = true
 ): Node =
   ## return a ``reGroupStart`` node
-  Node(
-    kind: reGroupStart,
-    cp: "(".toRune,
-    name: name,
-    flags: flags,
-    isCapturing: isCapturing)
+  result = initNode(reGroupStart, "(".toRune)
+  result.name = name
+  result.flags = flags
+  result.isCapturing = isCapturing
 
 func initSkipNode*(): Node =
-  result = Node(
-    kind: reSkip,
-    cp: "#".toRune)
+  initNode(reSkip, "#".toRune)
 
 func initSkipNode*(next: openArray[int16]): Node =
   ## Return a dummy node that should be skipped
   ## while traversing the NFA
-  result = Node(
-    kind: reSkip,
-    cp: "#".toRune, next: toSeq(next))
+  result = initNode(reSkip, "#".toRune)
+  result.next = toSeq(next)
 
 func isEmpty*(n: Node): bool =
   ## check if a set ``Node`` is empty

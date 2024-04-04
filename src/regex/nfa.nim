@@ -46,11 +46,10 @@ func update(
 func eNfa*(exp: RpnExp): Enfa {.raises: [RegexError].} =
   ## Thompson's construction
   result.s = newSeqOfCap[Node](exp.s.len + 2)
-  #result.s.setLen 0
   result.s.add initEOENode()
   var
     ends = newSeq[End](exp.s.len + 1)
-    states = newSeq[int16]()
+    states = newSeqOfCap[int16](exp.s.len + 2)
   if exp.s.len == 0:
     states.add eoe
   for n in exp.s:

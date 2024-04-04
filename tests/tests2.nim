@@ -97,7 +97,7 @@ func group(
 ): string {.inline, raises: [KeyError].} =
   text[m.group(groupName)]
 
-when false:
+when true:
   template matchMacro(s, r: untyped): untyped =
     {.line: instantiationInfo(fullPaths = true).}:
       (func (): bool =
@@ -2933,7 +2933,7 @@ test "fix#83":
     check findAllBounds("aaaxaaa", re2"$(a*)") == @[7 .. 6]
     check findAllBounds("aaaxaaa", re2"($|^)(a*)") == @[0 .. 2, 7 .. 6]
     check findAllBounds("aaaxaaa", re2"(^|$)(a*)") == @[0 .. 2, 7 .. 6]
-  when false:
+  when true:
     check matchMacroCapt("foo", rex"($*?)(\w*)") == @["", "foo"]
     check matchMacroCapt("foo", rex"($*)(\w*)") == @["", "foo"]
     check matchMacroCapt("foox", rex"($*)(\w*)x") == @["", "foo"]

@@ -21,11 +21,13 @@ template test(desc: string, body: untyped): untyped =
       body)()
 
 template check(condition: bool) =
-  doAssert(condition)
+  {.line: instantiationInfo(fullPaths = true).}:
+    doAssert(condition)
 
 template expect(exception: typedesc, body: untyped): untyped =
-  doAssertRaises(exception):
-    body
+  {.line: instantiationInfo(fullPaths = true).}:
+    doAssertRaises(exception):
+      body
 
 when defined(forceRegexAtRuntime):
   proc isMatch(s: string, pattern: Regex2): bool =
@@ -95,22 +97,24 @@ func group(
 ): string {.inline, raises: [KeyError].} =
   text[m.group(groupName)]
 
-when (NimMajor, NimMinor) >= (1, 1):
+when false:
   template matchMacro(s, r: untyped): untyped =
-    (func (): bool =
-      result = false
-      let exp = s
-      match exp, r:
-        result = true)()
+    {.line: instantiationInfo(fullPaths = true).}:
+      (func (): bool =
+        result = false
+        let exp = s
+        match exp, r:
+          result = true)()
 
   template matchMacroCapt(s, r: untyped): untyped =
-    (func (): seq[string] =
-      var m = false
-      let exp = s
-      match exp, r:
-        m = true
-        result = matches
-      check m)()
+    {.line: instantiationInfo(fullPaths = true).}:
+      (func (): seq[string] =
+        var m = false
+        let exp = s
+        match exp, r:
+          m = true
+          result = matches
+        check m)()
 
   test "tmatch_macro":
     block hasOwnScope:
@@ -2929,7 +2933,7 @@ test "fix#83":
     check findAllBounds("aaaxaaa", re2"$(a*)") == @[7 .. 6]
     check findAllBounds("aaaxaaa", re2"($|^)(a*)") == @[0 .. 2, 7 .. 6]
     check findAllBounds("aaaxaaa", re2"(^|$)(a*)") == @[0 .. 2, 7 .. 6]
-  when (NimMajor, NimMinor) >= (1, 1):
+  when false:
     check matchMacroCapt("foo", rex"($*?)(\w*)") == @["", "foo"]
     check matchMacroCapt("foo", rex"($*)(\w*)") == @["", "foo"]
     check matchMacroCapt("foox", rex"($*)(\w*)x") == @["", "foo"]

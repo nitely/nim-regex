@@ -45,8 +45,8 @@ func update(
 
 func eNfa*(exp: RpnExp): Enfa {.raises: [RegexError].} =
   ## Thompson's construction
-  result.s = newSeq[Node](exp.s.len + 2)
-  result.s.setLen 0
+  result.s = newSeqOfCap[Node](exp.s.len + 2)
+  #result.s.setLen 0
   result.s.add initEOENode()
   var
     ends = newSeq[End](exp.s.len + 1)
@@ -155,31 +155,63 @@ func isEpsilonTransition2(n: Node): bool {.inline.} =
     else:
       false
 
-func teClosure2(
-  result: var TeClosure,
-  eNfa: Enfa,
-  state: int16,
-  processing: var seq[int16],
-  epsilons: var Epsilons
-) =
-  if eNfa.s[state].kind in matchableKind + {reEOE}:
-    var tmpEpsilons = epsilons
-    result.add (state, tmpEpsilons)
-    return
-  if isEpsilonTransition2 eNfa.s[state]:
-    epsilons.add state
-  for i, s in pairs eNfa.s[state].next:
-    # Enter loops only once. "a", re"(a*)*" -> ["a", ""]
-    if eNfa.s[state].kind in repetitionKind:
-      if s notin processing or i == int(eNfa.s[state].isGreedy):
-        processing.add s
+when false:
+  func teClosure2(
+    result: var TeClosure,
+    eNfa: Enfa,
+    state: int16,
+    processing: var seq[int16],
+    epsilons: var Epsilons
+  ) =
+    if eNfa.s[state].kind in matchableKind + {reEOE}:
+      var tmpEpsilons = epsilons
+      result.add (state, tmpEpsilons)
+      return
+    if isEpsilonTransition2 eNfa.s[state]:
+      epsilons.add state
+    processing.add state
+    for i, s in pairs eNfa.s[state].next:
+      # Enter loops only once. "a", re"(a*)*" -> ["a", ""]
+      if eNfa.s[state].kind notin repetitionKind or
+          i == int(eNfa.s[state].isGreedy) or
+          s notin processing:
         teClosure2(result, eNfa, s, processing, epsilons)
-        discard processing.pop()
       # else skip loop
-    else:
-      teClosure2(result, eNfa, s, processing, epsilons)
-  if isEpsilonTransition2 eNfa.s[state]:
-    discard epsilons.pop()
+    if isEpsilonTransition2 eNfa.s[state]:
+      discard epsilons.pop()
+    discard processing.pop()
+else:
+  func teClosure2(
+    result: var TeClosure,
+    eNfa: Enfa,
+    state: int16,
+    processing: var seq[int16],
+    eTransitions: var Epsilons
+  ) =
+    var stack = @[(state, 0)]
+    while stack.len > 0:
+      let (n, nextIdx) = stack.pop()
+      if nextIdx == 0:  # pre-process
+        if eNfa.s[n].kind in matchableKind + {reEOE}:
+          var tmpeTransitions = eTransitions
+          result.add (n, tmpeTransitions)
+          continue
+        if isEpsilonTransition2 eNfa.s[n]:
+          eTransitions.add n
+        processing.add n
+      if nextIdx < eNfa.s[n].next.len:
+        let nn = eNfa.s[n].next[nextIdx]
+        stack.add (n, nextIdx+1)  # go next
+        # Enter loops only once. "a", re"(a*)*" -> ["a", ""]
+        if eNfa.s[n].kind notin repetitionKind or
+            nextIdx == int(eNfa.s[n].isGreedy) or
+            nn notin processing:
+          stack.add (nn, 0)  # go in
+        # else skip loop
+      else:  # post-process
+        if isEpsilonTransition2 eNfa.s[n]:
+          discard eTransitions.pop()
+        discard processing.pop()
 
 func teClosure(
   result: var TeClosure,
@@ -206,8 +238,8 @@ func eRemoval*(eNfa: Enfa): Nfa {.raises: [].} =
   ## Transitions are added in matching order (BFS),
   ## which may help matching performance
   #echo eNfa
-  result.s = newSeq[Node](eNfa.s.len)
-  result.s.setLen 0
+  result.s = newSeqOfCap[Node](eNfa.s.len)
+  #result.s.setLen 0
   var statesMap = newSeq[int16](eNfa.s.len)
   for i in 0 .. statesMap.len-1:
     statesMap[i] = -1

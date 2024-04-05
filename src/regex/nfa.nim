@@ -185,18 +185,19 @@ else:
     eNfa: Enfa,
     state: int16,
     processing: var seq[int16],
-    eTransitions: var Epsilons
+    epsilons: var Epsilons,
+    stack: var seq[(int16, int16)]
   ) =
-    var stack = @[(state, 0)]
+    stack.add (state, 0'i16)
     while stack.len > 0:
       let (n, nextIdx) = stack.pop()
       if nextIdx == 0:  # pre-process
         if eNfa.s[n].kind in matchableKind + {reEOE}:
-          var tmpeTransitions = eTransitions
-          result.add (n, tmpeTransitions)
+          var tmpEpsilons = epsilons
+          result.add (n, tmpEpsilons)
           continue
         if isEpsilonTransition2 eNfa.s[n]:
-          eTransitions.add n
+          epsilons.add n
         processing.add n
       if nextIdx < eNfa.s[n].next.len:
         let nn = eNfa.s[n].next[nextIdx]
@@ -205,11 +206,11 @@ else:
         if eNfa.s[n].kind notin repetitionKind or
             nextIdx == int(eNfa.s[n].isGreedy) or
             nn notin processing:
-          stack.add (nn, 0)  # go in
+          stack.add (nn, 0'i16)  # go in
         # else skip loop
       else:  # post-process
         if isEpsilonTransition2 eNfa.s[n]:
-          discard eTransitions.pop()
+          discard epsilons.pop()
         discard processing.pop()
 
 func teClosure(
@@ -217,14 +218,17 @@ func teClosure(
   eNfa: Enfa,
   state: int16,
   processing: var seq[int16],
-  epsilons: var Epsilons
+  epsilons: var Epsilons,
+  stack: var seq[(int16, int16)]
 ) =
   doAssert processing.len == 0
   doAssert epsilons.len == 0
+  doAssert stack.len == 0
   for s in eNfa.s[state].next:
-    teClosure2(result, eNfa, s, processing, epsilons)
+    teClosure2(result, eNfa, s, processing, epsilons, stack)
     doAssert processing.len == 0
     doAssert epsilons.len == 0
+    doAssert stack.len == 0
 
 when (NimMajor, NimMinor, NimPatch) < (1,4,0) and not declared(IndexDefect):
   # avoids a warning
@@ -253,13 +257,14 @@ func eRemoval*(eNfa: Enfa): Nfa {.raises: [].} =
   var qa: int16
   var processing = newSeqOfCap[int16](8)
   var epsilons = newSeqOfCap[int16](8)
+  var stack = newSeqOfCap[(int16, int16)](8)
   while qw.len > 0:
     try:
       qa = qw.popLast()
     except IndexDefect:
       doAssert false
     closure.setLen 0
-    teClosure(closure, eNfa, qa, processing, epsilons)
+    teClosure(closure, eNfa, qa, processing, epsilons, stack)
     doAssert statesMap[qa] > -1
     result.s[statesMap[qa]].next.setLen 0
     for qb, eps in closure.items:

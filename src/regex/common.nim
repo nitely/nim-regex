@@ -13,7 +13,7 @@ type
   ## raised when the pattern
   ## is not a valid regex
 
-template check*(cond: bool, msg: untyped) =
+template check*(cond: bool, msg: untyped): untyped =
   {.line: instantiationInfo(fullPaths = true).}:
     if not cond:
       raise newException(RegexError, msg)

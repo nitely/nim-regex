@@ -49,7 +49,7 @@ func eNfa*(exp: RpnExp): Enfa {.raises: [RegexError].} =
   result.s.add initEOENode()
   var
     ends = newSeq[End](exp.s.len + 1)
-    states = newSeqOfCap[int16](exp.s.len + 2)
+    states = newSeqOfCap[int16](8)
   if exp.s.len == 0:
     states.add eoe
   for n in exp.s:
@@ -193,8 +193,7 @@ else:
       let (n, nextIdx) = stack.pop()
       if nextIdx == 0:  # pre-process
         if eNfa.s[n].kind in matchableKind + {reEOE}:
-          var tmpEpsilons = epsilons
-          result.add (n, tmpEpsilons)
+          result.add (n, epsilons)
           continue
         if isEpsilonTransition2 eNfa.s[n]:
           epsilons.add n

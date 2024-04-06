@@ -173,11 +173,13 @@ func submatch(
         if matched:
           case ntn.kind
           of reGroupStart:
-            captx = capts.diverge captx
-            capts[captx, ntn.idx].a = i
+            if mfNoCaptures notin flags:
+              captx = capts.diverge captx
+              capts[captx, ntn.idx].a = i
           of reGroupEnd:
-            captx = capts.diverge captx
-            capts[captx, ntn.idx].b = i-1
+            if mfNoCaptures notin flags:
+              captx = capts.diverge captx
+              capts[captx, ntn.idx].b = i-1
           of assertionKind - lookaroundKind:
             matched = match(ntn, cPrev.Rune, c.Rune)
           of lookaroundKind:
@@ -268,7 +270,8 @@ func findSomeOptImpl*(
   text: string,
   regex: Regex,
   ms: var RegexMatches2,
-  start: Natural
+  start: Natural,
+  flags: MatchFlags = {}
 ): int =
   template regexSize: untyped =
     max(regex.litOpt.nfa.s.len, regex.nfa.s.len)
@@ -280,7 +283,7 @@ func findSomeOptImpl*(
   doAssert opt.nfa.s.len > 0
   initMaybeImpl(ms, regexSize, groupsLen)
   ms.clear()
-  let flags = regex.flags.toMatchFlags + {mfFindMatchOpt}
+  let flags = regex.flags.toMatchFlags + flags + {mfFindMatchOpt}
   let hasLits = opt.lits.len > 0
   let step = max(1, opt.lits.len)
   var limit = start.int

@@ -600,12 +600,19 @@ func match*(s: string, pattern: Regex2): bool {.inline, raises: [].} =
 when defined(noRegexOpt):
   template findSomeOptTpl(s, pattern, ms, i): untyped =
     findSomeImpl(s, pattern, ms, i)
+  template findSomeOptTpl(s, pattern, ms, i, flags): untyped =
+    findSomeImpl(s, pattern, ms, i, flags)
 else:
   template findSomeOptTpl(s, pattern, ms, i): untyped =
     if pattern.litOpt.canOpt:
       findSomeOptImpl(s, pattern, ms, i)
     else:
       findSomeImpl(s, pattern, ms, i)
+  template findSomeOptTpl(s, pattern, ms, i, flags): untyped =
+    if pattern.litOpt.canOpt:
+      findSomeOptImpl(s, pattern, ms, i, flags)
+    else:
+      findSomeImpl(s, pattern, ms, i, flags)
 
 iterator findAll*(
   s: string,
@@ -668,9 +675,10 @@ iterator findAllBounds*(
   var i = start
   var i2 = start-1
   var ms: RegexMatches2
+  let flags = {mfNoCaptures}
   while i <= len(s):
     doAssert(i > i2); i2 = i
-    i = findSomeOptTpl(s, pattern.toRegex, ms, i)
+    i = findSomeOptTpl(s, pattern.toRegex, ms, i, flags)
     #debugEcho i
     if i < 0: break
     for ab in ms.bounds:
@@ -735,9 +743,10 @@ iterator split*(s: string, sep: Regex2): string {.inline, raises: [].} =
     i2 = -1
     done = false
     ms: RegexMatches2
+    flags = {mfNoCaptures}
   while not done:
     doAssert(i > i2); i2 = i
-    i = findSomeOptTpl(s, sep.toRegex, ms, i)
+    i = findSomeOptTpl(s, sep.toRegex, ms, i, flags)
     done = i < 0 or i >= len(s)
     if done: ms.dummyMatch(s.len)
     for ab in ms.bounds:

@@ -3,6 +3,7 @@ v0.25.0
 
 * Drop support for Nim < 1.6
 * Implement PCRE var flags (#137)
+* Performance improvements
 
 v0.24.1
 ==================

@@ -136,22 +136,23 @@ func initJoinerNode*(): Node =
   ## Joiners are temporary nodes,
   ## they serve to generate the NFA
   ## but they are never part of it
-  Node(kind: reJoiner, cp: "~".toRune)
+  Node(kind: reJoiner, cp: '~'.toRune)
 
 func initEoeNode*(): Node =
   ## return the end-of-expression ``Node``.
   ## This is a dummy node that marks a match as successful
-  Node(kind: reEoe, cp: "#".toRune)
+  Node(kind: reEoe, cp: '#'.toRune)
 
 template initSetNodeImpl(result: var Node, k: NodeKind) =
   ## base node
   assert k in {reInSet, reNotSet}
   result = Node(
     kind: k,
-    cp: "#".toRune,
+    cp: '#'.toRune,
     cps: initHashSet[Rune](2),
     ranges: @[],
-    shorthands: @[])
+    shorthands: @[]
+  )
 
 func initSetNode*(): Node =
   ## return a set ``Node``,
@@ -171,7 +172,7 @@ func initGroupStart*(
   ## return a ``reGroupStart`` node
   Node(
     kind: reGroupStart,
-    cp: "(".toRune,
+    cp: '('.toRune,
     name: name,
     flags: flags,
     isCapturing: isCapturing)
@@ -179,14 +180,16 @@ func initGroupStart*(
 func initSkipNode*(): Node =
   result = Node(
     kind: reSkip,
-    cp: "#".toRune)
+    cp: '#'.toRune)
 
 func initSkipNode*(next: openArray[int16]): Node =
   ## Return a dummy node that should be skipped
   ## while traversing the NFA
   result = Node(
     kind: reSkip,
-    cp: "#".toRune, next: toSeq(next))
+    cp: '#'.toRune,
+    next: toSeq(next)
+  )
 
 func isEmpty*(n: Node): bool =
   ## check if a set ``Node`` is empty
@@ -194,7 +197,8 @@ func isEmpty*(n: Node): bool =
   result = (
     n.cps.len == 0 and
     n.ranges.len == 0 and
-    n.shorthands.len == 0)
+    n.shorthands.len == 0
+  )
 
 const
   opKind* = {

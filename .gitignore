@@ -1,6 +1,7 @@
 nimcache/
 src/regex.js
 src/regex.out
+src/regex/altopt
 src/regex/litopt
 src/regex/nfatype
 tests/tests

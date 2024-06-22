@@ -1,13 +1,6 @@
 import std/unicode
 import std/strutils
 
-when (NimMajor, NimMinor, NimPatch) < (0, 20, 0):
-  import sets
-  proc initHashSet*[T](size = 2): HashSet[T] =
-    result = initSet[T](size)
-  proc toHashSet*[T](keys: openArray[T]): HashSet[T] =
-    result = toSet[T](keys)
-
 type
   RegexError* = object of ValueError
   ## raised when the pattern

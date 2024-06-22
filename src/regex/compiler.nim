@@ -24,7 +24,7 @@ func reImpl*(s: string, flags: RegexFlags = {}): Regex {.inline.} =
     flags: flags,
     litOpt: opt
   )
-  when defined(regexDotDir) and (NimMajor, NimMinor) >= (1, 2):
+  when defined(regexDotDir):
     const regexDotDir {.strdefine.} = ""
     graphToFile(result, regexDotDir)
 

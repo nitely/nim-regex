@@ -1,7 +1,6 @@
 import std/strutils
-when (NimMajor, NimMinor) >= (1, 2):
-  import std/hashes
-  import std/os
+import std/hashes
+import std/os
 
 import ./nfatype
 import ./types
@@ -48,13 +47,12 @@ func graph*(nfa: Nfa): string =
 func graph*(regex: Regex): string =
   result = graph(regex.nfa)
 
-when (NimMajor, NimMinor) >= (1, 2):
-  func graphToFile*(regex: Regex, dir: string) =
-    {.noSideEffect.}:
-      if dir.len > 0:
-        let content = graph(regex)
-        let fname = $hash(content) & ".dot"
-        try:
-          writeFile(dir / fname, content)
-        except IOError:
-          debugEcho "write file error"
+func graphToFile*(regex: Regex, dir: string) =
+  {.noSideEffect.}:
+    if dir.len > 0:
+      let content = graph(regex)
+      let fname = $hash(content) & ".dot"
+      try:
+        writeFile(dir / fname, content)
+      except IOError:
+        debugEcho "write file error"

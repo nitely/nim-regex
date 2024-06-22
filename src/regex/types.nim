@@ -1,6 +1,5 @@
 # XXX hack because of nfamatch compile warning
-when NimMajor >= 1:
-  {.used.}
+{.used.}
 
 import std/unicode
 import std/sets

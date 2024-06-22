@@ -53,9 +53,6 @@ import ./types
 import ./nodematch
 import ./nfa
 
-when (NimMajor, NimMinor, NimPatch) < (0, 20, 0):
-  import common
-
 type
   LitNfa = Enfa
   End = seq[int16]

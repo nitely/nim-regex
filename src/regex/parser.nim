@@ -27,25 +27,25 @@ template check(cond, msg: untyped): untyped =
 func formatMsg(msg: string, at: int, exp: string): string =
   # todo: overflow checks
   const spaces = repeat(' ', "\n".len)
-  var exp = exp.replace("\n", spaces)
+  let exp = exp.replace("\n", spaces)
   var start = max(0, at-15)
   var mark = at
-  var expMsg = msg
-  expMsg.add("\n")
+  result = msg
+  result.add("\n")
   if not exp.runeSubStr(start, at-1).isAsciiPrintable:
     start = at-1
     let cleft = "~$# chars~" %% $start
     mark = cleft.len+1
-    expMsg.add(cleft)
+    result.add(cleft)
   elif start > 0:
     let cleft = "~$# chars~" %% $start
     mark = cleft.len+15
-    expMsg.add(cleft)
-  expMsg.add(exp.runeSubStr(start, 30))
+    result.add(cleft)
+  result.add(exp.runeSubStr(start, 30))
   if start+30 < exp.len:
-    expMsg.add("~$# chars~" %% $(exp.len - start - 30))
-  expMsg.add("\n")
-  expMsg.add(strutils.align("^", mark))
+    result.add("~$# chars~" %% $(exp.len - start - 30))
+  result.add("\n")
+  result.add(strutils.align("^", mark))
 
 template check(cond, msg, at, exp: untyped): untyped =
   {.line: instantiationInfo(fullPaths = true).}:

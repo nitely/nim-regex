@@ -410,21 +410,17 @@ and so on. However, it cannot be helped in cases where
 the regex is passed to the program at runtime (from terminal input,
 network, or text files).
 
-To compile the regex at runtime define the regex literal
-as a ``var/let``, or pass the string expression as a ``var``.
+To compile the regex at runtime pass the regex expression as a ``var/let``.
 
 .. code-block:: nim
     :test:
     let text = "abc"
     block:
-      var rexp = re2".+"
-      doAssert match(text, rexp)
+      var rexp = r".+"
+      doAssert match(text, re2(rexp))
     block:
-      let rexp = re2".+"
-      doAssert match(text, rexp)
-    block:
-      var exp = r".+"
-      doAssert match(text, re2(exp))
+      let rexp = r".+"
+      doAssert match(text, re2(rexp))
     block:
       func myFn(s: string, exp: string) =
         doAssert match(s, re2(exp))

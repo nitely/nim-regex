@@ -18,7 +18,7 @@ type
     look: var Lookaround,
     start: int,
     flags: MatchFlags
-  ): bool {.noSideEffect, raises: [].}
+  ): bool {.nimcall, noSideEffect, raises: [].}
   BehindSig = proc (
     smA, smB: var Submatches,
     capts: var Capts3,
@@ -28,7 +28,7 @@ type
     look: var Lookaround,
     start, limit: int,
     flags: MatchFlags
-  ): int {.noSideEffect, raises: [].}
+  ): int {.nimcall, noSideEffect, raises: [].}
   Lookaround* = object
     ahead*: AheadSig
     behind*: BehindSig

@@ -8,7 +8,7 @@ import ./litopt
 when defined(regexDotDir):
   import ./dotgraph
 
-func reImpl*(s: string, flags: RegexFlags = {}): Regex {.inline.} =
+func reImpl*(s: string, flags: RegexFlags = {}): Regex =
   if regexArbitraryBytes notin flags and verifyUtf8(s) != -1:
     raise newException(RegexError, "Invalid utf-8 regex")
   var groups: GroupsCapture

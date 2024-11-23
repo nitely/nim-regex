@@ -498,7 +498,7 @@ when not defined(forceRegexAtRuntime):
   func re2*(
     s: static string,
     flags: static RegexFlags = {}
-  ): static[Regex2] {.inline.} =
+  ): static[Regex2] =
     ## Parse and compile a regular expression at compile-time
     toRegex2 reCt(s, flags)
 
@@ -575,7 +575,7 @@ func match*(
   pattern: Regex2,
   m: var RegexMatch2,
   start = 0
-): bool {.inline, raises: [].} =
+): bool {.raises: [].} =
   ## return a match if the whole string
   ## matches the regular expression. This
   ## is similar to ``find(text, re"^regex$", m)``
@@ -588,7 +588,7 @@ func match*(
   debugCheckUtf8(s, pattern)
   result = matchImpl(s, pattern.toRegex, m, start)
 
-func match*(s: string, pattern: Regex2): bool {.inline, raises: [].} =
+func match*(s: string, pattern: Regex2): bool {.raises: [].} =
   debugCheckUtf8(s, pattern)
   var m: RegexMatch2
   result = matchImpl(s, pattern.toRegex, m)
@@ -648,7 +648,7 @@ func findAll*(
   s: string,
   pattern: Regex2,
   start = 0
-): seq[RegexMatch2] {.inline, raises: [].} =
+): seq[RegexMatch2] {.raises: [].} =
   for m in findAll(s, pattern, start):
     result.add m
 
@@ -686,7 +686,7 @@ func findAllBounds*(
   s: string,
   pattern: Regex2,
   start = 0
-): seq[Slice[int]] {.inline, raises: [].} =
+): seq[Slice[int]] {.raises: [].} =
   for m in findAllBounds(s, pattern, start):
     result.add m
 
@@ -695,7 +695,7 @@ func find*(
   pattern: Regex2,
   m: var RegexMatch2,
   start = 0
-): bool {.inline, raises: [].} =
+): bool {.raises: [].} =
   ## search through the string looking for the first
   ## location where there is a match
   runnableExamples:
@@ -715,7 +715,7 @@ func find*(
   return false
 
 # XXX find shortest match; disable captures
-func contains*(s: string, pattern: Regex2): bool {.inline, raises: [].} =
+func contains*(s: string, pattern: Regex2): bool {.raises: [].} =
   runnableExamples:
     doAssert re2"bc" in "abcd"
     doAssert re2"(23)+" in "23232"
@@ -751,7 +751,7 @@ iterator split*(s: string, sep: Regex2): string {.inline, raises: [].} =
         yield substr(s, first, last-1)
       first = ab.b+1
 
-func split*(s: string, sep: Regex2): seq[string] {.inline, raises: [].} =
+func split*(s: string, sep: Regex2): seq[string] {.raises: [].} =
   ## return not matched substrings
   runnableExamples:
     doAssert split("11a22Ϊ33Ⓐ44弢55", re2"\d+") ==
@@ -760,7 +760,7 @@ func split*(s: string, sep: Regex2): seq[string] {.inline, raises: [].} =
   for w in split(s, sep):
     result.add w
 
-func splitIncl*(s: string, sep: Regex2): seq[string] {.inline, raises: [].} =
+func splitIncl*(s: string, sep: Regex2): seq[string] {.raises: [].} =
   ## return not matched substrings, including captured groups
   runnableExamples:
     let
@@ -795,7 +795,7 @@ func startsWith*(
   s: string,
   pattern: Regex2,
   start = 0
-): bool {.inline, raises: [].} =
+): bool {.raises: [].} =
   ## return whether the string
   ## starts with the pattern or not
   runnableExamples:
@@ -805,7 +805,7 @@ func startsWith*(
   debugCheckUtf8(s, pattern)
   startsWithImpl2(s, pattern.toRegex, start)
 
-func endsWith*(s: string, pattern: Regex2): bool {.inline, raises: [].} =
+func endsWith*(s: string, pattern: Regex2): bool {.raises: [].} =
   ## return whether the string
   ## ends with the pattern or not
   runnableExamples:
@@ -842,7 +842,7 @@ func replace*(
   pattern: Regex2,
   by: string,
   limit = 0
-): string {.inline, raises: [ValueError].} =
+): string {.raises: [ValueError].} =
   ## Replace matched substrings.
   ##
   ## Matched groups can be accessed with ``$N``
@@ -887,7 +887,7 @@ func replace*(
   pattern: Regex2,
   by: proc (m: RegexMatch2, s: string): string,
   limit = 0
-): string {.inline, raises: [], effectsOf: by.} =
+): string {.raises: [], effectsOf: by.} =
   ## Replace matched substrings.
   ##
   ## If ``limit`` is given, at most ``limit``
@@ -988,7 +988,7 @@ func re*(
 when not defined(forceRegexAtRuntime):
   func re*(
     s: static string
-  ): static[Regex] {.inline, deprecated: "use re2(static string) instead".} =
+  ): static[Regex] {.deprecated: "use re2(static string) instead".} =
     reCt(s)
 
 func toPattern*(
@@ -1077,11 +1077,11 @@ func match*(
   pattern: Regex,
   m: var RegexMatch,
   start = 0
-): bool {.inline, raises: [], deprecated: "use match(string, Regex2, var RegexMatch2) instead".} =
+): bool {.raises: [], deprecated: "use match(string, Regex2, var RegexMatch2) instead".} =
   debugCheckUtf8 s
   result = matchImpl(s, pattern, m, start)
 
-func match*(s: string, pattern: Regex): bool {.inline, raises: [], deprecated: "use match(string, Regex2) instead".} =
+func match*(s: string, pattern: Regex): bool {.raises: [], deprecated: "use match(string, Regex2) instead".} =
   debugCheckUtf8 s
   var m: RegexMatch
   result = matchImpl(s, pattern, m)
@@ -1111,7 +1111,7 @@ func findAll*(
   s: string,
   pattern: Regex,
   start = 0
-): seq[RegexMatch] {.inline, raises: [], deprecated: "use findAll(string, Regex2) instead".} =
+): seq[RegexMatch] {.raises: [], deprecated: "use findAll(string, Regex2) instead".} =
   for m in findAll(s, pattern, start):
     result.add m
 
@@ -1138,17 +1138,17 @@ func findAllBounds*(
   s: string,
   pattern: Regex,
   start = 0
-): seq[Slice[int]] {.inline, raises: [], deprecated: "use findAllBounds(string, Regex2) instead".} =
+): seq[Slice[int]] {.raises: [], deprecated: "use findAllBounds(string, Regex2) instead".} =
   for m in findAllBounds(s, pattern, start):
     result.add m
 
 func findAndCaptureAll*(
   s: string, pattern: Regex
-): seq[string] {.inline, raises: [], deprecated: "use findAll(string, Regex2) instead".} =
+): seq[string] {.raises: [], deprecated: "use findAll(string, Regex2) instead".} =
   for m in s.findAll(pattern):
     result.add s[m.boundaries]
 
-func contains*(s: string, pattern: Regex): bool {.inline, raises: [], deprecated: "use contains(string, Regex2) instead".} =
+func contains*(s: string, pattern: Regex): bool {.raises: [], deprecated: "use contains(string, Regex2) instead".} =
   for _ in findAllBounds(s, pattern):
     return true
   return false
@@ -1158,7 +1158,7 @@ func find*(
   pattern: Regex,
   m: var RegexMatch,
   start = 0
-): bool {.inline, raises: [], deprecated: "use find(string, Regex2, var RegexMatch2) instead".} =
+): bool {.raises: [], deprecated: "use find(string, Regex2, var RegexMatch2) instead".} =
   m.clear()
   for m2 in findAll(s, pattern, start):
     m.captures.add m2.captures
@@ -1185,11 +1185,11 @@ iterator split*(s: string, sep: Regex): string {.inline, raises: [], deprecated:
         yield substr(s, first, last-1)
       first = ab.b+1
 
-func split*(s: string, sep: Regex): seq[string] {.inline, raises: [], deprecated: "use split(string, Regex2) instead".} =
+func split*(s: string, sep: Regex): seq[string] {.raises: [], deprecated: "use split(string, Regex2) instead".} =
   for w in split(s, sep):
     result.add w
 
-func splitIncl*(s: string, sep: Regex): seq[string] {.inline, raises: [], deprecated: "use splitIncl(string, Regex2) instead".} =
+func splitIncl*(s: string, sep: Regex): seq[string] {.raises: [], deprecated: "use splitIncl(string, Regex2) instead".} =
   template ab: untyped = m.boundaries
   debugCheckUtf8 s
   var
@@ -1215,7 +1215,7 @@ func splitIncl*(s: string, sep: Regex): seq[string] {.inline, raises: [], deprec
 
 func startsWith*(
   s: string, pattern: Regex, start = 0
-): bool {.inline, raises: [], deprecated: "use startsWith(string, Regex2) instead".} =
+): bool {.raises: [], deprecated: "use startsWith(string, Regex2) instead".} =
   debugCheckUtf8 s
   startsWithImpl(s, pattern, start)
 
@@ -1227,7 +1227,7 @@ template runeIncAt(s: string, n: var int) =
   else:
     n = s.len+1
 
-func endsWith*(s: string, pattern: Regex): bool {.inline, raises: [], deprecated: "use endsWith(string, Regex2) instead".} =
+func endsWith*(s: string, pattern: Regex): bool {.raises: [], deprecated: "use endsWith(string, Regex2) instead".} =
   debugCheckUtf8 s
   result = false
   var
@@ -1263,7 +1263,7 @@ func replace*(
   pattern: Regex,
   by: string,
   limit = 0
-): string {.inline, raises: [ValueError], deprecated: "use replace(string, Regex2, string) instead".} =
+): string {.raises: [ValueError], deprecated: "use replace(string, Regex2, string) instead".} =
   debugCheckUtf8 s
   result = ""
   var
@@ -1289,7 +1289,7 @@ func replace*(
   pattern: Regex,
   by: proc (m: RegexMatch, s: string): string,
   limit = 0
-): string {.inline, raises: [], effectsOf: by, deprecated: "use replace(string, Regex2, proc(RegexMatch2, string): string) instead".} =
+): string {.raises: [], effectsOf: by, deprecated: "use replace(string, Regex2, proc(RegexMatch2, string): string) instead".} =
   debugCheckUtf8 s
   result = ""
   var i, j = 0

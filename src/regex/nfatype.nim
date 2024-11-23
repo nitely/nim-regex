@@ -263,13 +263,11 @@ when defined(js) and (NimMajor, NimMinor) >= (1, 6) and (NimMajor, NimMinor) <= 
       #flags*: set[RegexFlag]
       litOpt*: LitOpt
 
-  {.push inline, noSideEffect.}
-  converter toRegex2*(r: Regex): Regex2 =
+  func toRegex2*(r: Regex): Regex2 =
     Regex2(nfa: r.nfa, groupsCount: r.groupsCount, namedGroups: r.namedGroups, litOpt: r.litOpt)
 
-  converter toRegex*(r: Regex2): Regex =
+  func toRegex*(r: Regex2): Regex =
     Regex(nfa: r.nfa, groupsCount: r.groupsCount, namedGroups: r.namedGroups, litOpt: r.litOpt)
-  {.pop.}
 else:
   type
     Regex2* = distinct Regex

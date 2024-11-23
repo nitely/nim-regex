@@ -10,9 +10,10 @@ import ./types
 import ./common
 import ./scanner
 
-func check(cond: bool, msg: string) {.inline.} =
-  if not cond:
-    raise newException(RegexError, msg)
+template check(cond, msg: untyped): untyped =
+  {.line: instantiationInfo(fullPaths = true).}:
+    if not cond:
+      raise newException(RegexError, msg)
 
 func isAsciiPrintable(s: string): bool =
   result = true

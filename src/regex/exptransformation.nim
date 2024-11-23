@@ -20,9 +20,10 @@ func swapCase(r: Rune): Rune =
   else:
     result = r
 
-func check(cond: bool, msg: string) =
-  if not cond:
-    raise newException(RegexError, msg)
+template check(cond, msg: untyped): untyped =
+  {.line: instantiationInfo(fullPaths = true).}:
+    if not cond:
+      raise newException(RegexError, msg)
 
 func fixEmptyOps(exp: Exp): Exp =
   ## Handle "|", "(|)", "a|", "|b", "||", "a||b", ...

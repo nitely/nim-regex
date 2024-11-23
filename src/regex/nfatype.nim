@@ -138,13 +138,12 @@ func diverge*(capts: var Capts3, captIdx: CaptIdx): CaptIdx =
     capts.s.setLen(capts.s.len+capts.blockSize)
     capts.states.add stsInitial
     doAssert result == capts.states.len-1
+  let idx = capts.blockIdx(result)
   if captIdx != -1:
-    let idx = capts.blockIdx(result)
     let cidx = capts.blockIdx(captIdx)
     for i in 0 .. capts.blockSize-1:
       capts.s[idx+i] = capts.s[cidx+i]
   else:
-    let idx = capts.blockIdx(result)
     for i in 0 .. capts.blockSize-1:
       capts.s[idx+i] = nonCapture
 

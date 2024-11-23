@@ -4,9 +4,10 @@ import std/algorithm
 import ./types
 import ./common
 
-func check(cond: bool, msg: string) =
-  if not cond:
-    raise newException(RegexError, msg)
+template check(cond, msg: untyped): untyped =
+  {.line: instantiationInfo(fullPaths = true).}:
+    if not cond:
+      raise newException(RegexError, msg)
 
 type
   End = seq[int16]

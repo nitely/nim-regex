@@ -1,4 +1,4 @@
-import std/unicode
+import std/unicode except `==`
 import std/sets
 
 import pkg/unicodedb/properties
@@ -6,6 +6,9 @@ import pkg/unicodedb/types as utypes
 
 import ./types
 import ./common
+
+func `==`(a, b: Rune): bool {.inline.} =
+  a.int32 == b.int32
 
 func isWord(r: Rune): bool {.inline.} =
   utmWord in unicodeTypes(r)
@@ -16,7 +19,7 @@ func isDecimal(r: Rune): bool {.inline.} =
 func isWordAscii(r: Rune): bool {.inline.} =
   ## return ``true`` if the given
   ## rune is in ``[A-Za-z0-9]`` range
-  case r.int
+  case r.int32
   of 'A'.ord .. 'Z'.ord,
       'a'.ord .. 'z'.ord,
       '0'.ord .. '9'.ord,
@@ -26,8 +29,8 @@ func isWordAscii(r: Rune): bool {.inline.} =
     false
 
 template isWordBoundaryImpl(r, nxt, isWordProc): bool =
-  (r.int > -1 and isWordProc(r)) xor
-    (nxt.int > -1 and isWordProc(nxt))
+  (r.int32 > -1 and isWordProc(r)) xor
+    (nxt.int32 > -1 and isWordProc(nxt))
 
 func isWordBoundary(r: Rune, nxt: Rune): bool {.inline.} =
   ## check if current match
@@ -77,7 +80,7 @@ func isWhiteSpace(r: Rune): bool {.inline.} =
   utmWhiteSpace in unicodeTypes(r)
 
 func isWhiteSpaceAscii(r: Rune): bool {.inline.} =
-  case r.int
+  case r.int32
   of ' '.ord,
       '\t'.ord,
       '\L'.ord,
@@ -89,7 +92,7 @@ func isWhiteSpaceAscii(r: Rune): bool {.inline.} =
     false
 
 func isDigitAscii(r: Rune): bool {.inline.} =
-  case r.int
+  case r.int32
   of '0'.ord .. '9'.ord:
     true
   else:
@@ -107,8 +110,10 @@ func match*(n: Node, r: Rune): bool {.inline.} =
   ## match for ``Node`` of matchable kind.
   ## Return whether the node matches
   ## the current character or not
-  if r.int < 0:
+  if r.int32 < 0:
     return n.kind == reEOE
+  if n.kind == reChar:
+    return n.cp == r
   case n.kind
   of reEOE:
     r == invalidRune

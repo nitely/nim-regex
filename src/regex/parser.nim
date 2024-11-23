@@ -10,11 +10,6 @@ import ./types
 import ./common
 import ./scanner
 
-template check(cond, msg: untyped): untyped =
-  {.line: instantiationInfo(fullPaths = true).}:
-    if not cond:
-      raise newException(RegexError, msg)
-
 func isAsciiPrintable(s: string): bool =
   result = true
   for c in s.runes:
@@ -24,33 +19,42 @@ func isAsciiPrintable(s: string): bool =
     else:
       return false
 
-func check(cond: bool, msg: string, at: int, exp: string) =
-  if not cond:
-    # todo: overflow checks
-    const spaces = repeat(' ', "\n".len)
-    var exp = exp.replace("\n", spaces)
-    var start = max(0, at-15)
-    var mark = at
-    var expMsg = msg
-    expMsg.add("\n")
-    if not exp.runeSubStr(start, at-1).isAsciiPrintable:
-      start = at-1
-      let cleft = "~$# chars~" %% $start
-      mark = cleft.len+1
-      expMsg.add(cleft)
-    elif start > 0:
-      let cleft = "~$# chars~" %% $start
-      mark = cleft.len+15
-      expMsg.add(cleft)
-    expMsg.add(exp.runeSubStr(start, 30))
-    if start+30 < exp.len:
-      expMsg.add("~$# chars~" %% $(exp.len - start - 30))
-    expMsg.add("\n")
-    expMsg.add(strutils.align("^", mark))
-    raise newException(RegexError, expMsg)
+template check(cond, msg: untyped): untyped =
+  {.line: instantiationInfo(fullPaths = true).}:
+    if not cond:
+      raise newException(RegexError, msg)
 
-template prettyCheck(cond: bool, msg: string) {.dirty.} =
-  check(cond, msg, startPos, sc.raw)
+func formatMsg(msg: string, at: int, exp: string): string =
+  # todo: overflow checks
+  const spaces = repeat(' ', "\n".len)
+  var exp = exp.replace("\n", spaces)
+  var start = max(0, at-15)
+  var mark = at
+  var expMsg = msg
+  expMsg.add("\n")
+  if not exp.runeSubStr(start, at-1).isAsciiPrintable:
+    start = at-1
+    let cleft = "~$# chars~" %% $start
+    mark = cleft.len+1
+    expMsg.add(cleft)
+  elif start > 0:
+    let cleft = "~$# chars~" %% $start
+    mark = cleft.len+15
+    expMsg.add(cleft)
+  expMsg.add(exp.runeSubStr(start, 30))
+  if start+30 < exp.len:
+    expMsg.add("~$# chars~" %% $(exp.len - start - 30))
+  expMsg.add("\n")
+  expMsg.add(strutils.align("^", mark))
+
+template check(cond, msg, at, exp: untyped): untyped =
+  {.line: instantiationInfo(fullPaths = true).}:
+    if not cond:
+      raise newException(RegexError, formatMsg(msg, at, exp))
+
+template prettyCheck(cond, msg: untyped): untyped {.dirty.} =
+  {.line: instantiationInfo(fullPaths = true).}:
+    check(cond, msg, startPos, sc.raw)
 
 func toShorthandNode(r: Rune): Node =
   ## the given character must be a shorthand or

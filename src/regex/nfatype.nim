@@ -49,10 +49,9 @@ func `[]`*(capts: var Capts3, i, j: Natural): var Slice[int] {.inline.} =
   doAssert j <= capts.blockSize-1
   result = capts.s[(i shl capts.blockSizeL2) + j]  # i * blockSize
 
-func `[]=`(capts: var Capts3, i, j: Natural, x: Slice[int]) {.inline.} =
-  doAssert i <= capts.len-1
-  doAssert j <= capts.blockSize-1
-  capts.s[(i shl capts.blockSizeL2) + j] = x
+func blockIdx(capts: Capts3, blockNum: Natural): int {.inline.} =
+  assert blockNum <= capts.len-1
+  blockNum shl capts.blockSizeL2
 
 when defined(js):
   func jsLog2(x: Natural): int {.importjs: "Math.log2(@)".}
@@ -133,18 +132,21 @@ func unfreeze*(capts: var Capts3, freezeId: CaptState) =
 func diverge*(capts: var Capts3, captIdx: CaptIdx): CaptIdx =
   if capts.free.len > 0:
     result = capts.free.pop
-    for i in 0 .. capts.blockSize-1:
-      capts[result, i] = nonCapture
     capts.states[result].to stsInitial
   else:
     result = capts.len.CaptIdx
-    for _ in 0 .. capts.blockSize-1:
-      capts.s.add nonCapture
+    capts.s.setLen(capts.s.len+capts.blockSize)
     capts.states.add stsInitial
     doAssert result == capts.states.len-1
   if captIdx != -1:
+    let idx = capts.blockIdx(result)
+    let cidx = capts.blockIdx(captIdx)
     for i in 0 .. capts.blockSize-1:
-      capts[result, i] = capts[captIdx, i]
+      capts.s[idx+i] = capts.s[cidx+i]
+  else:
+    let idx = capts.blockIdx(result)
+    for i in 0 .. capts.blockSize-1:
+      capts.s[idx+i] = nonCapture
 
 func recycle*(capts: var Capts3) =
   ## Free recyclable entries
@@ -372,13 +374,13 @@ func setLen*(item: var SmLookaroundItem, size: int) {.inline.} =
     item.a.setLen size
     item.b.setLen size
 
-template last*(sm: var SmLookaround): untyped =
+template last*(sm: SmLookaround): untyped =
   sm.s[sm.i-1]
 
-template lastA*(sm: var SmLookaround): untyped =
+template lastA*(sm: SmLookaround): untyped =
   last(sm).a
 
-template lastB*(sm: var SmLookaround): untyped =
+template lastB*(sm: SmLookaround): untyped =
   last(sm).b
 
 func grow*(sm: var SmLookaround) {.inline.} =

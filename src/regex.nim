@@ -674,7 +674,7 @@ iterator findAllBounds*(
   let flags = {mfNoCaptures}
   while i <= len(s):
     doAssert(i > i2); i2 = i
-    i = findSomeOptTpl(s, pattern.toRegex, ms, i, flags)
+    i = findSomeOptTpl(s, pattern.toRegex, ms, i)
     #debugEcho i
     if i < 0: break
     for ab in ms.bounds:

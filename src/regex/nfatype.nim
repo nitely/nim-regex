@@ -394,6 +394,10 @@ func removeLast*(sm: var SmLookaround) {.inline.} =
   sm.i -= 1
 
 when isMainModule:
+  func `[]=`(capts: var Capts3, i, j: Natural, x: Slice[int]) =
+    doAssert i <= capts.len-1
+    doAssert j <= capts.blockSize-1
+    capts.s[(i shl capts.blockSizeL2) + j] = x
   block:
     var capts = initCapts3(2)
     doAssert capts.len == 0

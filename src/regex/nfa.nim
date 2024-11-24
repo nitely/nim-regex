@@ -226,15 +226,15 @@ func eRemoval*(eNfa: Enfa): Nfa {.raises: [].} =
     doAssert statesMap[qa] > -1
     result.s[statesMap[qa]].next.setLen 0
     for qb, transitions in closure.items:
+      if statesMap[qb] == -1:
+        result.s.add eNfa.s[qb]
+        statesMap[qb] = result.s.len.int16-1
+      result.s[statesMap[qa]].next.add statesMap[qb]
       for eti in transitions:
         if statesMap[eti] == -1:
           result.s.add eNfa.s[eti]
           statesMap[eti] = result.s.len.int16-1
         result.s[statesMap[qa]].next.add statesMap[eti]
-      if statesMap[qb] == -1:
-        result.s.add eNfa.s[qb]
-        statesMap[qb] = result.s.len.int16-1
-      result.s[statesMap[qa]].next.add statesMap[qb]
       if qb notin qu:
         qu.incl qb
         qw.addFirst qb

@@ -34,7 +34,7 @@ type
     nfa: Nfa,
     look: Lookaround,
     flags: set[MatchFlag]
-  ): NimNode {.noSideEffect, raises: [].}
+  ): NimNode {.nimcall, noSideEffect, raises: [].}
   Lookaround = object
     ahead, behind: Sig
     smL: NimNode
@@ -266,11 +266,12 @@ func genLookaroundMatch(
     removeLast `smL`
 
 func getEpsilonTransitions(nfa: Nfa, n: Node, nti: int): seq[int] =
-  for i in countdown(nti-1, 0):
+  doAssert not isEpsilonTransition(n)
+  doAssert nti <= n.next.len-1
+  for i in nti+1 .. n.next.len-1:
     if not isEpsilonTransition(nfa.s[n.next[i]]):
       break
     result.add n.next[i]
-  result.reverse()
 
 func genMatchedBody(
   smB, ntLit, capt, bounds, matched, captx,

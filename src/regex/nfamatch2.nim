@@ -91,11 +91,15 @@ template nextStateTpl(bwMatch = false): untyped {.dirty.} =
       if not smB.hasState n:
         smB.add (n, capt, bounds)
       break
+    let L = nfa.s[n].next.len
     var nti = 0
-    while nti <= nfa.s[n].next.len-1:
-      matched = true
+    while nti < L:
+      let nt0 = nt
+      matched = not smB.hasState(nt) and
+        (ntn.match(c) or (anchored and ntn.kind == reEoe))
+      inc nti
       captx = capt
-      while isEpsilonTransition(ntn):
+      while nti < L and isEpsilonTransition(ntn):
         if matched:
           case ntn.kind
           of reGroupStart:
@@ -124,11 +128,8 @@ template nextStateTpl(bwMatch = false): untyped {.dirty.} =
             doAssert false
             discard
         inc nti
-      if matched and
-          not smB.hasState(nt) and
-          (ntn.match(c) or (anchored and ntn.kind == reEoe)):
-        smB.add (nt, captx, bounds2)
-      inc nti
+      if matched:
+        smB.add (nt0, captx, bounds2)
   swap smA, smB
   capts.recycle()
 

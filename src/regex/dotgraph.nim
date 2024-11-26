@@ -5,6 +5,14 @@ import std/os
 import ./nfatype
 import ./types
 
+func getEpsilonTransitions(nfa: Nfa, n: Node, nti: int): seq[int] =
+  doAssert not isEpsilonTransition(n)
+  doAssert nti <= n.next.len-1
+  for i in nti+1 .. n.next.len-1:
+    if not isEpsilonTransition(nfa.s[n.next[i]]):
+      break
+    result.add n.next[i]
+
 func color(n: Node): string =
   case n.kind
   of matchableKind: "black"
@@ -29,12 +37,13 @@ func graph*(nfa: Nfa): string =
     result.add tab
     var t = ""
     var ii = 0
-    for n2 in n.next:
+    for nti, n2 in pairs n.next:
       if isEpsilonTransition(nfa.s[n2]):
+        continue
+      for n3 in getEpsilonTransitions(nfa, n, nti):
         if t.len > 0:
           t &= ", "
-        t &= $nfa.s[n2]
-        continue
+        t &= $nfa.s[n3]
       if t.len > 0:
         t = ", {" & t & "}"
       let label = ($nfa.s[n2] & t & ", i=" & $ii).replace(r"\", r"\\")

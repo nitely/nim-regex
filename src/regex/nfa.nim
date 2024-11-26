@@ -147,8 +147,8 @@ func eNfa*(exp: RpnExp): Enfa {.raises: [RegexError].} =
   result.s.add initSkipNode(states)
 
 type
-  Etransitions = seq[int16]  # xxx transitions
-  TeClosure = seq[(int16, Etransitions)]
+  Transitions = seq[int16]
+  TeClosure = seq[(int16, Transitions)]
 
 func isEpsilonTransition2(n: Node): bool {.inline.} =
   result = case n.kind
@@ -164,24 +164,24 @@ func teClosure(
   eNfa: Enfa,
   state: int16,
   processing: var seq[int16],
-  eTransitions: Etransitions
+  transitions: Transitions
 ) =
-  var eTransitionsCurr = eTransitions
+  var transitionsCurr = transitions
   if isEpsilonTransition2 eNfa.s[state]:
-    eTransitionsCurr.add state
+    transitionsCurr.add state
   if eNfa.s[state].kind in matchableKind + {reEOE}:
-    result.add (state, eTransitionsCurr)
+    result.add (state, transitionsCurr)
     return
   for i, s in pairs eNfa.s[state].next:
     # Enter loops only once. "a", re"(a*)*" -> ["a", ""]
     if eNfa.s[state].kind in repetitionKind:
       if s notin processing or i == int(eNfa.s[state].isGreedy):
         processing.add s
-        teClosure(result, eNfa, s, processing, eTransitionsCurr)
+        teClosure(result, eNfa, s, processing, transitionsCurr)
         discard processing.pop()
       # else skip loop
     else:
-      teClosure(result, eNfa, s, processing, eTransitionsCurr)
+      teClosure(result, eNfa, s, processing, transitionsCurr)
 
 func teClosure(
   result: var TeClosure,
@@ -190,9 +190,9 @@ func teClosure(
   processing: var seq[int16]
 ) =
   doAssert processing.len == 0
-  var eTransitions: Etransitions
+  var transitions: Transitions
   for s in eNfa.s[state].next:
-    teClosure(result, eNfa, s, processing, eTransitions)
+    teClosure(result, eNfa, s, processing, transitions)
 
 func eRemoval*(eNfa: Enfa): Nfa {.raises: [].} =
   ## Remove e-transitions and return
@@ -225,16 +225,16 @@ func eRemoval*(eNfa: Enfa): Nfa {.raises: [].} =
     teClosure(closure, eNfa, qa, processing)
     doAssert statesMap[qa] > -1
     result.s[statesMap[qa]].next.setLen 0
-    for qb, eTransitions in closure.items:
-      for eti in eTransitions:
-        if statesMap[eti] == -1:
-          result.s.add eNfa.s[eti]
-          statesMap[eti] = result.s.len.int16-1
-        result.s[statesMap[qa]].next.add statesMap[eti]
+    for qb, transitions in closure.items:
       if statesMap[qb] == -1:
         result.s.add eNfa.s[qb]
         statesMap[qb] = result.s.len.int16-1
       result.s[statesMap[qa]].next.add statesMap[qb]
+      for eti in transitions:
+        if statesMap[eti] == -1:
+          result.s.add eNfa.s[eti]
+          statesMap[eti] = result.s.len.int16-1
+        result.s[statesMap[qa]].next.add statesMap[eti]
       if qb notin qu:
         qu.incl qb
         qw.addFirst qb

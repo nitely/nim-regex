@@ -125,11 +125,16 @@ func submatch(
   var eoeFound = false
   var smi = 0
   while smi < smA.len:
+    let L = nfa[n].next.len
     var nti = 0
-    while nti <= nfa[n].next.len-1:
-      matched = true
+    while nti < L:
+      let isEoe = ntn.kind == reEoe
+      let nt0 = nt
+      matched = not smB.hasState(nt) and
+        (ntn.match(c.Rune) or ntn.kind == reEoe)
+      inc nti
       captx = capt
-      while isEpsilonTransition(ntn):
+      while nti < L and isEpsilonTransition(ntn):
         if matched:
           case ntn.kind
           of groupKind:
@@ -146,10 +151,8 @@ func submatch(
             doAssert false
             discard
         inc nti
-      if matched and
-          not smB.hasState(nt) and
-          (ntn.match(c.Rune) or ntn.kind == reEoe):
-        if ntn.kind == reEoe:
+      if matched:
+        if isEoe:
           #debugEcho "eoe ", bounds, " ", ms.m
           ms.m.add (captx, bounds.a .. i-1)
           smA.clear()
@@ -158,8 +161,7 @@ func submatch(
             smA.add (0'i16, -1'i32, i .. i-1)
           smi = -1
           break
-        smB.add (nt, captx, bounds.a .. i-1)
-      inc nti
+        smB.add (nt0, captx, bounds.a .. i-1)
     inc smi
   swap smA, smB
 

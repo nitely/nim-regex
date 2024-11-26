@@ -108,7 +108,6 @@ template nextStateTpl(bwMatch = false): untyped {.dirty.} =
         inc nti
       if matched:
         smB.add (nt0, captx, bounds2)
-      inc nti
   swap smA, smB
 
 func matchImpl(

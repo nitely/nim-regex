@@ -162,7 +162,6 @@ func submatch(
           smi = -1
           break
         smB.add (nt0, captx, bounds.a .. i-1)
-      inc nti
     inc smi
   swap smA, smB
 

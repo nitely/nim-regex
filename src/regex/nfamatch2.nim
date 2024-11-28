@@ -76,7 +76,7 @@ func lookAround*(
     false
   smL.removeLast()
 
-func epsilonMatch(
+func epsilonMatch*(
   matched: var bool,
   captx: var int32,
   capts: var Capts3,
@@ -87,7 +87,7 @@ func epsilonMatch(
   cPrev: int32,
   c: Rune,
   flags: MatchFlags,
-  bwMatch: bool
+  bwMatch = false
 ) =
   template captElm: untyped =
     capts[captx, ntn.idx]

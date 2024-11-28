@@ -305,7 +305,7 @@ func genMatchedBody(
           parent: `captx`,
           bound: `charIdx`,
           idx: `zIdx`))
-        `captx` = (len(`capts`) - 1).CaptIdx
+        `captx` = (len(`capts`) - 1).int32
     of assertionKind - lookaroundKind:
       let matchCond = if mfBwMatch in flags:
         genMatch(z, c, cPrev)
@@ -477,7 +477,7 @@ func matchImpl(
       `cPrev` = -1'i32
       `i` = `start`
       iNext = `start`
-      `captx` {.used.} = -1.CaptIdx
+      `captx` {.used.} = -1'i32
     if `start`-1 in 0 .. `text`.len-1:
       `cPrev` = bwRuneAt(`text`, `start`-1).int32
     clear(`smA`)
@@ -528,7 +528,7 @@ func reversedMatchImpl(
       `cPrev` = -1'i32
       `i` = `start`
       iNext = `start`
-      `captx` {.used.} = -1.CaptIdx
+      `captx` {.used.} = -1'i32
     if `start` in 0 .. `text`.len-1:
       `cPrev` = runeAt(`text`, `start`).int32
     clear(`smA`)
@@ -591,7 +591,7 @@ proc matchImpl*(text, expLit, body: NimNode): NimNode =
         `smA` = newSubmatches `nfaLenLit`
         `smB` = newSubmatches `nfaLenLit`
         `capts` = default(Capts)
-        `capt` = -1.CaptIdx
+        `capt` = -1'i32
         `matched` = false
         `smL` {.used.} = default(SmLookaround)
       `matchImplStmt`

@@ -34,7 +34,7 @@ type
     behind*: BehindSig
     smL*: SmLookaround
 
-func lookAround*(
+func lookAround(
   ntn: Node,
   capts: var Capts3,
   captIdx: var int32,
@@ -76,22 +76,76 @@ func lookAround*(
     false
   smL.removeLast()
 
-template nextStateTpl(bwMatch = false): untyped {.dirty.} =
-  template bounds2: untyped =
-    when bwMatch: i .. bounds.b else: bounds.a .. i-1
+func epsilonMatch*(
+  matched: var bool,
+  captx: var int32,
+  capts: var Capts3,
+  look: var Lookaround,
+  ntn: Node,
+  text: string,
+  i: int,
+  cPrev: int32,
+  c: Rune,
+  flags: MatchFlags,
+  bwMatch = false
+) =
   template captElm: untyped =
-    capts[captx, nfa.s[nt].idx]
-  template nt: untyped = nfa.s[n].next[nti]
-  template ntn: untyped = nfa.s[nt]
+    capts[captx, ntn.idx]
+  case ntn.kind
+  of reGroupStart:
+    captx = capts.diverge captx
+    if mfReverseCapts notin flags or
+        captElm.a == nonCapture.a:
+      captElm.a = i
+  of reGroupEnd:
+    captx = capts.diverge captx
+    if mfReverseCapts notin flags or
+        captElm.b == nonCapture.b:
+      captElm.b = i-1
+  of assertionKind - lookaroundKind:
+    if bwMatch:
+      matched = match(ntn, c, cPrev.Rune)
+    else:
+      matched = match(ntn, cPrev.Rune, c)
+  of lookaroundKind:
+    let freezed = capts.freeze()
+    matched = lookAround(ntn, capts, captx, text, look, i, flags)
+    capts.unfreeze freezed
+    if captx != -1:
+      capts.keepAlive captx
+  else:
+    doAssert false
+    discard
+
+func nextState(
+  smA, smB: var Submatches,
+  capts: var Capts3,
+  look: var Lookaround,
+  text: string,
+  nfa2: Nfa,
+  i: int,
+  cPrev: int32,
+  c: Rune,
+  flags: MatchFlags,
+  bwMatch = false
+) {.inline.} =
+  template nfa: untyped = nfa2.s
+  template bounds2: untyped =
+    if bwMatch: i .. bounds.b else: bounds.a .. i-1
+  template nt: untyped = nfa[n].next[nti]
+  template ntn: untyped = nfa[nt]
+  let anchored = mfAnchored in flags
+  var captx = 0'i32
+  var matched = true
   smB.clear()
   for n, capt, bounds in items smA:
     if capt != -1:
       capts.keepAlive capt
-    if anchored and nfa.s[n].kind == reEoe:
+    if anchored and nfa[n].kind == reEoe:
       if not smB.hasState n:
         smB.add (n, capt, bounds)
       break
-    let L = nfa.s[n].next.len
+    let L = nfa[n].next.len
     var nti = 0
     while nti < L:
       let nt0 = nt
@@ -101,32 +155,9 @@ template nextStateTpl(bwMatch = false): untyped {.dirty.} =
       captx = capt
       while nti < L and isEpsilonTransition(ntn):
         if matched:
-          case ntn.kind
-          of reGroupStart:
-            # XXX this can be avoided in some cases?
-            captx = capts.diverge captx
-            if mfReverseCapts notin flags or
-                captElm.a == nonCapture.a:
-              captElm.a = i
-          of reGroupEnd:
-            captx = capts.diverge captx
-            if mfReverseCapts notin flags or
-                captElm.b == nonCapture.b:
-              captElm.b = i-1
-          of assertionKind - lookaroundKind:
-            when bwMatch:
-              matched = match(ntn, c, cPrev.Rune)
-            else:
-              matched = match(ntn, cPrev.Rune, c)
-          of lookaroundKind:
-            let freezed = capts.freeze()
-            matched = lookAround(ntn, capts, captx, text, look, i, flags)
-            capts.unfreeze freezed
-            if captx != -1:
-              capts.keepAlive captx
-          else:
-            doAssert false
-            discard
+          epsilonMatch(
+            matched, captx, capts, look, ntn, text, i, cPrev, c, flags, bwMatch
+          )
         inc nti
       if matched:
         smB.add (nt0, captx, bounds2)
@@ -148,8 +179,6 @@ func matchImpl(
     cPrev = -1'i32
     i = start
     iNext = start
-    captx = -1'i32
-    matched = false
   let
     anchored = mfAnchored in flags
     binFlag = mfBytesInput in flags
@@ -166,7 +195,7 @@ func matchImpl(
       inc iNext
     else:
       fastRuneAt(text, iNext, c, true)
-    nextStateTpl()
+    nextState(smA, smB, capts, look, text, nfa, i, cPrev, c, flags)
     if smA.len == 0:
       return false
     if anchored and nfa.s[smA[0].ni].kind == reEoe:
@@ -174,7 +203,7 @@ func matchImpl(
     i = iNext
     cPrev = c.int32
   c = Rune(-1)
-  nextStateTpl()
+  nextState(smA, smB, capts, look, text, nfa, i, cPrev, c, flags)
   if smA.len > 0:
     captIdx = smA[0].ci
   return smA.len > 0
@@ -197,9 +226,7 @@ func reversedMatchImpl(
     cPrev = -1'i32
     i = start
     iNext = start
-    captx: int32
-    matched = false
-    anchored = true
+  let flags = flags + {mfAnchored}
   let binFlag = mfBytesInput in flags
   if start in 0 .. text.len-1:
     cPrev = if binFlag:
@@ -214,7 +241,7 @@ func reversedMatchImpl(
       dec iNext
     else:
       bwFastRuneAt(text, iNext, c)
-    nextStateTpl(bwMatch = true)
+    nextState(smA, smB, capts, look, text, nfa, i, cPrev, c, flags, bwMatch = true)
     if smA.len == 0:
       return -1
     if nfa.s[smA[0].ni].kind == reEoe:
@@ -228,7 +255,7 @@ func reversedMatchImpl(
       dec iNext
     else:
       bwFastRuneAt(text, iNext, c)
-  nextStateTpl(bwMatch = true)
+  nextState(smA, smB, capts, look, text, nfa, i, cPrev, c, flags, bwMatch = true)
   for n, capt, bounds in items smA:
     if nfa.s[n].kind == reEoe:
       captIdx = capt

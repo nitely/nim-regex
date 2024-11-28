@@ -28,6 +28,7 @@ template check(cond, msg: untyped): untyped =
 func fixEmptyOps(exp: Exp): Exp =
   ## Handle "|", "(|)", "a|", "|b", "||", "a||b", ...
   ## Handle "()"
+  result = default(Exp)
   result.s = newSeq[Node](exp.s.len)
   result.s.setLen 0
   for i in 0 .. exp.s.len-1:
@@ -46,6 +47,7 @@ func fixEmptyOps(exp: Exp): Exp =
 
 func greediness(exp: Exp): Exp =
   ## apply greediness to an expression
+  result = default(Exp)
   result.s = newSeq[Node](exp.s.len)
   result.s.setLen 0
   var sc = exp.s.scan()
@@ -156,6 +158,7 @@ func squash(flags: seq[seq[Flag]]): array[Flag, bool] =
   ## this will set/unset those flags
   ## in order. It should be done each time
   ## there is a group start/end
+  result = default(array[Flag, bool])
   for ff in flags:
     for f in ff:
       result[f.toggle()] = false
@@ -212,6 +215,7 @@ func applyFlag(n: var Node, f: Flag) =
 
 func applyFlags(exp: Exp, fls: RegexFlags): Exp =
   ## apply flags to each group
+  result = default(Exp)
   result.s = newSeq[Node](exp.s.len)
   result.s.setLen 0
   var flags = newSeq[seq[Flag]]()
@@ -276,6 +280,7 @@ func expandOneRepRange(subExpr: seq[Node], n: Node): seq[Node] =
 
 func expandRepRange(exp: Exp): Exp =
   ## expand every repetition range
+  result = default(Exp)
   result.s = newSeq[Node](exp.s.len)
   result.s.setLen 0
   var i: int
@@ -314,6 +319,7 @@ func expandRepRange(exp: Exp): Exp =
          "expected before repetition range"))
 
 func expandArbitrayBytes(exp: Exp, flags: RegexFlags): Exp =
+  result = default(Exp)
   if regexArbitraryBytes notin flags:
     return exp
   template addBytes(result, node, n: untyped): untyped =
@@ -361,6 +367,7 @@ func joinAtoms(exp: Exp): AtomsExp =
   ## Put a ``~`` joiner between atoms. An atom is
   ## a piece of expression that would loose
   ## meaning when breaking it up (i.e.: ``a~(b|c)*~d``)
+  result = default(AtomsExp)
   result.s = newSeq[Node](exp.s.len * 2)
   result.s.setLen 0
   var atomsCount = 0
@@ -407,13 +414,14 @@ func opsPA(nk: NodeKind): OpsPA =
       reZeroOrMore,
       reOneOrMore,
       reZeroOrOne:
-    result = (5, asyRight)
+    (5, asyRight)
   of reJoiner:
-    result = (4, asyLeft)
+    (4, asyLeft)
   of reOr:
-    result = (3, asyLeft)
+    (3, asyLeft)
   else:
     doAssert false
+    default(OpsPA)
 
 func hasPrecedence(a: NodeKind, b: NodeKind): bool =
   ## Check ``b`` has precedence over ``a``.
@@ -454,6 +462,7 @@ func rpn(exp: AtomsExp): RpnExp =
   ## the parsing of the regular expression into an NFA.
   ## Suffix notation removes nesting and so it can
   ## be parsed in a linear way instead of recursively
+  result = default(RpnExp)
   result.s = newSeq[Node](exp.s.len)
   result.s.setLen 0
   var ops = newSeq[Node]()
@@ -478,6 +487,7 @@ func rpn(exp: AtomsExp): RpnExp =
 func subExps(exp: AtomsExp, parentKind = reLookahead): AtomsExp =
   ## Collect and convert lookaround sub-expressions to RPN
   template n: untyped = result.s[^1]
+  result = default(AtomsExp)
   result.s = newSeq[Node](exp.s.len)
   result.s.setLen 0
   var i = 0

@@ -50,6 +50,7 @@ func update(
 
 func eNfa*(exp: RpnExp): Enfa {.raises: [RegexError].} =
   ## Thompson's construction
+  result = default(Enfa)
   result.s = newSeq[Node](exp.s.len + 2)
   result.s.setLen 0
   result.s.add initEOENode()
@@ -190,7 +191,7 @@ func teClosure(
   processing: var seq[int16]
 ) =
   doAssert processing.len == 0
-  var transitions: Transitions
+  var transitions = default(Transitions)
   for s in eNfa.s[state].next:
     teClosure(result, eNfa, s, processing, transitions)
 
@@ -201,6 +202,7 @@ func eRemoval*(eNfa: Enfa): Nfa {.raises: [].} =
   ## Transitions are added in matching order (BFS),
   ## which may help matching performance
   #echo eNfa
+  result = default(Nfa)
   result.s = newSeq[Node](eNfa.s.len)
   result.s.setLen 0
   var statesMap = newSeq[int16](eNfa.s.len)
@@ -209,12 +211,12 @@ func eRemoval*(eNfa: Enfa): Nfa {.raises: [].} =
   let start = int16(eNfa.s.len-1)
   result.s.add eNfa.s[start]
   statesMap[start] = 0'i16
-  var closure: TeClosure
+  var closure = default(TeClosure)
   var qw = initDeque[int16](2)
   qw.addFirst start
-  var qu: set[int16]
+  var qu: set[int16] = {}
   qu.incl start
-  var qa: int16
+  var qa = 0'i16
   var processing = newSeqOfCap[int16](8)
   while qw.len > 0:
     try:
@@ -245,7 +247,7 @@ func reverse(eNfa: Enfa): Enfa =
   for n in mitems result.s:
     n.next.setLen 0
   var stack = @[(state0, -1'i16)]
-  var visited: set[int16]
+  var visited: set[int16] = {}
   template state: untyped = eNfa.s[ni]
   while stack.len > 0:
     let (ni, pi) = stack.pop()

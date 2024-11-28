@@ -204,10 +204,11 @@ func reversedMatchImpl*(
   look: var Lookaround,
   start, limit: int
 ): int =
-  var capts: Capts
+  var capts = default(Capts)
   var captIdx = -1'i32
   reversedMatchImpl(
-    smA, smB, capts, captIdx, text, nfa, look, start, limit)
+    smA, smB, capts, captIdx, text, nfa, look, start, limit
+  )
 
 template initLook*: Lookaround =
   Lookaround(
@@ -224,7 +225,7 @@ func matchImpl*(
   var
     smA = newSubmatches(regex.nfa.s.len)
     smB = newSubmatches(regex.nfa.s.len)
-    capts: Capts
+    capts = default(Capts)
     capt = -1'i32
     look = initLook()
   result = matchImpl(
@@ -242,7 +243,7 @@ func startsWithImpl*(text: string, regex: Regex, start: int): bool =
   var
     smA = newSubmatches(regex.nfa.s.len)
     smB = newSubmatches(regex.nfa.s.len)
-    capts: Capts
+    capts = default(Capts)
     capt = -1'i32
     look = initLook()
   result = matchImpl(

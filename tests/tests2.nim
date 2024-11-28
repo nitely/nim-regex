@@ -29,11 +29,11 @@ template expect(exception: typedesc, body: untyped): untyped =
 
 when defined(forceRegexAtRuntime):
   proc isMatch(s: string, pattern: Regex2): bool =
-    var m: RegexMatch2
+    var m = RegexMatch2()
     result = match(s, pattern, m)
 else:
   proc isMatch(s: string, pattern: static Regex2): bool =
-    var m: RegexMatch2
+    var m = RegexMatch2()
     result = match(s, pattern, m)
 
 proc raises(pattern: string): bool =
@@ -50,14 +50,14 @@ proc raisesMsg(pattern: string): string =
     result = getCurrentExceptionMsg()
 
 proc matchWithCapt(s: string, pattern: static Regex2): seq[string] =
-  var m: RegexMatch2
+  var m = RegexMatch2()
   check match(s, pattern, m)
   result.setLen m.captures.len
   for i, bounds in m.captures.pairs:
     result[i] = s[bounds]
 
 proc matchWithBounds(s: string, pattern: static Regex2): seq[Slice[int]] =
-  var m: RegexMatch2
+  var m = RegexMatch2()
   check match(s, pattern, m)
   return m.captures
 
@@ -67,7 +67,7 @@ proc toStrCaptures(m: RegexMatch2, s: string): seq[string] =
     result[i] = s[bounds]
 
 proc findWithCapt(s: string, pattern: Regex2): seq[string] =
-  var m: RegexMatch2
+  var m = RegexMatch2()
   check find(s, pattern, m)
   result = m.toStrCaptures(s)
 
@@ -1041,11 +1041,11 @@ test "tgreediness":
   check "aaa".matchWithCapt(re2"(a){1,}?(a){1,}(a)?") == @["a", "a", ""]
   check "aaa".matchWithCapt(re2"(a){1,}?(a){1,}?(a)?") == @["a", "a", "a"]
   block:
-    var m: RegexMatch2
+    var m = RegexMatch2()
     check match("aaaa", re2"(a*?)(a*?)(a*)", m)
     check m.toStrCaptures("aaaa") == @["", "", "aaaa"]
   block:
-    var m: RegexMatch2
+    var m = RegexMatch2()
     check match("aaaa", re2"(a*)(a*?)(a*?)", m)
     check m.toStrCaptures("aaaa") == @["aaaa", "", ""]
 
@@ -1072,48 +1072,48 @@ test "tdot_any_matcher":
 
 test "tgroup":
   block:
-    var m: RegexMatch2
+    var m = RegexMatch2()
     check "foobar".match(re2"(\w*)", m)
     check m.group(0) == 0..5
   block:
-    var m: RegexMatch2
+    var m = RegexMatch2()
     check "foobar".match(re2"(?P<foo>\w*)", m)
     check m.group(0) == 0..5
   block:
-    var m: RegexMatch2
+    var m = RegexMatch2()
     check "ab".match(re2"(a)(b)", m)
     check m.group(0) == 0..0
     check m.group(1) == 1..1
   block:
-    var m: RegexMatch2
+    var m = RegexMatch2()
     check match("ab", re2"(a)(b)", m)
     check m.toStrCaptures("ab") == @["a", "b"]
   block:
-    var m: RegexMatch2
+    var m = RegexMatch2()
     check "abc".match(re2"(?P<foo>\w)+", m)
     check m.group("foo") == 2..2
   block:
-    var m: RegexMatch2
+    var m = RegexMatch2()
     check "abc".match(re2"(\w)+", m)
     check m.group(0) == 2..2
 
 test "tnamed_groups":
   block:
-    var m: RegexMatch2
+    var m = RegexMatch2()
     check "foobar".match(re2"(?P<foo>\w*)", m)
     check m.group("foo") == 0..5
   block:
-    var m: RegexMatch2
+    var m = RegexMatch2()
     check "foobar".match(re2"(?P<foo>(?P<bar>\w*))", m)
     check m.group("foo") == 0..5
     check m.group("bar") == 0..5
   block:
-    var m: RegexMatch2
+    var m = RegexMatch2()
     check "aab".match(re2"(?P<foo>(?P<bar>a)*b)", m)
     check m.group("foo") == 0..2
     check m.group("bar") == 1..1
   block:
-    var m: RegexMatch2
+    var m = RegexMatch2()
     check "aab".match(re2"((?P<bar>a)*b)", m)
     check m.group("bar") == 1..1
 
@@ -1318,47 +1318,47 @@ test "tescaped_sequences":
 
 test "tfind":
   block:
-    var m: RegexMatch2
+    var m = RegexMatch2()
     check "abcd".find(re2"bc", m)
   block:
-    var m: RegexMatch2
+    var m = RegexMatch2()
     check(not "abcd".find(re2"ac", m))
   block:
-    var m: RegexMatch2
+    var m = RegexMatch2()
     check "a".find(re2"", m)
   block:
-    var m: RegexMatch2
+    var m = RegexMatch2()
     check "abcd".find(re2"^abcd$", m)
   block:
-    var m: RegexMatch2
+    var m = RegexMatch2()
     check "2222".find(re2"(22)*", m)
     check m.group(0) == 2 .. 3
   block:
-    var m: RegexMatch2
+    var m = RegexMatch2()
     check "abcd".find(re2"(ab)", m)
     check m.group(0) == 0 .. 1
   block:
-    var m: RegexMatch2
+    var m = RegexMatch2()
     check "abcd".find(re2"(bc)", m)
     check m.group(0) == 1 .. 2
   block:
-    var m: RegexMatch2
+    var m = RegexMatch2()
     check "abcd".find(re2"(cd)", m)
     check m.group(0) == 2 .. 3
   block:
-    var m: RegexMatch2
+    var m = RegexMatch2()
     check "abcd".find(re2"bc", m)
     check m.boundaries == 1 .. 2
   block:
-    var m: RegexMatch2
+    var m = RegexMatch2()
     check "aΪⒶ弢".find(re2"Ϊ", m)
     check m.boundaries == 1 .. 2
   block:
-    var m: RegexMatch2
+    var m = RegexMatch2()
     check "aΪⒶ弢".find(re2"Ⓐ", m)
     check m.boundaries == 3 .. 5
   block:
-    var m: RegexMatch2
+    var m = RegexMatch2()
     check "aΪⒶ弢".find(re2"弢", m)
     check m.boundaries == 6 .. 9
 
@@ -1753,17 +1753,17 @@ test "treplace":
 
 test "tmisc":
   block:
-    var m: RegexMatch2
+    var m = RegexMatch2()
     check "abc".match(re2"[^^]+", m)
     check m.boundaries == 0 .. 2
   check(not "^".isMatch(re2"[^^]+"))
   block:
-    var m: RegexMatch2
+    var m = RegexMatch2()
     check "kpd".match(re2"[^al-obc]+", m)
     check m.boundaries == 0 .. 2
   check(not "abc".isMatch(re2"[^al-obc]+"))
   block:
-    var m: RegexMatch2
+    var m = RegexMatch2()
     check "almocb".match(re2"[al-obc]+", m)
     check m.boundaries == 0 .. 5
   check(not "defzx".isMatch(re2"[al-obc]+"))
@@ -1771,7 +1771,7 @@ test "tmisc":
   # From http://www.regular-expressions.info/examples.html
   # Grabbing HTML Tags
   block:
-    var m: RegexMatch2
+    var m = RegexMatch2()
     check "one<TAG>two</TAG>three".find(re2"<TAG\b[^>]*>(.*?)</TAG>", m)
     check m.boundaries == 3 .. 16
   check("one<TAG>two</TAG>three".findWithCapt(
@@ -1794,7 +1794,7 @@ test "tmisc":
     check(not "127.0.0.999".isMatch(ip))
   # Floating Point Numbers
   block:
-    var m: RegexMatch2
+    var m = RegexMatch2()
     check "3.14".find(re2"^[-+]?[0-9]*\.?[0-9]+$", m)
     check m.boundaries == 0 .. 3
   check "1.602e-19".findWithCapt(
@@ -1809,7 +1809,7 @@ test "tmisc":
     [a-zA-Z]{2,4}
     \b
     """
-    var m: RegexMatch2
+    var m = RegexMatch2()
     check "john@server.department.company.com".find(email, m)
     check m.boundaries == 0 .. 33
     check(not "john@aol...com".isMatch(email))
@@ -1868,25 +1868,25 @@ test "tmisc":
 
   # Unicode
   block:
-    var m: RegexMatch2
+    var m = RegexMatch2()
     check "①②③".find(re2"①②③", m)
     check m.boundaries == 0 ..< "①②③".len
   block:
-    var m: RegexMatch2
+    var m = RegexMatch2()
     check "①②③④⑤".find(re2"①②③", m)
     check m.boundaries == 0 ..< "①②③".len
   block:
-    var m: RegexMatch2
+    var m = RegexMatch2()
     check "①②③".find(re2"①(②)③", m)
     check m.boundaries == 0 ..< "①②③".len
   check "①②③".findWithCapt(re2"①(②)③") == @["②"]
   block:
-    var m: RegexMatch2
+    var m = RegexMatch2()
     check "①②③".find(re2"[①②③]*", m)
     check m.boundaries == 0 ..< "①②③".len
   #
   block:
-    var m: RegexMatch2
+    var m = RegexMatch2()
     check "①②③".find(re2"[^④⑤]*", m)
     check m.boundaries == 0 ..< "①②③".len
 
@@ -1911,7 +1911,7 @@ test "tnegative_look_around":
   check "ab".matchWithCapt(re2"(\w(?<!c))b") == @["a"]
 
 test "tfull_lookarounds":
-  var m: RegexMatch2
+  var m = RegexMatch2()
   check match("ab", re2"a(?=b)\w")
   check(not match("ab", re2"a(?=x)\w"))
   check(not match("ab", re2"ab(?=x)"))
@@ -2208,7 +2208,7 @@ test "tpretty_errors":
 
 test "treuse_regex_match":
   block:
-    var m: RegexMatch2
+    var m = RegexMatch2()
     check "2222".find(re2"(22)*", m)
     check m.group(0) == 2 .. 3
 
@@ -2222,7 +2222,7 @@ test "treuse_regex_match":
     check m.group(0) == 2 .. 3
 
   block:
-    var m: RegexMatch2
+    var m = RegexMatch2()
     check "foobar".match(re2"(?P<foo>(?P<bar>\w*))", m)
     check m.group("foo") == 0..5
     check m.group("bar") == 0..5
@@ -2242,61 +2242,61 @@ test "tisInitialized":
 test "capturingGroupsNames":
   block:
     let text = "hello world"
-    var m: RegexMatch2
+    var m = RegexMatch2()
     check text.match(re2"(?P<greet>hello) (?P<who>world)", m)
     check m.groupsCount == 2
     for name in @["greet", "who"]:
       check m.groupNames.contains(name)
   block:
     let text = "hello world"
-    var m: RegexMatch2
+    var m = RegexMatch2()
     check text.match(re2"(?P<greet>hello) (?P<who>world)", m)
     check m.group("greet", text) == "hello"
     check m.group("who", text) == "world"
   block:
     let text = "hello world foo bar"
-    var m: RegexMatch2
+    var m = RegexMatch2()
     check text.match(re2"(?P<greet>hello) (?:(?P<who>[^\s]+)\s?)+", m)
     check m.group("greet", text) == "hello"
     check m.group("who", text) == "bar"
   block:
     let text = "hello world her"
-    var m: RegexMatch2
+    var m = RegexMatch2()
     check text.match(re2"(?P<greet>hello) (?P<who>world) (?P<who>her)", m)
     check m.group("who", text) == "her"
   block:
     let text = "hello world foo bar"
-    var m: RegexMatch2
+    var m = RegexMatch2()
     check text.match(re2"(?P<greet>hello) (?:(?P<who>[^\s]+)\s?)+", m)
     check m.group("who", text) == "bar"
   block:
     let text = "hello"
-    var m: RegexMatch2
+    var m = RegexMatch2()
     check text.match(re2"(?P<greet>hello)\s?(?P<who>world)?", m)
     check m.group("greet", text) == "hello"
     check m.group("who", text) == ""
   block:
     let text = "hello"
-    var m: RegexMatch2
+    var m = RegexMatch2()
     check text.match(re2"(hello)\s?(world)?", m)
     check m.group(0, text) == "hello"
     check m.group(1, text) == ""
   block:
     let text = ""
-    var m: RegexMatch2
+    var m = RegexMatch2()
     check text.match(re2"(hello)?\s?(world)?", m)
     check m.group(0, text) == ""
     check m.group(1, text) == ""
   block:
     let text = "hello world foo bar"
-    var m: RegexMatch2
+    var m = RegexMatch2()
     check text.match(re2"(hello) (?:([^\s]+)\s?)+", m)
     check m.group(1, text) == "bar"
 
 # XXX raise a compile error when regex contains unicode
 #     in ascii mode
 test "tflags":
-  var m: RegexMatch2
+  var m = RegexMatch2()
   #check match("abc", re2(r"abc", {reAscii}), m)
   check match("弢弢弢", re2"\w{3}", m)
   #check(not match("弢弢弢", re2(r"\w{3}", {reAscii}), m))
@@ -2308,7 +2308,7 @@ test "tflags":
   #check(not "%弢弢%".find(re2(r"\w{2}", {reAscii}), m))
 
 test "tfindopt":
-  var m: RegexMatch2
+  var m = RegexMatch2()
   check(not find("bar", re2"foo", m))
   check(not find("bar", re2"baz", m))
   check "abcd".find(re2"bc", m)
@@ -2514,7 +2514,7 @@ test "tfindallopt":
     @[0 .. 10, 14 .. 25]
 
 test "tmisc2":
-  var m: RegexMatch2
+  var m = RegexMatch2()
   check "one<TAG>two</TAG>tree".find(re2"<TAG>.*?</TAG>", m)
   check m.boundaries == 3 .. 16
   check "one<TAG>two</TAG>tree".find(re2"<TAG>[\w<>/]*?</TAG>", m)
@@ -2589,7 +2589,7 @@ test "tmisc2":
     m.captures == @[7 .. 10, 2 .. 2, 8 .. 10]
 
 test "tmisc2_5":
-  var m: RegexMatch2
+  var m = RegexMatch2()
   check match("abd", re2"((ab)c)|((ab)d)", m) and
     m.captures == @[nonCapture, nonCapture, 0 .. 2, 0 .. 1]
   check match("aaa", re2"(a*)", m) and
@@ -2652,7 +2652,7 @@ test "tmisc2_6":
     check(not match("1", re1))
 
 test "tmisc3":
-  var m: RegexMatch2
+  var m = RegexMatch2()
   block:  # issue #61
     const a = "void __mingw_setusermatherr (int (__attribute__((__cdecl__)) *)(struct _exception *));"
     check replace(a, re2"__attribute__[ ]*\(\(.*?\)\)([ ,;])", "$1") ==
@@ -2777,7 +2777,7 @@ test "tmisc3":
   check split("foobar", re2"o(?=b)") == @["fo", "bar"]
   check split("foobar", re2"o(?!b)") == @["f", "obar"]
   block:
-    var m: RegexMatch2
+    var m = RegexMatch2()
     check find("abcxyz", re2"(abc)|\w+", m)
     check m.boundaries == 0 .. 2
     check find("xyzabc", re2"(abc)|\w+", m)
@@ -2990,7 +2990,7 @@ test "issue_98":
   check match("1.1", re2"(\d+)\.(\d+)(\.(\d+)|)(\.(\d+)|)")
 
 test "issue_101":
-  var m: RegexMatch2
+  var m = RegexMatch2()
   check match("TXT1/TXT2.1", re2"(TXT1)/TXT2()\.(\d+)")
   check match("TXT1/TXT2.1", re2"(TXT1)/TXT2(?:)\.(\d+)")
   check match("TXT1/TXT2.1", re2"(TXT1)/TXT2(?i:)\.(\d+)")
@@ -3011,7 +3011,7 @@ test "issue_101":
   check(not match("A", re2"(?xi:(?xi)     )a"))
 
 test "tlookaround_captures":
-  var m: RegexMatch2
+  var m = RegexMatch2()
   check match("aaab", re2"((\w+)|a(a+)b(?<=^(a+)(b)))", m) and
     m.captures == @[0 .. 3, 0 .. 3, nonCapture, nonCapture, nonCapture]
   check match("aaab", re2"a(a+)b(?<=^(a+)(b))", m) and
@@ -3074,7 +3074,7 @@ test "tverifyutf8":
   check raisesMsg("\xff") == "Invalid utf-8 regex"
   raisesInvalidUtf8 match("\xff", re2"abc")
   block:
-    var m: RegexMatch2
+    var m = RegexMatch2()
     raisesInvalidUtf8 match("\xff", re2"abc", m)
   raisesInvalidUtf8 findAll("\xff", re2"abc")
   raisesInvalidUtf8 findAllBounds("\xff", re2"abc")
@@ -3170,7 +3170,7 @@ when not defined(js) or NimMajor >= 2:
       check replace("ΪⒶ弢ΪⒶ弢x", re2(r"ΪⒶ弢\w", flags), "abc") == "ΪⒶ弢abc"
       check replace("ΪⒶ弢ΪⒶ弢x", re2(r"(?u)ΪⒶ弢\w", flags), "abc") == "abc\xaaⒶ弢x"
     block:
-      var m: RegexMatch2
+      var m = RegexMatch2()
       check match("a", re2(r"a", flags)) and
         m.groupsCount == 0
       check match("\x02\xF8\x95", re2(r"\x{2F895}", flags)) and 
@@ -3287,7 +3287,7 @@ test "tvarflags":
     var flags = {regexDotAll}
     check match("a\L", re2(r"a.", flags))
   block:
-    var m: RegexMatch2
+    var m = RegexMatch2()
     check match("aa", re2(r"(a*)(a*)", {regexUngreedy}), m) and
       m.captures == @[0 .. -1, 0 .. 1]
     check match("aa", re2"(?U)(a*)(a*)", m) and

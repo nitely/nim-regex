@@ -139,7 +139,7 @@ func dummyMatch*(ms: var RegexMatches2, i: int) =
   if ms.m.len == 0 or max(ab.a, ab.b) < i:
     ms.add (-1'i32, i+1 .. i)
 
-func submatch(
+func nextState(
   ms: var RegexMatches2,
   text: string,
   regex: Regex,
@@ -176,26 +176,9 @@ func submatch(
       captx = capt
       while nti < L and isEpsilonTransition(ntn):
         if matched:
-          case ntn.kind
-          of reGroupStart:
-            if mfNoCaptures notin flags:
-              captx = capts.diverge captx
-              capts[captx, ntn.idx].a = i
-          of reGroupEnd:
-            if mfNoCaptures notin flags:
-              captx = capts.diverge captx
-              capts[captx, ntn.idx].b = i-1
-          of assertionKind - lookaroundKind:
-            matched = match(ntn, cPrev.Rune, c.Rune)
-          of lookaroundKind:
-            let freezed = capts.freeze()
-            matched = lookAround(ntn, capts, captx, text, look, i, flags)
-            capts.unfreeze freezed
-            if captx != -1:
-              capts.keepAlive captx
-          else:
-            doAssert false
-            discard
+          epsilonMatch(
+            matched, captx, capts, look, ntn, text, i, cPrev, c.Rune, flags
+          )
         inc nti
       if matched:
         if isEoe:
@@ -243,7 +226,7 @@ func findSomeImpl*(
       inc i
     else:
       fastRuneAt(text, i, c, true)
-    submatch(ms, text, regex, iPrev, cPrev, c.int32, flags)
+    nextState(ms, text, regex, iPrev, cPrev, c.int32, flags)
     if smA.len == 0:
       # avoid returning right before final zero-match
       if i < len(text):
@@ -256,7 +239,7 @@ func findSomeImpl*(
     smA.add (0'i16, -1'i32, i .. i-1)
     iPrev = i
     cPrev = c.int32
-  submatch(ms, text, regex, iPrev, cPrev, -1'i32, flags)
+  nextState(ms, text, regex, iPrev, cPrev, -1'i32, flags)
   doAssert smA.len == 0
   if ms.hasMatches():
     #debugEcho "m= ", ms.m.s

@@ -27,11 +27,11 @@ template expect(exception: typedesc, body: untyped): untyped =
 
 when defined(forceRegexAtRuntime):
   proc isMatch(s: string, pattern: Regex): bool =
-    var m: RegexMatch
+    var m = RegexMatch()
     result = match(s, pattern, m)
 else:
   proc isMatch(s: string, pattern: static Regex): bool =
-    var m: RegexMatch
+    var m = RegexMatch()
     result = match(s, pattern, m)
 
 proc raises(pattern: string): bool =
@@ -58,12 +58,12 @@ proc toStrCaptures(m: RegexMatch, s: string): seq[seq[string]] =
       inc j
 
 proc matchWithCapt(s: string, pattern: static Regex): seq[seq[string]] =
-  var m: RegexMatch
+  var m = RegexMatch()
   check match(s, pattern, m)
   result = m.toStrCaptures(s)
 
 proc findWithCapt(s: string, pattern: Regex): seq[seq[string]] =
-  var m: RegexMatch
+  var m = RegexMatch()
   check find(s, pattern, m)
   result = m.toStrCaptures(s)
 
@@ -622,12 +622,12 @@ test "tgreediness":
   check "aaa".matchWithCapt(re"(a){1,}?(a){1,}?(a)?") ==
     @[@["a"], @["a"], @["a"]]
   block:
-    var m: RegexMatch
+    var m = RegexMatch()
     check match("aaaa", re"(a*?)(a*?)(a*)", m)
     check m.toStrCaptures("aaaa") ==
       @[@[""], @[""], @["aaaa"]]
   block:
-    var m: RegexMatch
+    var m = RegexMatch()
     check match("aaaa", re"(a*)(a*?)(a*?)", m)
     check m.toStrCaptures("aaaa") ==
       @[@["aaaa"], @[""], @[""]]
@@ -660,20 +660,20 @@ test "tdot_any_matcher":
 
 test "tgroup":
   block:
-    var m: RegexMatch
+    var m = RegexMatch()
     check "foobar".match(re"(\w*)", m)
     check m.group(0) == @[0..5]
   block:
-    var m: RegexMatch
+    var m = RegexMatch()
     check "foobar".match(re"(?P<foo>\w*)", m)
     check m.group(0) == @[0..5]
   block:
-    var m: RegexMatch
+    var m = RegexMatch()
     check "ab".match(re"(a)(b)", m)
     check m.group(0) == @[0..0]
     check m.group(1) == @[1..1]
   block:
-    var m: RegexMatch
+    var m = RegexMatch()
     check match("ab", re"(a)(b)", m)
     check m.toStrCaptures("ab") ==
       @[@["a"], @["b"]]
@@ -681,7 +681,7 @@ test "tgroup":
     let
       expected = ["a", "b", "c"]
       text = "abc"
-    var m: RegexMatch
+    var m = RegexMatch()
     check text.match(re"(?P<foo>\w)+", m)
     var i = 0
     for bounds in m.group("foo"):
@@ -691,7 +691,7 @@ test "tgroup":
     let
       expected = ["a", "b", "c"]
       text = "abc"
-    var m: RegexMatch
+    var m = RegexMatch()
     check text.match(re"(\w)+", m)
     var i = 0
     for bounds in m.group(0):
@@ -700,21 +700,21 @@ test "tgroup":
 
 test "tnamed_groups":
   block:
-    var m: RegexMatch
+    var m = RegexMatch()
     check "foobar".match(re"(?P<foo>\w*)", m)
     check m.group("foo") == @[0..5]
   block:
-    var m: RegexMatch
+    var m = RegexMatch()
     check "foobar".match(re"(?P<foo>(?P<bar>\w*))", m)
     check m.group("foo") == @[0..5]
     check m.group("bar") == @[0..5]
   block:
-    var m: RegexMatch
+    var m = RegexMatch()
     check "aab".match(re"(?P<foo>(?P<bar>a)*b)", m)
     check m.group("foo") == @[0..2]
     check m.group("bar") == @[0..0, 1..1]
   block:
-    var m: RegexMatch
+    var m = RegexMatch()
     check "aab".match(re"((?P<bar>a)*b)", m)
     check m.group("bar") == @[0..0, 1..1]
 
@@ -926,49 +926,49 @@ test "tescaped_sequences":
 
 test "tfind":
   block:
-    var m: RegexMatch
+    var m = RegexMatch()
     check "abcd".find(re"bc", m)
   block:
-    var m: RegexMatch
+    var m = RegexMatch()
     check(not "abcd".find(re"ac", m))
   block:
-    var m: RegexMatch
+    var m = RegexMatch()
     check "a".find(re"", m)
   block:
-    var m: RegexMatch
+    var m = RegexMatch()
     check "abcd".find(re"^abcd$", m)
   check "2222".findWithCapt(re"(22)*") ==
     @[@["22", "22"]]
   block:
-    var m: RegexMatch
+    var m = RegexMatch()
     check "2222".find(re"(22)*", m)
     check m.group(0) == @[0 .. 1, 2 .. 3]
   block:
-    var m: RegexMatch
+    var m = RegexMatch()
     check "abcd".find(re"(ab)", m)
     check m.group(0) == @[0 .. 1]
   block:
-    var m: RegexMatch
+    var m = RegexMatch()
     check "abcd".find(re"(bc)", m)
     check m.group(0) == @[1 .. 2]
   block:
-    var m: RegexMatch
+    var m = RegexMatch()
     check "abcd".find(re"(cd)", m)
     check m.group(0) == @[2 .. 3]
   block:
-    var m: RegexMatch
+    var m = RegexMatch()
     check "abcd".find(re"bc", m)
     check m.boundaries == 1 .. 2
   block:
-    var m: RegexMatch
+    var m = RegexMatch()
     check "aΪⒶ弢".find(re"Ϊ", m)
     check m.boundaries == 1 .. 2
   block:
-    var m: RegexMatch
+    var m = RegexMatch()
     check "aΪⒶ弢".find(re"Ⓐ", m)
     check m.boundaries == 3 .. 5
   block:
-    var m: RegexMatch
+    var m = RegexMatch()
     check "aΪⒶ弢".find(re"弢", m)
     check m.boundaries == 6 .. 9
 
@@ -1344,17 +1344,17 @@ test "treplace":
 
 test "tmisc":
   block:
-    var m: RegexMatch
+    var m = RegexMatch()
     check "abc".match(re"[^^]+", m)
     check m.boundaries == 0 .. 2
   check(not "^".isMatch(re"[^^]+"))
   block:
-    var m: RegexMatch
+    var m = RegexMatch()
     check "kpd".match(re"[^al-obc]+", m)
     check m.boundaries == 0 .. 2
   check(not "abc".isMatch(re"[^al-obc]+"))
   block:
-    var m: RegexMatch
+    var m = RegexMatch()
     check "almocb".match(re"[al-obc]+", m)
     check m.boundaries == 0 .. 5
   check(not "defzx".isMatch(re"[al-obc]+"))
@@ -1362,7 +1362,7 @@ test "tmisc":
   # From http://www.regular-expressions.info/examples.html
   # Grabbing HTML Tags
   block:
-    var m: RegexMatch
+    var m = RegexMatch()
     check "one<TAG>two</TAG>three".find(re"<TAG\b[^>]*>(.*?)</TAG>", m)
     check m.boundaries == 3 .. 16
   check("one<TAG>two</TAG>three".findWithCapt(
@@ -1385,7 +1385,7 @@ test "tmisc":
     check(not "127.0.0.999".isMatch(ip))
   # Floating Point Numbers
   block:
-    var m: RegexMatch
+    var m = RegexMatch()
     check "3.14".find(re"^[-+]?[0-9]*\.?[0-9]+$", m)
     check m.boundaries == 0 .. 3
   check "1.602e-19".findWithCapt(
@@ -1400,7 +1400,7 @@ test "tmisc":
     [a-zA-Z]{2,4}
     \b
     """
-    var m: RegexMatch
+    var m = RegexMatch()
     check "john@server.department.company.com".find(email, m)
     check m.boundaries == 0 .. 33
     check(not "john@aol...com".isMatch(email))
@@ -1459,25 +1459,25 @@ test "tmisc":
 
   # Unicode
   block:
-    var m: RegexMatch
+    var m = RegexMatch()
     check "①②③".find(re"①②③", m)
     check m.boundaries == 0 ..< "①②③".len
   block:
-    var m: RegexMatch
+    var m = RegexMatch()
     check "①②③④⑤".find(re"①②③", m)
     check m.boundaries == 0 ..< "①②③".len
   block:
-    var m: RegexMatch
+    var m = RegexMatch()
     check "①②③".find(re"①(②)③", m)
     check m.boundaries == 0 ..< "①②③".len
   check "①②③".findWithCapt(re"①(②)③") == @[@["②"]]
   block:
-    var m: RegexMatch
+    var m = RegexMatch()
     check "①②③".find(re"[①②③]*", m)
     check m.boundaries == 0 ..< "①②③".len
   #
   block:
-    var m: RegexMatch
+    var m = RegexMatch()
     check "①②③".find(re"[^④⑤]*", m)
     check m.boundaries == 0 ..< "①②③".len
 
@@ -1502,7 +1502,7 @@ test "tnegative_look_around":
   check "ab".matchWithCapt(re"(\w(?<!c))b") == @[@["a"]]
 
 test "tfull_lookarounds":
-  var m: RegexMatch
+  var m = RegexMatch()
   check match("ab", re"a(?=b)\w")
   check(not match("ab", re"a(?=x)\w"))
   check(not match("ab", re"ab(?=x)"))
@@ -1799,7 +1799,7 @@ test "tpretty_errors":
 
 test "treuse_regex_match":
   block:
-    var m: RegexMatch
+    var m = RegexMatch()
     check "2222".find(re"(22)*", m)
     check m.group(0) == @[0 .. 1, 2 .. 3]
 
@@ -1813,7 +1813,7 @@ test "treuse_regex_match":
     check m.group(0) == @[2 .. 3]
 
   block:
-    var m: RegexMatch
+    var m = RegexMatch()
     check "foobar".match(re"(?P<foo>(?P<bar>\w*))", m)
     check m.group("foo") == @[0..5]
     check m.group("bar") == @[0..5]
@@ -1833,20 +1833,20 @@ test "tisInitialized":
 test "capturingGroupsNames":
   block:
     let text = "hello world"
-    var m: RegexMatch
+    var m = RegexMatch()
     check text.match(re"(?P<greet>hello) (?P<who>world)", m)
     check m.groupsCount == 2
     for name in @["greet", "who"]:
       check m.groupNames.contains(name)
   block:
     let text = "hello world"
-    var m: RegexMatch
+    var m = RegexMatch()
     check text.match(re"(?P<greet>hello) (?P<who>world)", m)
     check m.group("greet", text) == @["hello"]
     check m.group("who", text) == @["world"]
   block:
     let text = "hello world foo bar"
-    var m: RegexMatch
+    var m = RegexMatch()
     check text.match(re"(?P<greet>hello) (?:(?P<who>[^\s]+)\s?)+", m)
     check m.group("greet", text) == @["hello"]
     let whoGroups = m.group("who", text)
@@ -1854,77 +1854,77 @@ test "capturingGroupsNames":
       check whoGroups.contains(w)
   block:
     let text = "hello world"
-    var m: RegexMatch
+    var m = RegexMatch()
     check text.match(re"(?P<greet>hello) (?P<who>world)", m)
     check m.groupFirstCapture("greet", text) == "hello"
     check m.groupFirstCapture("who", text) == "world"
   block:
     let text = "hello world her"
-    var m: RegexMatch
+    var m = RegexMatch()
     check text.match(re"(?P<greet>hello) (?P<who>world) (?P<who>her)", m)
     check m.groupFirstCapture("greet", text) == "hello"
   block:
     let text = "hello world foo bar"
-    var m: RegexMatch
+    var m = RegexMatch()
     check text.match(re"(?P<greet>hello) (?:(?P<who>[^\s]+)\s?)+", m)
     # "who" captures @["world", "foo", "bar"]
     check m.groupFirstCapture("who", text) == "world"
   block:
     let text = "hello"
-    var m: RegexMatch
+    var m = RegexMatch()
     check text.match(re"(?P<greet>hello)\s?(?P<who>world)?", m)
     check m.groupFirstCapture("greet", text) == "hello"
     check m.groupFirstCapture("who", text) == ""
   block:
     let text = "hello world her"
-    var m: RegexMatch
+    var m = RegexMatch()
     check text.match(re"(?P<greet>hello) (?P<who>world) (?P<who>her)", m)
     check m.groupLastCapture("who", text) == "her"
   block:
     let text = "hello world foo bar"
-    var m: RegexMatch
+    var m = RegexMatch()
     check text.match(re"(?P<greet>hello) (?:(?P<who>[^\s]+)\s?)+", m)
     # "who" captures @["world", "foo", "bar"]
     check m.groupLastCapture("who", text) == "bar"
   block:
     let text = "hello"
-    var m: RegexMatch
+    var m = RegexMatch()
     check text.match(re"(?P<greet>hello)\s?(?P<who>world)?", m)
     check m.groupLastCapture("greet", text) == "hello"
     check m.groupLastCapture("who", text) == ""
   block:
     let text = "hello"
-    var m: RegexMatch
+    var m = RegexMatch()
     check text.match(re"(hello)\s?(world)?", m)
     check m.groupLastCapture(0, text) == "hello"
     check m.groupLastCapture(1, text) == ""
   block:
     let text = ""
-    var m: RegexMatch
+    var m = RegexMatch()
     check text.match(re"(hello)?\s?(world)?", m)
     check m.groupLastCapture(0, text) == ""
     check m.groupLastCapture(1, text) == ""
   block:
     let text = "hello world foo bar"
-    var m: RegexMatch
+    var m = RegexMatch()
     check text.match(re"(hello) (?:([^\s]+)\s?)+", m)
     # "who" captures @["world", "foo", "bar"]
     check m.groupLastCapture(1, text) == "bar"
   block:
     let text = "hello"
-    var m: RegexMatch
+    var m = RegexMatch()
     check text.match(re"(hello)\s?(world)?", m)
     check m.groupFirstCapture(0, text) == "hello"
     check m.groupFirstCapture(1, text) == ""
   block:
     let text = ""
-    var m: RegexMatch
+    var m = RegexMatch()
     check text.match(re"(hello)?\s?(world)?", m)
     check m.groupFirstCapture(0, text) == ""
     check m.groupFirstCapture(1, text) == ""
   block:
     let text = "hello world foo bar"
-    var m: RegexMatch
+    var m = RegexMatch()
     check text.match(re"(hello) (?:([^\s]+)\s?)+", m)
     # "who" captures @["world", "foo", "bar"]
     check m.groupFirstCapture(1, text) == "world"
@@ -1932,7 +1932,7 @@ test "capturingGroupsNames":
 # XXX raise a compile error when regex contains unicode
 #     in ascii mode
 test "tflags":
-  var m: RegexMatch
+  var m = RegexMatch()
   #check match("abc", re(r"abc", {reAscii}), m)
   check match("弢弢弢", re"\w{3}", m)
   #check(not match("弢弢弢", re(r"\w{3}", {reAscii}), m))
@@ -1944,7 +1944,7 @@ test "tflags":
   #check(not "%弢弢%".find(re(r"\w{2}", {reAscii}), m))
 
 test "tfindopt":
-  var m: RegexMatch
+  var m = RegexMatch()
   check(not find("bar", re"foo", m))
   check(not find("bar", re"baz", m))
   check "abcd".find(re"bc", m)
@@ -2150,7 +2150,7 @@ test "tfindallopt":
     @[0 .. 10, 14 .. 25]
 
 test "tmisc2":
-  var m: RegexMatch
+  var m = RegexMatch()
   check "one<TAG>two</TAG>tree".find(re"<TAG>.*?</TAG>", m)
   check m.boundaries == 3 .. 16
   check "one<TAG>two</TAG>tree".find(re"<TAG>[\w<>/]*?</TAG>", m)
@@ -2228,7 +2228,7 @@ test "tmisc2":
     m.captures == @[@[0 .. 6, 7 .. 10], @[0 .. 0, 1 .. 1, 2 .. 2], @[4 .. 6, 8 .. 10]]
 
 test "tmisc2_5":
-  var m: RegexMatch
+  var m = RegexMatch()
   check match("abd", re"((ab)c)|((ab)d)", m) and
     m.captures == @[@[], @[], @[0 .. 2], @[0 .. 1]]
   check match("aaa", re"(a*)", m) and
@@ -2291,7 +2291,7 @@ test "tmisc2_6":
     check(not match("1", re1))
 
 test "tmisc3":
-  var m: RegexMatch
+  var m = RegexMatch()
   block:  # issue #61
     const a = "void __mingw_setusermatherr (int (__attribute__((__cdecl__)) *)(struct _exception *));"
     check replace(a, re"__attribute__[ ]*\(\(.*?\)\)([ ,;])", "$1") ==
@@ -2416,7 +2416,7 @@ test "tmisc3":
   check split("foobar", re"o(?=b)") == @["fo", "bar"]
   check split("foobar", re"o(?!b)") == @["f", "obar"]
   block:
-    var m: RegexMatch
+    var m = RegexMatch()
     check find("abcxyz", re"(abc)|\w+", m)
     check m.boundaries == 0 .. 2
     check find("xyzabc", re"(abc)|\w+", m)
@@ -2515,7 +2515,7 @@ test "issue_98":
   check match("1.1", re"(\d+)\.(\d+)(\.(\d+)|)(\.(\d+)|)")
 
 test "issue_101":
-  var m: RegexMatch
+  var m = RegexMatch()
   check match("TXT1/TXT2.1", re"(TXT1)/TXT2()\.(\d+)")
   check match("TXT1/TXT2.1", re"(TXT1)/TXT2(?:)\.(\d+)")
   check match("TXT1/TXT2.1", re"(TXT1)/TXT2(?i:)\.(\d+)")

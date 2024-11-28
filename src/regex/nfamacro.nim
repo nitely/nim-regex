@@ -156,7 +156,7 @@ func genMatch(c: NimNode, n: Node): NimNode =
 
 func genSetMatch(c: NimNode, n: Node): NimNode =
   assert n.kind in {reInSet, reNotSet}
-  var terms: seq[NimNode]
+  var terms = newSeq[NimNode]()
   if n.ranges.len > 0:
     for bound in n.ranges:
       let a = newLit bound.a.int32
@@ -164,7 +164,7 @@ func genSetMatch(c: NimNode, n: Node): NimNode =
       terms.add quote do:
         `a` <= `c` and `c` <= `b`
   if n.cps.len > 0:
-    var caseStmt: seq[NimNode]
+    var caseStmt = newSeq[NimNode]()
     caseStmt.add c
     for cp in n.cps:
       caseStmt.add newTree(nnkOfBranch,
@@ -268,6 +268,7 @@ func genLookaroundMatch(
 func getEpsilonTransitions(nfa: Nfa, n: Node, nti: int): seq[int] =
   doAssert not isEpsilonTransition(n)
   doAssert nti <= n.next.len-1
+  result = newSeq[int]()
   for i in nti+1 .. n.next.len-1:
     if not isEpsilonTransition(nfa.s[n.next[i]]):
       break
@@ -291,7 +292,7 @@ func genMatchedBody(
   if eTransitions.len == 0:
     return quote do:
       add(`smB`, (`ntLit`, `capt`, `bounds2`))
-  var matchedBody: seq[NimNode]
+  var matchedBody = newSeq[NimNode]()
   matchedBody.add quote do:
     `matched` = true
     `captx` = `capt`
@@ -349,14 +350,14 @@ func genNextState(
   ]#
   template s: untyped = nfa.s
   result = newStmtList()
-  var caseStmtN: seq[NimNode]
+  var caseStmtN = newSeq[NimNode]()
   caseStmtN.add n
   for i in 0 .. s.len-1:
     if s[i].kind == reEoe:
       continue
     if isEpsilonTransition(s[i]):
       continue
-    var branchBodyN: seq[NimNode]
+    var branchBodyN = newSeq[NimNode]()
     for nti, nt in s[i].next.pairs:
       if eoeOnly and s[nt].kind != reEoe:
         continue
@@ -436,6 +437,7 @@ func nextState(
     swap `smA`, `smB`
 
 func eoeIdx(nfa: Nfa): int16 =
+  result = 0'i16
   for i in 0 .. nfa.s.len-1:
     if nfa.s[i].kind == reEoe:
       return i.int16
@@ -556,7 +558,7 @@ template look(smL: NimNode): untyped =
 template constructSubmatches2(
   captures, txt, capts, capt, size: untyped
 ): untyped =
-  var bounds: array[size, Slice[int]]
+  var bounds = default(array[size, Slice[int]])
   for i in 0 .. bounds.len-1:
     bounds[i] = -2 .. -3
   var captx = capt
@@ -588,13 +590,13 @@ proc matchImpl*(text, expLit, body: NimNode): NimNode =
       var
         `smA` = newSubmatches `nfaLenLit`
         `smB` = newSubmatches `nfaLenLit`
-        `capts`: Capts
+        `capts` = default(Capts)
         `capt` = -1'i32
         `matched` = false
-        `smL` {.used.}: SmLookaround
+        `smL` {.used.} = default(SmLookaround)
       `matchImplStmt`
       if `matched`:
-        var matches {.used, inject.}: seq[string]
+        var matches {.used, inject.} = newSeq[string]()
         when `nfaGroupsLen` > 0:
           constructSubmatches2(
             matches, `text`, `capts`, `capt`, `nfaGroupsLen`)

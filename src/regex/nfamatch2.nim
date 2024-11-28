@@ -34,7 +34,7 @@ type
     behind*: BehindSig
     smL*: SmLookaround
 
-func lookAround*(
+func lookAround(
   ntn: Node,
   capts: var Capts3,
   captIdx: var int32,

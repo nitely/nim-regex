@@ -8,6 +8,7 @@ import ./types
 func getEpsilonTransitions(nfa: Nfa, n: Node, nti: int): seq[int] =
   doAssert not isEpsilonTransition(n)
   doAssert nti <= n.next.len-1
+  result = newSeq[int]()
   for i in nti+1 .. n.next.len-1:
     if not isEpsilonTransition(nfa.s[n.next[i]]):
       break

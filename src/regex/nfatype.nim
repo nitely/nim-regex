@@ -66,10 +66,13 @@ template fastLog2Tpl(x: Natural): untyped =
       fastLog2(x)
 
 func initCapts3*(groupsLen: int): Capts3 =
-  result.groupsLen = groupsLen
-  result.blockSize = max(2, nextPowerOfTwo groupsLen)
-  result.blockSizeL2 = fastLog2Tpl result.blockSize
-  result.freezeId = stsFrozen.a
+  let blockSize = max(2, nextPowerOfTwo groupsLen)
+  Capts3(
+    groupsLen: groupsLen,
+    blockSize: blockSize,
+    blockSizeL2: fastLog2Tpl blockSize,
+    freezeId: stsFrozen.a
+  )
 
 func check(curr, next: CaptState): bool =
   ## Check if transition from state curr to next is allowed
@@ -230,6 +233,7 @@ type
   MatchFlags* = set[MatchFlag]
 
 func toMatchFlags*(f: RegexFlags): MatchFlags =
+  result = default(MatchFlags)
   if regexArbitraryBytes in f:
     result.incl mfBytesInput
 

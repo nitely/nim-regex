@@ -70,6 +70,7 @@ type
 func verifyUtf8*(s: string): int =
   ## Return `-1` if `s` is a valid utf-8 string.
   ## Otherwise, return the index of the first bad char.
+  result = -1
   var state = vusStart
   var i = 0
   let L = s.len

@@ -590,7 +590,7 @@ func match*(
 
 func match*(s: string, pattern: Regex2): bool {.raises: [].} =
   debugCheckUtf8(s, pattern)
-  var m: RegexMatch2
+  var m = RegexMatch2()
   result = matchImpl(s, pattern.toRegex, m)
 
 when defined(noRegexOpt):
@@ -631,8 +631,8 @@ iterator findAll*(
   debugCheckUtf8(s, pattern)
   var i = start
   var i2 = start-1
-  var m: RegexMatch2
-  var ms: RegexMatches2
+  var m = RegexMatch2()
+  var ms = RegexMatches2()
   while i <= len(s):
     doAssert(i > i2); i2 = i
     i = findSomeOptTpl(s, pattern.toRegex, ms, i)
@@ -649,6 +649,7 @@ func findAll*(
   pattern: Regex2,
   start = 0
 ): seq[RegexMatch2] {.raises: [].} =
+  result = newSeq[RegexMatch2]()
   for m in findAll(s, pattern, start):
     result.add m
 
@@ -670,7 +671,7 @@ iterator findAllBounds*(
   debugCheckUtf8(s, pattern)
   var i = start
   var i2 = start-1
-  var ms: RegexMatches2
+  var ms = RegexMatches2()
   let flags = {mfNoCaptures}
   while i <= len(s):
     doAssert(i > i2); i2 = i
@@ -687,6 +688,7 @@ func findAllBounds*(
   pattern: Regex2,
   start = 0
 ): seq[Slice[int]] {.raises: [].} =
+  result = newSeq[Slice[int]]()
   for m in findAllBounds(s, pattern, start):
     result.add m
 
@@ -738,7 +740,7 @@ iterator split*(s: string, sep: Regex2): string {.inline, raises: [].} =
     first, last, i = 0
     i2 = -1
     done = false
-    ms: RegexMatches2
+    ms = RegexMatches2()
     flags = {mfNoCaptures}
   while not done:
     doAssert(i > i2); i2 = i
@@ -757,6 +759,7 @@ func split*(s: string, sep: Regex2): seq[string] {.raises: [].} =
     doAssert split("11a22Ϊ33Ⓐ44弢55", re2"\d+") ==
       @["", "a", "Ϊ", "Ⓐ", "弢", ""]
 
+  result = newSeq[string]()
   for w in split(s, sep):
     result.add w
 
@@ -770,12 +773,13 @@ func splitIncl*(s: string, sep: Regex2): seq[string] {.raises: [].} =
 
   template ab: untyped = m.boundaries
   debugCheckUtf8(s, sep)
+  result = newSeq[string]()
   var
     first, last, i = 0
     i2 = -1
     done = false
-    m: RegexMatch2
-    ms: RegexMatches2
+    m = RegexMatch2()
+    ms = RegexMatches2()
   while not done:
     doAssert(i > i2); i2 = i
     i = findSomeOptTpl(s, sep.toRegex, ms, i)
@@ -967,7 +971,7 @@ proc toString(
 proc toString(pattern: Regex2): string {.used.} =
   ## NFA to string representation.
   ## For debugging purposes
-  var visited: set[int16]
+  var visited: set[int16] = {}
   result = pattern.toString(0, visited)
 
 #
@@ -1013,6 +1017,7 @@ func group*(
 func groupFirstCapture*(
   m: RegexMatch, i: int, text: string
 ): string {.inline, raises: [], deprecated.} =
+  result = ""
   for bounds in m.group i:
     return text[bounds]
 
@@ -1083,7 +1088,7 @@ func match*(
 
 func match*(s: string, pattern: Regex): bool {.raises: [], deprecated: "use match(string, Regex2) instead".} =
   debugCheckUtf8 s
-  var m: RegexMatch
+  var m = RegexMatch()
   result = matchImpl(s, pattern, m)
 
 iterator findAll*(
@@ -1094,8 +1099,8 @@ iterator findAll*(
   debugCheckUtf8 s
   var i = start
   var i2 = start-1
-  var m: RegexMatch
-  var ms: RegexMatches
+  var m = RegexMatch()
+  var ms = RegexMatches()
   while i <= len(s):
     doAssert(i > i2); i2 = i
     i = findSomeOptTpl(s, pattern, ms, i)
@@ -1112,6 +1117,7 @@ func findAll*(
   pattern: Regex,
   start = 0
 ): seq[RegexMatch] {.raises: [], deprecated: "use findAll(string, Regex2) instead".} =
+  result = newSeq[RegexMatch]()
   for m in findAll(s, pattern, start):
     result.add m
 
@@ -1123,7 +1129,7 @@ iterator findAllBounds*(
   debugCheckUtf8 s
   var i = start
   var i2 = start-1
-  var ms: RegexMatches
+  var ms = RegexMatches()
   while i <= len(s):
     doAssert(i > i2); i2 = i
     i = findSomeOptTpl(s, pattern, ms, i)
@@ -1139,12 +1145,14 @@ func findAllBounds*(
   pattern: Regex,
   start = 0
 ): seq[Slice[int]] {.raises: [], deprecated: "use findAllBounds(string, Regex2) instead".} =
+  result = newSeq[Slice[int]]()
   for m in findAllBounds(s, pattern, start):
     result.add m
 
 func findAndCaptureAll*(
   s: string, pattern: Regex
 ): seq[string] {.raises: [], deprecated: "use findAll(string, Regex2) instead".} =
+  result = newSeq[string]()
   for m in s.findAll(pattern):
     result.add s[m.boundaries]
 
@@ -1173,7 +1181,7 @@ iterator split*(s: string, sep: Regex): string {.inline, raises: [], deprecated:
     first, last, i = 0
     i2 = -1
     done = false
-    ms: RegexMatches
+    ms = RegexMatches()
   while not done:
     doAssert(i > i2); i2 = i
     i = findSomeOptTpl(s, sep, ms, i)
@@ -1186,18 +1194,20 @@ iterator split*(s: string, sep: Regex): string {.inline, raises: [], deprecated:
       first = ab.b+1
 
 func split*(s: string, sep: Regex): seq[string] {.raises: [], deprecated: "use split(string, Regex2) instead".} =
+  result = newSeq[string]()
   for w in split(s, sep):
     result.add w
 
 func splitIncl*(s: string, sep: Regex): seq[string] {.raises: [], deprecated: "use splitIncl(string, Regex2) instead".} =
   template ab: untyped = m.boundaries
   debugCheckUtf8 s
+  result = newSeq[string]()
   var
     first, last, i = 0
     i2 = -1
     done = false
-    m: RegexMatch
-    ms: RegexMatches
+    m = RegexMatch()
+    ms = RegexMatches()
   while not done:
     doAssert(i > i2); i2 = i
     i = findSomeOptTpl(s, sep, ms, i)
@@ -1231,7 +1241,7 @@ func endsWith*(s: string, pattern: Regex): bool {.raises: [], deprecated: "use e
   debugCheckUtf8 s
   result = false
   var
-    m: RegexMatch
+    m = default(RegexMatch)
     i = 0
   while i < s.len:
     result = match(s, pattern, m, i)
@@ -1329,7 +1339,7 @@ proc toString(
 proc toString(pattern: Regex): string {.used.} =
   ## NFA to string representation.
   ## For debugging purposes
-  var visited: set[int16]
+  var visited: set[int16] = {}
   result = pattern.toString(0, visited)
 
 {.pop.}  # {.push warning[Deprecated]: off.}
@@ -1340,7 +1350,7 @@ when isMainModule:
   import ./regex/dotgraph
 
   func toAtoms(s: string): string =
-    var groups: GroupsCapture
+    var groups = default(GroupsCapture)
     let atoms = s
       .parse
       .toAtoms(groups)
@@ -1571,6 +1581,7 @@ when isMainModule:
 
   # subset of tests.nim
   proc raisesMsg(pattern: string): string =
+    result = ""
     try:
       discard re2(pattern)
     except RegexError:
@@ -1582,7 +1593,7 @@ when isMainModule:
     (proc() = body)()
 
   test:
-    var m: RegexMatch2
+    var m = RegexMatch2()
     doAssert match("ac", re2"a(b|c)", m)
     doAssert(not match("ad", re2"a(b|c)", m))
     doAssert match("ab", re2"(ab)*", m)
@@ -1692,7 +1703,7 @@ when isMainModule:
       m.captures == @[0 .. 3, reNonCapture, reNonCapture]
     block:
       var m = false
-      var matches: seq[string]
+      var matches = newSeq[string]()
       match "abc", rex"(\w+)":
         doAssert matches == @["abc"]
         m = true

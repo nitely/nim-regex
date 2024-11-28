@@ -175,6 +175,7 @@ func parseOctalLit(sc: Scanner[Rune]): Node =
   result = Rune(cp).toCharNode
 
 func parseCC(s: string): UnicodeCategorySet =
+  result = default(UnicodeCategorySet)
   try:
     result = s.categoryMap.UnicodeCategorySet
   except ValueError:
@@ -235,31 +236,34 @@ func parseEscapedSeq(sc: Scanner[Rune]): Node =
   case sc.peek
   of "u".toRune:
     discard sc.next()
-    result = parseUnicodeLit(sc, 4)
+    parseUnicodeLit(sc, 4)
   of "U".toRune:
     discard sc.next()
-    result = parseUnicodeLit(sc, 8)
+    parseUnicodeLit(sc, 8)
   of "x".toRune:
     discard sc.next()
     case sc.peek
     of "{".toRune:
-      result = parseUnicodeLitX(sc)
+      parseUnicodeLitX(sc)
     else:
-      result = parseUnicodeLit(sc, 2)
+      parseUnicodeLit(sc, 2)
   of "0".toRune .. "7".toRune:
-    result = parseOctalLit(sc)
+    parseOctalLit(sc)
   of "p".toRune:
     discard sc.next()
-    result = parseUnicodeName(sc)
+    parseUnicodeName(sc)
   of "P".toRune:
     discard sc.next()
-    result = parseUnicodeName(sc)
-    result.kind = reNotUCC
+    var node = parseUnicodeName(sc)
+    node.kind = reNotUCC
+    node
   of invalidRune:
     let startPos = sc.pos
     prettyCheck(false, "Nothing to escape")
+    doAssert false
+    Node()
   else:
-    result = next(sc).toEscapedNode
+    next(sc).toEscapedNode
 
 func parseSetEscapedSeq(sc: Scanner[Rune]): Node =
   ## Just like regular ``parseEscapedSeq``
@@ -392,24 +396,23 @@ func parseSet(sc: Scanner[Rune]): Node =
       if cps.len == 0:
         cps.add(cp)
         continue
-      var last: Rune
-      case sc.peek
-      of "]".toRune:
+      if sc.peek == "]".toRune:
         cps.add(cp)
         continue
-      of "\\".toRune:
-        discard sc.next()
-        let nn = parseSetEscapedSeq(sc)
-        check(
-          nn.kind == reChar,
-          "Invalid set range. Range can't contain " &
-          "a character-class or assertion",
-          sc.pos-1,
-          sc.raw)
-        last = nn.cp
-      else:
-        assert(not sc.finished)
-        last = sc.next()
+      var last = case sc.peek
+        of "\\".toRune:
+          discard sc.next()
+          let nn = parseSetEscapedSeq(sc)
+          check(
+            nn.kind == reChar,
+            "Invalid set range. Range can't contain " &
+            "a character-class or assertion",
+            sc.pos-1,
+            sc.raw)
+          nn.cp
+        else:
+          doAssert(not sc.finished)
+          sc.next()
       let first = cps.pop()
       check(
         first <= last,
@@ -453,7 +456,8 @@ func parseRepRange(sc: Scanner[Rune]): Node =
     return Node(kind: reChar, cp: '{'.Rune)
   let startPos = sc.pos
   var
-    first, last: string
+    first = ""
+    last = ""
     hasFirst = false
     curr = ""
   for cp in sc:
@@ -482,8 +486,8 @@ func parseRepRange(sc: Scanner[Rune]): Node =
   if last.len == 0:  # {n,}
     last = "-1"
   var
-    firstNum: int
-    lastNum: int
+    firstNum = 0
+    lastNum = 0
   try:
     discard parseInt(first, firstNum)
     discard parseInt(last, lastNum)
@@ -556,13 +560,12 @@ func parseGroupTag(sc: Scanner[Rune]): Node =
   # A regular group
   let startPos = sc.pos
   if sc.peek != "?".toRune:
-    result = initGroupStart()
-    return
+    return initGroupStart()
   discard sc.next()  # Consume "?"
-  case sc.peek
+  result = case sc.peek
   of ":".toRune:
     discard sc.next()
-    result = initGroupStart(isCapturing = false)
+    initGroupStart(isCapturing = false)
   of "P".toRune:
     discard sc.next()
     prettyCheck(
@@ -589,7 +592,7 @@ func parseGroupTag(sc: Scanner[Rune]): Node =
     prettyCheck(
       sc.prev == ">".toRune,
       "Invalid group name. Missing `>`")
-    result = initGroupStart(name)
+    initGroupStart(name)
   of "i".toRune,
       "m".toRune,
       "s".toRune,
@@ -610,44 +613,39 @@ func parseGroupTag(sc: Scanner[Rune]): Node =
         flags.add toNegFlag(cp)
       else:
         flags.add toFlag(cp)
-    result = if sc.prev == ")".toRune:
+    if sc.prev == ")".toRune:
       Node(kind: reFlags, flags: flags)
     else:
-      initGroupStart(
-        flags = flags,
-        isCapturing = false)
+      initGroupStart(flags = flags, isCapturing = false)
   #reLookahead,
   #reLookbehind,
   of '='.Rune, '<'.Rune, '!'.Rune:
-    var lookAroundKind: NodeKind
-    case sc.peek
-    of '='.Rune:
-      lookAroundKind = reLookahead
-    of '!'.Rune:
-      lookAroundKind = reNotLookahead
-    of '<'.Rune:
-      discard sc.next()
-      case sc.peek:
-      of '='.Rune:
-        lookAroundKind = reLookbehind
-      of '!'.Rune:
-        lookAroundKind = reNotLookbehind
+    var lookAroundKind = case sc.peek
+      of '='.Rune: reLookahead
+      of '!'.Rune: reNotLookahead
+      of '<'.Rune:
+        discard sc.next()
+        case sc.peek:
+        of '='.Rune: reLookbehind
+        of '!'.Rune: reNotLookbehind
+        else:
+          prettyCheck(
+            false, "Invalid lookabehind, expected `<=` or `<!` symbol"
+          )
+          doAssert false
+          reLookbehind
       else:
-        prettyCheck(
-          false,
-          "Invalid lookabehind, expected `<=` or `<!` symbol")
-    else:
-      doAssert false
+        doAssert false
+        reLookbehind
     doAssert sc.peek in ['='.Rune, '!'.Rune]
     discard sc.next
     prettyCheck(
       sc.peek != ')'.Rune,
       "Empty lookaround is not allowed")
-    result = Node(kind: lookAroundKind)
+    Node(kind: lookAroundKind)
   else:
-    prettyCheck(
-      false,
-      "Invalid group. Unknown group type")
+    prettyCheck(false, "Invalid group. Unknown group type")
+    Node()
 
 func subParse(sc: Scanner[Rune]): Node =
   let r = sc.prev
@@ -745,6 +743,7 @@ func verbosity(
 func parse*(expression: string, flags: RegexFlags = {}): Exp =
   ## convert a ``string`` regex expression
   ## into a ``Node`` expression
+  result = default(Exp)
   result.s = newSeq[Node](expression.len)
   result.s.setLen 0
   var vb = newSeq[bool]()

@@ -87,6 +87,7 @@ func update(
 # and (...|...) by skip nodes.
 # Based on Thompson's construction
 func toLitNfa(exp: RpnExp): LitNfa =
+  result = default(LitNfa)
   result.s = newSeq[Node](exp.s.len + 2)
   result.s.setLen 0
   result.s.add initEoeNode()
@@ -175,6 +176,7 @@ type
     s: string
 
 func find(nodes: seq[Node], uid: int): NodeIdx =
+  result = default(NodeIdx)
   for idx in 0 .. nodes.len-1:
     if nodes[idx].uid == uid:
       return idx.NodeIdx
@@ -182,6 +184,7 @@ func find(nodes: seq[Node], uid: int): NodeIdx =
 
 func lits(exp: RpnExp, flags: RegexFlags): Lits =
   template state: untyped = litNfa.s[stateIdx]
+  result = default(Lits)
   result.idx = exp.delimiterLit()
   if result.idx == -1:
     return
@@ -230,7 +233,7 @@ func prefix(eNfa: Enfa, uid: NodeUid): Enfa =
     n.next.setLen 0
   # reverse transitions; DFS
   var stack = @[(state0, -1'i16)]
-  var visited: set[int16]
+  var visited: set[int16] = {}
   template state: untyped = eNfa.s[ni]
   while stack.len > 0:
     let (ni, pi) = stack.pop()
@@ -283,6 +286,7 @@ func canOpt*(litOpt: LitOpt): bool =
 
 func litopt3*(exp: RpnExp, flags: RegexFlags = {}): LitOpt =
   template litNode: untyped = exp.s[lits2.idx]
+  result = default(LitOpt)
   let lits2 = exp.lits(flags)
   if lits2.idx == -1:
     return

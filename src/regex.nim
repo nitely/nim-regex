@@ -188,7 +188,7 @@ This means the whole text needs to match the regex for this function to return `
 .. code-block:: nim
     :test:
     let text = "nim c --styleCheck:hint --colors:off regex.nim"
-    var m: RegexMatch2
+    var m = RegexMatch2()
     if match(text, re2"nim c (?:--(\w+:\w+) *)+ (\w+).nim", m):
       doAssert text[m.group(0)] == "colors:off"
       doAssert text[m.group(1)] == "regex"
@@ -229,7 +229,7 @@ match a given regex.
     """
     var match = ""
     var capture = ""
-    var m: RegexMatch2
+    var m = RegexMatch2()
     if find(text, re2"(\w+)@\w+\.\w+", m):
       match = text[m.boundaries]
       capture = text[m.group(0)]
@@ -509,7 +509,7 @@ func group*(m: RegexMatch2, i: int): Slice[int] {.inline, raises: [].} =
   ## and they are included same as in PCRE.
   runnableExamples:
     let text = "abc"
-    var m: RegexMatch2
+    var m = RegexMatch2()
     doAssert text.match(re2"(\w)+", m)
     doAssert text[m.group(0)] == "c"
 
@@ -521,7 +521,7 @@ func group*(
   ## return slices for a given named group
   runnableExamples:
     let text = "abc"
-    var m: RegexMatch2
+    var m = RegexMatch2()
     doAssert text.match(re2"(?P<foo>\w)+", m)
     doAssert text[m.group("foo")] == "c"
 
@@ -530,7 +530,7 @@ func group*(
 func groupsCount*(m: RegexMatch2): int {.inline, raises: [].} =
   ## return the number of capturing groups
   runnableExamples:
-    var m: RegexMatch2
+    var m = RegexMatch2()
     doAssert "ab".match(re2"(a)(b)", m)
     doAssert m.groupsCount == 2
 
@@ -540,7 +540,7 @@ func groupNames*(m: RegexMatch2): seq[string] {.inline, raises: [].} =
   ## return the names of capturing groups.
   runnableExamples:
     let text = "hello world"
-    var m: RegexMatch2
+    var m = RegexMatch2()
     doAssert text.match(re2"(?P<greet>hello) (?P<who>world)", m)
     doAssert m.groupNames == @["greet", "who"]
 
@@ -581,7 +581,7 @@ func match*(
   ## is similar to ``find(text, re"^regex$", m)``
   ## but has better performance
   runnableExamples:
-    var m: RegexMatch2
+    var m = RegexMatch2()
     doAssert "abcd".match(re2"abcd", m)
     doAssert not "abcd".match(re2"abc", m)
 
@@ -701,7 +701,7 @@ func find*(
   ## search through the string looking for the first
   ## location where there is a match
   runnableExamples:
-    var m: RegexMatch2
+    var m = RegexMatch2()
     doAssert "abcd".find(re2"bc", m) and
       m.boundaries == 1 .. 2
     doAssert not "abcd".find(re2"de", m)
@@ -1413,7 +1413,7 @@ when isMainModule:
   doAssert r"[[:xdigit:]]".toAtoms == "[[0-9a-fA-F]]"
   doAssert r"[[:alpha:][:digit:]]".toAtoms == "[[a-zA-Z][0-9]]"
 
-  var m: RegexMatch2
+  var m = RegexMatch2()
   #doAssert match("abc", re2(r"abc", {reAscii}), m)
   doAssert match("abc", re2"abc", m)
   doAssert match("ab", re2"a(b|c)", m)

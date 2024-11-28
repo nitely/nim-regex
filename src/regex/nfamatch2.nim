@@ -93,15 +93,17 @@ func epsilonMatch*(
     capts[captx, ntn.idx]
   case ntn.kind
   of reGroupStart:
-    captx = capts.diverge captx
-    if mfReverseCapts notin flags or
-        captElm.a == nonCapture.a:
-      captElm.a = i
+    if mfNoCaptures notin flags:
+      captx = capts.diverge captx
+      if mfReverseCapts notin flags or
+          captElm.a == nonCapture.a:
+        captElm.a = i
   of reGroupEnd:
-    captx = capts.diverge captx
-    if mfReverseCapts notin flags or
-        captElm.b == nonCapture.b:
-      captElm.b = i-1
+    if mfNoCaptures notin flags:
+      captx = capts.diverge captx
+      if mfReverseCapts notin flags or
+          captElm.b == nonCapture.b:
+        captElm.b = i-1
   of assertionKind - lookaroundKind:
     if bwMatch:
       matched = match(ntn, c, cPrev.Rune)

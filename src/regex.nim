@@ -1241,7 +1241,7 @@ func endsWith*(s: string, pattern: Regex): bool {.raises: [], deprecated: "use e
   debugCheckUtf8 s
   result = false
   var
-    m = default(RegexMatch)
+    m = RegexMatch()
     i = 0
   while i < s.len:
     result = match(s, pattern, m, i)

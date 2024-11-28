@@ -22,6 +22,8 @@ const
   stsFrozen = 5.CaptState .. CaptState.high
 
 type
+  # XXX int16 same as max parallel states or max regex len
+  #     but it's used by PState and the old capts
   CaptIdx* = int32
   Capts3* = object
     ## Seq of captures divided into blocks
@@ -33,7 +35,7 @@ type
     blockSize: Natural
     blockSizeL2: Natural
     states: seq[CaptState]
-    free: seq[int16]
+    free: seq[CaptIdx]
     freezeId: CaptState
 
 func len(capts: Capts3): int {.inline.} =
@@ -208,7 +210,7 @@ func constructSubmatches*(
   for c in captures.mitems:
     c.reverse()
 
-func reverse*(capts: var Capts, a, b: int32): int32 =
+func reverse*(capts: var Capts, a, b: CaptIdx): CaptIdx =
   ## reverse capture indices from a to b; return head
   doAssert a >= b
   var capt = a

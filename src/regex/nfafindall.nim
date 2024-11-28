@@ -100,7 +100,7 @@ func dummyMatch*(ms: var RegexMatches, i: int) {.inline.} =
   ## (no match implies this too)
   template ab: untyped = ms.m.s[^1].bounds
   if ms.m.len == 0 or max(ab.a, ab.b) < i:
-    ms.m.add (-1'i32, i+1 .. i)
+    ms.m.add (-1.CaptIdx, i+1 .. i)
 
 func submatch(
   ms: var RegexMatches,
@@ -120,7 +120,7 @@ func submatch(
   template nt: untyped = nfa[n].next[nti]
   template ntn: untyped = nfa[nt]
   smB.clear()
-  var captx: int32
+  var captx = 0.CaptIdx
   var matched = true
   var eoeFound = false
   var smi = 0
@@ -142,7 +142,7 @@ func submatch(
               parent: captx,
               bound: i,
               idx: ntn.idx)
-            captx = (capts.len-1).int32
+            captx = (capts.len-1).CaptIdx
           of assertionKind - lookaroundKind:
             matched = match(ntn, cPrev.Rune, c.Rune)
           of lookaroundKind:
@@ -158,7 +158,7 @@ func submatch(
           smA.clear()
           if not eoeFound:
             eoeFound = true
-            smA.add (0'i16, -1'i32, i .. i-1)
+            smA.add (0'i16, -1.CaptIdx, i .. i-1)
           smi = -1
           break
         smB.add (nt0, captx, bounds.a .. i-1)
@@ -181,7 +181,7 @@ func findSomeImpl*(
     i = start.int
     iPrev = start.int
     optFlag = mfFindMatchOpt in flags
-  smA.add (0'i16, -1'i32, i .. i-1)
+  smA.add (0'i16, -1.CaptIdx, i .. i-1)
   if start-1 in 0 .. text.len-1:
     cPrev = bwRuneAt(text, start-1).int32
   while i < text.len:
@@ -200,7 +200,7 @@ func findSomeImpl*(
         # else:  # XXX clear captures
         if optFlag:
           return i
-    smA.add (0'i16, -1'i32, i .. i-1)
+    smA.add (0'i16, -1.CaptIdx, i .. i-1)
     iPrev = i
     cPrev = c.int32
   submatch(ms, text, regex, iPrev, cPrev, -1'i32)

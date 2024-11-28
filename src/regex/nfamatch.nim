@@ -12,7 +12,7 @@ type
   AheadSig = proc (
     smA, smB: var Submatches,
     capts: var Capts,
-    captIdx: var int32,
+    captIdx: var CaptIdx,
     text: string,
     nfa: Nfa,
     look: var Lookaround,
@@ -22,7 +22,7 @@ type
   BehindSig = proc (
     smA, smB: var Submatches,
     capts: var Capts,
-    captIdx: var int32,
+    captIdx: var CaptIdx,
     text: string,
     nfa: Nfa,
     look: var Lookaround,
@@ -94,7 +94,7 @@ template nextStateTpl(bwMatch = false): untyped {.dirty.} =
               parent: captx,
               bound: i,
               idx: ntn.idx)
-            captx = (capts.len-1).int32
+            captx = (capts.len-1).CaptIdx
           of assertionKind - lookaroundKind:
             when bwMatch:
               matched = match(ntn, c, cPrev.Rune)
@@ -113,7 +113,7 @@ template nextStateTpl(bwMatch = false): untyped {.dirty.} =
 func matchImpl(
   smA, smB: var Submatches,
   capts: var Capts,
-  captIdx: var int32,
+  captIdx: var CaptIdx,
   text: string,
   nfa: Nfa,
   look: var Lookaround,
@@ -125,7 +125,7 @@ func matchImpl(
     cPrev = -1'i32
     i = start
     iNext = start
-    captx = -1'i32
+    captx = -1.CaptIdx
     matched = false
     anchored = mfAnchored in flags
   if start-1 in 0 .. text.len-1:
@@ -153,7 +153,7 @@ func matchImpl(
 func reversedMatchImpl(
   smA, smB: var Submatches,
   capts: var Capts,
-  captIdx: var int32,
+  captIdx: var CaptIdx,
   text: string,
   nfa: Nfa,
   look: var Lookaround,
@@ -168,7 +168,7 @@ func reversedMatchImpl(
     cPrev = -1'i32
     i = start
     iNext = start
-    captx: int32
+    captx = 0.CaptIdx
     matched = false
     anchored = true
   if start in 0 .. text.len-1:
@@ -205,7 +205,7 @@ func reversedMatchImpl*(
   start, limit: int
 ): int =
   var capts = default(Capts)
-  var captIdx = -1'i32
+  var captIdx = -1.CaptIdx
   reversedMatchImpl(
     smA, smB, capts, captIdx, text, nfa, look, start, limit
   )
@@ -226,7 +226,7 @@ func matchImpl*(
     smA = newSubmatches(regex.nfa.s.len)
     smB = newSubmatches(regex.nfa.s.len)
     capts = default(Capts)
-    capt = -1'i32
+    capt = -1.CaptIdx
     look = initLook()
   result = matchImpl(
     smA, smB, capts, capt, text, regex.nfa, look, start)
@@ -244,7 +244,7 @@ func startsWithImpl*(text: string, regex: Regex, start: int): bool =
     smA = newSubmatches(regex.nfa.s.len)
     smB = newSubmatches(regex.nfa.s.len)
     capts = default(Capts)
-    capt = -1'i32
+    capt = -1.CaptIdx
     look = initLook()
   result = matchImpl(
     smA, smB, capts, capt, text, regex.nfa, look, start, flags)

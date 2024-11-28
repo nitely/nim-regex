@@ -137,7 +137,7 @@ func dummyMatch*(ms: var RegexMatches2, i: int) =
   ## (no match implies this too)
   template ab: untyped = ms.m[^1].bounds
   if ms.m.len == 0 or max(ab.a, ab.b) < i:
-    ms.add (-1'i32, i+1 .. i)
+    ms.add (-1.CaptIdx, i+1 .. i)
 
 func nextState(
   ms: var RegexMatches2,
@@ -158,7 +158,7 @@ func nextState(
   template nt: untyped = nfa[n].next[nti]
   template ntn: untyped = nfa[nt]
   smB.clear()
-  var captx: int32
+  var captx = 0.CaptIdx
   var matched = true
   var eoeFound = false
   var smi = 0
@@ -187,7 +187,7 @@ func nextState(
           smA.clear()
           if not eoeFound:
             eoeFound = true
-            smA.add (0'i16, -1'i32, i .. i-1)
+            smA.add (0'i16, -1.CaptIdx, i .. i-1)
           smi = -1
           break
         smB.add (nt0, captx, bounds.a .. i-1)
@@ -214,7 +214,7 @@ func findSomeImpl*(
     flags = regex.flags.toMatchFlags + flags
     optFlag = mfFindMatchOpt in flags
     binFlag = mfBytesInput in flags
-  smA.add (0'i16, -1'i32, i .. i-1)
+  smA.add (0'i16, -1.CaptIdx, i .. i-1)
   if start-1 in 0 .. text.len-1:
     cPrev = if binFlag:
       text[start-1].int32
@@ -236,7 +236,7 @@ func findSomeImpl*(
           return i
         if optFlag:
           return i
-    smA.add (0'i16, -1'i32, i .. i-1)
+    smA.add (0'i16, -1.CaptIdx, i .. i-1)
     iPrev = i
     cPrev = c.int32
   nextState(ms, text, regex, iPrev, cPrev, -1'i32, flags)

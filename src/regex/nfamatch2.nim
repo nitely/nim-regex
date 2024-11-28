@@ -12,7 +12,7 @@ type
   AheadSig = proc (
     smA, smB: var Submatches,
     capts: var Capts3,
-    captIdx: var int32,
+    captIdx: var CaptIdx,
     text: string,
     nfa: Nfa,
     look: var Lookaround,
@@ -22,7 +22,7 @@ type
   BehindSig = proc (
     smA, smB: var Submatches,
     capts: var Capts3,
-    captIdx: var int32,
+    captIdx: var CaptIdx,
     text: string,
     nfa: Nfa,
     look: var Lookaround,
@@ -37,7 +37,7 @@ type
 func lookAround(
   ntn: Node,
   capts: var Capts3,
-  captIdx: var int32,
+  captIdx: var CaptIdx,
   text: string,
   look: var Lookaround,
   start: int,
@@ -78,7 +78,7 @@ func lookAround(
 
 func epsilonMatch*(
   matched: var bool,
-  captx: var int32,
+  captx: var CaptIdx,
   capts: var Capts3,
   look: var Lookaround,
   ntn: Node,
@@ -137,7 +137,7 @@ func nextState(
   template nt: untyped = nfa[n].next[nti]
   template ntn: untyped = nfa[nt]
   let anchored = mfAnchored in flags
-  var captx = 0'i32
+  var captx = 0.CaptIdx
   var matched = true
   smB.clear()
   for n, capt, bounds in items smA:
@@ -169,7 +169,7 @@ func nextState(
 func matchImpl(
   smA, smB: var Submatches,
   capts: var Capts3,
-  captIdx: var int32,
+  captIdx: var CaptIdx,
   text: string,
   nfa: Nfa,
   look: var Lookaround,
@@ -213,7 +213,7 @@ func matchImpl(
 func reversedMatchImpl(
   smA, smB: var Submatches,
   capts: var Capts3,
-  captIdx: var int32,
+  captIdx: var CaptIdx,
   text: string,
   nfa: Nfa,
   look: var Lookaround,
@@ -274,7 +274,7 @@ func reversedMatchImpl*(
   flags: MatchFlags = {}
 ): int =
   var capts = initCapts3(groupsLen)
-  var captIdx = -1'i32
+  var captIdx = -1.CaptIdx
   reversedMatchImpl(
     smA, smB, capts, captIdx, text, nfa, look, start, limit, flags
   )
@@ -298,7 +298,7 @@ func matchImpl*(
     smA = newSubmatches(regex.nfa.s.len)
     smB = newSubmatches(regex.nfa.s.len)
     capts = initCapts3(regex.groupsCount)
-    captIdx = -1'i32
+    captIdx = -1.CaptIdx
     look = initLook()
   result = matchImpl(
     smA, smB, capts, captIdx, text, regex.nfa, look, start, flags
@@ -326,7 +326,7 @@ func startsWithImpl2*(
     smA = newSubmatches(regex.nfa.s.len)
     smB = newSubmatches(regex.nfa.s.len)
     capts = initCapts3(regex.groupsCount)
-    captIdx = -1'i32
+    captIdx = -1.CaptIdx
     look = initLook()
   result = matchImpl(
     smA, smB, capts, captIdx, text, regex.nfa, look, start, flags

@@ -76,6 +76,47 @@ func lookAround*(
     false
   smL.removeLast()
 
+func epsilonMatch(
+  matched: var bool,
+  captx: var int32,
+  capts: var Capts3,
+  look: var Lookaround,
+  ntn: Node,
+  text: string,
+  i: int,
+  cPrev: int32,
+  c: Rune,
+  flags: MatchFlags,
+  bwMatch: bool
+) =
+  template captElm: untyped =
+    capts[captx, ntn.idx]
+  case ntn.kind
+  of reGroupStart:
+    captx = capts.diverge captx
+    if mfReverseCapts notin flags or
+        captElm.a == nonCapture.a:
+      captElm.a = i
+  of reGroupEnd:
+    captx = capts.diverge captx
+    if mfReverseCapts notin flags or
+        captElm.b == nonCapture.b:
+      captElm.b = i-1
+  of assertionKind - lookaroundKind:
+    if bwMatch:
+      matched = match(ntn, c, cPrev.Rune)
+    else:
+      matched = match(ntn, cPrev.Rune, c)
+  of lookaroundKind:
+    let freezed = capts.freeze()
+    matched = lookAround(ntn, capts, captx, text, look, i, flags)
+    capts.unfreeze freezed
+    if captx != -1:
+      capts.keepAlive captx
+  else:
+    doAssert false
+    discard
+
 func nextState(
   smA, smB: var Submatches,
   capts: var Capts3,
@@ -91,11 +132,9 @@ func nextState(
   template nfa: untyped = nfa2.s
   template bounds2: untyped =
     if bwMatch: i .. bounds.b else: bounds.a .. i-1
-  template captElm: untyped =
-    capts[captx, nfa[nt].idx]
   template nt: untyped = nfa[n].next[nti]
   template ntn: untyped = nfa[nt]
-  let anchored = bwMatch or mfAnchored in flags
+  let anchored = mfAnchored in flags
   var captx = 0'i32
   var matched = true
   smB.clear()
@@ -116,32 +155,9 @@ func nextState(
       captx = capt
       while nti < L and isEpsilonTransition(ntn):
         if matched:
-          case ntn.kind
-          of reGroupStart:
-            # XXX this can be avoided in some cases?
-            captx = capts.diverge captx
-            if mfReverseCapts notin flags or
-                captElm.a == nonCapture.a:
-              captElm.a = i
-          of reGroupEnd:
-            captx = capts.diverge captx
-            if mfReverseCapts notin flags or
-                captElm.b == nonCapture.b:
-              captElm.b = i-1
-          of assertionKind - lookaroundKind:
-            if bwMatch:
-              matched = match(ntn, c, cPrev.Rune)
-            else:
-              matched = match(ntn, cPrev.Rune, c)
-          of lookaroundKind:
-            let freezed = capts.freeze()
-            matched = lookAround(ntn, capts, captx, text, look, i, flags)
-            capts.unfreeze freezed
-            if captx != -1:
-              capts.keepAlive captx
-          else:
-            doAssert false
-            discard
+          epsilonMatch(
+            matched, captx, capts, look, ntn, text, i, cPrev, c, flags, bwMatch
+          )
         inc nti
       if matched:
         smB.add (nt0, captx, bounds2)
@@ -210,6 +226,7 @@ func reversedMatchImpl(
     cPrev = -1'i32
     i = start
     iNext = start
+  let flags = flags + {mfAnchored}
   let binFlag = mfBytesInput in flags
   if start in 0 .. text.len-1:
     cPrev = if binFlag:

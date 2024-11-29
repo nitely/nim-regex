@@ -1495,6 +1495,10 @@ test "tfindall":
     @[0 .. 10, 11 .. 10, 12 .. 22, 23 .. 22]
   check findAllBounds("1xxx", re2"\d\w+x") == @[0 .. 3]
   check findAllBounds("xxxx", re2"\d\w+x").len == 0
+  check findAllBounds("a123", re2"a\d*") == @[0 .. 3]
+  check findAllBounds("a123", re2"a\d*?") == @[0 .. 0]
+  check findAllBounds("a123", re2"a\d+") == @[0 .. 3]
+  check findAllBounds("a123", re2"a\d+?") == @[0 .. 1]
 
 test "tstarts_with":
   check "abc".startsWith(re2"ab")
@@ -1547,6 +1551,10 @@ test "tends_with":
   check re2"$" in ""
   check endsWith("a", re2"")
   check re2"$" in "a"
+  check endsWith("a123", re2"a\d*")
+  #check endsWith("a123", re2"a\d*?")  # XXX fix
+  check endsWith("a123", re2"a\d*$")
+  check endsWith("a123", re2"a\d*?$")
 
 test "tliterals":
   check "a".isMatch(re2"\u0061")

@@ -106,6 +106,40 @@ func swapCase*(r: Rune): Rune =
     return
   result = r.toUpper()
 
+func matchShorthand(n: Node, r: Rune): bool =
+  case n.kind
+  of reWord:
+    r.isWord()
+  of reNotAlphaNum:
+    not r.isWord()
+  of reDigit:
+    r.isDecimal()
+  of reNotDigit:
+    not r.isDecimal()
+  of reWhiteSpace:
+    r.isWhiteSpace()
+  of reNotWhiteSpace:
+    not r.isWhiteSpace()
+  of reWordAscii:
+    r.isWordAscii()
+  of reDigitAscii:
+    r.isDigitAscii()
+  of reWhiteSpaceAscii:
+    r.isWhiteSpaceAscii()
+  of reUCC:
+    r.unicodeCategory() in n.cc
+  of reNotAlphaNumAscii:
+    not r.isWordAscii()
+  of reNotDigitAscii:
+    not r.isDigitAscii()
+  of reNotWhiteSpaceAscii:
+    not r.isWhiteSpaceAscii()
+  of reNotUCC:
+    r.unicodeCategory() notin n.cc
+  else:
+    doAssert false
+    false
+
 func match*(n: Node, r: Rune): bool {.inline.} =
   ## match for ``Node`` of matchable kind.
   ## Return whether the node matches
@@ -130,15 +164,15 @@ func match*(n: Node, r: Rune): bool {.inline.} =
   of reNotWhiteSpace:
     not r.isWhiteSpace()
   of reInSet, reNotSet:
-    var matches = (
+    var matched = (
       r in n.cps or
       r in n.ranges)
-    if not matches:
+    if not matched:
       for nn in n.shorthands:
-        matches = nn.match(r)
-        if matches: break
-    ((matches and n.kind == reInSet) or
-     (not matches and n.kind == reNotSet))
+        matched = matchShorthand(nn, r)
+        if matched: break
+    ((matched and n.kind == reInSet) or
+     (not matched and n.kind == reNotSet))
   of reAny:
     r != lineBreakRune
   of reAnyNL:

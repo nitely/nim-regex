@@ -42,6 +42,7 @@ proc raises(pattern: string): bool =
     result = true
 
 proc raisesMsg(pattern: string): string =
+  result = ""
   try:
     discard pattern.re()
   except RegexError:
@@ -71,6 +72,7 @@ func findAllCapt(s: string, reg: Regex): seq[seq[seq[Slice[int]]]] =
   result = map(
     findAll(s, reg),
     func (m: RegexMatch): seq[seq[Slice[int]]] =
+      result = newSeq[seq[Slice[int]]]()
       for i in 0 .. m.groupsCount-1:
         result.add m.group(i))
 

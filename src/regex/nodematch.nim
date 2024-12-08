@@ -108,37 +108,38 @@ func swapCase*(r: Rune): Rune =
 
 func matchShorthand(n: Node, r: Rune): bool =
   case n.kind
-  of reWord:
-    r.isWord()
-  of reNotAlphaNum:
-    not r.isWord()
-  of reDigit:
-    r.isDecimal()
-  of reNotDigit:
-    not r.isDecimal()
-  of reWhiteSpace:
-    r.isWhiteSpace()
-  of reNotWhiteSpace:
-    not r.isWhiteSpace()
-  of reWordAscii:
-    r.isWordAscii()
-  of reDigitAscii:
-    r.isDigitAscii()
-  of reWhiteSpaceAscii:
-    r.isWhiteSpaceAscii()
-  of reUCC:
-    r.unicodeCategory() in n.cc
-  of reNotAlphaNumAscii:
-    not r.isWordAscii()
-  of reNotDigitAscii:
-    not r.isDigitAscii()
-  of reNotWhiteSpaceAscii:
-    not r.isWhiteSpaceAscii()
-  of reNotUCC:
-    r.unicodeCategory() notin n.cc
+  of reWord: r.isWord()
+  of reNotAlphaNum: not r.isWord()
+  of reDigit: r.isDecimal()
+  of reNotDigit: not r.isDecimal()
+  of reWhiteSpace: r.isWhiteSpace()
+  of reNotWhiteSpace: not r.isWhiteSpace()
+  of reWordAscii: r.isWordAscii()
+  of reDigitAscii: r.isDigitAscii()
+  of reWhiteSpaceAscii: r.isWhiteSpaceAscii()
+  of reUCC: r.unicodeCategory() in n.cc
+  of reNotAlphaNumAscii: not r.isWordAscii()
+  of reNotDigitAscii: not r.isDigitAscii()
+  of reNotWhiteSpaceAscii: not r.isWhiteSpaceAscii()
+  of reNotUCC: r.unicodeCategory() notin n.cc
   else:
     doAssert false
     false
+
+func matchSet(n: Node, r: Rune): bool =
+  result = (
+    r in n.cps or
+    r in n.ranges
+  )
+  if not result:
+    for nn in n.shorthands:
+      result = matchShorthand(nn, r)
+      if result:
+        break
+  result = (
+    (result and n.kind == reInSet) or
+    (not result and n.kind == reNotSet)
+  )
 
 func match*(n: Node, r: Rune): bool {.inline.} =
   ## match for ``Node`` of matchable kind.
@@ -149,52 +150,25 @@ func match*(n: Node, r: Rune): bool {.inline.} =
   if n.kind == reChar:
     return n.cp == r
   case n.kind
-  of reEOE:
-    r == invalidRune
-  of reWord:
-    r.isWord()
-  of reNotAlphaNum:
-    not r.isWord()
-  of reDigit:
-    r.isDecimal()
-  of reNotDigit:
-    not r.isDecimal()
-  of reWhiteSpace:
-    r.isWhiteSpace()
-  of reNotWhiteSpace:
-    not r.isWhiteSpace()
-  of reInSet, reNotSet:
-    var matched = (
-      r in n.cps or
-      r in n.ranges)
-    if not matched:
-      for nn in n.shorthands:
-        matched = matchShorthand(nn, r)
-        if matched: break
-    ((matched and n.kind == reInSet) or
-     (not matched and n.kind == reNotSet))
-  of reAny:
-    r != lineBreakRune
-  of reAnyNL:
-    true
-  of reCharCI:
-    r == n.cp or r == n.cp.swapCase()
-  of reWordAscii:
-    r.isWordAscii()
-  of reDigitAscii:
-    r.isDigitAscii()
-  of reWhiteSpaceAscii:
-    r.isWhiteSpaceAscii()
-  of reUCC:
-    r.unicodeCategory() in n.cc
-  of reNotAlphaNumAscii:
-    not r.isWordAscii()
-  of reNotDigitAscii:
-    not r.isDigitAscii()
-  of reNotWhiteSpaceAscii:
-    not r.isWhiteSpaceAscii()
-  of reNotUCC:
-    r.unicodeCategory() notin n.cc
+  of reEOE: r == invalidRune
+  of reWord: r.isWord()
+  of reNotAlphaNum: not r.isWord()
+  of reDigit: r.isDecimal()
+  of reNotDigit: not r.isDecimal()
+  of reWhiteSpace: r.isWhiteSpace()
+  of reNotWhiteSpace: not r.isWhiteSpace()
+  of reAny: r != lineBreakRune
+  of reAnyNL: true
+  of reCharCI: r == n.cp or r == n.cp.swapCase()
+  of reWordAscii: r.isWordAscii()
+  of reDigitAscii: r.isDigitAscii()
+  of reWhiteSpaceAscii: r.isWhiteSpaceAscii()
+  of reUCC: r.unicodeCategory() in n.cc
+  of reNotAlphaNumAscii: not r.isWordAscii()
+  of reNotDigitAscii: not r.isDigitAscii()
+  of reNotWhiteSpaceAscii: not r.isWhiteSpaceAscii()
+  of reNotUCC: r.unicodeCategory() notin n.cc
+  of reInSet, reNotSet: matchSet(n, r)
   else:
     assert n.kind == reChar
     n.cp == r

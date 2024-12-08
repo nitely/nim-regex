@@ -275,8 +275,7 @@ func parseSetEscapedSeq(sc: Scanner[Rune]): Node =
 
 func parseAsciiSet(sc: Scanner[Rune]): Node =
   ## Parse an ascii set (i.e: ``[:ascii:]``).
-  ## The ascii set will get expanded
-  ## and merged with the outer set
+  ## An expanded ascii set is returned.
   let startPos = sc.pos
   assert sc.peek == ":".toRune
   discard sc.next()

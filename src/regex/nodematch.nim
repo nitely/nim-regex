@@ -106,6 +106,45 @@ func swapCase*(r: Rune): Rune =
     return
   result = r.toUpper()
 
+func matchAsciiSet(n: Node, r: Rune): bool =
+  assert n.shorthands.len == 0
+  result = r in n.cps or
+    r in n.ranges
+  result = (result and n.kind == reInSet) or
+    (not result and n.kind == reNotSet)
+
+func matchShorthand(n: Node, r: Rune): bool =
+  case n.kind
+  of reWord: r.isWord()
+  of reNotAlphaNum: not r.isWord()
+  of reDigit: r.isDecimal()
+  of reNotDigit: not r.isDecimal()
+  of reWhiteSpace: r.isWhiteSpace()
+  of reNotWhiteSpace: not r.isWhiteSpace()
+  of reUCC: r.unicodeCategory() in n.cc
+  of reNotUCC: r.unicodeCategory() notin n.cc
+  of reWordAscii: r.isWordAscii()
+  of reNotAlphaNumAscii: not r.isWordAscii()
+  of reDigitAscii: r.isDigitAscii()
+  of reNotDigitAscii: not r.isDigitAscii()
+  of reWhiteSpaceAscii: r.isWhiteSpaceAscii()
+  of reNotWhiteSpaceAscii: not r.isWhiteSpaceAscii()
+  of reInSet, reNotSet: matchAsciiSet(n, r)
+  else:
+    doAssert false
+    false
+
+func matchSet(n: Node, r: Rune): bool =
+  result = r in n.cps or
+    r in n.ranges
+  if not result:
+    for nn in n.shorthands:
+      result = matchShorthand(nn, r)
+      if result:
+        break
+  result = (result and n.kind == reInSet) or
+    (not result and n.kind == reNotSet)
+
 func match*(n: Node, r: Rune): bool {.inline.} =
   ## match for ``Node`` of matchable kind.
   ## Return whether the node matches
@@ -115,52 +154,25 @@ func match*(n: Node, r: Rune): bool {.inline.} =
   if n.kind == reChar:
     return n.cp == r
   case n.kind
-  of reEOE:
-    r == invalidRune
-  of reWord:
-    r.isWord()
-  of reNotAlphaNum:
-    not r.isWord()
-  of reDigit:
-    r.isDecimal()
-  of reNotDigit:
-    not r.isDecimal()
-  of reWhiteSpace:
-    r.isWhiteSpace()
-  of reNotWhiteSpace:
-    not r.isWhiteSpace()
-  of reInSet, reNotSet:
-    var matches = (
-      r in n.cps or
-      r in n.ranges)
-    if not matches:
-      for nn in n.shorthands:
-        matches = nn.match(r)
-        if matches: break
-    ((matches and n.kind == reInSet) or
-     (not matches and n.kind == reNotSet))
-  of reAny:
-    r != lineBreakRune
-  of reAnyNL:
-    true
-  of reCharCI:
-    r == n.cp or r == n.cp.swapCase()
-  of reWordAscii:
-    r.isWordAscii()
-  of reDigitAscii:
-    r.isDigitAscii()
-  of reWhiteSpaceAscii:
-    r.isWhiteSpaceAscii()
-  of reUCC:
-    r.unicodeCategory() in n.cc
-  of reNotAlphaNumAscii:
-    not r.isWordAscii()
-  of reNotDigitAscii:
-    not r.isDigitAscii()
-  of reNotWhiteSpaceAscii:
-    not r.isWhiteSpaceAscii()
-  of reNotUCC:
-    r.unicodeCategory() notin n.cc
+  of reEOE: r == invalidRune
+  of reWord: r.isWord()
+  of reNotAlphaNum: not r.isWord()
+  of reDigit: r.isDecimal()
+  of reNotDigit: not r.isDecimal()
+  of reWhiteSpace: r.isWhiteSpace()
+  of reNotWhiteSpace: not r.isWhiteSpace()
+  of reAny: r != lineBreakRune
+  of reAnyNL: true
+  of reCharCI: r == n.cp or r == n.cp.swapCase()
+  of reUCC: r.unicodeCategory() in n.cc
+  of reNotUCC: r.unicodeCategory() notin n.cc
+  of reWordAscii: r.isWordAscii()
+  of reNotAlphaNumAscii: not r.isWordAscii()
+  of reDigitAscii: r.isDigitAscii()
+  of reNotDigitAscii: not r.isDigitAscii()
+  of reWhiteSpaceAscii: r.isWhiteSpaceAscii()
+  of reNotWhiteSpaceAscii: not r.isWhiteSpaceAscii()
+  of reInSet, reNotSet: matchSet(n, r)
   else:
     assert n.kind == reChar
     n.cp == r

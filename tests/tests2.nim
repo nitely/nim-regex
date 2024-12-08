@@ -44,6 +44,7 @@ proc raises(pattern: string): bool =
     result = true
 
 proc raisesMsg(pattern: string): string =
+  result = ""
   try:
     discard pattern.re2()
   except RegexError:
@@ -52,7 +53,7 @@ proc raisesMsg(pattern: string): string =
 proc matchWithCapt(s: string, pattern: static Regex2): seq[string] =
   var m = RegexMatch2()
   check match(s, pattern, m)
-  result.setLen m.captures.len
+  result = newSeq[string](m.captures.len)
   for i, bounds in m.captures.pairs:
     result[i] = s[bounds]
 
@@ -62,7 +63,7 @@ proc matchWithBounds(s: string, pattern: static Regex2): seq[Slice[int]] =
   return m.captures
 
 proc toStrCaptures(m: RegexMatch2, s: string): seq[string] =
-  result.setLen m.captures.len
+  result = newSeq[string](m.captures.len)
   for i, bounds in m.captures.pairs:
     result[i] = s[bounds]
 
@@ -75,6 +76,7 @@ func findAllCapt(s: string, reg: Regex2): seq[seq[Slice[int]]] =
   result = map(
     findAll(s, reg),
     func (m: RegexMatch2): seq[Slice[int]] =
+      result = newSeq[Slice[int]]()
       for i in 0 .. m.groupsCount-1:
         result.add m.group(i))
 
@@ -104,17 +106,18 @@ template matchMacro(s, r: untyped): untyped =
 
 template matchMacroCapt(s, r: untyped): untyped =
   (func (): seq[string] =
+    result = newSeq[string]()
     var m = false
     let exp = s
     match exp, r:
       m = true
-      result = matches
+      result.add matches
     check m)()
 
 test "tmatch_macro":
   block hasOwnScope:
     var m = false
-    var matches: seq[string]
+    var matches = newSeq[string]()
     match "abc", rex"(\w+)":
       check matches == @["abc"]
       m = true
@@ -2242,7 +2245,7 @@ test "treuse_regex_match":
 
 test "tisInitialized":
   block:
-    var re: Regex2
+    var re = default(Regex2)
     check(not re.isInitialized)
     re = re2"foo"
     check re.isInitialized
@@ -3092,7 +3095,7 @@ test "tverifyutf8":
   raisesInvalidUtf8 endsWith("\xff", re2"abc")
   raisesInvalidUtf8 replace("\xff", re2"abc", "abc")
   raisesInvalidUtf8 replace("\xff", re2"abc",
-    (proc (m: RegexMatch2, s: string): string = discard))
+    (proc (m: RegexMatch2, s: string): string = return ""))
   raisesInvalidUtf8 escapeRe("\xff")
 
 # bug: raises invalid utf8 regex in Nim 1.0 + js target

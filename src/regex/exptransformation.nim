@@ -256,7 +256,7 @@ func expandOneRepRange(subExpr: seq[Node], n: Node): seq[Node] =
       result.add(subExpr)
     result.add(Node(
       kind: reZeroOrMore,
-      cp: "*".toRune,
+      cp: '*'.toRune,
       isGreedy: n.isGreedy))
   elif n.min == n.max:  # a{n} -> aaa
     result = newSeqOfCap[Node](subExpr.len * n.max)
@@ -270,12 +270,12 @@ func expandOneRepRange(subExpr: seq[Node], n: Node): seq[Node] =
     for _ in n.min ..< n.max - 1:
       result.add(Node(
         kind: reZeroOrOne,
-        cp: "?".toRune,
+        cp: '?'.toRune,
         isGreedy: n.isGreedy))
       result.add(subExpr)
     result.add(Node(
       kind: reZeroOrOne,
-      cp: "?".toRune,
+      cp: '?'.toRune,
       isGreedy: n.isGreedy))
 
 func expandRepRange(exp: Exp): Exp =

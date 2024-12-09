@@ -1,0 +1,15 @@
+Scanner	regex/scanner.html#Scanner	scanner: Scanner	
+newScanner	regex/scanner.html#newScanner,seq[T]	scanner: newScanner[T](s: seq[T]): Scanner[T]	
+scan	regex/scanner.html#scan,seq[T]	scanner: scan[T](s: seq[T]): Scanner[T]	
+scan	regex/scanner.html#scan,string	scanner: scan(raw: string; bytesMode = false): Scanner[Rune]	
+items	regex/scanner.html#items.i,Scanner[T]	scanner: items[T](sc: Scanner[T]): T	
+mitems	regex/scanner.html#mitems.i,Scanner[T]	scanner: mitems[T](sc: var Scanner[T]): var T	
+finished	regex/scanner.html#finished,Scanner[T]	scanner: finished[T](sc: Scanner[T]): bool	
+prev	regex/scanner.html#prev,Scanner[T]	scanner: prev[T](sc: Scanner[T]): T	
+curr	regex/scanner.html#curr,Scanner[T]	scanner: curr[T](sc: Scanner[T]): T	
+next	regex/scanner.html#next,Scanner[T]	scanner: next[T](sc: Scanner[T]): T	
+peek	regex/scanner.html#peek,Scanner[Rune]	scanner: peek(sc: Scanner[Rune]): Rune	
+peek	regex/scanner.html#peek,Scanner[Node]	scanner: peek(sc: Scanner[Node]): Node	
+peek	regex/scanner.html#peek.i,Scanner[T]	scanner: peek[T](sc: Scanner[T]): (T, T)	
+peek	regex/scanner.html#peek,Scanner[Rune],int	scanner: peek(sc: Scanner[Rune]; n: int): Rune	
+find	regex/scanner.html#find,Scanner[Rune],Rune	scanner: find(sc: Scanner[Rune]; r: Rune): int	

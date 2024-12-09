@@ -19,13 +19,13 @@ const
   # Nim and not the actual `\n`
   lineBreakRune* = Rune(10)
 
-proc toRune*(s: string): Rune =
-  result = s.runeAt(0)
+func toRune*(c: char): Rune =
+  result = Rune(c.ord)
 
-proc `<=`*(x, y: Rune): bool =
+func `<=`*(x, y: Rune): bool =
   x.int <= y.int
 
-proc cmp*(x, y: Rune): int =
+func cmp*(x, y: Rune): int =
   x.int - y.int
 
 func bwRuneAt*(s: string, n: int): Rune =

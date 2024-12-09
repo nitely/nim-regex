@@ -60,17 +60,17 @@ func toShorthandNode(r: Rune): Node =
   ## the given character must be a shorthand or
   ## else a ``CharNode`` is returned
   case r
-  of "w".toRune:
+  of 'w'.toRune:
     Node(kind: reWord, cp: r)
-  of "d".toRune:
+  of 'd'.toRune:
     Node(kind: reDigit, cp: r)
-  of "s".toRune:
+  of 's'.toRune:
     Node(kind: reWhiteSpace, cp: r)
-  of "W".toRune:
+  of 'W'.toRune:
     Node(kind: reNotAlphaNum, cp: r)
-  of "D".toRune:
+  of 'D'.toRune:
     Node(kind: reNotDigit, cp: r)
-  of "S".toRune:
+  of 'S'.toRune:
     Node(kind: reNotWhiteSpace, cp: r)
   else:
     r.toCharNode
@@ -79,13 +79,13 @@ func toAssertionNode(r: Rune): Node =
   ## the given character must be an assertion or
   ## else a ``CharNode`` is returned
   case r
-  of "A".toRune:
+  of 'A'.toRune:
     Node(kind: reStart, cp: r)
-  of "z".toRune:
+  of 'z'.toRune:
     Node(kind: reEnd, cp: r)
-  of "b".toRune:
+  of 'b'.toRune:
     Node(kind: reWordBoundary, cp: r)
-  of "B".toRune:
+  of 'B'.toRune:
     Node(kind: reNotWordBoundary, cp: r)
   else:
     r.toCharNode
@@ -95,18 +95,18 @@ func toEscapedSeqNode(r: Rune): Node =
   ## escaped sequence or else a regular char
   ## Node is returned
   case r
-  of "a".toRune:
-    Node(kind: reChar, cp: "\x07".toRune)
-  of "f".toRune:
-    Node(kind: reChar, cp: "\x0C".toRune)
-  of "t".toRune:
-    Node(kind: reChar, cp: "\t".toRune)
-  of "n".toRune:
-    Node(kind: reChar, cp: "\L".toRune)
-  of "r".toRune:
-    Node(kind: reChar, cp: "\r".toRune)
-  of "v".toRune:
-    Node(kind: reChar, cp: "\x0B".toRune)
+  of 'a'.toRune:
+    Node(kind: reChar, cp: '\x07'.toRune)
+  of 'f'.toRune:
+    Node(kind: reChar, cp: '\x0C'.toRune)
+  of 't'.toRune:
+    Node(kind: reChar, cp: '\t'.toRune)
+  of 'n'.toRune:
+    Node(kind: reChar, cp: '\L'.toRune)
+  of 'r'.toRune:
+    Node(kind: reChar, cp: '\r'.toRune)
+  of 'v'.toRune:
+    Node(kind: reChar, cp: '\x0B'.toRune)
   else:
     r.toCharNode
 
@@ -143,9 +143,9 @@ func parseUnicodeLit(sc: Scanner[Rune], size: int): Node =
 
 func parseUnicodeLitX(sc: Scanner[Rune]): Node =
   let startPos = sc.pos-1
-  assert sc.peek == "{".toRune
+  assert sc.peek == '{'.toRune
   discard sc.next()
-  let litEnd = sc.find("}".toRune)
+  let litEnd = sc.find('}'.toRune)
   prettyCheck(
     litEnd != -1,
     "Invalid unicode literal. Expected `}`")
@@ -154,7 +154,7 @@ func parseUnicodeLitX(sc: Scanner[Rune]): Node =
     ("Invalid unicode literal. " &
      "Expected at most 8 chars, found $#") %% $litEnd)
   result = parseUnicodeLit(sc, litEnd)
-  assert sc.peek == "}".toRune
+  assert sc.peek == '}'.toRune
   discard sc.next()
 
 func parseOctalLit(sc: Scanner[Rune]): Node =
@@ -186,9 +186,9 @@ func parseCC(s: string): UnicodeCategorySet =
 
 func parseUnicodeNameX(sc: Scanner[Rune]): Node =
   let startPos = sc.pos-1
-  assert sc.peek == "{".toRune
+  assert sc.peek == '{'.toRune
   discard sc.next()
-  let nameEnd = sc.find("}".toRune)
+  let nameEnd = sc.find('}'.toRune)
   prettyCheck(
     nameEnd != -1,
     "Invalid unicode name. Expected `}`")
@@ -200,7 +200,7 @@ func parseUnicodeNameX(sc: Scanner[Rune]): Node =
       "Invalid unicode name. " &
       "Expected chars in {'a'..'z', 'A'..'Z'}")
     name[i] = sc.next().int.char
-  assert sc.peek == "}".toRune
+  assert sc.peek == '}'.toRune
   discard sc.next()
   prettyCheck(
     name in [
@@ -212,47 +212,47 @@ func parseUnicodeNameX(sc: Scanner[Rune]): Node =
     "Invalid unicode name. Found $#" %% name)
   result = Node(
     kind: reUCC,
-    cp: "#".toRune,
+    cp: '#'.toRune,
     cc: name.parseCC)
 
 func parseUnicodeName(sc: Scanner[Rune]): Node =
   let startPos = sc.pos-1
   case sc.peek
-  of "{".toRune:
+  of '{'.toRune:
     result = parseUnicodeNameX(sc)
   else:
     prettyCheck(
       sc.peek in [
-        "C".toRune, "L".toRune, "M".toRune, "N".toRune,
-        "Z".toRune, "P".toRune, "S".toRune],
+        'C'.toRune, 'L'.toRune, 'M'.toRune, 'N'.toRune,
+        'Z'.toRune, 'P'.toRune, 'S'.toRune],
       "Invalid unicode name. Found $#" %% sc.peek.toUTF8)
     result = Node(
       kind: reUCC,
-      cp: "¿".toRune,
+      cp: '#'.toRune,
       cc: sc.next().toUTF8.parseCC)
 
 func parseEscapedSeq(sc: Scanner[Rune]): Node =
   ## Parse a escaped sequence
   case sc.peek
-  of "u".toRune:
+  of 'u'.toRune:
     discard sc.next()
     parseUnicodeLit(sc, 4)
-  of "U".toRune:
+  of 'U'.toRune:
     discard sc.next()
     parseUnicodeLit(sc, 8)
-  of "x".toRune:
+  of 'x'.toRune:
     discard sc.next()
     case sc.peek
-    of "{".toRune:
+    of '{'.toRune:
       parseUnicodeLitX(sc)
     else:
       parseUnicodeLit(sc, 2)
-  of "0".toRune .. "7".toRune:
+  of '0'.toRune .. '7'.toRune:
     parseOctalLit(sc)
-  of "p".toRune:
+  of 'p'.toRune:
     discard sc.next()
     parseUnicodeName(sc)
-  of "P".toRune:
+  of 'P'.toRune:
     discard sc.next()
     var node = parseUnicodeName(sc)
     node.kind = reNotUCC
@@ -277,79 +277,79 @@ func parseAsciiSet(sc: Scanner[Rune]): Node =
   ## Parse an ascii set (i.e: ``[:ascii:]``).
   ## An expanded ascii set is returned.
   let startPos = sc.pos
-  assert sc.peek == ":".toRune
+  assert sc.peek == ':'.toRune
   discard sc.next()
   result = case sc.peek
-  of "^".toRune:
+  of '^'.toRune:
     discard sc.next()
     initNotSetNode()
   else:
     initSetNode()
   var name = newStringOfCap(16)
   for r in sc:
-    if r == ":".toRune:
+    if r == ':'.toRune:
       break
     name.add(r.toUTF8)
   prettyCheck(
-    sc.peek == "]".toRune,
+    sc.peek == ']'.toRune,
     "Invalid ascii set. Expected [:name:]")
   discard sc.next
   case name
   of "alpha":
     result.ranges.add([
-      "a".toRune .. "z".toRune,
-      "A".toRune .. "Z".toRune])
+      'a'.toRune .. 'z'.toRune,
+      'A'.toRune .. 'Z'.toRune])
   of "alnum":
     result.ranges.add([
-      "0".toRune .. "9".toRune,
-      "a".toRune .. "z".toRune,
-      "A".toRune .. "Z".toRune])
+      '0'.toRune .. '9'.toRune,
+      'a'.toRune .. 'z'.toRune,
+      'A'.toRune .. 'Z'.toRune])
   of "ascii":
     result.ranges.add(
-      "\x00".toRune .. "\x7F".toRune)
+      '\x00'.toRune .. '\x7F'.toRune)
   of "blank":
     result.cps.incl(toHashSet([
-      "\t".toRune, " ".toRune]))
+      '\t'.toRune, ' '.toRune]))
   of "cntrl":
     result.ranges.add(
-      "\x00".toRune .. "\x1F".toRune)
-    result.cps.incl("\x7F".toRune)
+      '\x00'.toRune .. '\x1F'.toRune)
+    result.cps.incl('\x7F'.toRune)
   of "digit":
     result.ranges.add(
-      "0".toRune .. "9".toRune)
+      '0'.toRune .. '9'.toRune)
   of "graph":
     result.ranges.add(
-      "!".toRune .. "~".toRune)
+      '!'.toRune .. '~'.toRune)
   of "lower":
     result.ranges.add(
-      "a".toRune .. "z".toRune)
+      'a'.toRune .. 'z'.toRune)
   of "print":
     result.ranges.add(
-      " ".toRune .. "~".toRune)
+      ' '.toRune .. '~'.toRune)
   of "punct":
     result.ranges.add([
-      "!".toRune .. "/".toRune,
-      ":".toRune .. "@".toRune,
-      "[".toRune .. "`".toRune,
-      "{".toRune .. "~".toRune])
+      '!'.toRune .. '/'.toRune,
+      ':'.toRune .. '@'.toRune,
+      '['.toRune .. '`'.toRune,
+      '{'.toRune .. '~'.toRune])
   of "space":
     result.cps.incl(toHashSet([
-      "\t".toRune, "\L".toRune, "\v".toRune,
-      "\f".toRune, "\r".toRune, " ".toRune]))
+      '\t'.toRune, '\L'.toRune, '\v'.toRune,
+      '\f'.toRune, '\r'.toRune, ' '.toRune]))
   of "upper":
     result.ranges.add(
-      "A".toRune .. "Z".toRune)
+      'A'.toRune .. 'Z'.toRune)
   of "word":
     result.ranges.add([
-      "0".toRune .. "9".toRune,
-      "a".toRune .. "z".toRune,
-      "A".toRune .. "Z".toRune])
-    result.cps.incl("_".toRune)
+      '0'.toRune .. '9'.toRune,
+      'a'.toRune .. 'z'.toRune,
+      'A'.toRune .. 'Z'.toRune])
+    result.cps.incl('_'.toRune)
   of "xdigit":
     result.ranges.add([
-      "0".toRune .. "9".toRune,
-      "a".toRune .. "f".toRune,
-      "A".toRune .. "F".toRune])
+      '0'.toRune .. '9'.toRune,
+      'a'.toRune .. 'f'.toRune,
+      'A'.toRune .. 'F'.toRune])
   else:
     prettyCheck(
       false,
@@ -362,7 +362,7 @@ func parseSet(sc: Scanner[Rune]): Node =
   ## handles a ton of edge cases
   let startPos = sc.pos
   result = case sc.peek
-  of "^".toRune:
+  of '^'.toRune:
     discard sc.next()
     initNotSetNode()
   else:
@@ -372,12 +372,12 @@ func parseSet(sc: Scanner[Rune]): Node =
     cps = newSeq[Rune]()
   for cp in sc:
     case cp
-    of "]".toRune:
+    of ']'.toRune:
       hasEnd = not result.isEmpty or cps.len > 0
       if hasEnd:
         break
       cps.add(cp)
-    of "\\".toRune:
+    of '\\'.toRune:
       let nn = parseSetEscapedSeq(sc)
       case nn.kind
       of reChar:
@@ -386,20 +386,20 @@ func parseSet(sc: Scanner[Rune]): Node =
         assert nn.kind in shorthandKind
         result.shorthands.add(nn)
         # can't be range so discard
-        if sc.peek == "-".toRune:
+        if sc.peek == '-'.toRune:
           cps.add(sc.next())
-    of "-".toRune:
+    of '-'.toRune:
       if sc.finished:
         # no end
         continue
       if cps.len == 0:
         cps.add(cp)
         continue
-      if sc.peek == "]".toRune:
+      if sc.peek == ']'.toRune:
         cps.add(cp)
         continue
       var last = case sc.peek
-        of "\\".toRune:
+        of '\\'.toRune:
           discard sc.next()
           let nn = parseSetEscapedSeq(sc)
           check(
@@ -420,10 +420,10 @@ func parseSet(sc: Scanner[Rune]): Node =
         sc.pos,
         sc.raw)
       result.ranges.add(first .. last)
-      if sc.peek == "-".toRune:
+      if sc.peek == '-'.toRune:
         cps.add(sc.next())
-    of "[".toRune:
-      if sc.peek == ":".toRune:
+    of '['.toRune:
+      if sc.peek == ':'.toRune:
         # todo: rename shorhands
         result.shorthands.add(parseAsciiSet(sc))
       else:
@@ -514,17 +514,17 @@ func parseRepRange(sc: Scanner[Rune]): Node =
 
 func toFlag(r: Rune): Flag =
   result = case r
-  of "i".toRune:
+  of 'i'.toRune:
     flagCaseInsensitive
-  of "m".toRune:
+  of 'm'.toRune:
     flagMultiLine
-  of "s".toRune:
+  of 's'.toRune:
     flagAnyMatchNewLine
-  of "U".toRune:
+  of 'U'.toRune:
     flagUnGreedy
-  of "u".toRune:
+  of 'u'.toRune:
     flagUnicode
-  of "x".toRune:
+  of 'x'.toRune:
     flagVerbose
   else:
     # todo: return err and show a better error msg
@@ -534,17 +534,17 @@ func toFlag(r: Rune): Flag =
 
 func toNegFlag(r: Rune): Flag =
   result = case r
-  of "i".toRune:
+  of 'i'.toRune:
     flagNotCaseInsensitive
-  of "m".toRune:
+  of 'm'.toRune:
     flagNotMultiLine
-  of "s".toRune:
+  of 's'.toRune:
     flagNotAnyMatchNewLine
-  of "U".toRune:
+  of 'U'.toRune:
     flagNotUnGreedy
-  of "u".toRune:
+  of 'u'.toRune:
     flagNotUnicode
-  of "x".toRune:
+  of 'x'.toRune:
     flagNotVerbose
   else:
     # todo: return err and show a better error msg
@@ -558,22 +558,22 @@ func parseGroupTag(sc: Scanner[Rune]): Node =
   ## if it's not special enough
   # A regular group
   let startPos = sc.pos
-  if sc.peek != "?".toRune:
+  if sc.peek != '?'.toRune:
     return initGroupStart()
   discard sc.next()  # Consume "?"
   result = case sc.peek
-  of ":".toRune:
+  of ':'.toRune:
     discard sc.next()
     initGroupStart(isCapturing = false)
-  of "P".toRune:
+  of 'P'.toRune:
     discard sc.next()
     prettyCheck(
-      sc.peek == "<".toRune,
+      sc.peek == '<'.toRune,
       "Invalid group name. Missing `<`")
     discard sc.next()  # Consume "<"
     var name = newStringOfCap(75)
     for r in sc:
-      if r == ">".toRune:
+      if r == '>'.toRune:
         break
       prettyCheck(
         r.int <= char.high.ord and r.int.char in {
@@ -589,30 +589,30 @@ func parseGroupTag(sc: Scanner[Rune]): Node =
       name.len > 0,
       "Invalid group name. Name can't be empty")
     prettyCheck(
-      sc.prev == ">".toRune,
+      sc.prev == '>'.toRune,
       "Invalid group name. Missing `>`")
     initGroupStart(name)
-  of "i".toRune,
-      "m".toRune,
-      "s".toRune,
-      "U".toRune,
-      "u".toRune,
-      "x".toRune,
-      "-".toRune:
+  of 'i'.toRune,
+      'm'.toRune,
+      's'.toRune,
+      'U'.toRune,
+      'u'.toRune,
+      'x'.toRune,
+      '-'.toRune:
     var
       flags: seq[Flag] = @[]
       isNegated = false
     for cp in sc:
-      if cp == ":".toRune or cp == ")".toRune:
+      if cp == ':'.toRune or cp == ')'.toRune:
         break
-      if cp == "-".toRune:
+      if cp == '-'.toRune:
         isNegated = true
         continue
       if isNegated:
         flags.add toNegFlag(cp)
       else:
         flags.add toFlag(cp)
-    if sc.prev == ")".toRune:
+    if sc.prev == ')'.toRune:
       Node(kind: reFlags, flags: flags)
     else:
       initGroupStart(flags = flags, isCapturing = false)
@@ -649,32 +649,32 @@ func parseGroupTag(sc: Scanner[Rune]): Node =
 func subParse(sc: Scanner[Rune]): Node =
   let r = sc.prev
   case r
-  of "\\".toRune:
+  of '\\'.toRune:
     sc.parseEscapedSeq()
-  of "[".toRune:
+  of '['.toRune:
     sc.parseSet()
-  of "{".toRune:
+  of '{'.toRune:
     sc.parseRepRange()
-  of "(".toRune:
+  of '('.toRune:
     sc.parseGroupTag()
-  of "|".toRune:
+  of '|'.toRune:
     Node(kind: reOr, cp: r)
-  of "*".toRune:
+  of '*'.toRune:
     noRepeatCheck sc
     Node(kind: reZeroOrMore, cp: r)
-  of "+".toRune:
+  of '+'.toRune:
     noRepeatCheck sc
     Node(kind: reOneOrMore, cp: r)
-  of "?".toRune:
+  of '?'.toRune:
     noRepeatCheck sc
     Node(kind: reZeroOrOne, cp: r)
-  of ")".toRune:
+  of ')'.toRune:
     Node(kind: reGroupEnd, cp: r)
-  of "^".toRune:
+  of '^'.toRune:
     Node(kind: reStartSym, cp: r)
-  of "$".toRune:
+  of '$'.toRune:
     Node(kind: reEndSym, cp: r)
-  of ".".toRune:
+  of '.'.toRune:
     Node(kind: reAny, cp: r)
   else:
     r.toCharNode
@@ -684,16 +684,16 @@ func skipWhiteSpace(sc: Scanner[Rune], vb: seq[bool]): bool =
   if vb.len == 0 or not vb[vb.len-1]:
     return false
   result = case sc.prev
-  of " ".toRune,
-      "\t".toRune,
-      "\L".toRune,
-      "\r".toRune,
-      "\f".toRune,
-      "\v".toRune:
+  of ' '.toRune,
+      '\t'.toRune,
+      '\L'.toRune,
+      '\r'.toRune,
+      '\f'.toRune,
+      '\v'.toRune:
     true
-  of "#".toRune:
+  of '#'.toRune:
     for r in sc:
-      if r == "\L".toRune:
+      if r == '\L'.toRune:
         break
     true
   else:

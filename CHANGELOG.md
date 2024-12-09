@@ -1,3 +1,9 @@
+v0.26.0
+==================
+
+* Performance improvements
+* Fix devel compiler warnings
+
 v0.25.0
 ==================
 

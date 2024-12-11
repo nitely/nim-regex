@@ -1,0 +1,17 @@
+RegexError	regex/common.html#RegexError	common: RegexError	
+invalidRune	regex/common.html#invalidRune	common: invalidRune	
+lineBreakRune	regex/common.html#lineBreakRune	common: lineBreakRune	
+toRune	regex/common.html#toRune,char	common: toRune(c: char): Rune	
+`&lt;=`	regex/common.html#<=,Rune,Rune	common: `&lt;=`(x, y: Rune): bool	
+cmp	regex/common.html#cmp,Rune,Rune	common: cmp(x, y: Rune): int	
+bwRuneAt	regex/common.html#bwRuneAt,string,int	common: bwRuneAt(s: string; n: int): Rune	
+bwFastRuneAt	regex/common.html#bwFastRuneAt.t,string,int,Rune	common: bwFastRuneAt(s: string; n: var int; result: var Rune): untyped	
+`%%`	regex/common.html#%%,string,openArray[string]	common: `%%`(formatstr: string; a: openArray[string]): string	
+`%%`	regex/common.html#%%,string,string	common: `%%`(formatstr: string; a: string): string	
+verifyUtf8	regex/common.html#verifyUtf8,string	common: verifyUtf8(s: string): int	
+SortedSeq	regex/common.html#SortedSeq	common: SortedSeq	
+initSortedSeq	regex/common.html#initSortedSeq	common: initSortedSeq[T](): SortedSeq[T]	
+len	regex/common.html#len,SortedSeq[T]	common: len[T](s: SortedSeq[T]): int	
+add	regex/common.html#add,SortedSeq[T],openArray[T]	common: add[T](s: var SortedSeq[T]; x: openArray[T])	
+contains	regex/common.html#contains,SortedSeq[T],T	common: contains[T](s: SortedSeq[T]; x: T): bool	
+items	regex/common.html#items.i,SortedSeq[T]	common: items[T](s: SortedSeq[T]): T	

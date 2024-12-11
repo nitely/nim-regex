@@ -2,8 +2,6 @@
 {.used.}
 
 import std/unicode
-import std/sets
-from std/algorithm import sorted
 from std/sequtils import toSeq
 
 import pkg/unicodedb/properties
@@ -112,7 +110,7 @@ type
     # reRepRange
     min*, max*: int16
     # reInSet, reNotSet
-    cps*: HashSet[Rune]
+    cps*: SortedSeq[Rune]
     ranges*: seq[Slice[Rune]]  # todo: interval tree
     shorthands*: seq[Node]
     # reUCC, reNotUCC
@@ -148,9 +146,10 @@ template initSetNodeImpl(result: var Node, k: NodeKind) =
   result = Node(
     kind: k,
     cp: '#'.toRune,
-    cps: initHashSet[Rune](2),
+    cps: initSortedSeq[Rune](),
     ranges: @[],
-    shorthands: @[])
+    shorthands: @[]
+  )
 
 func initSetNode*(): Node =
   ## return a set ``Node``,
@@ -193,7 +192,8 @@ func isEmpty*(n: Node): bool =
   result = (
     n.cps.len == 0 and
     n.ranges.len == 0 and
-    n.shorthands.len == 0)
+    n.shorthands.len == 0
+  )
 
 const
   opKind* = {
@@ -317,13 +317,7 @@ func `$`*(n: Node): string =
     str.add '['
     if n.kind == reNotSet:
       str.add '^'
-    var
-      cps = newSeq[Rune](n.cps.len)
-      i = 0
     for cp in n.cps:
-      cps[i] = cp
-      inc i
-    for cp in cps.sorted(cmp):
       str.add $cp
     for sl in n.ranges:
       str.add($sl.a & '-' & $sl.b)

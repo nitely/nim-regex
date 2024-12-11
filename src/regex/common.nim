@@ -1,5 +1,6 @@
 import std/unicode
 import std/strutils
+import std/algorithm
 
 type
   RegexError* = object of ValueError
@@ -23,10 +24,10 @@ func toRune*(c: char): Rune =
   result = Rune(c.ord)
 
 func `<=`*(x, y: Rune): bool =
-  x.int <= y.int
+  x.int32 <= y.int32
 
 func cmp*(x, y: Rune): int =
-  x.int - y.int
+  x.int32 - y.int32
 
 func bwRuneAt*(s: string, n: int): Rune =
   ## Take rune ending at ``n``
@@ -106,3 +107,29 @@ func verifyUtf8*(s: string): int =
     inc i
   if state == vusStart:
     result = -1
+
+type
+  SortedSeq*[T] = object
+    s: seq[T]
+
+func initSortedSeq*[T]: SortedSeq[T] {.inline.} =
+  SortedSeq[T](s: newSeq[T]())
+
+#func toSeq*[T](s: SortedSeq[T]): seq[T] =
+#  result = s.s
+
+func len*[T](s: SortedSeq[T]): int {.inline.} =
+  s.s.len
+
+func add*[T](s: var SortedSeq[T], x: openArray[T]) =
+  if x.len == 0:
+    return
+  s.s.add x
+  sort s.s, cmp
+
+func contains*[T](s: SortedSeq[T], x: T): bool =
+  binarySearch(s.s, x, cmp) != -1
+
+iterator items*[T](s: SortedSeq[T]): T {.inline.} =
+  for i in 0 .. s.s.len-1:
+    yield s.s[i]

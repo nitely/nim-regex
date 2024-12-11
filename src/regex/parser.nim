@@ -2,6 +2,7 @@ import std/unicode
 import std/strutils
 import std/sets
 import std/parseutils
+import std/sequtils
 
 import pkg/unicodedb/properties
 
@@ -291,69 +292,79 @@ func parseAsciiSet(sc: Scanner[Rune]): Node =
       break
     name.add(r.toUTF8)
   prettyCheck(
-    sc.peek == ']'.toRune,
-    "Invalid ascii set. Expected [:name:]")
+    sc.peek == ']'.toRune, "Invalid ascii set. Expected [:name:]"
+  )
   discard sc.next
   case name
   of "alpha":
     result.ranges.add([
       'a'.toRune .. 'z'.toRune,
-      'A'.toRune .. 'Z'.toRune])
+      'A'.toRune .. 'Z'.toRune
+    ])
   of "alnum":
     result.ranges.add([
       '0'.toRune .. '9'.toRune,
       'a'.toRune .. 'z'.toRune,
-      'A'.toRune .. 'Z'.toRune])
+      'A'.toRune .. 'Z'.toRune
+    ])
   of "ascii":
     result.ranges.add(
-      '\x00'.toRune .. '\x7F'.toRune)
+      '\x00'.toRune .. '\x7F'.toRune
+    )
   of "blank":
-    result.cps.incl(toHashSet([
-      '\t'.toRune, ' '.toRune]))
+    result.cps.add(['\t'.toRune, ' '.toRune])
   of "cntrl":
     result.ranges.add(
-      '\x00'.toRune .. '\x1F'.toRune)
-    result.cps.incl('\x7F'.toRune)
+      '\x00'.toRune .. '\x1F'.toRune
+    )
+    result.cps.add(['\x7F'.toRune])
   of "digit":
     result.ranges.add(
-      '0'.toRune .. '9'.toRune)
+      '0'.toRune .. '9'.toRune
+    )
   of "graph":
     result.ranges.add(
-      '!'.toRune .. '~'.toRune)
+      '!'.toRune .. '~'.toRune
+    )
   of "lower":
     result.ranges.add(
-      'a'.toRune .. 'z'.toRune)
+      'a'.toRune .. 'z'.toRune
+    )
   of "print":
     result.ranges.add(
-      ' '.toRune .. '~'.toRune)
+      ' '.toRune .. '~'.toRune
+    )
   of "punct":
     result.ranges.add([
       '!'.toRune .. '/'.toRune,
       ':'.toRune .. '@'.toRune,
       '['.toRune .. '`'.toRune,
-      '{'.toRune .. '~'.toRune])
+      '{'.toRune .. '~'.toRune
+    ])
   of "space":
-    result.cps.incl(toHashSet([
+    result.cps.add([
       '\t'.toRune, '\L'.toRune, '\v'.toRune,
-      '\f'.toRune, '\r'.toRune, ' '.toRune]))
+      '\f'.toRune, '\r'.toRune, ' '.toRune
+    ])
   of "upper":
-    result.ranges.add(
-      'A'.toRune .. 'Z'.toRune)
+    result.ranges.add('A'.toRune .. 'Z'.toRune)
   of "word":
     result.ranges.add([
       '0'.toRune .. '9'.toRune,
       'a'.toRune .. 'z'.toRune,
-      'A'.toRune .. 'Z'.toRune])
-    result.cps.incl('_'.toRune)
+      'A'.toRune .. 'Z'.toRune
+    ])
+    result.cps.add(['_'.toRune])
   of "xdigit":
     result.ranges.add([
       '0'.toRune .. '9'.toRune,
       'a'.toRune .. 'f'.toRune,
-      'A'.toRune .. 'F'.toRune])
+      'A'.toRune .. 'F'.toRune
+    ])
   else:
     prettyCheck(
-      false,
-      "Invalid ascii set. `$#` is not a valid name" %% name)
+      false, "Invalid ascii set. `$#` is not a valid name" %% name
+    )
 
 func parseSet(sc: Scanner[Rune]): Node =
   ## parse a set atom (i.e ``[a-z]``) into a
@@ -430,11 +441,10 @@ func parseSet(sc: Scanner[Rune]): Node =
         cps.add(cp)
     else:
       cps.add(cp)
-  # todo: use ref and set to nil when empty
-  result.cps.incl(cps.toHashSet)
+  result.cps.add toSeq(cps.toHashSet)
   prettyCheck(
-    hasEnd,
-    "Invalid set. Missing `]`")
+    hasEnd, "Invalid set. Missing `]`"
+  )
 
 func noRepeatCheck(sc: Scanner[Rune]) =
   ## Check next symbol is not a repetition

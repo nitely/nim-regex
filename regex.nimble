@@ -20,6 +20,7 @@ task test2, "Test":
   execTest "c", "-r -o:bin/regex src/regex.nim"
   execTest "c", "-r -o:bin/litopt src/regex/litopt.nim"
   execTest "c", "-r -o:bin/nfatype src/regex/nfatype.nim"
+  execTest "c", "-r -o:bin/common src/regex/common.nim"
   execTest "c", "-r tests/tests2.nim"
   execTest "c", "-r -d:forceRegexAtRuntime tests/tests2.nim"
   execTest "c", "-r -d:forceRegexAtRuntime -d:noRegexOpt tests/tests2.nim"

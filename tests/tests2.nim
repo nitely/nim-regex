@@ -786,6 +786,8 @@ test "tset":
   check "b".isMatch(re2"[abc]")
   check "c".isMatch(re2"[abc]")
   check(not "d".isMatch(re2"[abc]"))
+  check not "[".isMatch(re2"[abc]")
+  check not "]".isMatch(re2"[abc]")
   check "a".isMatch(re2"[\w]")
   check "1".isMatch(re2"[\w]")
   check "1".isMatch(re2"[\d]")
@@ -915,6 +917,20 @@ test "tset":
   check "a".isMatch(re2"[\x{61}]")
   check "abab".isMatch(re2"[\x61-\x62]*")
   check "a".isMatch(re2"[\141]")
+  check "a".isMatch(re2"[21a-z76]")
+  check "x".isMatch(re2"[21a-z76]")
+  check "z".isMatch(re2"[21a-z76]")
+  check "1".isMatch(re2"[21a-z76]")
+  check "2".isMatch(re2"[21a-z76]")
+  check "6".isMatch(re2"[21a-z76]")
+  check "7".isMatch(re2"[21a-z76]")
+  block:
+    const s = "qwertyuiopasdfghjklzxcvbnm"
+    const exp = re2("[" & s & "]")
+    var matched = 0
+    for c in s:
+      matched += int(isMatch($c, exp))
+    doAssert matched == s.len
 
 test "tnot_set":
   check "a".matchWithCapt(re2"([^b])") == @["a"]

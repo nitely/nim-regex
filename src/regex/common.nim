@@ -113,10 +113,7 @@ type
     s: seq[T]
 
 func initSortedSeq*[T]: SortedSeq[T] {.inline.} =
-  SortedSeq[T](s: newSeq[T]())
-
-#func toSeq*[T](s: SortedSeq[T]): seq[T] =
-#  result = s.s
+  SortedSeq[T](s: @[])
 
 func len*[T](s: SortedSeq[T]): int {.inline.} =
   s.s.len
@@ -128,8 +125,52 @@ func add*[T](s: var SortedSeq[T], x: openArray[T]) =
   sort s.s, cmp
 
 func contains*[T](s: SortedSeq[T], x: T): bool =
-  binarySearch(s.s, x, cmp) != -1
+  if s.len <= 10:
+    return x in s.s
+  return binarySearch(s.s, x, cmp) != -1
 
 iterator items*[T](s: SortedSeq[T]): T {.inline.} =
   for i in 0 .. s.s.len-1:
     yield s.s[i]
+
+
+when isMainModule:
+  block:
+    var s = initSortedSeq[int]()
+    doAssert s.s.len == 0
+    s.add @[2,1,3]
+    doAssert s.s == @[1,2,3]
+    s.add @[5,4,6,7]
+    doAssert s.s == @[1,2,3,4,5,6,7]
+  block:
+    var s = initSortedSeq[int]()
+    doAssert s.len == 0
+    s.add @[2,1,3]
+    doAssert s.len == 3
+  block:
+    var s = initSortedSeq[int]()
+    doAssert 1 notin s
+    s.add @[2,1,3]
+    doAssert 1 in s
+    doAssert 2 in s
+    doAssert 3 in s
+    doAssert 4 notin s
+    doAssert 0 notin s
+  block:
+    var s = initSortedSeq[int]()
+    s.add @[2,1,3]
+    var ss = newSeq[int]()
+    for x in s:
+      ss.add x
+    doAssert ss == @[1,2,3]
+  block:
+    var nums = newSeq[int]()
+    for x in 100 .. 200:
+      nums.add x
+    for x in 0 .. 100:
+      nums.add x
+    var s = initSortedSeq[int]()
+    s.add nums
+    for x in 0 .. 200:
+      doAssert x in s
+  echo "ok"

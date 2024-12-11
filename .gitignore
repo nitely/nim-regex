@@ -3,6 +3,7 @@ src/regex.js
 src/regex.out
 src/regex/litopt
 src/regex/nfatype
+src/regex/common
 tests/tests
 tests/tests.js
 tests/tests2

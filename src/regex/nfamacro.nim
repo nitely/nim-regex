@@ -6,6 +6,7 @@ import std/tables
 import std/sets
 import std/algorithm
 
+import pkg/unicodedb/casing
 import pkg/unicodedb/properties
 import pkg/unicodedb/types as utypes
 
@@ -124,7 +125,8 @@ func genMatch(c: NimNode, n: Node): NimNode =
       quote do: true
     of reCharCI:
       let cp2Lit = newLit n.cp.swapCase().int32
-      quote do: `c` == `cpLit` or `c` == `cp2Lit`
+      let cp3Lit = newLit n.cp.simpleCaseFold().int32
+      quote do: `c` == `cpLit` or `c` == `cp2Lit` or simpleCaseFold(`c`) == Rune(`cp3Lit`)
     of reWordAscii:
       genWordAsciiMatch(c)
     of reNotAlphaNumAscii:

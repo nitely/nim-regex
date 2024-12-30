@@ -3,13 +3,13 @@ import std/sets
 import std/tables
 import std/algorithm
 
+import pkg/unicodedb/casing
+
 import ./exptype
 import ./types
 import ./common
 import ./scanner
 
-# todo: can not use unicodeplus due to
-# https://github.com/nim-lang/Nim/issues/7059
 func swapCase(r: Rune): Rune =
   # Note a character can be
   # non-lower and non-upper
@@ -178,10 +178,12 @@ func applyFlag(n: var Node, f: Flag) =
     else:
       discard
   of flagCaseInsensitive:
-    if n.kind == reChar and n.cp != n.cp.swapCase():
+    if n.kind == reChar and n.cp.hasCaseFolds:
       n.kind = reCharCI
+      n.cp = n.cp.simpleCaseFold
     # todo: apply recursevely to
     #       shorthands of reInSet/reNotSet (i.e: [:ascii:])
+    # XXX add all casefolds that map to the cp instead of swapCase
     if n.kind in {reInSet, reNotSet}:
       var cps = newSeq[Rune]()
       for cp in items n.cps:
@@ -190,9 +192,8 @@ func applyFlag(n: var Node, f: Flag) =
           cps.add cp2
       n.cps.add cps
       for sl in n.ranges[0 .. ^1]:
-        let
-          cpa = sl.a.swapCase()
-          cpb = sl.b.swapCase()
+        let cpa = sl.a.swapCase()
+        let cpb = sl.b.swapCase()
         if sl.a != cpa and sl.b != cpb:
           n.ranges.add(cpa .. cpb)
   of flagUnGreedy:

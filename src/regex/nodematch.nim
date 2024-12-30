@@ -1,5 +1,6 @@
 import std/unicode except `==`
 
+import pkg/unicodedb/casing
 import pkg/unicodedb/properties
 import pkg/unicodedb/types as utypes
 
@@ -97,14 +98,6 @@ func isDigitAscii(r: Rune): bool {.inline.} =
   else:
     false
 
-# todo: can not use unicodeplus due to
-# https://github.com/nim-lang/Nim/issues/7059
-func swapCase*(r: Rune): Rune =
-  result = r.toLower()
-  if result != r:
-    return
-  result = r.toUpper()
-
 func matchAsciiSet(n: Node, r: Rune): bool =
   assert n.shorthands.len == 0
   result = r in n.cps or
@@ -162,7 +155,7 @@ func match*(n: Node, r: Rune): bool {.inline.} =
   of reNotWhiteSpace: not r.isWhiteSpace()
   of reAny: r != lineBreakRune
   of reAnyNL: true
-  of reCharCI: r == n.cp or r == n.cp.swapCase()
+  of reCharCI: r == n.cp or n.cp == r.simpleCaseFold
   of reUCC: r.unicodeCategory() in n.cc
   of reNotUCC: r.unicodeCategory() notin n.cc
   of reWordAscii: r.isWordAscii()

@@ -700,17 +700,18 @@ test "rust_regression":
 
 # https://github.com/BurntSushi/rebar/pull/20
 test "rebar":
-  check match("ſ", re2(r"s", {regexCaseless}))
-  check match("s", re2(r"ſ", {regexCaseless}))
-  check "ſ".len == 2
-  check findAllBounds("ſ", re2(r"s", {regexCaseless})) == @[0 .. 1]
-  check findAllBounds("s", re2(r"ſ", {regexCaseless})) == @[0 .. 0]
-  # XXX fix
-  #check match("s", re2(r"[ſ]", {regexCaseless}))
-  #check match("ſ", re2(r"[s]", {regexCaseless}))
-  check match("a", re2(r"A", {regexCaseless}))
-  check match("A", re2(r"a", {regexCaseless}))
-  check match("@", re2(r"@", {regexCaseless}))
-  check findAllBounds("a", re2(r"A", {regexCaseless})) == @[0 .. 0]
-  check findAllBounds("A", re2(r"a", {regexCaseless})) == @[0 .. 0]
-  check findAllBounds("@", re2(r"@", {regexCaseless})) == @[0 .. 0]
+  block:
+    check match("ſ", re2(r"s", {regexCaseless}))
+    check match("s", re2(r"ſ", {regexCaseless}))
+    check "ſ".len == 2
+    check findAllBounds("ſ", re2(r"s", {regexCaseless})) == @[0 .. 1]
+    check findAllBounds("s", re2(r"ſ", {regexCaseless})) == @[0 .. 0]
+    # XXX fix
+    #check match("s", re2(r"[ſ]", {regexCaseless}))
+    #check match("ſ", re2(r"[s]", {regexCaseless}))
+    check match("a", re2(r"A", {regexCaseless}))
+    check match("A", re2(r"a", {regexCaseless}))
+    check match("@", re2(r"@", {regexCaseless}))
+    check findAllBounds("a", re2(r"A", {regexCaseless})) == @[0 .. 0]
+    check findAllBounds("A", re2(r"a", {regexCaseless})) == @[0 .. 0]
+    check findAllBounds("@", re2(r"@", {regexCaseless})) == @[0 .. 0]

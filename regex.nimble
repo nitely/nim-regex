@@ -8,7 +8,7 @@ srcDir = "src"
 skipDirs = @["tests", "bench", "docs"]
 
 requires "nim >= 1.6.0"
-requires "unicodedb >= 0.13.1"
+requires "unicodedb >= 0.13.2"
 
 template execTest(lang, target: static string) =
   doAssert lang in ["c", "js"]

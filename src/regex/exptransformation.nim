@@ -183,13 +183,12 @@ func applyFlag(n: var Node, f: Flag) =
       n.cp = n.cp.simpleCaseFold
     # todo: apply recursevely to
     #       shorthands of reInSet/reNotSet (i.e: [:ascii:])
-    # XXX add all casefolds that map to the cp instead of swapCase
     if n.kind in {reInSet, reNotSet}:
       var cps = newSeq[Rune]()
       for cp in items n.cps:
-        let cp2 = cp.swapCase()
-        if cp != cp2:
-          cps.add cp2
+        for cp2 in cp.resolveCaseFold:
+          if cp != cp2:
+            cps.add cp2
       n.cps.add cps
       for sl in n.ranges[0 .. ^1]:
         let cpa = sl.a.swapCase()

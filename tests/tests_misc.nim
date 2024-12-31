@@ -54,6 +54,7 @@ DEALINGS IN THE SOFTWARE.
 ]#
 
 from std/sequtils import map
+from std/strutils import splitLines
 import ../src/regex
 
 const nonCapture = reNonCapture
@@ -724,3 +725,49 @@ test "rebar":
     check findAllBounds("a", re2(r"A", {regexCaseless})) == @[0 .. 0]
     check findAllBounds("A", re2(r"a", {regexCaseless})) == @[0 .. 0]
     check findAllBounds("@", re2(r"@", {regexCaseless})) == @[0 .. 0]
+  block:
+    var i = 0
+    for line in "foo foo\nZ\nfoo".splitLines:
+      i += int(re2"[a-z][a-z][a-z]" in line)
+    check i == 2
+  block:
+    var i = 0
+    for line in "foo foo\r\nZ\r\nfoo\r\nfoo".splitLines:
+      for m in findAll(line, re2"([a-z][a-z])([a-z])([\r\n])?"):
+        for c in m.captures:
+          i += int(c != reNonCapture)
+        i += 1  # bounds
+    check i == 12
+
+  # These only work by chance, nim-regex expects valid utf-8
+  when false:
+    var i = 0
+    for line in "./tests/lh3lh3-reb-howto.txt".lines:
+      i += int(re2"([a-zA-Z][a-zA-Z0-9]*)://([^ /]+)(/[^ ]*)?" in line)
+    check i == 17_549
+  when false:
+    var i = 0
+    for line in "./tests/lh3lh3-reb-howto.txt".lines:
+      i += int(re2"([^ @]+)@([^ @]+)" in line)
+    check i == 15057
+  when false:
+    var i = 0
+    for line in "./tests/lh3lh3-reb-howto.txt".lines:
+      i += int(re2"([0-9][0-9]?)/([0-9][0-9]?)/([0-9][0-9]([0-9][0-9])?)" in line)
+    check i == 668
+  when false:
+    var i = 0
+    for line in "./tests/lh3lh3-reb-howto.txt".lines:
+      let line = line.toValidUtf8
+      i += int(re2"([a-zA-Z][a-zA-Z0-9]*)://([^ /]+)(/[^ ]*)?|([^ @]+)@([^ @]+)" in line)
+    check i == 32539
+  when false:
+    var i = 0
+    for line in "./tests/rust-src-tools-3b0d4813.txt".lines:
+      i += int(re2(r"\b\w{25,}\b", {regexAscii}) in line)
+    check i == 5073
+  when false:
+    var i = 0
+    for line in "./tests/rust-src-tools-3b0d4813.txt".lines:
+      i += int(re2"\b\w{25,}\b" in line)
+    check i == 5075

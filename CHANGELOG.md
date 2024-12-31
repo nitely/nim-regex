@@ -1,3 +1,8 @@
+v0.26.1
+==================
+
+* Fix unicode case-insensitive match edge case #150
+
 v0.26.0
 ==================
 

@@ -1569,6 +1569,7 @@ when isMainModule:
 
   doAssert ~"ab" in "abcd"
   doAssert ~"zx" notin "abcd"
+  doAssert not compiles(~"(+)")
 
   # bug: raises invalid utf8 regex in Nim 1.0 + js target
   when not defined(js) or NimMajor >= 2:

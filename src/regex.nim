@@ -504,14 +504,14 @@ when not defined(forceRegexAtRuntime):
 
 proc reCheck(s: string) {.compileTime.} =
   try:
-    discard re2(s)
+    discard reCt(s)
   except RegexError:
     raise newException(RegexError, getCurrentExceptionMsg())
 
 func `~`*(s: static string): Regex2 =
   static: reCheck(s)
   {.cast(noSideEffect), cast(gcsafe).}:
-    var reg {.global.} = re2(s)
+    var reg {.global.} = toRegex2 reImpl(s)
     return reg
 
 func group*(m: RegexMatch2, i: int): Slice[int] {.inline, raises: [].} =

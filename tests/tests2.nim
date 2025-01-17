@@ -3387,8 +3387,8 @@ test "startsWith openArray[char] test":
     check not startsWith(s.toOpenArray(0, 3), re2"^bcd", m, 1)
 
 test "tsigil":
-  check match(~"ab", "ab")
-  check not match(~"zx", "ab")
+  check "ab".match ~"ab"
+  check not "ab".match ~"zx"
   check ~"ab" in "abcd"
   check ~"zx" notin "abcd"
   check not compiles(~"(+)")
@@ -3401,5 +3401,5 @@ test "tsigil":
 
 test "tsigil_gcsafe":
   func tsigil: bool {.gcsafe.} =
-    match(~"foo", "foo")
+    "foo".match ~"foo"
   doAssert tsigil()

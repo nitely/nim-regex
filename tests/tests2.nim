@@ -3385,3 +3385,20 @@ test "startsWith openArray[char] test":
     check startsWith(s.toOpenArray(1, 3), re2"^bcd$", m, 0)
     check m.boundaries == 0 .. 2
     check not startsWith(s.toOpenArray(0, 3), re2"^bcd", m, 1)
+
+test "tsigil":
+  check ~"ab".match "ab"
+  check not ~"zx".match "ab"
+  check(~"ab" in "abcd")
+  check(~"zx" notin "abcd")
+  try:
+    discard ~"(+)"
+    doAssert false
+  except RegexError:
+    check getCurrentExceptionMsg() ==
+      "Invalid `+` operator, nothing to repeat"
+
+test "tsigil_gcsafe":
+  func tsigil: bool {.gcsafe.} =
+    ~"foo".match "foo"
+  doAssert tsigil()

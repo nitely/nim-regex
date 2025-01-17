@@ -22,7 +22,7 @@ template test(desc: string, body: untyped): untyped =
         echo "[CT/RT] " & desc
       body)()
 
-template check(condition: bool) =
+template check(condition: bool): untyped =
   doAssert(condition)
 
 template expect(exception: typedesc, body: untyped): untyped =
@@ -3389,8 +3389,9 @@ test "startsWith openArray[char] test":
 test "tsigil":
   check ~"ab".match "ab"
   check not ~"zx".match "ab"
-  check(~"ab" in "abcd")
-  check(~"zx" notin "abcd")
+  check ~"ab" in "abcd"
+  check ~"zx" notin "abcd"
+  check not compiles(~"(+)")
   try:
     discard ~"(+)"
     doAssert false

@@ -1566,6 +1566,7 @@ when isMainModule:
   doAssert match("A", re2"(?xi)     a")
   doAssert(not match("A", re2"((?xi))     a"))
   doAssert(not match("A", re2"(?xi:(?xi)     )a"))
+  doAssert not compiles(re2"(+)")
 
   doAssert ~"ab" in "abcd"
   doAssert ~"zx" notin "abcd"

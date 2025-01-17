@@ -3348,8 +3348,8 @@ test "tvarflags":
     check(not match("a\Lb\L", re2"(?ms)a.b(?-sm:.)"))
 
 test "tsigil":
-  check match(~"ab", "ab")
-  check not match(~"zx", "ab")
+  check "ab".match ~"ab"
+  check not "ab".match ~"zx"
   check ~"ab" in "abcd"
   check ~"zx" notin "abcd"
   check not compiles(~"(+)")
@@ -3362,5 +3362,5 @@ test "tsigil":
 
 test "tsigil_gcsafe":
   func tsigil: bool {.gcsafe.} =
-    match(~"foo", "foo")
+    "foo".match ~"foo"
   doAssert tsigil()

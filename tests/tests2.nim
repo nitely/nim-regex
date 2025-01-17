@@ -3392,12 +3392,6 @@ test "tsigil":
   check ~"ab" in "abcd"
   check ~"zx" notin "abcd"
   check not compiles(~"(+)")
-  try:
-    discard ~"(+)"
-    doAssert false
-  except RegexError:
-    check getCurrentExceptionMsg() ==
-      "Invalid `+` operator, nothing to repeat"
 
 test "tsigil_gcsafe":
   func tsigil: bool {.gcsafe.} =

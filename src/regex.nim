@@ -509,6 +509,11 @@ proc reCheck(s: string) {.compileTime.} =
     raise newException(RegexError, getCurrentExceptionMsg())
 
 func `~`*(s: static string): Regex2 =
+  ## Compile a regex at runtime.
+  ## The compiled regex is cached and reused.
+  ## It gets compiled once in a program lifetime.
+  ## The regex is validated at compile-time,
+  ## and so it may only raise a `RegexError` at compile-time.
   static: reCheck(s)
   {.cast(noSideEffect), cast(gcsafe).}:
     var reg {.global.} = toRegex2 reImpl(s)

@@ -502,6 +502,18 @@ when not defined(forceRegexAtRuntime):
     ## Parse and compile a regular expression at compile-time
     toRegex2 reCt(s, flags)
 
+proc reCheck(s: string) {.compileTime.} =
+  try:
+    discard re2(s)
+  except RegexError:
+    raise newException(RegexError, getCurrentExceptionMsg())
+
+func `~`*(s: static[string]): Regex2 =
+  static: reCheck(s)
+  {.cast(noSideEffect), cast(gcsafe).}:
+    var reg {.global.} = re2(s)
+    return reg
+
 func group*(m: RegexMatch2, i: int): Slice[int] {.inline, raises: [].} =
   ## return slice for a given group.
   ## Slice of start > end are empty
@@ -1555,6 +1567,9 @@ when isMainModule:
   doAssert(not match("A", re2"((?xi))     a"))
   doAssert(not match("A", re2"(?xi:(?xi)     )a"))
 
+  doAssert ~"ab" in "abcd"
+  doAssert ~"zx" notin "abcd"
+
   # bug: raises invalid utf8 regex in Nim 1.0 + js target
   when not defined(js) or NimMajor >= 2:
     block:
@@ -1701,6 +1716,8 @@ when isMainModule:
       m.captures == @[0 .. 3, reNonCapture]
     doAssert match("aaab", re2"(\w+)|\w+(?<=^(\w)(\w+))b", m) and
       m.captures == @[0 .. 3, reNonCapture, reNonCapture]
+    doAssert ~"ab" in "abcd"
+    doAssert ~"zx" notin "abcd"
     block:
       var m = false
       var matches = newSeq[string]()

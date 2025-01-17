@@ -3346,3 +3346,20 @@ test "tvarflags":
     check match("a\Lb\L", re2"(?ms)a.b(?s-m:.)")
     check(not match("a\Lb\L", re2(r"a.b(?-sm:.)", {regexDotAll, regexMultiline})))
     check(not match("a\Lb\L", re2"(?ms)a.b(?-sm:.)"))
+
+test "tsigil":
+  check ~"ab".match "ab"
+  check not ~"zx".match "ab"
+  check(~"ab" in "abcd")
+  check(~"zx" notin "abcd")
+  try:
+    discard ~"(+)"
+    doAssert false
+  except RegexError:
+    check getCurrentExceptionMsg() ==
+      "Invalid `+` operator, nothing to repeat"
+
+test "tsigil_gcsafe":
+  func tsigil: bool {.gcsafe.} =
+    ~"foo".match "foo"
+  doAssert tsigil()

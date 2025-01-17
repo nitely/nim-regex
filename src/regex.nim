@@ -508,7 +508,7 @@ proc reCheck(s: string) {.compileTime.} =
   except RegexError:
     raise newException(RegexError, getCurrentExceptionMsg())
 
-func `~`*(s: static[string]): Regex2 =
+func `~`*(s: static string): Regex2 =
   static: reCheck(s)
   {.cast(noSideEffect), cast(gcsafe).}:
     var reg {.global.} = re2(s)

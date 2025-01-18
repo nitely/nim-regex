@@ -508,28 +508,16 @@ proc reCheck(s: string) {.compileTime.} =
   except RegexError:
     raise newException(RegexError, getCurrentExceptionMsg())
 
-import locks
-var sigils {.compileTime.} = newSeq[string]()
-var sigilre = initTable[string, Regex2]()
-var sigillock: Lock
-initLock(sigillock)
-
-func `~`*(s: static string): Regex2 {.raises: [RegexError].} =
+func `~`*(s: static string): Regex2 {.nodestroy.} =
   ## Compile a regex at runtime.
   ## The compiled regex is cached and reused.
   ## It gets compiled once in a program lifetime.
   ## The regex is validated at compile-time,
   ## and so it may only raise a `RegexError` at compile-time.
   static: reCheck(s)
-  when nimvm:
-    return toRegex2 reImpl(s)
-  else:
-    {.cast(noSideEffect), cast(gcsafe), cast(raises: [RegexError]).}:
-      withLock sigillock:
-        if s in sigilre:
-          return sigilre[s]
-        sigilre[s] = toRegex2 reImpl(s)
-        return sigilre[s]
+  {.cast(noSideEffect), cast(gcsafe).}:
+    var reg {.global.} = toRegex2 reImpl(s)
+    return reg
 
 func group*(m: RegexMatch2, i: int): Slice[int] {.inline, raises: [].} =
   ## return slice for a given group.

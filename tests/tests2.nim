@@ -3386,14 +3386,14 @@ test "startsWith openArray[char] test":
     check m.boundaries == 0 .. 2
     check not startsWith(s.toOpenArray(0, 3), re2"^bcd", m, 1)
 
-test "tsigil":
+test "ttilde":
   check "ab".match ~"ab"
   check not "ab".match ~"zx"
   check ~"ab" in "abcd"
   check ~"zx" notin "abcd"
   check not compiles(~"(+)")
 
-test "tsigil_gcsafe":
-  func tsigil: bool {.gcsafe.} =
+test "ttilde_gcsafe":
+  func ttilde: bool {.gcsafe.} =
     "foo".match ~"foo"
-  doAssert tsigil()
+  doAssert ttilde()

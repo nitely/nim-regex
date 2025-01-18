@@ -359,8 +359,8 @@ Tilde
 #####
 
 The tilde operator (``~``) compiles a regex literal at runtime,
-and it cache it for later usage. The regex is validated
-at compile-time. Since it does not generate a compiled regex,
+and it caches it for later usage. The regex is validated
+at compile-time. Since it does not generates code for the compiled regex,
 compilation time can be faster, and the resulting binary smaller.
 Do not assign it to a ``const``.
 

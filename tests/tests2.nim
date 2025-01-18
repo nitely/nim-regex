@@ -3347,14 +3347,14 @@ test "tvarflags":
     check(not match("a\Lb\L", re2(r"a.b(?-sm:.)", {regexDotAll, regexMultiline})))
     check(not match("a\Lb\L", re2"(?ms)a.b(?-sm:.)"))
 
-test "tsigil":
+test "ttilde":
   check "ab".match ~"ab"
   check not "ab".match ~"zx"
   check ~"ab" in "abcd"
   check ~"zx" notin "abcd"
   check not compiles(~"(+)")
 
-test "tsigil_gcsafe":
-  func tsigil: bool {.gcsafe.} =
+test "ttilde_gcsafe":
+  func ttilde: bool {.gcsafe.} =
     "foo".match ~"foo"
-  doAssert tsigil()
+  doAssert ttilde()

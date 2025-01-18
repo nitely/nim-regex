@@ -428,6 +428,7 @@ To compile the regex at runtime pass the regex expression as a ``var/let``.
 
 ]##
 
+import std/locks
 import std/tables
 import std/sequtils
 import std/unicode
@@ -508,16 +509,26 @@ proc reCheck(s: string) {.compileTime.} =
   except RegexError:
     raise newException(RegexError, getCurrentExceptionMsg())
 
-func `~`*(s: static string): Regex2 {.nodestroy.} =
+var tildes = initTable[string, Regex2]()
+var tildelock: Lock
+initLock(tildelock)
+
+func `~`*(s: static string): Regex2 {.raises: [RegexError].} =
   ## Compile a regex at runtime.
   ## The compiled regex is cached and reused.
   ## It gets compiled once in a program lifetime.
   ## The regex is validated at compile-time,
   ## and so it may only raise a `RegexError` at compile-time.
   static: reCheck(s)
-  {.cast(noSideEffect), cast(gcsafe).}:
-    var reg {.global.} = toRegex2 reImpl(s)
-    return reg
+  when nimvm:
+    return toRegex2 reImpl(s)
+  else:
+    {.cast(noSideEffect), cast(gcsafe), cast(raises: [RegexError]).}:
+      withLock tildelock:
+        if s in tildes:
+          return tildes[s]
+        tildes[s] = toRegex2 reImpl(s)
+        return tildes[s]
 
 func group*(m: RegexMatch2, i: int): Slice[int] {.inline, raises: [].} =
   ## return slice for a given group.

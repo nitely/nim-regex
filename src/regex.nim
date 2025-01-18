@@ -355,6 +355,25 @@ regex is parsed as a byte sequence. The ``Ⓐ`` character
 is composed of multiple bytes (``\xe2\x92\xb6``),
 and only the last byte is affected by the ``+`` operator.
 
+Tilde
+#####
+
+The tilde operator (``~``) compiles a regex literal at runtime,
+and it cache it for later usage. The regex is validated
+at compile-time. Since it does not generate a compiled regex,
+compilation time can be faster, and the resulting binary smaller.
+Do not assign it to a ``const``.
+
+.. code-block:: nim
+    :test:
+    let text = "abc"
+    block:
+      doAssert match(text, ~".+")
+    block:
+      func myFn(s: string, r: Regex2) =
+        doAssert match(s, r)
+      myFn(text, ~".+")
+
 Compile the regex at compile time
 #################################
 
@@ -398,17 +417,6 @@ Using a ``const`` can avoid confusion when passing flags:
 
 Compile the regex at runtime
 ############################
-
-.. note::
-    Consider `compiling the regex at compile-time <#examples-compile-the-regex-at-compile-time>`_
-    whenever possible.
-
-Most of the time compiling the regex at runtime can be avoided,
-and it should be avoided. Nim has really good compile-time
-capabilities like reading files, constructing strings,
-and so on. However, it cannot be helped in cases where
-the regex is passed to the program at runtime (from terminal input,
-network, or text files).
 
 To compile the regex at runtime pass the regex expression as a ``var/let``.
 
@@ -509,21 +517,25 @@ proc reCheck(s: string) {.compileTime.} =
   except RegexError:
     raise newException(RegexError, getCurrentExceptionMsg())
 
+var tildesct {.compileTime.} = initTable[string, Regex2]()
 var tildes = initTable[string, Regex2]()
 var tildelock: Lock
 initLock(tildelock)
 
-func `~`*(s: static string): Regex2 {.raises: [RegexError].} =
+func `~`*(s: static string): lent Regex2 {.raises: [RegexError].} =
   ## Compile a regex at runtime.
-  ## The compiled regex is cached and reused.
+  ## The compiled regex is cached for later usage.
   ## It gets compiled once in a program lifetime.
   ## The regex is validated at compile-time,
   ## and so it may only raise a `RegexError` at compile-time.
   static: reCheck(s)
-  when nimvm:
-    return toRegex2 reImpl(s)
-  else:
-    {.cast(noSideEffect), cast(gcsafe), cast(raises: [RegexError]).}:
+  {.cast(noSideEffect), cast(gcsafe), cast(raises: [RegexError]).}:
+    when nimvm:
+      if s in tildesct:
+        return tildesct[s]
+      tildesct[s] = toRegex2 reImpl(s)
+      return tildesct[s]
+    else:
       withLock tildelock:
         if s in tildes:
           return tildes[s]

@@ -436,7 +436,6 @@ To compile the regex at runtime pass the regex expression as a ``var/let``.
 
 ]##
 
-import std/locks
 import std/tables
 import std/sequtils
 import std/unicode

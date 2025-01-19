@@ -518,29 +518,27 @@ proc reCheck(s: string) {.compileTime.} =
     raise newException(RegexError, getCurrentExceptionMsg())
 
 var tildesct {.compileTime.} = initTable[string, Regex2]()
-var tildes = initTable[string, Regex2]()
-var tildelock: Lock
-initLock(tildelock)
+var tildes {.threadvar.}: Table[string, Regex2]
 
-func `~`*(s: static string): lent Regex2 {.raises: [RegexError].} =
+func `~`*(s: static string): Regex2 {.raises: [RegexError], gcsafe.} =
   ## Compile a regex at runtime.
   ## The compiled regex is cached for later usage.
-  ## It gets compiled once in a program lifetime.
+  ## It gets compiled once per thread.
   ## The regex is validated at compile-time,
   ## and so it may only raise a `RegexError` at compile-time.
   static: reCheck(s)
-  {.cast(noSideEffect), cast(gcsafe), cast(raises: [RegexError]).}:
+  {.cast(noSideEffect), cast(raises: [RegexError]).}:
     when nimvm:
-      if s in tildesct:
+      {.cast(gcsafe).}:
+        if s in tildesct:
+          return tildesct[s]
+        tildesct[s] = toRegex2 reImpl(s)
         return tildesct[s]
-      tildesct[s] = toRegex2 reImpl(s)
-      return tildesct[s]
     else:
-      withLock tildelock:
-        if s in tildes:
-          return tildes[s]
-        tildes[s] = toRegex2 reImpl(s)
+      if s in tildes:
         return tildes[s]
+      tildes[s] = toRegex2 reImpl(s)
+      return tildes[s]
 
 func group*(m: RegexMatch2, i: int): Slice[int] {.inline, raises: [].} =
   ## return slice for a given group.

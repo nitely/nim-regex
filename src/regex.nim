@@ -517,7 +517,7 @@ proc reCheck(s: string) {.compileTime.} =
   except RegexError:
     raise newException(RegexError, getCurrentExceptionMsg())
 
-var tildesct {.compileTime.} = initTable[string, Regex2]()
+var tildesct {.compileTime.}: Table[string, Regex2]
 var tildes {.threadvar.}: Table[string, Regex2]
 
 func `~`*(s: static string): Regex2 {.raises: [RegexError], gcsafe.} =

@@ -539,6 +539,11 @@ func `~`*(s: static string): Regex2 {.raises: [RegexError], gcsafe.} =
       tildes[s] = toRegex2 reImpl(s)
       return tildes[s]
 
+func regexDestroyCache* {.gcsafe.} =
+  ## Destroy tilde (``~``) cache.
+  {.cast(noSideEffect).}:
+    tildes = default(Table[string, Regex2])
+
 func group*(m: RegexMatch2, i: int): Slice[int] {.inline, raises: [].} =
   ## return slice for a given group.
   ## Slice of start > end are empty

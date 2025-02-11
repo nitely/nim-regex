@@ -293,7 +293,7 @@ func genMatchedBody(
   let eTransitions = getEpsilonTransitions(nfa, n, nti)
   if eTransitions.len == 0:
     return quote do:
-      add(`smB`, (`ntLit`, `capt`, `bounds2`))
+      add(`smB`, initPstate(`ntLit`, `capt`, `bounds2`))
   var matchedBody = newSeq[NimNode]()
   matchedBody.add quote do:
     `matched` = true
@@ -325,7 +325,7 @@ func genMatchedBody(
       doAssert false
   matchedBody.add quote do:
     if `matched`:
-      add(`smB`, (`ntLit`, `captx`, `bounds2`))
+      add(`smB`, initPstate(`ntLit`, `captx`, `bounds2`))
   return newStmtList matchedBody
 
 func genNextState(
@@ -339,10 +339,10 @@ func genNextState(
   #[
     case n
     of 0:
-      if not smB.hasState(1):
+      if not smB.contains(1):
         if c == 'a':
           smB.add((1, capt, bounds))
-      if not smB.hasState(4):
+      if not smB.contains(4):
         if c == 'b':
           smB.add((4, capt, bounds))
     of 1:
@@ -384,11 +384,11 @@ func genNextState(
         i, nti, nfa, look, flags)
       if mfAnchored in flags and s[nt].kind == reEoe:
         branchBodyN.add quote do:
-          if not hasState(`smB`, `ntLit`):
+          if not contains(`smB`, `ntLit`):
             `matchedBodyStmt`
       else:
         branchBodyN.add quote do:
-          if not hasState(`smB`, `ntLit`) and `matchCond`:
+          if not contains(`smB`, `ntLit`) and `matchCond`:
             `matchedBodyStmt`
     doAssert eoeOnly or branchBodyN.len > 0
     if branchBodyN.len > 0:
@@ -418,7 +418,10 @@ func nextState(
   flags: set[MatchFlag],
   eoeOnly = false
 ): NimNode =
-  defForVars n, capt, bounds
+  defForVars pstate
+  let n = quote do: `pstate`.ni
+  let capt = quote do: `pstate`.ci
+  let bounds = quote do: `pstate`.bounds
   let eoeBailOut = if mfAnchored in flags:
     quote do:
       if `n` == `eoe`:
@@ -433,7 +436,7 @@ func nextState(
     flags, eoeOnly)
   result = quote do:
     `smB`.clear()
-    for `n`, `capt`, `bounds` in `smA`.items:
+    for `pstate` in `smA`.items:
       `eoeBailOut`
       `nextStateStmt`
     swap `smA`, `smB`
@@ -483,7 +486,7 @@ func matchImpl(
     if `start`-1 in 0 .. `text`.len-1:
       `cPrev` = bwRuneAt(`text`, `start`-1).int32
     clear(`smA`)
-    add(`smA`, (0'i16, `captIdx`, `i` .. `i`-1))
+    add(`smA`, initPstate(0'i16, `captIdx`, `i` .. `i`-1))
     while `i` < `text`.len:
       fastRuneAt(`text`, iNext, `c`, true)
       `nextStateStmt`
@@ -590,8 +593,8 @@ proc matchImpl*(text, expLit, body: NimNode): NimNode =
   result = quote do:
     block:
       var
-        `smA` = newPstates `nfaLenLit`
-        `smB` = newPstates `nfaLenLit`
+        `smA` = initPstates `nfaLenLit`
+        `smB` = initPstates `nfaLenLit`
         `capts` = default(Capts)
         `capt` = -1'i32
         `matched` = false

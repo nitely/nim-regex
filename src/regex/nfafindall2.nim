@@ -59,23 +59,19 @@ type
     c: Capts3
     look: Lookaround
 
-template initMaybeImpl(
+func initMaybeImpl(
   ms: var RegexMatches2,
   size, groupsLen: int
-) =
-  if ms.a == nil:
-    assert ms.b == nil
-    ms.a = newPstates size
-    ms.b = newPstates size
-    ms.c = initCapts3 groupsLen
-    ms.look = initLook()
-  doAssert ms.a.cap >= size and
-    ms.b.cap >= size
+) {.inline.} =
+  ms.a.reset(size)
+  ms.b.reset(size)
+  ms.c.reset(groupsLen)
+  ms.look = initLook()
 
-template initMaybeImpl(
+func initMaybeImpl(
   ms: var RegexMatches2,
   regex: Regex
-) =
+) {.inline.} =
   initMaybeImpl(ms, regex.nfa.s.len, regex.groupsCount)
 
 func add(ms: var RegexMatches2, m: MatchItem) {.inline.} =
@@ -170,7 +166,7 @@ func nextState(
     while nti < L:
       let isEoe = ntn.kind == reEoe
       let nt0 = nt
-      matched = not smB.hasState(nt) and
+      matched = nt notin smB and
         (ntn.match(c.Rune) or ntn.kind == reEoe)
       inc nti
       captx = capt
@@ -187,10 +183,10 @@ func nextState(
           smA.clear()
           if not eoeFound:
             eoeFound = true
-            smA.add (0'i16, -1.CaptIdx, i .. i-1)
+            smA.add initPstate(0'i16, -1.CaptIdx, i .. i-1)
           smi = -1
           break
-        smB.add (nt0, captx, bounds.a .. i-1)
+        smB.add initPstate(nt0, captx, bounds.a .. i-1)
     inc smi
   swap smA, smB
   capts.recycle()
@@ -214,7 +210,7 @@ func findSomeImpl*(
     flags = regex.flags.toMatchFlags + flags
     optFlag = mfFindMatchOpt in flags
     binFlag = mfBytesInput in flags
-  smA.add (0'i16, -1.CaptIdx, i .. i-1)
+  smA.add initPstate(0'i16, -1.CaptIdx, i .. i-1)
   if start-1 in 0 .. text.len-1:
     cPrev = if binFlag:
       text[start-1].int32
@@ -236,7 +232,7 @@ func findSomeImpl*(
           return i
         if optFlag:
           return i
-    smA.add (0'i16, -1.CaptIdx, i .. i-1)
+    smA.add initPstate(0'i16, -1.CaptIdx, i .. i-1)
     iPrev = i
     cPrev = c.int32
   nextState(ms, text, regex, iPrev, cPrev, -1'i32, flags)

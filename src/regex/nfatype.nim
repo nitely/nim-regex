@@ -23,7 +23,7 @@ const
 
 type
   # XXX int16 same as max parallel states or max regex len
-  #     but it's used by PState and the old capts
+  #     but it's used by Pstate and the old capts
   CaptIdx* = int32
   Capts3* = object
     ## Seq of captures divided into blocks
@@ -300,34 +300,34 @@ func clear*(m: var RegexMatch2) {.inline.} =
 type
   NodeIdx* = int16
   Bounds* = Slice[int]
-  PState* = tuple
+  Pstate* = tuple
     ni: NodeIdx
     ci: CaptIdx
     bounds: Bounds
-  Submatches* = ref object
+  Pstates* = ref object
     ## Parallel states would be a better name.
     ## This is a sparse set
-    sx: seq[PState]
+    sx: seq[Pstate]
     ss: seq[int16]
     si: int16
 
-func newSubmatches*(size: int): Submatches {.inline.} =
-  result = new Submatches
-  result.sx = newSeq[PState](8)
+func newPstates*(size: int): Pstates {.inline.} =
+  result = new Pstates
+  result.sx = newSeq[Pstate](8)
   result.ss = newSeq[int16](size)
   result.si = 0
 
 when defined(release):
   {.push checks: off.}
 
-func `[]`*(sm: Submatches, i: int): PState {.inline.} =
+func `[]`*(sm: Pstates, i: int): Pstate {.inline.} =
   assert i < sm.si
   sm.sx[i]
 
-func hasState*(sm: Submatches, n: int16): bool {.inline.} =
+func hasState*(sm: Pstates, n: int16): bool {.inline.} =
   sm.ss[n] < sm.si and sm.sx[sm.ss[n]].ni == n
 
-func add*(sm: var Submatches, item: PState) {.inline.} =
+func add*(sm: var Pstates, item: Pstate) {.inline.} =
   assert(not sm.hasState(item.ni))
   assert sm.si <= sm.sx.len
   if (sm.si == sm.sx.len).unlikely:
@@ -336,25 +336,25 @@ func add*(sm: var Submatches, item: PState) {.inline.} =
   sm.ss[item.ni] = sm.si
   sm.si += 1'i16
 
-func len*(sm: Submatches): int {.inline.} =
+func len*(sm: Pstates): int {.inline.} =
   sm.si
 
-func clear*(sm: var Submatches) {.inline.} =
+func clear*(sm: var Pstates) {.inline.} =
   sm.si = 0
 
-iterator items*(sm: Submatches): PState {.inline.} =
+iterator items*(sm: Pstates): Pstate {.inline.} =
   for i in 0 .. sm.len-1:
     yield sm.sx[i]
 
 # does not work in Nim <= 0.20
-#iterator mitems*(sm: Submatches): var PState {.inline.} =
+#iterator mitems*(sm: Pstates): var Pstate {.inline.} =
 #  for i in 0 .. sm.len-1:
 #    yield sm.sx[i]
 
-func cap*(sm: Submatches): int {.inline.} =
+func cap*(sm: Pstates): int {.inline.} =
   sm.ss.len
 
-func setLen*(sm: var Submatches, size: int) {.inline.} =
+func setLen*(sm: var Pstates, size: int) {.inline.} =
   sm.ss.setLen size
 
 when defined(release):
@@ -364,7 +364,7 @@ when defined(release):
 #     size seq to reduce allocations
 type
   SmLookaroundItem* = object
-    a, b: Submatches
+    a, b: Pstates
   SmLookaround* = object
     s: seq[SmLookaroundItem]
     i: int
@@ -372,8 +372,8 @@ type
 func setLen*(item: var SmLookaroundItem, size: int) {.inline.} =
   if item.a == nil:
     doAssert item.b == nil
-    item.a = newSubmatches size
-    item.b = newSubmatches size
+    item.a = newPstates size
+    item.b = newPstates size
   else:
     doAssert item.b != nil
     item.a.setLen size

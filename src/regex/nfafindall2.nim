@@ -54,7 +54,7 @@ type
     bounds: Bounds
   Matches = seq[MatchItem]
   RegexMatches2* = object
-    a, b: Submatches
+    a, b: Pstates
     m: Matches
     c: Capts3
     look: Lookaround
@@ -65,8 +65,8 @@ template initMaybeImpl(
 ) =
   if ms.a == nil:
     assert ms.b == nil
-    ms.a = newSubmatches size
-    ms.b = newSubmatches size
+    ms.a = newPstates size
+    ms.b = newPstates size
     ms.c = initCapts3 groupsLen
     ms.look = initLook()
   doAssert ms.a.cap >= size and

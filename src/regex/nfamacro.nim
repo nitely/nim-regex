@@ -590,8 +590,8 @@ proc matchImpl*(text, expLit, body: NimNode): NimNode =
   result = quote do:
     block:
       var
-        `smA` = newSubmatches `nfaLenLit`
-        `smB` = newSubmatches `nfaLenLit`
+        `smA` = newPstates `nfaLenLit`
+        `smB` = newPstates `nfaLenLit`
         `capts` = default(Capts)
         `capt` = -1'i32
         `matched` = false

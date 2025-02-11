@@ -10,7 +10,7 @@ import ./nfatype
 
 type
   AheadSig = proc (
-    smA, smB: var Submatches,
+    smA, smB: var Pstates,
     capts: var Capts,
     captIdx: var CaptIdx,
     text: string,
@@ -20,7 +20,7 @@ type
     flags: set[MatchFlag]
   ): bool {.nimcall, noSideEffect, raises: [].}
   BehindSig = proc (
-    smA, smB: var Submatches,
+    smA, smB: var Pstates,
     capts: var Capts,
     captIdx: var CaptIdx,
     text: string,
@@ -111,7 +111,7 @@ template nextStateTpl(bwMatch = false): untyped {.dirty.} =
   swap smA, smB
 
 func matchImpl(
-  smA, smB: var Submatches,
+  smA, smB: var Pstates,
   capts: var Capts,
   captIdx: var CaptIdx,
   text: string,
@@ -151,7 +151,7 @@ func matchImpl(
   return smA.len > 0
 
 func reversedMatchImpl(
-  smA, smB: var Submatches,
+  smA, smB: var Pstates,
   capts: var Capts,
   captIdx: var CaptIdx,
   text: string,
@@ -198,7 +198,7 @@ func reversedMatchImpl(
   return -1
 
 func reversedMatchImpl*(
-  smA, smB: var Submatches,
+  smA, smB: var Pstates,
   text: string,
   nfa: Nfa,
   look: var Lookaround,
@@ -223,8 +223,8 @@ func matchImpl*(
 ): bool =
   m.clear()
   var
-    smA = newSubmatches(regex.nfa.s.len)
-    smB = newSubmatches(regex.nfa.s.len)
+    smA = newPstates(regex.nfa.s.len)
+    smB = newPstates(regex.nfa.s.len)
     capts = default(Capts)
     capt = -1.CaptIdx
     look = initLook()
@@ -241,8 +241,8 @@ func startsWithImpl*(text: string, regex: Regex, start: int): bool =
   # XXX optimize mfShortestMatch, mfNoCaptures
   template flags: untyped = {mfAnchored, mfShortestMatch, mfNoCaptures}
   var
-    smA = newSubmatches(regex.nfa.s.len)
-    smB = newSubmatches(regex.nfa.s.len)
+    smA = newPstates(regex.nfa.s.len)
+    smB = newPstates(regex.nfa.s.len)
     capts = default(Capts)
     capt = -1.CaptIdx
     look = initLook()

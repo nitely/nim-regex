@@ -10,7 +10,7 @@ import ./nfatype
 
 type
   AheadSig = proc (
-    smA, smB: var Submatches,
+    smA, smB: var Pstates,
     capts: var Capts3,
     captIdx: var CaptIdx,
     text: string,
@@ -20,7 +20,7 @@ type
     flags: MatchFlags
   ): bool {.nimcall, noSideEffect, raises: [].}
   BehindSig = proc (
-    smA, smB: var Submatches,
+    smA, smB: var Pstates,
     capts: var Capts3,
     captIdx: var CaptIdx,
     text: string,
@@ -120,7 +120,7 @@ func epsilonMatch*(
     discard
 
 func nextState(
-  smA, smB: var Submatches,
+  smA, smB: var Pstates,
   capts: var Capts3,
   look: var Lookaround,
   text: string,
@@ -167,7 +167,7 @@ func nextState(
   capts.recycle()
 
 func matchImpl(
-  smA, smB: var Submatches,
+  smA, smB: var Pstates,
   capts: var Capts3,
   captIdx: var CaptIdx,
   text: string,
@@ -211,7 +211,7 @@ func matchImpl(
   return smA.len > 0
 
 func reversedMatchImpl(
-  smA, smB: var Submatches,
+  smA, smB: var Pstates,
   capts: var Capts3,
   captIdx: var CaptIdx,
   text: string,
@@ -265,7 +265,7 @@ func reversedMatchImpl(
   return -1
 
 func reversedMatchImpl*(
-  smA, smB: var Submatches,
+  smA, smB: var Pstates,
   text: string,
   nfa: Nfa,
   look: var Lookaround,
@@ -295,8 +295,8 @@ func matchImpl*(
   m.clear()
   let flags = regex.flags.toMatchFlags + flags
   var
-    smA = newSubmatches(regex.nfa.s.len)
-    smB = newSubmatches(regex.nfa.s.len)
+    smA = newPstates(regex.nfa.s.len)
+    smB = newPstates(regex.nfa.s.len)
     capts = initCapts3(regex.groupsCount)
     captIdx = -1.CaptIdx
     look = initLook()
@@ -323,8 +323,8 @@ func startsWithImpl2*(
   # XXX optimize mfShortestMatch, mfNoCaptures
   let flags = regex.flags.toMatchFlags + {mfAnchored, mfShortestMatch, mfNoCaptures}
   var
-    smA = newSubmatches(regex.nfa.s.len)
-    smB = newSubmatches(regex.nfa.s.len)
+    smA = newPstates(regex.nfa.s.len)
+    smB = newPstates(regex.nfa.s.len)
     capts = initCapts3(regex.groupsCount)
     captIdx = -1.CaptIdx
     look = initLook()

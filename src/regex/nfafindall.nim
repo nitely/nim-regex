@@ -19,7 +19,7 @@ type
     s: seq[MatchItem]
     i: int
   RegexMatches* = object
-    a, b: Submatches
+    a, b: Pstates
     m: Matches
     c: Capts
     look: Lookaround
@@ -52,8 +52,8 @@ template initMaybeImpl(
 ) =
   if ms.a == nil:
     assert ms.b == nil
-    ms.a = newSubmatches size
-    ms.b = newSubmatches size
+    ms.a = newPstates size
+    ms.b = newPstates size
     ms.look = initLook()
   doAssert ms.a.cap >= size and
     ms.b.cap >= size

@@ -263,7 +263,7 @@ func genLookaroundMatch(
   let nfaLenLit = newLit nfa.s.len
   result = quote do:
     grow `smL`
-    `smL`.last.setLen `nfaLenLit`
+    `smL`.last.reset `nfaLenLit`
     `lookaroundStmt`
     removeLast `smL`
 
@@ -425,8 +425,8 @@ func nextState(
   let eoeBailOut = if mfAnchored in flags:
     quote do:
       if `n` == `eoe`:
-        if not hasState(`smB`, `n`):
-          add(`smB`, (`n`, `capt`, `bounds`))
+        if not contains(`smB`, `n`):
+          add(`smB`, initPstate(`n`, `capt`, `bounds`))
         break
   else:
     newEmptyNode()
@@ -537,7 +537,7 @@ func reversedMatchImpl(
     if `start` in 0 .. `text`.len-1:
       `cPrev` = runeAt(`text`, `start`).int32
     clear(`smA`)
-    add(`smA`, (0'i16, `captIdx`, `i` .. `i`-1))
+    add(`smA`, initPstate(0'i16, `captIdx`, `i` .. `i`-1))
     while iNext > 0:
       bwFastRuneAt(`text`, iNext, `c`)
       `nextStateStmt`

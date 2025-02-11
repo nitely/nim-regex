@@ -68,17 +68,15 @@ template fastLog2Tpl(x: Natural): untyped =
       fastLog2(x)
 
 func reset*(capts: var Capts3, groupsLen: int) =
-  if groupsLen == 0:
-    return
+  capts.freezeId = stsFrozen.a
+  capts.s.setLen 0
+  capts.states.setLen 0
+  capts.free.setLen 0
   if capts.groupsLen != groupsLen:
     let blockSize = max(2, nextPowerOfTwo groupsLen)
     capts.groupsLen = groupsLen
     capts.blockSize = blockSize
     capts.blockSizeL2 = fastLog2Tpl blockSize
-  capts.freezeId = stsFrozen.a
-  capts.s.setLen 0
-  capts.states.setLen 0
-  capts.free.setLen 0
 
 func initCapts3*(groupsLen: int): Capts3 =
   reset(result, groupsLen)

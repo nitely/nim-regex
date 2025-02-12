@@ -32,19 +32,16 @@ type
   Lookaround* = object
     ahead*: AheadSig
     behind*: BehindSig
-    smL*: SmLookaround
+    #smL*: SmLookaround
 
 template lookAroundTpl*: untyped {.dirty.} =
-  template smL: untyped = look.smL
-  template smLa: untyped = smL.lastA
-  template smLb: untyped = smL.lastB
   template zNfa: untyped = ntn.subExp.nfa
   let flags2 = if ntn.subExp.reverseCapts:
     {mfAnchored, mfReverseCapts}
   else:
     {mfAnchored}
-  smL.grow()
-  smL.last.reset zNfa.s.len
+  var smLa = initPstates(zNfa.s.len)
+  var smLb = initPstates(zNfa.s.len)
   matched = case ntn.kind
   of reLookahead:
     look.ahead(
@@ -65,7 +62,6 @@ template lookAroundTpl*: untyped {.dirty.} =
   else:
     doAssert false
     false
-  smL.removeLast()
 
 template nextStateTpl(bwMatch = false): untyped {.dirty.} =
   template bounds2: untyped =

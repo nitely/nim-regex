@@ -38,7 +38,6 @@ type
   ): NimNode {.nimcall, noSideEffect, raises: [].}
   Lookaround = object
     ahead, behind: Sig
-    smL: NimNode
 
 # todo: can not use unicodeplus due to
 # https://github.com/nim-lang/Nim/issues/7059
@@ -240,9 +239,7 @@ func genLookaroundMatch(
   look: Lookaround
 ): NimNode =
   template nfa: untyped = n.subExp.nfa
-  template smL: untyped = look.smL
-  let smlA = quote do: lastA(`smL`)
-  let smlB = quote do: lastB(`smL`)
+  defVars smlA, smlB
   var flags = {mfAnchored}
   if n.subExp.reverseCapts:
     flags.incl mfReverseCapts
@@ -262,10 +259,9 @@ func genLookaroundMatch(
       `matched` = not `matched`
   let nfaLenLit = newLit nfa.s.len
   result = quote do:
-    grow `smL`
-    `smL`.last.reset `nfaLenLit`
+    var `smlA` = initPstates(`nfaLenLit`)
+    var `smlB` = initPstates(`nfaLenLit`)
     `lookaroundStmt`
-    removeLast `smL`
 
 func getEpsilonTransitions(nfa: Nfa, n: Node, nti: int): seq[int] =
   doAssert not isEpsilonTransition(n)
@@ -554,11 +550,11 @@ func reversedMatchImpl(
       `captsStmt`
     `matched` = `smA`.len > 0
 
-template look(smL: NimNode): untyped =
+template look: untyped =
   Lookaround(
     ahead: matchImpl,
-    behind: reversedMatchImpl,
-    smL: smL)
+    behind: reversedMatchImpl
+  )
 
 template constructSubmatches2(
   captures, txt, capts, capt, size: untyped
@@ -581,13 +577,13 @@ proc matchImpl*(text, expLit, body: NimNode): NimNode =
   if not (expLit.kind == nnkCallStrLit and $expLit[0] == "rex"):
     error "not a regex literal; only rex\"regex\" is allowed", expLit
   let exp = expLit[1]
-  defVars smA, smB, capts, capt, matched, smL
+  defVars smA, smB, capts, capt, matched
   let regex = reCt(exp.strVal)
   let startLit = newLit 0
   let flags: set[MatchFlag] = {}
   let matchImplStmt = matchImpl(
     smA, smB, capts, capt, matched,
-    text, startLit, regex.nfa, look(smL), flags)
+    text, startLit, regex.nfa, look(), flags)
   let nfaLenLit = newLit regex.nfa.s.len
   let nfaGroupsLen = int(regex.groupsCount)
   result = quote do:
@@ -598,7 +594,6 @@ proc matchImpl*(text, expLit, body: NimNode): NimNode =
         `capts` = default(Capts)
         `capt` = -1'i32
         `matched` = false
-        `smL` {.used.} = default(SmLookaround)
       `matchImplStmt`
       if `matched`:
         var matches {.used, inject.} = newSeq[string]()

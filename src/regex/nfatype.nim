@@ -361,38 +361,6 @@ func cap*(sm: Pstates): int {.inline.} =
 when defined(release):
   {.pop.}
 
-# XXX maybe store the lookaround number + count, and use a fixed
-#     size seq to reduce allocations
-type
-  SmLookaroundItem* = object
-    a, b: Pstates
-  SmLookaround* = object
-    s: seq[SmLookaroundItem]
-    i: int
-
-func reset*(item: var SmLookaroundItem, size: int) {.inline.} =
-  item.a.reset size
-  item.b.reset size
-
-template last*(sm: SmLookaround): untyped =
-  sm.s[sm.i-1]
-
-template lastA*(sm: SmLookaround): untyped =
-  last(sm).a
-
-template lastB*(sm: SmLookaround): untyped =
-  last(sm).b
-
-func grow*(sm: var SmLookaround) {.inline.} =
-  doAssert sm.i <= sm.s.len
-  if sm.i == sm.s.len:
-    sm.s.setLen(max(1, sm.s.len) * 2)
-  sm.i += 1
-
-func removeLast*(sm: var SmLookaround) {.inline.} =
-  doAssert sm.i > 0
-  sm.i -= 1
-
 when isMainModule:
   func `[]=`(capts: var Capts3, i, j: Natural, x: Slice[int]) =
     doAssert i <= capts.len-1

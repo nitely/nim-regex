@@ -32,7 +32,7 @@ type
   Lookaround* = object
     ahead*: AheadSig
     behind*: BehindSig
-    smL*: SmLookaround
+    #smL*: SmLookaround
 
 func lookAround(
   ntn: Node,
@@ -43,17 +43,16 @@ func lookAround(
   start: int,
   flags: MatchFlags
 ): bool =
-  template smL: untyped = look.smL
-  template smLa: untyped = smL.lastA
-  template smLb: untyped = smL.lastB
   template subNfa: untyped = ntn.subExp.nfa
   var flags2 = {mfAnchored}
   if ntn.subExp.reverseCapts:
     flags2.incl mfReverseCapts
   if mfBytesInput in flags:
     flags2.incl mfBytesInput
-  smL.grow()
-  smL.last.reset subNfa.s.len
+  # XXX store lookaround number + count, and use a fixed
+  #     size seq to reduce allocations; use look.smL
+  var smLa = initPstates(subNfa.s.len)
+  var smLb = initPstates(subNfa.s.len)
   result = case ntn.kind
   of reLookahead:
     look.ahead(
@@ -74,7 +73,6 @@ func lookAround(
   else:
     doAssert false
     false
-  smL.removeLast()
 
 func epsilonMatch*(
   matched: var bool,

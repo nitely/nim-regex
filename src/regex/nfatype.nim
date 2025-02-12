@@ -309,7 +309,8 @@ type
     ni*: NodeIdx
     ci*: CaptIdx
     bounds*: Bounds
-  Pstates* = object
+  # XXX this is a ref because of Nim JS bugs; it works in +2.2.0
+  Pstates* = ref object
     ## This is a sparse set
     sx: seq[Pstate]
     ss: seq[int16]
@@ -322,6 +323,8 @@ when defined(release):
   {.push checks: off.}
 
 func reset*(sm: var Pstates, size: int) {.inline.} =
+  if sm == nil:
+    sm = Pstates()
   sm.sx.setLen 8
   sm.ss.setLen size
   sm.si = 0

@@ -10,7 +10,7 @@ import ./nfatype
 
 type
   AheadSig = proc (
-    smA, smB: var Submatches,
+    smA, smB: var Pstates,
     capts: var Capts,
     captIdx: var CaptIdx,
     text: string,
@@ -20,7 +20,7 @@ type
     flags: set[MatchFlag]
   ): bool {.nimcall, noSideEffect, raises: [].}
   BehindSig = proc (
-    smA, smB: var Submatches,
+    smA, smB: var Pstates,
     capts: var Capts,
     captIdx: var CaptIdx,
     text: string,
@@ -32,19 +32,16 @@ type
   Lookaround* = object
     ahead*: AheadSig
     behind*: BehindSig
-    smL*: SmLookaround
+    #smL*: SmLookaround
 
 template lookAroundTpl*: untyped {.dirty.} =
-  template smL: untyped = look.smL
-  template smLa: untyped = smL.lastA
-  template smLb: untyped = smL.lastB
   template zNfa: untyped = ntn.subExp.nfa
   let flags2 = if ntn.subExp.reverseCapts:
     {mfAnchored, mfReverseCapts}
   else:
     {mfAnchored}
-  smL.grow()
-  smL.last.setLen zNfa.s.len
+  var smLa = initPstates(zNfa.s.len)
+  var smLb = initPstates(zNfa.s.len)
   matched = case ntn.kind
   of reLookahead:
     look.ahead(
@@ -65,24 +62,26 @@ template lookAroundTpl*: untyped {.dirty.} =
   else:
     doAssert false
     false
-  smL.removeLast()
 
 template nextStateTpl(bwMatch = false): untyped {.dirty.} =
   template bounds2: untyped =
     when bwMatch: i .. bounds.b else: bounds.a .. i-1
   template nt: untyped = nfa.s[n].next[nti]
   template ntn: untyped = nfa.s[nt]
+  template n: untyped = pstate.ni
+  template capt: untyped = pstate.ci
+  template bounds: untyped = pstate.bounds
   smB.clear()
-  for n, capt, bounds in items smA:
+  for pstate in items smA:
     if anchored and nfa.s[n].kind == reEoe:
-      if not smB.hasState n:
-        smB.add (n, capt, bounds)
+      if n notin smB:
+        smB.add initPstate(n, capt, bounds)
       break
     let L = nfa.s[n].next.len
     var nti = 0
     while nti < L:
       let nt0 = nt
-      matched = not smB.hasState(nt) and
+      matched = nt notin smB and
         (ntn.match(c) or (anchored and ntn.kind == reEoe))
       inc nti
       captx = capt
@@ -107,11 +106,11 @@ template nextStateTpl(bwMatch = false): untyped {.dirty.} =
             discard
         inc nti
       if matched:
-        smB.add (nt0, captx, bounds2)
+        smB.add initPstate(nt0, captx, bounds2)
   swap smA, smB
 
 func matchImpl(
-  smA, smB: var Submatches,
+  smA, smB: var Pstates,
   capts: var Capts,
   captIdx: var CaptIdx,
   text: string,
@@ -131,7 +130,7 @@ func matchImpl(
   if start-1 in 0 .. text.len-1:
     cPrev = bwRuneAt(text, start-1).int32
   smA.clear()
-  smA.add (0'i16, captIdx, i .. i-1)
+  smA.add initPstate(0'i16, captIdx, i .. i-1)
   while i < text.len:
     fastRuneAt(text, iNext, c, true)
     nextStateTpl()
@@ -151,7 +150,7 @@ func matchImpl(
   return smA.len > 0
 
 func reversedMatchImpl(
-  smA, smB: var Submatches,
+  smA, smB: var Pstates,
   capts: var Capts,
   captIdx: var CaptIdx,
   text: string,
@@ -174,7 +173,7 @@ func reversedMatchImpl(
   if start in 0 .. text.len-1:
     cPrev = text.runeAt(start).int32
   smA.clear()
-  smA.add (0'i16, captIdx, i .. i-1)
+  smA.add initPstate(0'i16, captIdx, i .. i-1)
   while iNext > limit:
     bwFastRuneAt(text, iNext, c)
     nextStateTpl(bwMatch = true)
@@ -188,17 +187,17 @@ func reversedMatchImpl(
   if iNext > 0:
     bwFastRuneAt(text, iNext, c)
   nextStateTpl(bwMatch = true)
-  for n, capt, bounds in items smA:
-    if nfa.s[n].kind == reEoe:
+  for pstate in items smA:
+    if nfa.s[pstate.ni].kind == reEoe:
       if mfReverseCapts in flags:
-        captIdx = reverse(capts, capt, captIdx)
+        captIdx = reverse(capts, pstate.ci, captIdx)
       else:
-        captIdx = capt
-      return bounds.a
+        captIdx = pstate.ci
+      return pstate.bounds.a
   return -1
 
 func reversedMatchImpl*(
-  smA, smB: var Submatches,
+  smA, smB: var Pstates,
   text: string,
   nfa: Nfa,
   look: var Lookaround,
@@ -223,8 +222,8 @@ func matchImpl*(
 ): bool =
   m.clear()
   var
-    smA = newSubmatches(regex.nfa.s.len)
-    smB = newSubmatches(regex.nfa.s.len)
+    smA = initPstates(regex.nfa.s.len)
+    smB = initPstates(regex.nfa.s.len)
     capts = default(Capts)
     capt = -1.CaptIdx
     look = initLook()
@@ -241,8 +240,8 @@ func startsWithImpl*(text: string, regex: Regex, start: int): bool =
   # XXX optimize mfShortestMatch, mfNoCaptures
   template flags: untyped = {mfAnchored, mfShortestMatch, mfNoCaptures}
   var
-    smA = newSubmatches(regex.nfa.s.len)
-    smB = newSubmatches(regex.nfa.s.len)
+    smA = initPstates(regex.nfa.s.len)
+    smB = initPstates(regex.nfa.s.len)
     capts = default(Capts)
     capt = -1.CaptIdx
     look = initLook()

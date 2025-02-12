@@ -10,7 +10,7 @@ import ./nfatype
 
 type
   AheadSig = proc (
-    smA, smB: var Submatches,
+    smA, smB: var Pstates,
     capts: var Capts3,
     captIdx: var CaptIdx,
     text: string,
@@ -20,7 +20,7 @@ type
     flags: MatchFlags
   ): bool {.nimcall, noSideEffect, raises: [].}
   BehindSig = proc (
-    smA, smB: var Submatches,
+    smA, smB: var Pstates,
     capts: var Capts3,
     captIdx: var CaptIdx,
     text: string,
@@ -32,7 +32,7 @@ type
   Lookaround* = object
     ahead*: AheadSig
     behind*: BehindSig
-    smL*: SmLookaround
+    #smL*: SmLookaround
 
 func lookAround(
   ntn: Node,
@@ -43,17 +43,16 @@ func lookAround(
   start: int,
   flags: MatchFlags
 ): bool =
-  template smL: untyped = look.smL
-  template smLa: untyped = smL.lastA
-  template smLb: untyped = smL.lastB
   template subNfa: untyped = ntn.subExp.nfa
   var flags2 = {mfAnchored}
   if ntn.subExp.reverseCapts:
     flags2.incl mfReverseCapts
   if mfBytesInput in flags:
     flags2.incl mfBytesInput
-  smL.grow()
-  smL.last.setLen subNfa.s.len
+  # XXX store lookaround number + count, and use a fixed
+  #     size seq to reduce allocations; use look.smL
+  var smLa = initPstates(subNfa.s.len)
+  var smLb = initPstates(subNfa.s.len)
   result = case ntn.kind
   of reLookahead:
     look.ahead(
@@ -74,7 +73,6 @@ func lookAround(
   else:
     doAssert false
     false
-  smL.removeLast()
 
 func epsilonMatch*(
   matched: var bool,
@@ -120,7 +118,7 @@ func epsilonMatch*(
     discard
 
 func nextState(
-  smA, smB: var Submatches,
+  smA, smB: var Pstates,
   capts: var Capts3,
   look: var Lookaround,
   text: string,
@@ -136,22 +134,25 @@ func nextState(
     if bwMatch: i .. bounds.b else: bounds.a .. i-1
   template nt: untyped = nfa[n].next[nti]
   template ntn: untyped = nfa[nt]
+  template n: untyped = pstate.ni
+  template capt: untyped = pstate.ci
+  template bounds: untyped = pstate.bounds
   let anchored = mfAnchored in flags
   var captx = 0.CaptIdx
   var matched = true
   smB.clear()
-  for n, capt, bounds in items smA:
+  for pstate in items smA:
     if capt != -1:
       capts.keepAlive capt
     if anchored and nfa[n].kind == reEoe:
-      if not smB.hasState n:
-        smB.add (n, capt, bounds)
+      if n notin smB:
+        smB.add initPstate(n, capt, bounds)
       break
     let L = nfa[n].next.len
     var nti = 0
     while nti < L:
       let nt0 = nt
-      matched = not smB.hasState(nt) and
+      matched = nt notin smB and
         (ntn.match(c) or (anchored and ntn.kind == reEoe))
       inc nti
       captx = capt
@@ -162,12 +163,12 @@ func nextState(
           )
         inc nti
       if matched:
-        smB.add (nt0, captx, bounds2)
+        smB.add initPstate(nt0, captx, bounds2)
   swap smA, smB
   capts.recycle()
 
 func matchImpl(
-  smA, smB: var Submatches,
+  smA, smB: var Pstates,
   capts: var Capts3,
   captIdx: var CaptIdx,
   text: string,
@@ -190,7 +191,7 @@ func matchImpl(
     else:
       bwRuneAt(text, start-1).int32
   smA.clear()
-  smA.add (0'i16, captIdx, i .. i-1)
+  smA.add initPstate(0'i16, captIdx, i .. i-1)
   while i < text.len:
     if binFlag:
       c = text[iNext].Rune
@@ -211,7 +212,7 @@ func matchImpl(
   return smA.len > 0
 
 func reversedMatchImpl(
-  smA, smB: var Submatches,
+  smA, smB: var Pstates,
   capts: var Capts3,
   captIdx: var CaptIdx,
   text: string,
@@ -236,7 +237,7 @@ func reversedMatchImpl(
     else:
       runeAt(text, start).int32
   smA.clear()
-  smA.add (0'i16, captIdx, i .. i-1)
+  smA.add initPstate(0'i16, captIdx, i .. i-1)
   while iNext > limit:
     if binFlag:
       c = text[iNext-1].Rune
@@ -258,14 +259,14 @@ func reversedMatchImpl(
     else:
       bwFastRuneAt(text, iNext, c)
   nextState(smA, smB, capts, look, text, nfa, i, cPrev, c, flags, bwMatch = true)
-  for n, capt, bounds in items smA:
-    if nfa.s[n].kind == reEoe:
-      captIdx = capt
-      return bounds.a
+  for pstate in items smA:
+    if nfa.s[pstate.ni].kind == reEoe:
+      captIdx = pstate.ci
+      return pstate.bounds.a
   return -1
 
 func reversedMatchImpl*(
-  smA, smB: var Submatches,
+  smA, smB: var Pstates,
   text: string,
   nfa: Nfa,
   look: var Lookaround,
@@ -295,8 +296,8 @@ func matchImpl*(
   m.clear()
   let flags = regex.flags.toMatchFlags + flags
   var
-    smA = newSubmatches(regex.nfa.s.len)
-    smB = newSubmatches(regex.nfa.s.len)
+    smA = initPstates(regex.nfa.s.len)
+    smB = initPstates(regex.nfa.s.len)
     capts = initCapts3(regex.groupsCount)
     captIdx = -1.CaptIdx
     look = initLook()
@@ -323,8 +324,8 @@ func startsWithImpl2*(
   # XXX optimize mfShortestMatch, mfNoCaptures
   let flags = regex.flags.toMatchFlags + {mfAnchored, mfShortestMatch, mfNoCaptures}
   var
-    smA = newSubmatches(regex.nfa.s.len)
-    smB = newSubmatches(regex.nfa.s.len)
+    smA = initPstates(regex.nfa.s.len)
+    smB = initPstates(regex.nfa.s.len)
     capts = initCapts3(regex.groupsCount)
     captIdx = -1.CaptIdx
     look = initLook()

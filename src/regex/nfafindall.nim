@@ -19,7 +19,7 @@ type
     s: seq[MatchItem]
     i: int
   RegexMatches* = object
-    a, b: Submatches
+    a, b: Pstates
     m: Matches
     c: Capts
     look: Lookaround
@@ -46,22 +46,18 @@ func add(ms: var Matches, m: MatchItem) {.inline.} =
 func clear(ms: var Matches) {.inline.} =
   ms.i = 0
 
-template initMaybeImpl(
+func initMaybeImpl(
   ms: var RegexMatches,
   size: int
-) =
-  if ms.a == nil:
-    assert ms.b == nil
-    ms.a = newSubmatches size
-    ms.b = newSubmatches size
-    ms.look = initLook()
-  doAssert ms.a.cap >= size and
-    ms.b.cap >= size
+) {.inline.} =
+  ms.a.reset size
+  ms.b.reset size
+  ms.look = initLook()
 
-template initMaybeImpl(
+func initMaybeImpl(
   ms: var RegexMatches,
   regex: Regex
-) =
+) {.inline.} =
   initMaybeImpl(ms, regex.nfa.s.len)
 
 func hasMatches(ms: RegexMatches): bool {.inline.} =
@@ -130,7 +126,7 @@ func submatch(
     while nti < L:
       let isEoe = ntn.kind == reEoe
       let nt0 = nt
-      matched = not smB.hasState(nt) and
+      matched = nt notin smB and
         (ntn.match(c.Rune) or ntn.kind == reEoe)
       inc nti
       captx = capt
@@ -158,10 +154,10 @@ func submatch(
           smA.clear()
           if not eoeFound:
             eoeFound = true
-            smA.add (0'i16, -1.CaptIdx, i .. i-1)
+            smA.add initPstate(0'i16, -1.CaptIdx, i .. i-1)
           smi = -1
           break
-        smB.add (nt0, captx, bounds.a .. i-1)
+        smB.add initPstate(nt0, captx, bounds.a .. i-1)
     inc smi
   swap smA, smB
 
@@ -181,7 +177,7 @@ func findSomeImpl*(
     i = start.int
     iPrev = start.int
     optFlag = mfFindMatchOpt in flags
-  smA.add (0'i16, -1.CaptIdx, i .. i-1)
+  smA.add initPstate(0'i16, -1.CaptIdx, i .. i-1)
   if start-1 in 0 .. text.len-1:
     cPrev = bwRuneAt(text, start-1).int32
   while i < text.len:
@@ -200,7 +196,7 @@ func findSomeImpl*(
         # else:  # XXX clear captures
         if optFlag:
           return i
-    smA.add (0'i16, -1.CaptIdx, i .. i-1)
+    smA.add initPstate(0'i16, -1.CaptIdx, i .. i-1)
     iPrev = i
     cPrev = c.int32
   submatch(ms, text, regex, iPrev, cPrev, -1'i32)

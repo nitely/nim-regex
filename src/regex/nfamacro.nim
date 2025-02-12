@@ -38,7 +38,6 @@ type
   ): NimNode {.nimcall, noSideEffect, raises: [].}
   Lookaround = object
     ahead, behind: Sig
-    smL: NimNode
 
 # todo: can not use unicodeplus due to
 # https://github.com/nim-lang/Nim/issues/7059
@@ -240,9 +239,7 @@ func genLookaroundMatch(
   look: Lookaround
 ): NimNode =
   template nfa: untyped = n.subExp.nfa
-  template smL: untyped = look.smL
-  let smlA = quote do: lastA(`smL`)
-  let smlB = quote do: lastB(`smL`)
+  defVars smlA, smlB
   var flags = {mfAnchored}
   if n.subExp.reverseCapts:
     flags.incl mfReverseCapts
@@ -262,10 +259,9 @@ func genLookaroundMatch(
       `matched` = not `matched`
   let nfaLenLit = newLit nfa.s.len
   result = quote do:
-    grow `smL`
-    `smL`.last.setLen `nfaLenLit`
+    var `smlA` = initPstates(`nfaLenLit`)
+    var `smlB` = initPstates(`nfaLenLit`)
     `lookaroundStmt`
-    removeLast `smL`
 
 func getEpsilonTransitions(nfa: Nfa, n: Node, nti: int): seq[int] =
   doAssert not isEpsilonTransition(n)
@@ -293,7 +289,7 @@ func genMatchedBody(
   let eTransitions = getEpsilonTransitions(nfa, n, nti)
   if eTransitions.len == 0:
     return quote do:
-      add(`smB`, (`ntLit`, `capt`, `bounds2`))
+      add(`smB`, initPstate(`ntLit`, `capt`, `bounds2`))
   var matchedBody = newSeq[NimNode]()
   matchedBody.add quote do:
     `matched` = true
@@ -325,7 +321,7 @@ func genMatchedBody(
       doAssert false
   matchedBody.add quote do:
     if `matched`:
-      add(`smB`, (`ntLit`, `captx`, `bounds2`))
+      add(`smB`, initPstate(`ntLit`, `captx`, `bounds2`))
   return newStmtList matchedBody
 
 func genNextState(
@@ -339,10 +335,10 @@ func genNextState(
   #[
     case n
     of 0:
-      if not smB.hasState(1):
+      if not smB.contains(1):
         if c == 'a':
           smB.add((1, capt, bounds))
-      if not smB.hasState(4):
+      if not smB.contains(4):
         if c == 'b':
           smB.add((4, capt, bounds))
     of 1:
@@ -384,11 +380,11 @@ func genNextState(
         i, nti, nfa, look, flags)
       if mfAnchored in flags and s[nt].kind == reEoe:
         branchBodyN.add quote do:
-          if not hasState(`smB`, `ntLit`):
+          if not contains(`smB`, `ntLit`):
             `matchedBodyStmt`
       else:
         branchBodyN.add quote do:
-          if not hasState(`smB`, `ntLit`) and `matchCond`:
+          if not contains(`smB`, `ntLit`) and `matchCond`:
             `matchedBodyStmt`
     doAssert eoeOnly or branchBodyN.len > 0
     if branchBodyN.len > 0:
@@ -418,12 +414,15 @@ func nextState(
   flags: set[MatchFlag],
   eoeOnly = false
 ): NimNode =
-  defForVars n, capt, bounds
+  defForVars pstate
+  let n = quote do: `pstate`.ni
+  let capt = quote do: `pstate`.ci
+  let bounds = quote do: `pstate`.bounds
   let eoeBailOut = if mfAnchored in flags:
     quote do:
       if `n` == `eoe`:
-        if not hasState(`smB`, `n`):
-          add(`smB`, (`n`, `capt`, `bounds`))
+        if not contains(`smB`, `n`):
+          add(`smB`, initPstate(`n`, `capt`, `bounds`))
         break
   else:
     newEmptyNode()
@@ -433,7 +432,7 @@ func nextState(
     flags, eoeOnly)
   result = quote do:
     `smB`.clear()
-    for `n`, `capt`, `bounds` in `smA`.items:
+    for `pstate` in `smA`.items:
       `eoeBailOut`
       `nextStateStmt`
     swap `smA`, `smB`
@@ -483,7 +482,7 @@ func matchImpl(
     if `start`-1 in 0 .. `text`.len-1:
       `cPrev` = bwRuneAt(`text`, `start`-1).int32
     clear(`smA`)
-    add(`smA`, (0'i16, `captIdx`, `i` .. `i`-1))
+    add(`smA`, initPstate(0'i16, `captIdx`, `i` .. `i`-1))
     while `i` < `text`.len:
       fastRuneAt(`text`, iNext, `c`, true)
       `nextStateStmt`
@@ -534,7 +533,7 @@ func reversedMatchImpl(
     if `start` in 0 .. `text`.len-1:
       `cPrev` = runeAt(`text`, `start`).int32
     clear(`smA`)
-    add(`smA`, (0'i16, `captIdx`, `i` .. `i`-1))
+    add(`smA`, initPstate(0'i16, `captIdx`, `i` .. `i`-1))
     while iNext > 0:
       bwFastRuneAt(`text`, iNext, `c`)
       `nextStateStmt`
@@ -551,11 +550,11 @@ func reversedMatchImpl(
       `captsStmt`
     `matched` = `smA`.len > 0
 
-template look(smL: NimNode): untyped =
+template look: untyped =
   Lookaround(
     ahead: matchImpl,
-    behind: reversedMatchImpl,
-    smL: smL)
+    behind: reversedMatchImpl
+  )
 
 template constructSubmatches2(
   captures, txt, capts, capt, size: untyped
@@ -578,24 +577,23 @@ proc matchImpl*(text, expLit, body: NimNode): NimNode =
   if not (expLit.kind == nnkCallStrLit and $expLit[0] == "rex"):
     error "not a regex literal; only rex\"regex\" is allowed", expLit
   let exp = expLit[1]
-  defVars smA, smB, capts, capt, matched, smL
+  defVars smA, smB, capts, capt, matched
   let regex = reCt(exp.strVal)
   let startLit = newLit 0
   let flags: set[MatchFlag] = {}
   let matchImplStmt = matchImpl(
     smA, smB, capts, capt, matched,
-    text, startLit, regex.nfa, look(smL), flags)
+    text, startLit, regex.nfa, look(), flags)
   let nfaLenLit = newLit regex.nfa.s.len
   let nfaGroupsLen = int(regex.groupsCount)
   result = quote do:
     block:
       var
-        `smA` = newSubmatches `nfaLenLit`
-        `smB` = newSubmatches `nfaLenLit`
+        `smA` = initPstates `nfaLenLit`
+        `smB` = initPstates `nfaLenLit`
         `capts` = default(Capts)
         `capt` = -1'i32
         `matched` = false
-        `smL` {.used.} = default(SmLookaround)
       `matchImplStmt`
       if `matched`:
         var matches {.used, inject.} = newSeq[string]()

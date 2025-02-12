@@ -1,0 +1,6 @@
+Lookaround	regex/nfamatch2.html#Lookaround	nfamatch2: Lookaround	
+epsilonMatch	regex/nfamatch2.html#epsilonMatch,bool,CaptIdx,Capts3,Lookaround,Node,string,int,int32,Rune,MatchFlags	nfamatch2: epsilonMatch(matched: var bool; captx: var CaptIdx; capts: var Capts3;\n             look: var Lookaround; ntn: Node; text: string; i: int;\n             cPrev: int32; c: Rune; flags: MatchFlags; bwMatch = false)	
+reversedMatchImpl	regex/nfamatch2.html#reversedMatchImpl,Pstates,Pstates,string,Nfa,Lookaround,int,int,int,MatchFlags	nfamatch2: reversedMatchImpl(smA, smB: var Pstates; text: string; nfa: Nfa;\n                  look: var Lookaround; groupsLen: int; start, limit: int;\n                  flags: MatchFlags = {}): int	
+initLook	regex/nfamatch2.html#initLook.t	nfamatch2: initLook(): Lookaround	
+matchImpl	regex/nfamatch2.html#matchImpl,string,Regex,RegexMatch2,int,MatchFlags	nfamatch2: matchImpl(text: string; regex: Regex; m: var RegexMatch2; start = 0;\n          flags: MatchFlags = {}): bool	
+startsWithImpl2	regex/nfamatch2.html#startsWithImpl2,string,Regex,int	nfamatch2: startsWithImpl2(text: string; regex: Regex; start: int): bool	

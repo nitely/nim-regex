@@ -20,7 +20,7 @@ template test(desc: string, body: untyped): untyped =
         echo "[CT/RT] " & desc
       body)()
 
-template check(condition: bool) =
+template check(condition: bool): untyped =
   doAssert(condition)
 
 template expect(exception: typedesc, body: untyped): untyped =
@@ -3346,3 +3346,15 @@ test "tvarflags":
     check match("a\Lb\L", re2"(?ms)a.b(?s-m:.)")
     check(not match("a\Lb\L", re2(r"a.b(?-sm:.)", {regexDotAll, regexMultiline})))
     check(not match("a\Lb\L", re2"(?ms)a.b(?-sm:.)"))
+
+test "ttilde":
+  check "ab".match ~"ab"
+  check not "ab".match ~"zx"
+  check ~"ab" in "abcd"
+  check ~"zx" notin "abcd"
+  check not compiles(~"(+)")
+
+test "ttilde_gcsafe":
+  func ttilde: bool {.gcsafe.} =
+    "foo".match ~"foo"
+  doAssert ttilde()

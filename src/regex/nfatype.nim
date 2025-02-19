@@ -14,12 +14,10 @@ const nonCapture* = -1 .. -2
 # XXX limit lookarounds to int8.high per regex
 type CaptState* = uint8
 const
-  stsInitial = 0.CaptState
-  stsKeepAlive = 1.CaptState
-  stsRecyclable = 2.CaptState
-  stsRecycled = 3.CaptState
-  stsNotRecyclable = 4.CaptState
-  stsFrozen = 5.CaptState .. CaptState.high
+  stsKeepAlive = 0.CaptState
+  stsRecycle = 1.CaptState
+  stsNotRecyclable = 2.CaptState
+  stsFrozen = 3.CaptState .. CaptState.high
 
 type
   # XXX int16 same as max parallel states or max regex len
@@ -81,44 +79,6 @@ func reset*(capts: var Capts3, groupsLen: int) =
 func initCapts3*(groupsLen: int): Capts3 =
   reset(result, groupsLen)
 
-func check(curr, next: CaptState): bool =
-  ## Check if transition from state curr to next is allowed
-  result = case next:
-  of stsInitial:
-    curr == stsInitial or
-    curr == stsRecycled or
-    curr == stsNotRecyclable or
-    curr in stsFrozen
-  of stsKeepAlive:
-    curr == stsInitial or
-    curr == stsRecyclable
-  of stsRecyclable:
-    curr == stsInitial or
-    curr == stsKeepAlive
-  of stsRecycled:
-    curr == stsRecyclable or
-    curr == stsRecycled
-  of stsNotRecyclable:
-    curr == stsInitial or
-    curr == stsKeepAlive or
-    curr in stsFrozen
-  else:
-    doAssert next in stsFrozen
-    curr == stsInitial or
-    curr == stsKeepAlive or
-    curr == stsRecyclable
-
-proc to(a: var CaptState, b: CaptState) {.inline.} =
-  doAssert check(a, b), $a.int & " " & $b.int
-  a = b
-
-func keepAlive*(capts: var Capts3, captIdx: CaptIdx) {.inline.} =
-  template state: untyped = capts.states[captIdx]
-  doAssert state != stsRecycled
-  if state == stsInitial or
-      state == stsRecyclable:
-    state.to stsKeepAlive
-
 func freeze*(capts: var Capts3): CaptState =
   ## Freeze all in use capts.
   ## Return freezeId
@@ -126,27 +86,24 @@ func freeze*(capts: var Capts3): CaptState =
   inc capts.freezeId
   result = capts.freezeId
   for state in mitems capts.states:
-    if state == stsInitial or
-        state == stsKeepAlive or
-        state == stsRecyclable:
-      state.to result
+    if state == stsRecycle:
+      state = result
 
 func unfreeze*(capts: var Capts3, freezeId: CaptState) =
   doAssert freezeId in stsFrozen
   doAssert freezeId == capts.freezeId, "Unordered freeze/unfreeze call"
   for state in mitems capts.states:
     if state == freezeId:
-      state.to stsInitial
+      state = stsRecycle
   dec capts.freezeId
 
 func diverge*(capts: var Capts3, captIdx: CaptIdx): CaptIdx =
   if capts.free.len > 0:
     result = capts.free.pop
-    capts.states[result].to stsInitial
   else:
     result = capts.len.CaptIdx
     capts.s.setLen(capts.s.len+capts.blockSize)
-    capts.states.add stsInitial
+    capts.states.add stsRecycle
     doAssert result == capts.states.len-1
   let idx = capts.blockIdx(result)
   if captIdx != -1:
@@ -162,19 +119,20 @@ func recycle*(capts: var Capts3) =
   ## Set initial/keepAlive entries to recyclable
   capts.free.setLen 0
   for i, state in mpairs capts.states:
-    if state == stsRecyclable or
-        state == stsRecycled:
+    if state == stsRecycle:
       capts.free.add i.int16
-      state.to stsRecycled
-    if state == stsInitial or
-        state == stsKeepAlive:
-      state.to stsRecyclable
+    if state == stsKeepAlive:
+      state = stsRecycle
 
-func notRecyclable*(capts: var Capts3, captIdx: CaptIdx) =
-  capts.states[captIdx].to stsNotRecyclable
+func keepAlive*(capts: var Capts3, captIdx: CaptIdx) {.inline.} =
+  if capts.states[captIdx] == stsRecycle:
+    capts.states[captIdx] = stsKeepAlive
+
+func notRecyclable*(capts: var Capts3, captIdx: CaptIdx) {.inline.} =
+  capts.states[captIdx] = stsNotRecyclable
 
 func recyclable*(capts: var Capts3, captIdx: CaptIdx) {.inline.} =
-  capts.states[captIdx].to stsInitial
+  capts.states[captIdx] = stsRecycle
 
 func clear*(capts: var Capts3) =
   capts.s.setLen 0
@@ -446,6 +404,7 @@ when isMainModule:
     var captx1 = capts.diverge -1
     capts[captx1, 0] = 1..1
     capts[captx1, 1] = 2..2
+    capts.keepAlive captx1
     capts.recycle()
     var captx2 = capts.diverge -1
     capts[captx2, 0] = 3..3
@@ -464,7 +423,6 @@ when isMainModule:
     doAssert capts[captx1, 0] == 1..1
     doAssert capts[captx1, 1] == 2..2
     capts.recycle()
-    capts.recycle()
     var captx2 = capts.diverge -1
     doAssert captx1 == captx2
     doAssert capts[captx1, 0] == nonCapture
@@ -476,8 +434,8 @@ when isMainModule:
     capts[captx1, 1] = 2..2
     doAssert capts[captx1, 0] == 1..1
     doAssert capts[captx1, 1] == 2..2
-    capts.recycle()
     capts.keepAlive captx1
+    capts.recycle()
     var captx2 = capts.diverge -1
     doAssert captx1 != captx2
     doAssert capts[captx1, 0] == 1..1
@@ -561,3 +519,4 @@ when isMainModule:
     capts.recycle()
     capts.recycle()
     doAssert capts.free.len == 1
+  echo "ok"

@@ -83,7 +83,7 @@ func add(ms: var RegexMatches2, m: MatchItem) {.inline.} =
     if max(msm[i].bounds.b, msm[i].bounds.a) < m.bounds.a:
       size = i+1
       break
-  #for i in size .. msm.len-1:
+  for i in size .. msm.len-1:
     if msm[i].capt != -1:
       capts.recyclable msm[i].capt
   msm.setLen size
@@ -159,8 +159,6 @@ func nextState(
   var eoeFound = false
   var smi = 0
   while smi < smA.len:
-    if capt != -1:
-      capts.keepAlive capt
     let L = nfa[n].next.len
     var nti = 0
     while nti < L:
@@ -189,7 +187,11 @@ func nextState(
         smB.add initPstate(nt0, captx, bounds.a .. i-1)
     inc smi
   swap smA, smB
-  capts.recycle()
+  if mfNoCaptures notin flags:
+    for pstate in items smA:
+      if pstate.ci != -1:
+        capts.keepAlive pstate.ci
+    capts.recycle()
 
 func findSomeImpl*(
   text: string,

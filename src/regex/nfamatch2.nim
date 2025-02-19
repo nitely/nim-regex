@@ -142,8 +142,6 @@ func nextState(
   var matched = true
   smB.clear()
   for pstate in items smA:
-    if capt != -1:
-      capts.keepAlive capt
     if anchored and nfa[n].kind == reEoe:
       if n notin smB:
         smB.add initPstate(n, capt, bounds)
@@ -165,7 +163,11 @@ func nextState(
       if matched:
         smB.add initPstate(nt0, captx, bounds2)
   swap smA, smB
-  capts.recycle()
+  if mfNoCaptures notin flags:
+    for pstate in items smA:
+      if capt != -1:
+        capts.keepAlive capt
+    capts.recycle()
 
 func matchImpl(
   smA, smB: var Pstates,

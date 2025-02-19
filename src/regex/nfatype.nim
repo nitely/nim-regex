@@ -322,7 +322,7 @@ func cap*(sm: Pstates): int {.inline.} =
 when defined(release):
   {.pop.}
 
-when false:
+when isMainModule:
   func `[]=`(capts: var Capts3, i, j: Natural, x: Slice[int]) =
     doAssert i <= capts.len-1
     doAssert j <= capts.blockSize-1
@@ -404,6 +404,7 @@ when false:
     var captx1 = capts.diverge -1
     capts[captx1, 0] = 1..1
     capts[captx1, 1] = 2..2
+    capts.keepAlive captx1
     capts.recycle()
     var captx2 = capts.diverge -1
     capts[captx2, 0] = 3..3
@@ -422,7 +423,6 @@ when false:
     doAssert capts[captx1, 0] == 1..1
     doAssert capts[captx1, 1] == 2..2
     capts.recycle()
-    capts.recycle()
     var captx2 = capts.diverge -1
     doAssert captx1 == captx2
     doAssert capts[captx1, 0] == nonCapture
@@ -434,8 +434,8 @@ when false:
     capts[captx1, 1] = 2..2
     doAssert capts[captx1, 0] == 1..1
     doAssert capts[captx1, 1] == 2..2
-    capts.recycle()
     capts.keepAlive captx1
+    capts.recycle()
     var captx2 = capts.diverge -1
     doAssert captx1 != captx2
     doAssert capts[captx1, 0] == 1..1
@@ -519,3 +519,4 @@ when false:
     capts.recycle()
     capts.recycle()
     doAssert capts.free.len == 1
+  echo "ok"

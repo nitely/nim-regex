@@ -119,10 +119,10 @@ func recycle*(capts: var Capts3) =
   ## Set initial/keepAlive entries to recyclable
   capts.free.setLen 0
   for i, state in mpairs capts.states:
-    case state
-    of stsRecycle: capts.free.add i.int16
-    of stsKeepAlive: state = stsRecycle
-    else: discard
+    if state == stsRecycle:
+      capts.free.add i.int16
+    if state == stsKeepAlive:
+      state = stsRecycle
 
 func keepAlive*(capts: var Capts3, captIdx: CaptIdx) {.inline.} =
   if capts.states[captIdx] == stsRecycle:

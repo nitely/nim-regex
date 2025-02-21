@@ -387,32 +387,4 @@ func replace*(
 func isInitialized*(re: Regex): bool {.inline, raises: [], deprecated: "use isInitialized(Regex2) instead".} =
   re.nfa.s.len > 0
 
-proc toString(
-  pattern: Regex,
-  nIdx: int16,
-  visited: var set[int16]
-): string {.used.} =
-  ## NFA to string representation.
-  ## For debugging purposes
-  # XXX zero-match transitions are missing
-  if nIdx in visited:
-    result = "[...]"
-    return
-  visited.incl(nIdx)
-  let n = pattern.nfa.s[nIdx]
-  result = "["
-  result.add($n)
-  for nn in n.next:
-    if isEpsilonTransition(pattern.nfa.s[nn]):
-      continue
-    result.add(", ")
-    result.add(pattern.toString(nn, visited))
-  result.add("]")
-
-proc toString(pattern: Regex): string {.used.} =
-  ## NFA to string representation.
-  ## For debugging purposes
-  var visited: set[int16] = {}
-  result = pattern.toString(0, visited)
-
 {.pop.}  # {.push warning[Deprecated]: off.}

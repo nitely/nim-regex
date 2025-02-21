@@ -1,0 +1,1 @@
+matchImpl	regex/nfamacro.html#matchImpl,NimNode,NimNode,NimNode	nfamacro: matchImpl(text, expLit, body: NimNode): NimNode	

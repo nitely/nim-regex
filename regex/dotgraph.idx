@@ -1,0 +1,3 @@
+graph	regex/dotgraph.html#graph,Nfa	dotgraph: graph(nfa: Nfa): string	
+graph	regex/dotgraph.html#graph,Regex	dotgraph: graph(regex: Regex): string	
+graphToFile	regex/dotgraph.html#graphToFile,Regex,string	dotgraph: graphToFile(regex: Regex; dir: string)	

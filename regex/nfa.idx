@@ -1,0 +1,4 @@
+eNfa	regex/nfa.html#eNfa,RpnExp	nfa: eNfa(exp: RpnExp): Enfa	
+eRemoval	regex/nfa.html#eRemoval,Enfa	nfa: eRemoval(eNfa: Enfa): Nfa	
+subExps	regex/nfa.html#subExps,RpnExp	nfa: subExps(exp: RpnExp): RpnExp	
+nfa2	regex/nfa.html#nfa2,RpnExp	nfa: nfa2(exp: RpnExp): Nfa	

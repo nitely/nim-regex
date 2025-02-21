@@ -1,0 +1,55 @@
+nonCapture	regex/nfatype.html#nonCapture	nfatype: nonCapture	
+CaptState	regex/nfatype.html#CaptState	nfatype: CaptState	
+CaptIdx	regex/nfatype.html#CaptIdx	nfatype: CaptIdx	
+Capts3	regex/nfatype.html#Capts3	nfatype: Capts3	
+`[]`	regex/nfatype.html#[],Capts3,Natural,Natural	nfatype: `[]`(capts: Capts3; i, j: Natural): Slice[int]	
+`[]`	regex/nfatype.html#[],Capts3,Natural,Natural_2	nfatype: `[]`(capts: var Capts3; i, j: Natural): var Slice[int]	
+reset	regex/nfatype.html#reset,Capts3,int	nfatype: reset(capts: var Capts3; groupsLen: int)	
+initCapts3	regex/nfatype.html#initCapts3,int	nfatype: initCapts3(groupsLen: int): Capts3	
+freeze	regex/nfatype.html#freeze,Capts3	nfatype: freeze(capts: var Capts3): CaptState	
+unfreeze	regex/nfatype.html#unfreeze,Capts3,CaptState	nfatype: unfreeze(capts: var Capts3; freezeId: CaptState)	
+diverge	regex/nfatype.html#diverge,Capts3,CaptIdx	nfatype: diverge(capts: var Capts3; captIdx: CaptIdx): CaptIdx	
+recycle	regex/nfatype.html#recycle,Capts3	nfatype: recycle(capts: var Capts3)	
+keepAlive	regex/nfatype.html#keepAlive,Capts3,CaptIdx	nfatype: keepAlive(capts: var Capts3; captIdx: CaptIdx)	
+notRecyclable	regex/nfatype.html#notRecyclable,Capts3,CaptIdx	nfatype: notRecyclable(capts: var Capts3; captIdx: CaptIdx)	
+recyclable	regex/nfatype.html#recyclable,Capts3,CaptIdx	nfatype: recyclable(capts: var Capts3; captIdx: CaptIdx)	
+clear	regex/nfatype.html#clear,Capts3	nfatype: clear(capts: var Capts3)	
+CaptNode	regex/nfatype.html#CaptNode	nfatype: CaptNode	
+Capts	regex/nfatype.html#Capts	nfatype: Capts	
+Captures	regex/nfatype.html#Captures	nfatype: Captures	
+constructSubmatches	regex/nfatype.html#constructSubmatches,Captures,Capts,int,int	nfatype: constructSubmatches(captures: var Captures; capts: Capts; capt, size: int)	
+reverse	regex/nfatype.html#reverse,Capts,CaptIdx,CaptIdx	nfatype: reverse(capts: var Capts; a, b: CaptIdx): CaptIdx	
+mfShortestMatch	regex/nfatype.html#mfShortestMatch	MatchFlag.mfShortestMatch	
+mfNoCaptures	regex/nfatype.html#mfNoCaptures	MatchFlag.mfNoCaptures	
+mfFindMatch	regex/nfatype.html#mfFindMatch	MatchFlag.mfFindMatch	
+mfFindMatchOpt	regex/nfatype.html#mfFindMatchOpt	MatchFlag.mfFindMatchOpt	
+mfAnchored	regex/nfatype.html#mfAnchored	MatchFlag.mfAnchored	
+mfBwMatch	regex/nfatype.html#mfBwMatch	MatchFlag.mfBwMatch	
+mfReverseCapts	regex/nfatype.html#mfReverseCapts	MatchFlag.mfReverseCapts	
+mfBytesInput	regex/nfatype.html#mfBytesInput	MatchFlag.mfBytesInput	
+MatchFlag	regex/nfatype.html#MatchFlag	nfatype: MatchFlag	
+MatchFlags	regex/nfatype.html#MatchFlags	nfatype: MatchFlags	
+toMatchFlags	regex/nfatype.html#toMatchFlags,RegexFlags	nfatype: toMatchFlags(f: RegexFlags): MatchFlags	
+RegexLit	regex/nfatype.html#RegexLit	nfatype: RegexLit	
+Regex	regex/nfatype.html#Regex	nfatype: Regex	
+RegexMatch	regex/nfatype.html#RegexMatch	nfatype: RegexMatch	
+RegexMatch2	regex/nfatype.html#RegexMatch2	nfatype: RegexMatch2	
+Regex2	regex/nfatype.html#Regex2	nfatype: Regex2	
+toRegex2	regex/nfatype.html#toRegex2.t	nfatype: toRegex2(r): untyped	
+toRegex	regex/nfatype.html#toRegex.t	nfatype: toRegex(r): untyped	
+clear	regex/nfatype.html#clear,RegexMatch	nfatype: clear(m: var RegexMatch)	
+clear	regex/nfatype.html#clear,RegexMatch2	nfatype: clear(m: var RegexMatch2)	
+NodeIdx	regex/nfatype.html#NodeIdx	nfatype: NodeIdx	
+Bounds	regex/nfatype.html#Bounds	nfatype: Bounds	
+Pstate	regex/nfatype.html#Pstate	nfatype: Pstate	
+Pstates	regex/nfatype.html#Pstates	nfatype: Pstates	
+initPstate	regex/nfatype.html#initPstate,NodeIdx,CaptIdx,Bounds	nfatype: initPstate(ni: NodeIdx; ci: CaptIdx; bounds: Bounds): Pstate	
+reset	regex/nfatype.html#reset,Pstates,int	nfatype: reset(sm: var Pstates; size: int)	
+initPstates	regex/nfatype.html#initPstates,int	nfatype: initPstates(size: int): Pstates	
+`[]`	regex/nfatype.html#[],Pstates,int	nfatype: `[]`(sm: Pstates; i: int): lent Pstate	
+contains	regex/nfatype.html#contains,Pstates,int16	nfatype: contains(sm: Pstates; n: int16): bool	
+add	regex/nfatype.html#add,Pstates,sinkPstate	nfatype: add(sm: var Pstates; item: sink Pstate)	
+len	regex/nfatype.html#len,Pstates	nfatype: len(sm: Pstates): int	
+clear	regex/nfatype.html#clear,Pstates	nfatype: clear(sm: var Pstates)	
+items	regex/nfatype.html#items.i,Pstates	nfatype: items(sm: Pstates): lent Pstate	
+cap	regex/nfatype.html#cap,Pstates	nfatype: cap(sm: Pstates): int	

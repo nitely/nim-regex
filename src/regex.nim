@@ -355,6 +355,25 @@ regex is parsed as a byte sequence. The ``Ⓐ`` character
 is composed of multiple bytes (``\xe2\x92\xb6``),
 and only the last byte is affected by the ``+`` operator.
 
+Tilde
+#####
+
+The tilde operator (``~``) compiles a regex literal at runtime,
+and it caches it for later usage. The regex is validated
+at compile-time. Since it does not generates code for the compiled regex,
+compilation time can be faster, and the resulting binary smaller.
+Do not assign it to a ``const``.
+
+.. code-block:: nim
+    :test:
+    let text = "abc"
+    block:
+      doAssert match(text, ~".+")
+    block:
+      func myFn(s: string, r: Regex2) =
+        doAssert match(s, r)
+      myFn(text, ~".+")
+
 Compile the regex at compile time
 #################################
 
@@ -398,17 +417,6 @@ Using a ``const`` can avoid confusion when passing flags:
 
 Compile the regex at runtime
 ############################
-
-.. note::
-    Consider `compiling the regex at compile-time <#examples-compile-the-regex-at-compile-time>`_
-    whenever possible.
-
-Most of the time compiling the regex at runtime can be avoided,
-and it should be avoided. Nim has really good compile-time
-capabilities like reading files, constructing strings,
-and so on. However, it cannot be helped in cases where
-the regex is passed to the program at runtime (from terminal input,
-network, or text files).
 
 To compile the regex at runtime pass the regex expression as a ``var/let``.
 
@@ -496,6 +504,40 @@ when not defined(forceRegexAtRuntime):
   ): static[Regex2] =
     ## Parse and compile a regular expression at compile-time
     toRegex2 reCt(s, flags)
+
+proc reCheck(s: string) {.compileTime.} =
+  try:
+    discard reCt(s)
+  except RegexError:
+    raise newException(RegexError, getCurrentExceptionMsg())
+
+var tildesct {.compileTime.}: Table[string, Regex2]
+var tildes {.threadvar.}: Table[string, Regex2]
+
+func `~`*(s: static string): Regex2 {.raises: [RegexError], gcsafe.} =
+  ## Compile a regex at runtime.
+  ## The compiled regex is cached for later usage.
+  ## It gets compiled once per thread.
+  ## The regex is validated at compile-time,
+  ## and so it may only raise a `RegexError` at compile-time.
+  static: reCheck(s)
+  {.cast(noSideEffect), cast(raises: [RegexError]).}:
+    when nimvm:
+      {.cast(gcsafe).}:
+        if s in tildesct:
+          return tildesct[s]
+        tildesct[s] = toRegex2 reImpl(s)
+        return tildesct[s]
+    else:
+      if s in tildes:
+        return tildes[s]
+      tildes[s] = toRegex2 reImpl(s)
+      return tildes[s]
+
+func regexDestroyCache* {.gcsafe.} =
+  ## Destroy tilde (``~``) cache.
+  {.cast(noSideEffect).}:
+    tildes = default(Table[string, Regex2])
 
 func group*(m: RegexMatch2, i: int): Slice[int] {.inline, raises: [].} =
   ## return slice for a given group.
@@ -1177,6 +1219,11 @@ when isMainModule:
   doAssert match("A", re2"(?xi)     a")
   doAssert(not match("A", re2"((?xi))     a"))
   doAssert(not match("A", re2"(?xi:(?xi)     )a"))
+  doAssert not compiles(re2"(+)")
+
+  doAssert ~"ab" in "abcd"
+  doAssert ~"zx" notin "abcd"
+  doAssert not compiles(~"(+)")
 
   # bug: raises invalid utf8 regex in Nim 1.0 + js target
   when not defined(js) or NimMajor >= 2:
@@ -1324,6 +1371,8 @@ when isMainModule:
       m.captures == @[0 .. 3, reNonCapture]
     doAssert match("aaab", re2"(\w+)|\w+(?<=^(\w)(\w+))b", m) and
       m.captures == @[0 .. 3, reNonCapture, reNonCapture]
+    doAssert ~"ab" in "abcd"
+    doAssert ~"zx" notin "abcd"
     block:
       var m = false
       var matches = newSeq[string]()

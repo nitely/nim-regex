@@ -243,9 +243,9 @@ when isMainModule:
 # (but extract the bench to another module without nimbench)
 # open the log with KCachegrind
 
-$ nim c --debugger:native --threads:off -d:danger -d:useMalloc -o:bin/bench2 bench/bench2.nim && valgrind --tool=callgrind -v ./bin/bench2
+$ nim c --debugger:native --threads:off -d:danger -d:useMalloc --panics:on --mm:arc -o:bin/bench2 bench/bench2.nim && valgrind --tool=callgrind -v ./bin/bench2
 
 # Bench
 
-$ nim c -r --threads:off -d:danger --mm:arc -o:bin/bench bench/bench.nim
+$ nim c -r --threads:off -d:danger --mm:arc --panics:on -o:bin/bench bench/bench.nim
 ]#

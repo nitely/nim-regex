@@ -124,7 +124,7 @@ func add*[T](s: var SortedSeq[T], x: openArray[T]) =
   s.s.add x
   sort s.s, cmp
 
-func contains*[T](s: SortedSeq[T], x: T): bool =
+func contains*[T](s: SortedSeq[T], x: T): bool {.inline.} =
   if s.len <= 10:
     return x in s.s
   return binarySearch(s.s, x, cmp) != -1

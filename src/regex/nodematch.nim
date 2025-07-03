@@ -98,14 +98,14 @@ func isDigitAscii(r: Rune): bool {.inline.} =
   else:
     false
 
-func matchAsciiSet(n: Node, r: Rune): bool =
+func matchAsciiSet(n: Node, r: Rune): bool {.inline.} =
   assert n.shorthands.len == 0
   result = r in n.cps or
     r in n.ranges
   result = (result and n.kind == reInSet) or
     (not result and n.kind == reNotSet)
 
-func matchShorthand(n: Node, r: Rune): bool =
+func matchShorthand(n: Node, r: Rune): bool {.inline.} =
   case n.kind
   of reWord: r.isWord()
   of reNotAlphaNum: not r.isWord()
@@ -126,7 +126,7 @@ func matchShorthand(n: Node, r: Rune): bool =
     doAssert false
     false
 
-func matchSet(n: Node, r: Rune): bool =
+func matchSet(n: Node, r: Rune): bool {.inline.} =
   result = r in n.cps or
     r in n.ranges
   if not result:

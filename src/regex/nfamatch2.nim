@@ -276,6 +276,9 @@ func reversedMatchImpl*(
   start, limit: int,
   flags: MatchFlags = {}
 ): int =
+  var flags = flags
+  if groupsLen == 0:
+    flags.incl mfNoCaptures
   var capts = initCapts3(groupsLen)
   var captIdx = -1.CaptIdx
   reversedMatchImpl(
@@ -296,7 +299,9 @@ func matchImpl*(
   flags: MatchFlags = {}
 ): bool =
   m.clear()
-  let flags = regex.flags.toMatchFlags + flags
+  var flags = regex.flags.toMatchFlags + flags
+  if regex.groupsCount == 0:
+    flags.incl mfNoCaptures
   var
     smA = initPstates(regex.nfa.s.len)
     smB = initPstates(regex.nfa.s.len)

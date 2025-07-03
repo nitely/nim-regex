@@ -160,6 +160,7 @@ func nextState(
   var smi = 0
   while smi < smA.len:
     let L = nfa[n].next.len
+    let A = bounds.a
     var nti = 0
     while nti < L:
       let isEoe = ntn.kind == reEoe
@@ -177,14 +178,14 @@ func nextState(
       if matched:
         if isEoe:
           #debugEcho "eoe ", bounds, " ", ms.m
-          ms.add (captx, bounds.a .. i-1)
+          ms.add (captx, A .. i-1)
           smA.clear()
           if not eoeFound:
             eoeFound = true
             smA.add initPstate(0'i16, -1.CaptIdx, i .. i-1)
           smi = -1
           break
-        smB.add initPstate(nt0, captx, bounds.a .. i-1)
+        smB.add initPstate(nt0, captx, A .. i-1)
     inc smi
   swap smA, smB
   if mfNoCaptures notin flags:
@@ -208,8 +209,10 @@ func findSomeImpl*(
     cPrev = -1'i32
     i = start.int
     iPrev = start.int
-  let
     flags = regex.flags.toMatchFlags + flags
+  if regex.groupsCount == 0:
+    flags.incl mfNoCaptures
+  let
     optFlag = mfFindMatchOpt in flags
     binFlag = mfBytesInput in flags
   smA.add initPstate(0'i16, -1.CaptIdx, i .. i-1)

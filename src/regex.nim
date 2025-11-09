@@ -507,39 +507,32 @@ when not defined(forceRegexAtRuntime):
     ## Parse and compile a regular expression at compile-time
     toRegex2 reCt(s, flags)
 
-proc reCheck(s: string) {.compileTime.} =
+proc reCheck(s: string): string =
   try:
     discard reCt(s)
-  except RegexError:
-    raise newException(RegexError, getCurrentExceptionMsg())
+    return ""
+  except RegexError as err:
+    return "[RegexError] " & err.msg
 
-var tildesct {.compileTime.}: Table[string, Regex2]
-var tildes {.threadvar.}: Table[string, Regex2]
-
-func `~`*(s: static string): Regex2 {.raises: [RegexError], gcsafe.} =
-  ## Compile a regex at runtime.
-  ## The compiled regex is cached for later usage.
-  ## It gets compiled once per thread.
-  ## The regex is validated at compile-time,
-  ## and so it may only raise a `RegexError` at compile-time.
-  static: reCheck(s)
-  {.cast(noSideEffect), cast(raises: [RegexError]).}:
+func `~`*(s: static string): lent Regex2 =
+  ## Return a compiled regex.
+  ## The regex is:
+  ## - Validated at compile-time.
+  ## - Compiled at runtime.
+  ## - Cached for later usage.
+  when reCheck(s) != "":
+    {.error: reCheck(s).}
+  {.cast(noSideEffect), cast(gcsafe), cast(raises: []).}:
     when nimvm:
-      {.cast(gcsafe).}:
-        if s in tildesct:
-          return tildesct[s]
-        tildesct[s] = toRegex2 reImpl(s)
-        return tildesct[s]
+      const rvm = toRegex2 reImpl(s)
+      return rvm
     else:
-      if s in tildes:
-        return tildes[s]
-      tildes[s] = toRegex2 reImpl(s)
-      return tildes[s]
-
-func regexDestroyCache* {.gcsafe.} =
-  ## Destroy tilde (``~``) cache.
-  {.cast(noSideEffect).}:
-    tildes = default(Table[string, Regex2])
+      when defined(gcDestructors):
+        var reg {.global.} = toRegex2 reImpl(s)
+        return reg
+      else:
+        const reg = toRegex2 reImpl(s)
+        return reg
 
 func group*(m: RegexMatch2, i: int): Slice[int] {.inline, raises: [].} =
   ## return slice for a given group.
@@ -1256,6 +1249,7 @@ when isMainModule:
   doAssert(not match("A", re2"(?xi:(?xi)     )a"))
   doAssert not compiles(re2"(+)")
 
+  doAssert ~r"\w" in "abcd"
   doAssert ~"ab" in "abcd"
   doAssert ~"zx" notin "abcd"
   doAssert not compiles(~"(+)")

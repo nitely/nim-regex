@@ -48,6 +48,8 @@ https://nitely.github.io/2020/11/30/regex-literals-optimization.html
 import std/algorithm
 import std/sets
 import std/unicode
+when NimMajor >= 2:
+  import std/assertions
 
 import ./types
 import ./nodematch

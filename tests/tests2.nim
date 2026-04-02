@@ -1,6 +1,8 @@
 from std/unicode import runeLen
 from std/sequtils import map
 from std/strutils import contains
+when NimMajor >= 2:
+  import std/assertions
 
 import ../src/regex
 

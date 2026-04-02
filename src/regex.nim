@@ -432,6 +432,8 @@ import std/tables
 import std/sequtils
 import std/unicode
 from std/strutils import addf
+when NimMajor >= 2:
+  import std/assertions
 
 import ./regex/types
 import ./regex/common

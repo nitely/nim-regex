@@ -3,6 +3,8 @@ import std/strutils
 import std/sets
 import std/parseutils
 import std/sequtils
+when NimMajor >= 2:
+  import std/assertions
 
 import pkg/unicodedb/properties
 

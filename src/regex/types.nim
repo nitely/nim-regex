@@ -3,6 +3,8 @@
 
 import std/unicode
 from std/sequtils import toSeq
+when NimMajor >= 2:
+  import std/assertions
 
 import pkg/unicodedb/properties
 

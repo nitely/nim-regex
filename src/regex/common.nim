@@ -1,6 +1,8 @@
 import std/unicode
 import std/strutils
 import std/algorithm
+when NimMajor >= 2:
+  import std/assertions
 
 type
   RegexError* = object of ValueError

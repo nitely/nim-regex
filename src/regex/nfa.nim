@@ -1,5 +1,7 @@
 import std/deques
 import std/algorithm
+when NimMajor >= 2:
+  import std/assertions
 
 import ./types
 import ./common

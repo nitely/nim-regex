@@ -40,6 +40,8 @@ for the algorithm description
 import std/unicode
 import std/tables
 from std/strutils import find
+when NimMajor >= 2:
+  import std/assertions
 
 import ./common
 import ./nodematch

@@ -1,4 +1,6 @@
 from std/sequtils import map
+when NimMajor >= 2:
+  import std/assertions
 
 import ../src/regex
 

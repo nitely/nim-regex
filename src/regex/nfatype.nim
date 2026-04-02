@@ -5,6 +5,8 @@ import std/sets
 import std/algorithm
 import std/math
 import std/bitops
+when NimMajor >= 2:
+  import std/assertions
 
 import ./types
 import ./litopt

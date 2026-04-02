@@ -55,6 +55,8 @@ DEALINGS IN THE SOFTWARE.
 
 from std/sequtils import map
 from std/strutils import splitLines
+when NimMajor >= 2:
+  import std/assertions
 import ../src/regex
 
 const nonCapture = reNonCapture

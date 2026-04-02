@@ -2,6 +2,8 @@ import std/unicode
 import std/sets
 import std/tables
 import std/algorithm
+when NimMajor >= 2:
+  import std/assertions
 
 import pkg/unicodedb/casing
 

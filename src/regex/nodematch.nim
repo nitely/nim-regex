@@ -1,4 +1,6 @@
 import std/unicode except `==`
+when NimMajor >= 2:
+  import std/assertions
 
 import pkg/unicodedb/casing
 import pkg/unicodedb/properties

@@ -5,7 +5,7 @@ import std/unicode
 import std/tables
 import std/sets
 import std/algorithm
-when NimMajor >= 2:
+when defined(nimPreviewSlimSystem):
   import std/assertions
 
 import pkg/unicodedb/casing

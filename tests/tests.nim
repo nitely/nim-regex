@@ -1,5 +1,5 @@
 from std/sequtils import map
-when NimMajor >= 2:
+when defined(nimPreviewSlimSystem):
   import std/assertions
 
 import ../src/regex

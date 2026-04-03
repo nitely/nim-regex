@@ -1,7 +1,7 @@
 import std/unicode
 import std/strutils
 import std/algorithm
-when NimMajor >= 2:
+when defined(nimPreviewSlimSystem):
   import std/assertions
 
 type

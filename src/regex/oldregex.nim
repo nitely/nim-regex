@@ -4,7 +4,7 @@ import std/tables
 import std/sequtils
 import std/unicode
 from std/strutils import addf
-when NimMajor >= 2:
+when defined(nimPreviewSlimSystem):
   import std/assertions
 
 import ./types

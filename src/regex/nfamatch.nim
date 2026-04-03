@@ -2,7 +2,7 @@
 
 import std/unicode
 import std/tables
-when NimMajor >= 2:
+when defined(nimPreviewSlimSystem):
   import std/assertions
 
 import ./common

@@ -40,7 +40,7 @@ for the algorithm description
 import std/unicode
 import std/tables
 from std/strutils import find
-when NimMajor >= 2:
+when defined(nimPreviewSlimSystem):
   import std/assertions
 
 import ./common

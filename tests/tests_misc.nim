@@ -55,7 +55,7 @@ DEALINGS IN THE SOFTWARE.
 
 from std/sequtils import map
 from std/strutils import splitLines
-when NimMajor >= 2:
+when defined(nimPreviewSlimSystem):
   import std/assertions
 import ../src/regex
 

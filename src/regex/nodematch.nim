@@ -1,5 +1,5 @@
 import std/unicode except `==`
-when NimMajor >= 2:
+when defined(nimPreviewSlimSystem):
   import std/assertions
 
 import pkg/unicodedb/casing

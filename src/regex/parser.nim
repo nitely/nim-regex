@@ -3,7 +3,7 @@ import std/strutils
 import std/sets
 import std/parseutils
 import std/sequtils
-when NimMajor >= 2:
+when defined(nimPreviewSlimSystem):
   import std/assertions
 
 import pkg/unicodedb/properties

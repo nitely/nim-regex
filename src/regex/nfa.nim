@@ -1,6 +1,6 @@
 import std/deques
 import std/algorithm
-when NimMajor >= 2:
+when defined(nimPreviewSlimSystem):
   import std/assertions
 
 import ./types

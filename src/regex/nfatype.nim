@@ -5,7 +5,7 @@ import std/sets
 import std/algorithm
 import std/math
 import std/bitops
-when NimMajor >= 2:
+when defined(nimPreviewSlimSystem):
   import std/assertions
 
 import ./types

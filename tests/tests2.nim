@@ -1465,6 +1465,12 @@ test "tsplitIncl":
   check splitIncl("ab", re2"") == @["a", "b"]
   check splitIncl("ab", re2"\b") == @["ab"]
   check splitIncl("a b", re2" ") == @["a", "b"]
+  check splitIncl("abc", re2"", maxsplit = -1) == @["a", "b", "c"]
+  check splitIncl("abc", re2"", maxsplit = 1) == @["abc"]
+  check splitIncl("abc", re2"", maxsplit = 2) == @["a", "bc"]
+  check splitIncl("a,b,c", re2"(,)", maxsplit = -1) == @["a", ",", "b", ",", "c"]
+  check splitIncl("a,b,c", re2"(,)", maxsplit = 1) == @["a,b,c"]
+  check splitIncl("a,b,c", re2"(,)", maxsplit = 2) == @["a", ",", "b,c"]
 
 test "tfindall":
   check findAllBounds("abcabc abc", re2"abc abc|abc") == @[0 .. 2, 3 .. 9]

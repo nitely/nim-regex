@@ -3348,3 +3348,22 @@ test "tvarflags":
     check match("a\Lb\L", re2"(?ms)a.b(?s-m:.)")
     check(not match("a\Lb\L", re2(r"a.b(?-sm:.)", {regexDotAll, regexMultiline})))
     check(not match("a\Lb\L", re2"(?ms)a.b(?-sm:.)"))
+
+test "start-last range":
+  block:
+    var m = RegexMatch2()
+    check match("abcd", re2"bcd", m, 1, 3)
+    check m.boundaries == 1 .. 3
+  block:
+    var m = RegexMatch2()
+    check match("abcd", re2"abc", m, 0, 2)
+    check m.boundaries == 0 .. 2
+    check not match("abcd", re2"abc", m, 0, 1)
+  block:
+    var m = RegexMatch2()
+    check match("abcd", re2"(\w+)", m, 0, 1)
+    check m.boundaries == 0 .. 1
+    check m.group(0) == 0 .. 1
+    check match("abcde", re2"(\w+)", m, 1, 3)
+    check m.boundaries == 1 .. 3
+    check m.group(0) == 1 .. 3

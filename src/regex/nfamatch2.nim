@@ -18,7 +18,7 @@ type
     text: string,
     nfa: Nfa,
     look: var Lookaround,
-    start: int,
+    start, last: int,
     flags: MatchFlags
   ): bool {.nimcall, noSideEffect, raises: [].}
   BehindSig = proc (
@@ -58,11 +58,11 @@ func lookAround(
   result = case ntn.kind
   of reLookahead:
     look.ahead(
-      smLa, smLb, capts, captIdx, text, subNfa, look, start, flags2
+      smLa, smLb, capts, captIdx, text, subNfa, look, start, text.high, flags2
     )
   of reNotLookahead:
     not look.ahead(
-      smLa, smLb, capts, captIdx, text, subNfa, look, start, flags2
+      smLa, smLb, capts, captIdx, text, subNfa, look, start, text.high, flags2
     )
   of reLookbehind:
     look.behind(
@@ -179,6 +179,7 @@ func matchImpl(
   nfa: Nfa,
   look: var Lookaround,
   start = 0,
+  last = int.high,
   flags: MatchFlags = {}
 ): bool =
   var
@@ -189,14 +190,15 @@ func matchImpl(
   let
     anchored = mfAnchored in flags
     binFlag = mfBytesInput in flags
-  if start-1 in 0 .. text.len-1:
+    last = min(last, text.high)
+  if start-1 in 0 .. last:
     cPrev = if binFlag:
       text[start-1].int32
     else:
       bwRuneAt(text, start-1).int32
   smA.clear()
   smA.add initPstate(0'i16, captIdx, i .. i-1)
-  while i < text.len:
+  while i <= last:
     if binFlag:
       c = text[iNext].Rune
       inc iNext
@@ -295,6 +297,7 @@ func matchImpl*(
   regex: Regex,
   m: var RegexMatch2,
   start = 0,
+  last = int.high,
   flags: MatchFlags = {}
 ): bool =
   m.clear()
@@ -306,7 +309,7 @@ func matchImpl*(
     captIdx = -1.CaptIdx
     look = initLook()
   result = matchImpl(
-    smA, smB, capts, captIdx, text, regex.nfa, look, start, flags
+    smA, smB, capts, captIdx, text, regex.nfa, look, start, last, flags
   )
   if result:
     m.captures.setLen regex.groupsCount
@@ -334,5 +337,5 @@ func startsWithImpl2*(
     captIdx = -1.CaptIdx
     look = initLook()
   result = matchImpl(
-    smA, smB, capts, captIdx, text, regex.nfa, look, start, flags
+    smA, smB, capts, captIdx, text, regex.nfa, look, start, text.high, flags
   )

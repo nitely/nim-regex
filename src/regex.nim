@@ -571,7 +571,8 @@ func match*(
   s: string,
   pattern: Regex2,
   m: var RegexMatch2,
-  start = 0
+  start = 0,
+  last = int.high
 ): bool {.raises: [].} =
   ## return a match if the whole string
   ## matches the regular expression. This
@@ -583,7 +584,7 @@ func match*(
     doAssert not "abcd".match(re2"abc", m)
 
   debugCheckUtf8(s, pattern)
-  result = matchImpl(s, pattern.toRegex, m, start)
+  result = matchImpl(s, pattern.toRegex, m, start, last)
 
 func match*(s: string, pattern: Regex2): bool {.raises: [].} =
   debugCheckUtf8(s, pattern)

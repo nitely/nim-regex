@@ -3354,11 +3354,19 @@ test "start-last range":
     var m = RegexMatch2()
     check match("abcd", re2"bcd", m, 1, 3)
     check m.boundaries == 1 .. 3
+    check not match("abcd", re2"bc", m, 1, 3)
+    check startsWith("abcd", re2"bcd", m, 1, 3)
+    check m.boundaries == 1 .. 3
+    check startsWith("abcd", re2"bc", m, 1, 3)
+    check m.boundaries == 1 .. 2
   block:
     var m = RegexMatch2()
     check match("abcd", re2"abc", m, 0, 2)
     check m.boundaries == 0 .. 2
+    check startsWith("abcd", re2"abc", m, 0, 2)
+    check m.boundaries == 0 .. 2
     check not match("abcd", re2"abc", m, 0, 1)
+    check not startsWith("abcd", re2"abc", m, 0, 1)
   block:
     var m = RegexMatch2()
     check match("abcd", re2"(\w+)", m, 0, 1)
@@ -3367,3 +3375,9 @@ test "start-last range":
     check match("abcde", re2"(\w+)", m, 1, 3)
     check m.boundaries == 1 .. 3
     check m.group(0) == 1 .. 3
+  block:
+    var m = RegexMatch2()
+    check not match("xabc", re2"^abc", m, 1)
+    check match("abcx", re2"abc$", m, 0, 2)
+    check not startsWith("xabc", re2"^abc", m, 1)
+    check startsWith("abcx", re2"abc$", m, 0, 2)

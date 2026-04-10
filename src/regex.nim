@@ -760,10 +760,10 @@ func split*(s: string, sep: Regex2): seq[string] {.raises: [].} =
   for w in split(s, sep):
     result.add w
 
-func splitIncl*(s: string, sep: Regex2, maxSplit = -1): seq[string] {.raises: [].} =
+func splitIncl*(s: string, sep: Regex2, limit = -1): seq[string] {.raises: [].} =
   ## return not matched substrings, including captured groups
   ##
-  ## If `maxsplit != -1`, then the string will only be split `maxsplit - 1` times.
+  ## If `limit != -1`, then the result will contain at most `limit` substrings, plus the included capture groups.
   runnableExamples:
     let
       parts = splitIncl("a,b", re2"(,)")
@@ -774,7 +774,9 @@ func splitIncl*(s: string, sep: Regex2, maxSplit = -1): seq[string] {.raises: []
 
   template ab: untyped = m.boundaries
   debugCheckUtf8(s, sep)
-  if maxSplit == 1:
+  if limit == 0:
+    return @[]
+  elif limit == 1:
     return @[s]
   result = newSeq[string]()
   var
@@ -798,7 +800,7 @@ func splitIncl*(s: string, sep: Regex2, maxSplit = -1): seq[string] {.raises: []
           if m.group(g) != nonCapture:
             result.add substr(s, m.group(g).a, m.group(g).b)
         inc splits
-        if splits == maxSplit - 1:
+        if splits == limit - 1:
           if ab.b + 1 <= s.high:
             result.add substr(s, ab.b + 1)
           done = true

@@ -827,13 +827,8 @@ func startsWith*(
   m: var RegexMatch2,
   start = 0
 ): bool {.raises: [].} =
-  ## return whether the string
-  ## starts with the pattern or not
-  ## and return a match if it return true
-  ##
-  ## if you use `toOpenArray` to pass a slice of a string,
-  ## use returned `RegexMatch2` variable to the slice, not the string.
-  ##
+  ## return whether the string starts with the pattern or not.
+  ## Boundaries are relative to the `s` start/end.
   runnableExamples:
     let s = "abcd"
     let start = 1

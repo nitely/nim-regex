@@ -841,11 +841,8 @@ func startsWith*(
   ##       start = 1
   ##       last = s.len - 1
   ##     var m = RegexMatch2()
-  ##     discard startsWith(s.toOpenArray(start, last), re2"bcd", m)
-  ##     echo s[m.boundaries]  # echo wrong matched substring!
-  ##     # following code echo matched substring correctly
-  ##     echo s.toOpenArray(start, last)[m.boundaries]
-  ##     echo s[m.boundaries.a + start .. m.boundaries.b + start]
+  ##     doAssert startsWith(s.toOpenArray(start, last), re2"bcd", m)
+  ##     doAssert s[m.boundaries.a + start .. m.boundaries.b + start] == "bcd"
   debugCheckUtf8(s, pattern)
   result = matchImpl(s, pattern.toRegex, m, start, {mfAnchored, mfShortestMatch})
 

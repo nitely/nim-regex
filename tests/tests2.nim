@@ -3360,3 +3360,22 @@ test "tvarflags":
     check match("a\Lb\L", re2"(?ms)a.b(?s-m:.)")
     check(not match("a\Lb\L", re2(r"a.b(?-sm:.)", {regexDotAll, regexMultiline})))
     check(not match("a\Lb\L", re2"(?ms)a.b(?-sm:.)"))
+
+test "startsWith openArray[char] test":
+  block:
+    var m = RegexMatch2()
+    let s = "abcd"
+    check startsWith(s.toOpenArray(0, 3), re2"abcd", m, 0)
+    check m.boundaries == 0 .. 3
+    check startsWith(s.toOpenArray(0, 3), re2"abc", m, 0)
+    check m.boundaries == 0 .. 2
+    check startsWith(s.toOpenArray(0, 3), re2"bcd", m, 1)
+    check m.boundaries == 1 .. 3
+    check not startsWith(s.toOpenArray(0, 2), re2"bcd", m, 1)
+    check startsWith(s.toOpenArray(1, 3), re2"bcd", m, 0)
+    check m.boundaries == 0 .. 2
+    check startsWith(s.toOpenArray(1, 3), re2"cd", m, 1)
+    check m.boundaries == 1 .. 2
+    check startsWith(s.toOpenArray(1, 3), re2"^bcd$", m, 0)
+    check m.boundaries == 0 .. 2
+    check not startsWith(s.toOpenArray(0, 3), re2"^bcd", m, 1)

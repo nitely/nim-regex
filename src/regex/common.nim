@@ -31,7 +31,7 @@ func `<=`*(x, y: Rune): bool =
 func cmp*(x, y: Rune): int =
   x.int32 - y.int32
 
-func bwRuneAt*(s: string, n: int): Rune =
+func bwRuneAt*(s: openArray[char], n: int): Rune =
   ## Take rune ending at ``n``
   doAssert n >= 0
   doAssert n <= s.len-1
@@ -41,7 +41,7 @@ func bwRuneAt*(s: string, n: int): Rune =
   fastRuneAt(s, n, result, false)
 
 template bwFastRuneAt*(
-  s: string, n: var int, result: var Rune
+  s: openArray[char], n: var int, result: var Rune
 ): untyped =
   ## Take rune ending at ``n``
   doAssert n > 0
@@ -70,7 +70,7 @@ type
     vusError, vusStart, vusA, vusB, vusC, vusD, vusE, vusF, vusG
 
 # Taken from nim-unicodeplus
-func verifyUtf8*(s: string): int =
+func verifyUtf8*(s: openArray[char]): int =
   ## Return `-1` if `s` is a valid utf-8 string.
   ## Otherwise, return the index of the first bad char.
   result = -1

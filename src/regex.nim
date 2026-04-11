@@ -466,7 +466,7 @@ template debugCheckUtf8(s: untyped): untyped =
   when not defined(release):
     assert(verifyUtf8(s) == -1, "Invalid utf-8 input")
 
-template debugCheckUtf8(s: string, pat: Regex2): untyped =
+template debugCheckUtf8(s: openArray[char], pat: Regex2): untyped =
   when not defined(release):
     assert(
       regexArbitraryBytes in pat.toRegex.flags or
@@ -820,6 +820,34 @@ func startsWith*(
 
   debugCheckUtf8(s, pattern)
   startsWithImpl2(s, pattern.toRegex, start)
+
+func startsWith*(
+  s: openArray[char],
+  pattern: Regex2,
+  m: var RegexMatch2,
+  start = 0
+): bool {.raises: [].} =
+  ## return whether the string
+  ## starts with the pattern or not
+  ## and return a match if it return true
+  ##
+  ## if you use `toOpenArray` to pass a slice of a string,
+  ## use returned `RegexMatch2` variable to the slice, not the string.
+  ##
+  ## .. code-block:: nim
+  ##     :test:
+  ##     let
+  ##       s = "abcd"
+  ##       start = 1
+  ##       last = s.len - 1
+  ##     var m = RegexMatch2()
+  ##     discard startsWith(s.toOpenArray(start, last), re2"bcd", m)
+  ##     echo s[m.boundaries]  # echo wrong matched substring!
+  ##     # following code echo matched substring correctly
+  ##     echo s.toOpenArray(start, last)[m.boundaries]
+  ##     echo s[m.boundaries.a + start .. m.boundaries.b + start]
+  debugCheckUtf8(s, pattern)
+  result = matchImpl(s, pattern.toRegex, m, start, {mfAnchored, mfShortestMatch})
 
 func endsWith*(s: string, pattern: Regex2): bool {.raises: [].} =
   ## return whether the string

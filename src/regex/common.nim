@@ -33,7 +33,7 @@ func cmp*(x, y: Rune): int =
 
 when NimMajor < 2:
   # Copied from std/unicode in Nim's stdlib because Nim older than ver 2
-  # doesn't have `fastRuneAt` with `openArray[char]` param.
+  # doesn't have `fastRuneAt`/`runeAt` with `openArray[char]` param.
 
   template ones(n: untyped): untyped = ((1 shl n)-1)
   const replRune = Rune(0xFFFD)
@@ -115,6 +115,9 @@ when NimMajor < 2:
     else:
       result = Rune(uint(s[i]))
       when doInc: inc(i)
+
+  proc runeAt*(s: openArray[char], i: Natural): Rune =
+    fastRuneAt(s, i, result, false)
 
 func bwRuneAt*(s: openArray[char], n: int): Rune =
   ## Take rune ending at ``n``

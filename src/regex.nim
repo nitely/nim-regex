@@ -834,15 +834,13 @@ func startsWith*(
   ## if you use `toOpenArray` to pass a slice of a string,
   ## use returned `RegexMatch2` variable to the slice, not the string.
   ##
-  ## .. code-block:: nim
-  ##     :test:
-  ##     let
-  ##       s = "abcd"
-  ##       start = 1
-  ##       last = s.len - 1
-  ##     var m = RegexMatch2()
-  ##     doAssert startsWith(s.toOpenArray(start, last), re2"bcd", m)
-  ##     doAssert s[m.boundaries.a + start .. m.boundaries.b + start] == "bcd"
+  runnableExamples:
+    let s = "abcd"
+    let start = 1
+    let last = s.len - 1
+    var m: RegexMatch2
+    doAssert startsWith(s.toOpenArray(start, last), re2"bcd", m)
+    doAssert s[m.boundaries.a + start .. m.boundaries.b + start] == "bcd"
   debugCheckUtf8(s, pattern)
   result = matchImpl(s, pattern.toRegex, m, start, {mfAnchored, mfShortestMatch})
 

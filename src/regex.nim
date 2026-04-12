@@ -760,7 +760,7 @@ func split*(s: string, sep: Regex2): seq[string] {.raises: [].} =
   for w in split(s, sep):
     result.add w
 
-func splitIncl*(s: string, sep: Regex2, limit = -1): seq[string] {.raises: [].} =
+func splitIncl*(s: string, sep: Regex2, limit = -1, start = 0): seq[string] {.raises: [].} =
   ## return not matched substrings, including captured groups
   ##
   ## If `limit != -1`, then the result will contain at most `limit` substrings, plus the included capture groups.
@@ -777,11 +777,11 @@ func splitIncl*(s: string, sep: Regex2, limit = -1): seq[string] {.raises: [].} 
   if limit == 0:
     return @[]
   elif limit == 1:
-    return @[s]
+    return @[s.substr(start)]
   result = newSeq[string]()
   var
-    first, last, i = 0
-    i2 = -1
+    first, last, i = start
+    i2 = start-1
     done = false
     m = RegexMatch2()
     ms = RegexMatches2()
@@ -794,7 +794,7 @@ func splitIncl*(s: string, sep: Regex2, limit = -1): seq[string] {.raises: [].} 
     for mi in ms:
       fillMatchImpl(m, mi, ms, sep.toRegex)
       last = ab.a
-      if ab.a > 0 or ab.a <= ab.b:  # skip first empty match
+      if ab.a > start or ab.a <= ab.b:  # skip first empty match
         result.add substr(s, first, last-1)
         for g in 0 ..< m.groupsCount:
           if m.group(g) != nonCapture:

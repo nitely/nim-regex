@@ -1477,6 +1477,12 @@ test "tsplitIncl":
   check splitIncl("a1b2c", re2"(\d)", limit = 0) == @[]
   check splitIncl("a1b2c", re2"(\d)", limit = 1) == @["a1b2c"]
   check splitIncl("a1b2c", re2"(\d)", limit = 2) == @["a", "1", "b2c"]
+  check splitIncl("abc", re2"", start = 1) == @["b", "c"]
+  check splitIncl("abc", re2"", limit = 1, start = 1) == @["bc"]
+  check splitIncl("abcbd", re2"^b", start = 1) == @["bcbd"]
+  check splitIncl("a,b,c", re2",", start = 2) == @["b", "c"]
+  check splitIncl("a1b2c", re2"(\d)", start = 2) == @["b", "2", "c"]
+  check splitIncl("a1b2c3d", re2"(\d)", limit = 2, start = 2) == @["b", "2", "c3d"]
 
 test "tfindall":
   check findAllBounds("abcabc abc", re2"abc abc|abc") == @[0 .. 2, 3 .. 9]

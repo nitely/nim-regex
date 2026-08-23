@@ -13,7 +13,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        nim: [1.6.20, 2.0.16, 2.2.4, 2.2.x, devel]
+        nim: [1.6.x, 2.0.x, 2.2.4, 2.2.x, devel]
         exclude:
           - os: windows-latest
             nim: devel
@@ -36,7 +36,7 @@ jobs:
       run: |
         nimble test
     - name: Build docs
-      if: matrix.nim == '1.6.20' && matrix.os == 'ubuntu-latest'
+      if: matrix.nim == '1.6.x' && matrix.os == 'ubuntu-latest'
       run: |
         nimble docs
     - name: Deploy docs
@@ -45,7 +45,7 @@ jobs:
       # and remove `github.ref == 'refs/heads/master'` below
       if: |
         github.event_name == 'push' && github.ref == 'refs/heads/master' &&
-        matrix.nim == '1.6.20' && matrix.os == 'ubuntu-latest'
+        matrix.nim == '1.6.x' && matrix.os == 'ubuntu-latest'
       uses: crazy-max/ghaction-github-pages@v1
       with:
         build_dir: docs

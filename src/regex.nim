@@ -507,56 +507,53 @@ when not defined(forceRegexAtRuntime):
     ## Parse and compile a regular expression at compile-time
     toRegex2 reCt(s, flags)
 
-proc reCheck(s: string): bool {.compileTime.} =
+func reCheck(s: string): bool {.compileTime.} =
   try:
     discard reCt(s)
     true
   except RegexError:
     false
 
-proc reCheckMsg(s: string): string {.compileTime.} =
+func reCheckMsg(s: string): string {.compileTime.} =
   try:
     discard reCt(s)
     ""
-  except RegexError:
-    getCurrentExceptionMsg()
+  except RegexError as err:
+    err.msg
 
 var tildesVm {.compileTime.}: Table[string, Regex2]
 var tildes {.threadvar.}: Table[string, Regex2]
 
-proc tildeImpl(reg: var Regex2, s: string) =
+template tildeImpl(T: type Regex2, s: string): T =
   try:
     when nimvm:
-      reg =
-        if s in tildesVm:
-          tildesVm[s]
-        else:
-          tildesVm[s] = toRegex2 reImpl(s)
-          tildesVm[s]
+      if s in tildesVm:
+        tildesVm[s]
+      else:
+        tildesVm[s] = toRegex2 reImpl(s)
+        tildesVm[s]
     else:
-      reg =
-        if s in tildes:
-          tildes[s]
-        else:
-          tildes[s] = toRegex2 reImpl(s)
-          tildes[s]
+      if s in tildes:
+        tildes[s]
+      else:
+        tildes[s] = toRegex2 reImpl(s)
+        tildes[s]
   except RegexError as err:
     raiseAssert err.msg
   except KeyError as err:
     raiseAssert err.msg
 
-func `~`*(s: static string): Regex2 {.raises: [], gcsafe.} =
+template `~`*(s: string): Regex2 =
   ## Return a compiled regex.
   ## The regex is:
   ## - Validated at compile-time.
   ## - Compiled at runtime.
   ## - Cached for later usage.
-  when not reCheck(s):
-    {.error: "RegexError: \n" & reCheckMsg(s).}
-  var reg: Regex2
+  when s notin tildesVm:
+    when not reCheck(s):
+      {.error: "RegexError: \n" & reCheckMsg(s).}
   {.cast(gcsafe), cast(noSideEffect).}:
-    tildeImpl(reg, s)
-  reg
+    tildeImpl(Regex2, s)
 
 func regexDestroyCache* {.gcsafe.} =
   ## Destroy tilde (``~``) cache.

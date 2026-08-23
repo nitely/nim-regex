@@ -3392,8 +3392,10 @@ test "ttilde":
   check ~r"ab" in "abcd"
   check ~r"zx" notin "abcd"
   check not compiles(~r"(+)")
+  regexDestroyCache()
 
 test "ttilde_gcsafe":
   func ttilde: bool {.raises: [], gcsafe.} =
     "foo".match ~r"foo"
   doAssert ttilde()
+  regexDestroyCache()

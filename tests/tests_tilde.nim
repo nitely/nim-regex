@@ -13,6 +13,7 @@ macro genAsserts(n: static int): untyped =
 block:
   proc threadFunc() {.thread.} =
     doAssert ~r"ab" in "abcd"
+    regexDestroyCache()
 
   proc test() =
     var th: Thread[void]
@@ -20,6 +21,7 @@ block:
     joinThread(th)
 
   test()
+  regexDestroyCache()
 
 block:
   proc test() =
@@ -28,6 +30,7 @@ block:
     doAssert reg[^1] in "ab321"
 
   test()
+  regexDestroyCache()
 
 block:
   proc test() =
@@ -37,11 +40,13 @@ block:
     foo(~r"ab")
 
   test()
+  regexDestroyCache()
 
 block:
   proc threadFunc() {.thread.} =
     genAsserts(128)
     doAssert ~r"ab" in "abcd"
+    regexDestroyCache()
 
   proc test() =
     var th = newSeq[Thread[void]](16)
@@ -50,5 +55,6 @@ block:
     joinThreads(th)
 
   test()
+  regexDestroyCache()
 
 echo "ok"

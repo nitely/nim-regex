@@ -507,32 +507,65 @@ when not defined(forceRegexAtRuntime):
     ## Parse and compile a regular expression at compile-time
     toRegex2 reCt(s, flags)
 
-proc reCheck(s: string): string =
+proc reCheck(s: string): bool {.compileTime.} =
   try:
     discard reCt(s)
-    return ""
-  except RegexError as err:
-    return "[RegexError] " & err.msg
+    true
+  except RegexError:
+    false
 
-func `~`*(s: static string): lent Regex2 =
+proc reCheckMsg(s: string): string {.compileTime.} =
+  try:
+    discard reCt(s)
+    ""
+  except RegexError:
+    getCurrentExceptionMsg()
+
+var tildesVm {.compileTime.}: Table[string, Regex2]
+var tildes {.threadvar.}: Table[string, Regex2]
+
+proc tildeImpl(reg: var Regex2, s: string) =
+  try:
+    when nimvm:
+      reg =
+        if s in tildesVm:
+          tildesVm[s]
+        else:
+          tildesVm[s] = toRegex2 reImpl(s)
+          tildesVm[s]
+    else:
+      reg =
+        if s in tildes:
+          tildes[s]
+        else:
+          tildes[s] = toRegex2 reImpl(s)
+          tildes[s]
+  except RegexError as err:
+    raiseAssert err.msg
+  except KeyError as err:
+    raiseAssert err.msg
+
+func `~`*(s: static string): Regex2 {.raises: [], gcsafe.} =
   ## Return a compiled regex.
   ## The regex is:
   ## - Validated at compile-time.
   ## - Compiled at runtime.
   ## - Cached for later usage.
-  when reCheck(s) != "":
-    {.error: reCheck(s).}
-  {.cast(noSideEffect), cast(gcsafe), cast(raises: []).}:
-    when nimvm:
-      const rvm = toRegex2 reImpl(s)
-      return rvm
-    else:
-      when defined(gcDestructors):
-        var reg {.global.} = toRegex2 reImpl(s)
-        return reg
-      else:
-        const reg = toRegex2 reImpl(s)
-        return reg
+  when not reCheck(s):
+    {.error: "RegexError: \n" & reCheckMsg(s).}
+  var reg: Regex2
+  {.cast(gcsafe), cast(noSideEffect).}:
+    tildeImpl(reg, s)
+  reg
+
+func regexDestroyCache* {.gcsafe.} =
+  ## Destroy tilde (``~``) cache.
+  when nimvm:
+    {.cast(gcsafe), cast(noSideEffect).}:
+      tildesVm = default(Table[string, Regex2])
+  else:
+    {.cast(noSideEffect).}:
+      tildes = default(Table[string, Regex2])
 
 func group*(m: RegexMatch2, i: int): Slice[int] {.inline, raises: [].} =
   ## return slice for a given group.
@@ -1250,9 +1283,9 @@ when isMainModule:
   doAssert not compiles(re2"(+)")
 
   doAssert ~r"\w" in "abcd"
-  doAssert ~"ab" in "abcd"
-  doAssert ~"zx" notin "abcd"
-  doAssert not compiles(~"(+)")
+  doAssert ~r"ab" in "abcd"
+  doAssert ~r"zx" notin "abcd"
+  doAssert not compiles(~r"(+)")
 
   # bug: raises invalid utf8 regex in Nim 1.0 + js target
   when not defined(js) or NimMajor >= 2:

@@ -3387,13 +3387,13 @@ test "startsWith openArray[char] test":
     check not startsWith(s.toOpenArray(0, 3), re2"^bcd", m, 1)
 
 test "ttilde":
-  check "ab".match ~"ab"
-  check not "ab".match ~"zx"
-  check ~"ab" in "abcd"
-  check ~"zx" notin "abcd"
-  check not compiles(~"(+)")
+  check "ab".match ~r"ab"
+  check not "ab".match ~r"zx"
+  check ~r"ab" in "abcd"
+  check ~r"zx" notin "abcd"
+  check not compiles(~r"(+)")
 
 test "ttilde_gcsafe":
-  func ttilde: bool {.gcsafe.} =
-    "foo".match ~"foo"
+  func ttilde: bool {.raises: [], gcsafe.} =
+    "foo".match ~r"foo"
   doAssert ttilde()

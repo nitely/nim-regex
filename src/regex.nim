@@ -527,13 +527,13 @@ var tildes {.threadvar.}: Table[string, Regex2]
 template tildeImpl(T: type Regex2, s: string): T =
   try:
     when nimvm:
-      if s in tildesVm:
+      if contains(tildesVm, s):
         tildesVm[s]
       else:
         tildesVm[s] = toRegex2 reImpl(s)
         tildesVm[s]
     else:
-      if s in tildes:
+      if contains(tildes, s):
         tildes[s]
       else:
         tildes[s] = toRegex2 reImpl(s)
@@ -550,7 +550,7 @@ template `~`*(s: string): Regex2 =
   ## - Compiled at runtime.
   ## - Cached for later usage.
   const ss = s
-  when ss notin tildesVm:
+  when not contains(tildesVm, ss):
     when not check(Regex2, ss):
       {.error: "RegexError: \n" & errMsg(Regex2, ss).}
   {.cast(gcsafe), cast(noSideEffect).}:

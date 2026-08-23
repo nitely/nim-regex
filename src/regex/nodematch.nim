@@ -7,6 +7,8 @@ import pkg/unicodedb/types as utypes
 import ./types
 import ./common
 
+{.push overflowChecks: off, boundChecks: off.}
+
 func `==`(a, b: Rune): bool {.inline.} =
   a.int32 == b.int32
 
@@ -16,17 +18,16 @@ func isWord(r: Rune): bool {.inline.} =
 func isDecimal(r: Rune): bool {.inline.} =
   utmDecimal in unicodeTypes(r)
 
+const wordAsciiTable = block:
+  var t: array[128, bool]
+  for c in 'A'.ord .. 'Z'.ord: t[c] = true
+  for c in 'a'.ord .. 'z'.ord: t[c] = true
+  for c in '0'.ord .. '9'.ord: t[c] = true
+  t['_'.ord] = true
+  t
+
 func isWordAscii(r: Rune): bool {.inline.} =
-  ## return ``true`` if the given
-  ## rune is in ``[A-Za-z0-9]`` range
-  case r.int32
-  of 'A'.ord .. 'Z'.ord,
-      'a'.ord .. 'z'.ord,
-      '0'.ord .. '9'.ord,
-      '_'.ord:
-    true
-  else:
-    false
+  r.int32 <= 128 and wordAsciiTable[r.int32 and 0xFF]
 
 template isWordBoundaryImpl(r, nxt, isWordProc): bool =
   (r.int32 > -1 and isWordProc(r)) xor
@@ -141,30 +142,37 @@ func match*(n: Node, r: Rune): bool {.inline.} =
   ## match for ``Node`` of matchable kind.
   ## Return whether the node matches
   ## the current character or not
-  if r.int32 < 0:
-    return n.kind == reEOE
-  if n.kind == reChar:
-    return n.cp == r
-  case n.kind
-  of reEOE: r == invalidRune
-  of reWord: r.isWord()
-  of reNotAlphaNum: not r.isWord()
-  of reDigit: r.isDecimal()
-  of reNotDigit: not r.isDecimal()
-  of reWhiteSpace: r.isWhiteSpace()
-  of reNotWhiteSpace: not r.isWhiteSpace()
-  of reAny: r != lineBreakRune
-  of reAnyNL: true
-  of reCharCI: r == n.cp or n.cp == r.simpleCaseFold
-  of reUCC: r.unicodeCategory() in n.cc
-  of reNotUCC: r.unicodeCategory() notin n.cc
-  of reWordAscii: r.isWordAscii()
-  of reNotAlphaNumAscii: not r.isWordAscii()
-  of reDigitAscii: r.isDigitAscii()
-  of reNotDigitAscii: not r.isDigitAscii()
-  of reWhiteSpaceAscii: r.isWhiteSpaceAscii()
-  of reNotWhiteSpaceAscii: not r.isWhiteSpaceAscii()
-  of reInSet, reNotSet: matchSet(n, r)
+  let np = addr n
+  let k = np.kind
+  if k == reWordAscii:
+    return r.isWordAscii()
+  elif r.int32 < 0:
+    return k == reEOE
+  elif k == reChar:
+    return np.cp == r
+  elif k == reEOE:
+    return r == invalidRune
   else:
-    assert n.kind == reChar
-    n.cp == r
+    case n.kind
+    of reEOE: r == invalidRune
+    of reWord: r.isWord()
+    of reNotAlphaNum: not r.isWord()
+    of reDigit: r.isDecimal()
+    of reNotDigit: not r.isDecimal()
+    of reWhiteSpace: r.isWhiteSpace()
+    of reNotWhiteSpace: not r.isWhiteSpace()
+    of reAny: r != lineBreakRune
+    of reAnyNL: true
+    of reCharCI: r == n.cp or n.cp == r.simpleCaseFold
+    of reUCC: r.unicodeCategory() in n.cc
+    of reNotUCC: r.unicodeCategory() notin n.cc
+    of reWordAscii: r.isWordAscii()
+    of reNotAlphaNumAscii: not r.isWordAscii()
+    of reDigitAscii: r.isDigitAscii()
+    of reNotDigitAscii: not r.isDigitAscii()
+    of reWhiteSpaceAscii: r.isWhiteSpaceAscii()
+    of reNotWhiteSpaceAscii: not r.isWhiteSpaceAscii()
+    of reInSet, reNotSet: matchSet(n, r)
+    else:
+      assert n.kind == reChar
+      n.cp == r

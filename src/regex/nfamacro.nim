@@ -289,7 +289,7 @@ func genMatchedBody(
   let eTransitions = getEpsilonTransitions(nfa, n, nti)
   if eTransitions.len == 0:
     return quote do:
-      add(`smB`, initPstate(`ntLit`, `capt`, `bounds2`))
+      add(`smB`, `ntLit`, `capt`, `bounds2`.a, `bounds2`.b)
   var matchedBody = newSeq[NimNode]()
   matchedBody.add quote do:
     `matched` = true
@@ -321,7 +321,7 @@ func genMatchedBody(
       doAssert false
   matchedBody.add quote do:
     if `matched`:
-      add(`smB`, initPstate(`ntLit`, `captx`, `bounds2`))
+      add(`smB`, `ntLit`, `captx`, `bounds2`.a, `bounds2`.b)
   return newStmtList matchedBody
 
 func genNextState(
@@ -403,8 +403,8 @@ func genNextState(
       discard)
   result.add newTree(nnkCaseStmt, caseStmtN)
   when defined(reDumpMacro):
-    echo "==== genNextState ===="
-    echo repr(result)
+    debugEcho "==== genNextState ===="
+    debugEcho repr(result)
 
 func nextState(
   smA, smB, c, capts, charIdx, cPrev,
@@ -422,7 +422,7 @@ func nextState(
     quote do:
       if `n` == `eoe`:
         if not contains(`smB`, `n`):
-          add(`smB`, initPstate(`n`, `capt`, `bounds`))
+          add(`smB`, `n`, `capt`, `bounds`.a, `bounds`.b)
         break
   else:
     newEmptyNode()
@@ -482,7 +482,7 @@ func matchImpl(
     if `start`-1 in 0 .. `text`.len-1:
       `cPrev` = bwRuneAt(`text`, `start`-1).int32
     clear(`smA`)
-    add(`smA`, initPstate(0'i16, `captIdx`, `i` .. `i`-1))
+    add(`smA`, 0'i16, `captIdx`, `i`, `i`-1)
     while `i` < `text`.len:
       fastRuneAt(`text`, iNext, `c`, true)
       `nextStateStmt`
@@ -533,7 +533,7 @@ func reversedMatchImpl(
     if `start` in 0 .. `text`.len-1:
       `cPrev` = runeAt(`text`, `start`).int32
     clear(`smA`)
-    add(`smA`, initPstate(0'i16, `captIdx`, `i` .. `i`-1))
+    add(`smA`, 0'i16, `captIdx`, `i`, `i`-1)
     while iNext > 0:
       bwFastRuneAt(`text`, iNext, `c`)
       `nextStateStmt`
@@ -573,11 +573,13 @@ template constructSubmatches2(
   for i in 0 .. bounds.len-1:
     captures[i] = txt[bounds[i]]
 
-proc matchImpl*(text, expLit, body: NimNode): NimNode =
+proc matchImpl*(text, expLit, env, body: NimNode): NimNode =
   if not (expLit.kind == nnkCallStrLit and $expLit[0] == "rex"):
     error "not a regex literal; only rex\"regex\" is allowed", expLit
   let exp = expLit[1]
-  defVars smA, smB, capts, capt, matched
+  defVars capts, capt, matched
+  let smA = quote do: `env`.smA
+  let smB = quote do: `env`.smB
   let regex = reCt(exp.strVal)
   let startLit = newLit 0
   let flags: set[MatchFlag] = {}
@@ -588,9 +590,9 @@ proc matchImpl*(text, expLit, body: NimNode): NimNode =
   let nfaGroupsLen = int(regex.groupsCount)
   result = quote do:
     block:
+      reset(`smA`, `nfaLenLit`)
+      reset(`smB`, `nfaLenLit`)
       var
-        `smA` = initPstates `nfaLenLit`
-        `smB` = initPstates `nfaLenLit`
         `capts` = default(Capts)
         `capt` = -1'i32
         `matched` = false
@@ -601,3 +603,10 @@ proc matchImpl*(text, expLit, body: NimNode): NimNode =
           constructSubmatches2(
             matches, `text`, `capts`, `capt`, `nfaGroupsLen`)
         `body`
+
+proc matchImpl*(text, expLit, body: NimNode): NimNode =
+  defVars env
+  let smt = matchImpl(text, expLit, env, body)
+  quote do:
+    var `env`: RegexEnv
+    `smt`

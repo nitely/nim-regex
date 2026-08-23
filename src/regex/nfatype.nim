@@ -65,18 +65,18 @@ template fastLog2Tpl(x: Natural): untyped =
     else:
       fastLog2(x)
 
-func reset*(capts: var Capts3, groupsLen: int) =
+func reset*(capts: var Capts3, groupsLen: int) {.inline.} =
   capts.freezeId = stsFrozen.a
-  capts.s.setLen 0
-  capts.states.setLen 0
-  capts.free.setLen 0
+  #capts.s.setLen 0
+  #capts.states.setLen 0
+  #capts.free.setLen 0
   if capts.groupsLen != groupsLen:
     let blockSize = max(2, nextPowerOfTwo groupsLen)
     capts.groupsLen = groupsLen
     capts.blockSize = blockSize
     capts.blockSizeL2 = fastLog2Tpl blockSize
 
-func initCapts3*(groupsLen: int): Capts3 =
+func initCapts3*(groupsLen: int): Capts3 {.inline.} =
   reset(result, groupsLen)
 
 func freeze*(capts: var Capts3): CaptState =
@@ -117,7 +117,7 @@ func diverge*(capts: var Capts3, captIdx: CaptIdx): CaptIdx =
 func recycle*(capts: var Capts3) =
   ## Free recyclable entries
   ## Set initial/keepAlive entries to recyclable
-  capts.free.setLen 0
+  #capts.free.setLen 0
   for i, state in mpairs capts.states:
     if state == stsRecycle:
       capts.free.add i.int16
@@ -135,9 +135,10 @@ func recyclable*(capts: var Capts3, captIdx: CaptIdx) {.inline.} =
   capts.states[captIdx] = stsRecycle
 
 func clear*(capts: var Capts3) =
-  capts.s.setLen 0
-  capts.states.setLen 0
-  capts.free.setLen 0
+  discard
+  #capts.s.setLen 0
+  #capts.states.setLen 0
+  #capts.free.setLen 0
 
 # XXX Deprecate
 type
@@ -197,7 +198,7 @@ type
     mfBytesInput
   MatchFlags* = set[MatchFlag]
 
-func toMatchFlags*(f: RegexFlags): MatchFlags =
+func toMatchFlags*(f: RegexFlags): MatchFlags {.inline.} =
   result = default(MatchFlags)
   if regexArbitraryBytes in f:
     result.incl mfBytesInput
@@ -273,6 +274,8 @@ type
     sx: seq[Pstate]
     ss: seq[int16]
     si: int16
+  RegexEnv* = object
+    smA*, smB*: Pstates
 
 func initPstate*(ni: NodeIdx, ci: CaptIdx, bounds: Bounds): Pstate {.inline.} =
   Pstate(ni: ni, ci: ci, bounds: bounds)
@@ -282,12 +285,19 @@ when defined(release):
 
 func reset*(sm: var Pstates, size: int) {.inline.} =
   if sm == nil:
-    sm = Pstates()
-  sm.sx.setLen 8
-  sm.ss.setLen size
+    sm = new Pstates
+  if sm.sx.len == 0:
+    sm.sx.setLen 8
+  if sm.ss.len != size:
+    sm.ss.setLen size
   sm.si = 0
 
+func reset*(env: var RegexEnv, size: int) {.inline.} =
+  reset(env.smA, size)
+  reset(env.smB, size)
+
 func initPstates*(size: int): Pstates {.inline.} =
+  result = Pstates()
   reset(result, size)
 
 func `[]`*(sm: Pstates, i: int): lent Pstate {.inline.} =
@@ -297,12 +307,27 @@ func `[]`*(sm: Pstates, i: int): lent Pstate {.inline.} =
 func contains*(sm: Pstates, n: int16): bool {.inline.} =
   sm.ss[n] < sm.si and sm.sx[sm.ss[n]].ni == n
 
-func add*(sm: var Pstates, item: sink Pstate) {.inline.} =
+func add*(sm: var Pstates, ni: NodeIdx, ci: CaptIdx, a, b: int) {.inline.} =
+  assert(ni notin sm)
+  assert sm.si <= sm.sx.len
+  if (sm.si == sm.sx.len).unlikely:
+    sm.sx.setLen(sm.sx.len * 2)
+  sm.sx[sm.si].ni = ni
+  sm.sx[sm.si].ci = ci
+  sm.sx[sm.si].bounds.a = a
+  sm.sx[sm.si].bounds.b = b
+  sm.ss[ni] = sm.si
+  sm.si += 1'i16
+
+func add*(sm: var Pstates, item: Pstate) {.inline.} =
   assert(item.ni notin sm)
   assert sm.si <= sm.sx.len
   if (sm.si == sm.sx.len).unlikely:
     sm.sx.setLen(sm.sx.len * 2)
-  sm.sx[sm.si] = item
+  sm.sx[sm.si].ni = item.ni
+  sm.sx[sm.si].ci = item.ci
+  sm.sx[sm.si].bounds.a = item.bounds.a
+  sm.sx[sm.si].bounds.b = item.bounds.b
   sm.ss[item.ni] = sm.si
   sm.si += 1'i16
 

@@ -144,13 +144,13 @@ func nextState(
   for pstate in items smA:
     if anchored and nfa[n].kind == reEoe:
       if n notin smB:
-        smB.add initPstate(n, capt, bounds)
+        smB.add(n, capt, bounds.a, bounds.b)
       break
     let L = nfa[n].next.len
     var nti = 0
     while nti < L:
       let nt0 = nt
-      matched = nt notin smB and
+      matched = nt0 notin smB and
         (ntn.match(c) or (anchored and ntn.kind == reEoe))
       inc nti
       captx = capt
@@ -161,7 +161,7 @@ func nextState(
           )
         inc nti
       if matched:
-        smB.add initPstate(nt0, captx, bounds2)
+        smB.add(nt0, captx, bounds.a, i-1)
   swap smA, smB
   if mfNoCaptures notin flags:
     for pstate in items smA:
@@ -193,7 +193,7 @@ func matchImpl(
     else:
       bwRuneAt(text, start-1).int32
   smA.clear()
-  smA.add initPstate(0'i16, captIdx, i .. i-1)
+  smA.add(0'i16, captIdx, i, i-1)
   while i < text.len:
     if binFlag:
       c = text[iNext].Rune
@@ -239,7 +239,7 @@ func reversedMatchImpl(
     else:
       runeAt(text, start).int32
   smA.clear()
-  smA.add initPstate(0'i16, captIdx, i .. i-1)
+  smA.add(0'i16, captIdx, i, i-1)
   while iNext > limit:
     if binFlag:
       c = text[iNext-1].Rune
@@ -292,14 +292,19 @@ func matchImpl*(
   text: string,
   regex: Regex,
   m: var RegexMatch2,
+  env: var RegexEnv,
   start = 0,
   flags: MatchFlags = {}
 ): bool =
+  template smA: untyped = env.smA
+  template smB: untyped = env.smB
   m.clear()
+  smA.reset(regex.nfa.s.len)
+  smB.reset(regex.nfa.s.len)
   let flags = regex.flags.toMatchFlags + flags
   var
-    smA = initPstates(regex.nfa.s.len)
-    smB = initPstates(regex.nfa.s.len)
+    #smA = initPstates(regex.nfa.s.len)
+    #smB = initPstates(regex.nfa.s.len)
     capts = initCapts3(regex.groupsCount)
     captIdx = -1.CaptIdx
     look = initLook()
@@ -317,6 +322,16 @@ func matchImpl*(
     if regex.namedGroups.len > 0:
       m.namedGroups = regex.namedGroups
     m.boundaries = smA[0].bounds
+
+func matchImpl*(
+  text: string,
+  regex: Regex,
+  m: var RegexMatch2,
+  start = 0,
+  flags: MatchFlags = {}
+): bool =
+  var env: RegexEnv
+  matchImpl(text, regex, m, env, start, flags)
 
 func startsWithImpl2*(
   text: string,

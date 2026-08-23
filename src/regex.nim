@@ -453,7 +453,11 @@ export
   RegexMatch2,
   RegexFlag,
   RegexFlags,
-  RegexError
+  RegexError,
+  RegexEnv
+
+proc newRegexEnv*(size: int): RegexEnv =
+  reset(result, size)
 
 const reNonCapture* = nonCapture
 
@@ -564,6 +568,24 @@ macro match*(
       doAssert matches == @["abc", "b"]
 
   matchImpl(text, regex, body)
+
+macro match*(
+  text: string,
+  regex: RegexLit,
+  env: var RegexEnv,
+  body: untyped
+): untyped =
+  matchImpl(text, regex, env, body)
+
+func match*(
+  s: string,
+  pattern: Regex2,
+  m: var RegexMatch2,
+  env: var RegexEnv,
+  start = 0
+): bool {.raises: [].} =
+  debugCheckUtf8(s, pattern)
+  result = matchImpl(s, pattern.toRegex, m, env, start)
 
 func match*(
   s: string,

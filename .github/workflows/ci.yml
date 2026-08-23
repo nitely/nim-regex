@@ -8,11 +8,12 @@ on:
 
 jobs:
   test:
-    name: Nim ${{ matrix.nim }}
-    runs-on: ubuntu-latest
+    name: Nim ${{ matrix.nim }} / ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        nim: [1.6.20, 2.0.14, 2.2.0, 2.2.4, 2.2.x, devel]
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        nim: [1.6.20, 2.0.16, 2.2.4, 2.2.x, devel]
     steps:
     - uses: actions/checkout@v7
     - uses: jiro4989/setup-nim-action@v2
@@ -32,7 +33,7 @@ jobs:
       run: |
         nimble test
     - name: Build docs
-      if: matrix.nim == '1.6.20'
+      if: matrix.nim == '1.6.20' && matrix.os == 'ubuntu-latest'
       run: |
         nimble docs
     - name: Deploy docs
@@ -41,7 +42,7 @@ jobs:
       # and remove `github.ref == 'refs/heads/master'` below
       if: |
         github.event_name == 'push' && github.ref == 'refs/heads/master' &&
-        matrix.nim == '1.6.20'
+        matrix.nim == '1.6.20' && matrix.os == 'ubuntu-latest'
       uses: crazy-max/ghaction-github-pages@v1
       with:
         build_dir: docs

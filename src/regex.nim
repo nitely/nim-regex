@@ -507,14 +507,14 @@ when not defined(forceRegexAtRuntime):
     ## Parse and compile a regular expression at compile-time
     toRegex2 reCt(s, flags)
 
-func reCheck(T: type Regex2, s: string): bool {.compileTime.} =
+func check(T: type Regex2, s: string): bool {.compileTime.} =
   try:
     discard reCt(s)
     true
   except RegexError:
     false
 
-func reCheckMsg(T: type Regex2, s: string): string {.compileTime.} =
+func errMsg(T: type Regex2, s: string): string {.compileTime.} =
   try:
     discard reCt(s)
     ""
@@ -551,8 +551,8 @@ template `~`*(s: string): Regex2 =
   ## - Cached for later usage.
   const ss = s
   when ss notin tildesVm:
-    when not reCheck(Regex2, ss):
-      {.error: "RegexError: \n" & reCheckMsg(Regex2, ss).}
+    when not check(Regex2, ss):
+      {.error: "RegexError: \n" & errMsg(Regex2, ss).}
   {.cast(gcsafe), cast(noSideEffect).}:
     tildeImpl(Regex2, ss)
 

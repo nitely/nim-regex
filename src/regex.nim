@@ -549,11 +549,12 @@ template `~`*(s: string): Regex2 =
   ## - Validated at compile-time.
   ## - Compiled at runtime.
   ## - Cached for later usage.
-  when s notin tildesVm:
-    when not reCheck(s):
-      {.error: "RegexError: \n" & reCheckMsg(s).}
+  const ss = s
+  when ss notin tildesVm:
+    when not reCheck(ss):
+      {.error: "RegexError: \n" & reCheckMsg(ss).}
   {.cast(gcsafe), cast(noSideEffect).}:
-    tildeImpl(Regex2, s)
+    tildeImpl(Regex2, ss)
 
 func regexDestroyCache* {.gcsafe.} =
   ## Destroy tilde (``~``) cache.

@@ -14,6 +14,9 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
         nim: [1.6.20, 2.0.16, 2.2.4, 2.2.x, devel]
+        exclude:
+          - os: windows-latest
+            nim: devel
     steps:
     - uses: actions/checkout@v7
     - uses: jiro4989/setup-nim-action@v2

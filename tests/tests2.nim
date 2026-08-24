@@ -22,7 +22,7 @@ template test(desc: string, body: untyped): untyped =
         echo "[CT/RT] " & desc
       body)()
 
-template check(condition: bool) =
+template check(condition: bool): untyped =
   doAssert(condition)
 
 template expect(exception: typedesc, body: untyped): untyped =
@@ -3385,3 +3385,17 @@ test "startsWith openArray[char] test":
     check startsWith(s.toOpenArray(1, 3), re2"^bcd$", m, 0)
     check m.boundaries == 0 .. 2
     check not startsWith(s.toOpenArray(0, 3), re2"^bcd", m, 1)
+
+test "ttilde":
+  check "ab".match ~r"ab"
+  check not "ab".match ~r"zx"
+  check ~r"ab" in "abcd"
+  check ~r"zx" notin "abcd"
+  check not compiles(~r"(+)")
+  regexDestroyCache()
+
+test "ttilde_gcsafe":
+  func ttilde: bool {.raises: [], gcsafe.} =
+    "foo".match ~r"foo"
+  doAssert ttilde()
+  regexDestroyCache()

@@ -8,29 +8,44 @@ on:
 
 jobs:
   test:
-    name: Nim ${{ matrix.nim }}
-    runs-on: ubuntu-latest
+    name: Nim ${{ matrix.nim }} / ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        nim: [1.6.20, 2.0.14, 2.2.0]
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        nim: [1.6.x, 2.0.x, 2.2.4, 2.2.x, devel]
+        exclude:
+          - os: windows-latest
+            nim: devel
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v7
+    - uses: jiro4989/setup-nim-action@v2
+      with:
+        nim-version: ${{ matrix.nim }}
+        use-nightlies: true
+        repo-token: ${{ secrets.GITHUB_TOKEN }}
+    - uses: actions/setup-node@v7
+      with:
+        node-version: 24
+        token: ${{ secrets.GITHUB_TOKEN }}
+        package-manager-cache: false
+    - name: Setup
+      run: |
+        nimble install -y --depsOnly
     - name: Run Tests
       run: |
-        docker pull nimlang/nim:${{ matrix.nim }}
-        docker run --rm -v `pwd`:/usr/src/app -w /usr/src/app nimlang/nim:${{ matrix.nim }} /bin/bash -c "git config --global --add safe.directory /usr/src/app; nimble install -y; nimble test"
+        nimble test
     - name: Build docs
-      if: matrix.nim == '1.6.20'
+      if: matrix.nim == '1.6.x' && matrix.os == 'ubuntu-latest'
       run: |
-        docker pull nimlang/nim:${{ matrix.nim }}
-        docker run --rm -v `pwd`:/usr/src/app -w /usr/src/app nimlang/nim:${{ matrix.nim }} /bin/bash -c "git config --global --add safe.directory /usr/src/app; nimble install -y; nimble docs"
+        nimble docs
     - name: Deploy docs
       # to view docs on your own fork: push a gh-pages branch on your fork,
       # enable gh-pages in your fork
       # and remove `github.ref == 'refs/heads/master'` below
       if: |
         github.event_name == 'push' && github.ref == 'refs/heads/master' &&
-        matrix.nim == '1.6.20'
+        matrix.nim == '1.6.x' && matrix.os == 'ubuntu-latest'
       uses: crazy-max/ghaction-github-pages@v1
       with:
         build_dir: docs

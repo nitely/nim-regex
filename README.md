@@ -8,8 +8,8 @@ A library for parsing, compiling, and executing regular expressions at both runt
 Features:
 
 * The match time is linear in the length of the input string
-* Supports compiling regex at compile-time
-* Supports matching at compile-time
+* Compile-time regex syntax validation
+* Runtime and Nim VM (compile-time) support
 * Unicode level-1 support
 * Descriptive error messages
 * PCRE syntax and semantics

@@ -271,7 +271,7 @@ func reversedMatchImpl(
 
 func reversedMatchImpl*(
   smA, smB: var Pstates,
-  text: string,
+  text: openArray[char],
   nfa: Nfa,
   look: var Lookaround,
   groupsLen: int,

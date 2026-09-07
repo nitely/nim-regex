@@ -74,7 +74,7 @@ proc findWithCapt(s: string, pattern: Regex2): seq[string] =
   check find(s, pattern, m)
   result = m.toStrCaptures(s)
 
-func findAllCapt(s: string, reg: Regex2): seq[seq[Slice[int]]] =
+func findAllCapt(s: string or openArray[char], reg: Regex2): seq[seq[Slice[int]]] =
   result = map(
     findAll(s, reg),
     func (m: RegexMatch2): seq[Slice[int]] =
@@ -3385,3 +3385,11 @@ test "startsWith openArray[char] test":
     check startsWith(s.toOpenArray(1, 3), re2"^bcd$", m, 0)
     check m.boundaries == 0 .. 2
     check not startsWith(s.toOpenArray(0, 3), re2"^bcd", m, 1)
+
+test "findAll openArray[char] test":
+  block:
+    check findAllCapt("a".toOpenArray(0, 0), re2"(a*)+") == @[@[1 .. 0], @[1 .. 0]]
+    check findAllCapt("abcde".toOpenArray(1, 3), re2"(bcd)") == @[@[0 .. 2]]
+    check findAllCapt("abcbe".toOpenArray(1, 3), re2"(b)") == @[@[0 .. 0], @[2 .. 2]]
+    check findAllCapt("abcde".toOpenArray(2, 3), re2"(cde)") == @[]
+    check findAllCapt("ab12cde34fg56".toOpenArray(1, 9), re2"(\d+)") == @[@[1 .. 2], @[6 .. 7]]

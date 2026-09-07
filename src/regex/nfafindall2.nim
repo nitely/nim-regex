@@ -39,7 +39,6 @@ for the algorithm description
 
 import std/unicode
 import std/tables
-from std/strutils import find
 when defined(nimPreviewSlimSystem):
   import std/assertions
 
@@ -139,7 +138,7 @@ func dummyMatch*(ms: var RegexMatches2, i: int) =
 
 func nextState(
   ms: var RegexMatches2,
-  text: string,
+  text: openArray[char],
   regex: Regex,
   i: int,
   cPrev, c: int32,
@@ -196,7 +195,7 @@ func nextState(
     capts.recycle()
 
 func findSomeImpl*(
-  text: string,
+  text: openArray[char],
   regex: Regex,
   ms: var RegexMatches2,
   start: Natural = 0,
@@ -252,7 +251,7 @@ func findSomeImpl*(
 # in litopt.nim
 
 func findSomeOptImpl*(
-  text: string,
+  text: openArray[char],
   regex: Regex,
   ms: var RegexMatches2,
   start: Natural,

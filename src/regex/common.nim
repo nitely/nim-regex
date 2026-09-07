@@ -223,6 +223,92 @@ iterator items*[T](s: SortedSeq[T]): T {.inline.} =
   for i in 0 .. s.s.len-1:
     yield s.s[i]
 
+func find*(a: SkipTable, s, sub: openArray[char], start: Natural = 0, last = -1): int =
+  # copied from std/strutils as it doesn't have `find` for `openArray[char]`.
+  let
+    last = if last < 0: s.high else: last
+    subLast = sub.len - 1
+
+  if subLast == -1:
+    # this was an empty needle string,
+    # we count this as match in the first possible position:
+    return start
+
+  # This is an implementation of the Boyer-Moore Horspool algorithms
+  # https://en.wikipedia.org/wiki/Boyer%E2%80%93Moore%E2%80%93Horspool_algorithm
+  result = -1
+  var skip = start
+
+  while last - skip >= subLast:
+    var i = subLast
+    while s[skip + i] == sub[i]:
+      if i == 0:
+        return skip
+      dec i
+    inc skip, a[s[skip + subLast]]
+
+when not (defined(js) or defined(nimdoc) or defined(nimscript)):
+  from system/ansi_c import c_memchr
+
+  const hasCStringBuiltin = true
+else:
+  const hasCStringBuiltin = false
+
+func find*(s: openArray[char], sub: char, start: Natural = 0, last = -1): int =
+  # copied from std/strutils as it doesn't have `find` for `openArray[char]`.
+  result = -1
+  let last = if last < 0: s.high else: last
+
+  template findImpl =
+    for i in int(start)..last:
+      if s[i] == sub:
+        return i
+
+  when nimvm:
+    findImpl()
+  else:
+    when hasCStringBuiltin:
+      let length = last-start+1
+      if length > 0:
+        let found = c_memchr(unsafeAddr s[start], cint(sub), cast[csize_t](length))
+        if not found.isNil:
+          return cast[int](found) -% cast[int](unsafeAddr s[0])
+    else:
+      findImpl()
+
+when defined(linux):
+  proc memmem(haystack: pointer, haystacklen: csize_t,
+              needle: pointer, needlelen: csize_t): pointer {.importc, header: """#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif
+#include <string.h>""".}
+elif defined(bsd) or (defined(macosx) and not defined(ios)):
+  proc memmem(haystack: pointer, haystacklen: csize_t,
+              needle: pointer, needlelen: csize_t): pointer {.importc, header: "#include <string.h>".}
+
+func find*(s: openArray[char], sub: string, start: Natural = 0, last = -1): int =
+  # copied from std/strutils as it doesn't have `find` for `openArray[char]`.
+  if sub.len > s.len - start: return -1
+  if sub.len == 1: return find(s, sub[0], start, last)
+
+  template useSkipTable =
+    result = find(initSkipTable(sub), s, sub, start, last)
+
+  when nimvm:
+    useSkipTable()
+  else:
+    when declared(memmem):
+      let subLen = sub.len
+      if last < 0 and start < s.len and subLen != 0:
+        let found = memmem(unsafeAddr s[start], csize_t(s.len - start), unsafeAddr sub[0], csize_t(subLen))
+        result = if not found.isNil:
+            cast[int](found) -% cast[int](unsafeAddr s[0])
+          else:
+            -1
+      else:
+        useSkipTable()
+    else:
+      useSkipTable()
 
 when isMainModule:
   block:

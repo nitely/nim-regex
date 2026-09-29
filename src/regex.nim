@@ -355,6 +355,25 @@ regex is parsed as a byte sequence. The ``Ⓐ`` character
 is composed of multiple bytes (``\xe2\x92\xb6``),
 and only the last byte is affected by the ``+`` operator.
 
+Tilde
+#####
+
+The tilde operator (``~``) compiles a regex literal at runtime,
+and it caches it for later usage. The regex is validated
+at compile-time. Since it does not generates code for the compiled regex,
+compilation time can be faster, and the resulting binary smaller.
+Do not assign it to a ``const``.
+
+.. code-block:: nim
+    :test:
+    let text = "abc"
+    block:
+      doAssert match(text, ~".+")
+    block:
+      func myFn(s: string, r: Regex2) =
+        doAssert match(s, r)
+      myFn(text, ~".+")
+
 Compile the regex at compile time
 #################################
 
@@ -398,17 +417,6 @@ Using a ``const`` can avoid confusion when passing flags:
 
 Compile the regex at runtime
 ############################
-
-.. note::
-    Consider `compiling the regex at compile-time <#examples-compile-the-regex-at-compile-time>`_
-    whenever possible.
-
-Most of the time compiling the regex at runtime can be avoided,
-and it should be avoided. Nim has really good compile-time
-capabilities like reading files, constructing strings,
-and so on. However, it cannot be helped in cases where
-the regex is passed to the program at runtime (from terminal input,
-network, or text files).
 
 To compile the regex at runtime pass the regex expression as a ``var/let``.
 
@@ -498,6 +506,64 @@ when not defined(forceRegexAtRuntime):
   ): static[Regex2] =
     ## Parse and compile a regular expression at compile-time
     toRegex2 reCt(s, flags)
+
+func check(T: type Regex2, s: string): bool {.compileTime.} =
+  try:
+    discard reCt(s)
+    true
+  except RegexError:
+    false
+
+func errMsg(T: type Regex2, s: string): string {.compileTime.} =
+  try:
+    discard reCt(s)
+    ""
+  except RegexError as err:
+    err.msg
+
+var tildesVm {.compileTime.}: Table[string, Regex2]
+var tildes {.threadvar.}: Table[string, Regex2]
+
+template tildeImpl(T: type Regex2, s: string): T =
+  try:
+    when nimvm:
+      if contains(tildesVm, s):
+        tildesVm[s]
+      else:
+        tildesVm[s] = toRegex2 reImpl(s)
+        tildesVm[s]
+    else:
+      if contains(tildes, s):
+        tildes[s]
+      else:
+        tildes[s] = toRegex2 reImpl(s)
+        tildes[s]
+  except RegexError as err:
+    raiseAssert err.msg
+  except KeyError as err:
+    raiseAssert err.msg
+
+template `~`*(s: string): Regex2 =
+  ## Return a compiled regex.
+  ## The regex is:
+  ## - Validated at compile-time.
+  ## - Compiled at runtime.
+  ## - Cached for later usage.
+  const ss = s
+  when not contains(tildesVm, ss):
+    when not check(Regex2, ss):
+      {.error: "RegexError: \n" & errMsg(Regex2, ss).}
+  {.cast(gcsafe), cast(noSideEffect).}:
+    tildeImpl(Regex2, ss)
+
+func regexDestroyCache* {.gcsafe.} =
+  ## Destroy tilde (``~``) cache.
+  when nimvm:
+    {.cast(gcsafe), cast(noSideEffect).}:
+      tildesVm = default(Table[string, Regex2])
+  else:
+    {.cast(noSideEffect).}:
+      tildes = default(Table[string, Regex2])
 
 func group*(m: RegexMatch2, i: int): Slice[int] {.inline, raises: [].} =
   ## return slice for a given group.
@@ -1212,6 +1278,12 @@ when isMainModule:
   doAssert match("A", re2"(?xi)     a")
   doAssert(not match("A", re2"((?xi))     a"))
   doAssert(not match("A", re2"(?xi:(?xi)     )a"))
+  doAssert not compiles(re2"(+)")
+
+  doAssert ~r"\w" in "abcd"
+  doAssert ~r"ab" in "abcd"
+  doAssert ~r"zx" notin "abcd"
+  doAssert not compiles(~r"(+)")
 
   # bug: raises invalid utf8 regex in Nim 1.0 + js target
   when not defined(js) or NimMajor >= 2:
@@ -1359,6 +1431,8 @@ when isMainModule:
       m.captures == @[0 .. 3, reNonCapture]
     doAssert match("aaab", re2"(\w+)|\w+(?<=^(\w)(\w+))b", m) and
       m.captures == @[0 .. 3, reNonCapture, reNonCapture]
+    doAssert ~"ab" in "abcd"
+    doAssert ~"zx" notin "abcd"
     block:
       var m = false
       var matches = newSeq[string]()

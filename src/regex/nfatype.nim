@@ -9,7 +9,10 @@ when defined(nimPreviewSlimSystem):
   import std/assertions
 
 import ./types
-import ./litopt
+import ./common
+
+when hasRegexOpt:
+  import ./litopt
 
 const nonCapture* = -1 .. -2
 
@@ -213,7 +216,8 @@ type
     groupsCount*: int16
     namedGroups*: OrderedTable[string, int16]
     flags*: RegexFlags
-    litOpt*: LitOpt
+    when hasRegexOpt:
+      litOpt*: LitOpt
   RegexMatch* = object
     ## deprecated
     captures*: Captures
@@ -233,13 +237,20 @@ when defined(js) and (NimMajor, NimMinor) >= (1, 6) and (NimMajor, NimMinor) <= 
       groupsCount*: int16
       namedGroups*: OrderedTable[string, int16]
       #flags*: set[RegexFlag]
-      litOpt*: LitOpt
+      when hasRegexOpt:
+        litOpt*: LitOpt
 
   func toRegex2*(r: Regex): Regex2 =
-    Regex2(nfa: r.nfa, groupsCount: r.groupsCount, namedGroups: r.namedGroups, litOpt: r.litOpt)
+    when hasRegexOpt:
+      Regex2(nfa: r.nfa, groupsCount: r.groupsCount, namedGroups: r.namedGroups, litOpt: r.litOpt)
+    else:
+      Regex2(nfa: r.nfa, groupsCount: r.groupsCount, namedGroups: r.namedGroups)
 
   func toRegex*(r: Regex2): Regex =
-    Regex(nfa: r.nfa, groupsCount: r.groupsCount, namedGroups: r.namedGroups, litOpt: r.litOpt)
+    when hasRegexOpt:
+      Regex(nfa: r.nfa, groupsCount: r.groupsCount, namedGroups: r.namedGroups, litOpt: r.litOpt)
+    else:
+      Regex(nfa: r.nfa, groupsCount: r.groupsCount, namedGroups: r.namedGroups)
 else:
   type
     Regex2* = distinct Regex

@@ -1,5 +1,4 @@
 import std/deques
-import std/algorithm
 when defined(nimPreviewSlimSystem):
   import std/assertions
 
@@ -50,8 +49,12 @@ func update(
     else:
       ends[ni].add ends[n]
 
-func eNfa*(exp: RpnExp): Enfa {.raises: [RegexError].} =
-  ## Thompson's construction
+func eNfa*(
+  exp: RpnExp,
+  reverse = false
+): Enfa {.raises: [RegexError].} =
+  ## Thompson's construction. If ``reverse`` is true,
+  ## the NFA matches the expression backwards
   result = default(Enfa)
   result.s = newSeq[Node](exp.s.len + 2)
   result.s.setLen 0
@@ -76,9 +79,11 @@ func eNfa*(exp: RpnExp): Enfa {.raises: [RegexError].} =
       result.s.add n
       states.add ni
     of reJoiner:
-      let
+      var
         stateB = states.pop()
         stateA = states.pop()
+      if reverse:
+        swap stateA, stateB
       result.combine(ends, stateA, stateB)
       states.add stateA
     of reOr:
@@ -132,18 +137,33 @@ func eNfa*(exp: RpnExp): Enfa {.raises: [RegexError].} =
       if not n.isGreedy:
         swap result.s[^1].next[0], result.s[^1].next[1]
     of reGroupStart:
-      let stateA = states.pop()
-      n.next.add stateA
-      ends.update(ni, n.next)
-      result.s.add n
-      states.add ni
+      if not reverse:
+        let stateA = states.pop()
+        n.next.add stateA
+        ends.update(ni, n.next)
+        result.s.add n
+        states.add ni
+      else:
+        n.next.add eoe
+        ends.update(ni, n.next)
+        let stateA = states.pop()
+        result.combine(ends, stateA, ni)
+        result.s.add n
+        states.add stateA
     of reGroupEnd:
-      n.next.add eoe
-      ends.update(ni, n.next)
-      let stateA = states.pop()
-      result.combine(ends, stateA, ni)
-      result.s.add n
-      states.add stateA
+      if not reverse:
+        n.next.add eoe
+        ends.update(ni, n.next)
+        let stateA = states.pop()
+        result.combine(ends, stateA, ni)
+        result.s.add n
+        states.add stateA
+      else:
+        let stateA = states.pop()
+        n.next.add stateA
+        ends.update(ni, n.next)
+        result.s.add n
+        states.add ni
     else:
       doAssert(false, "Unhandled node: $#" %% $n.kind)
   doAssert states.len == 1
@@ -243,53 +263,6 @@ func eRemoval*(eNfa: Enfa): Nfa {.raises: [].} =
         qu.incl qb
         qw.addFirst qb
 
-func reverse(eNfa: Enfa): Enfa =
-  template state0: untyped = int16(eNfa.s.len-1)
-  result = eNfa
-  for n in mitems result.s:
-    n.next.setLen 0
-  var stack = @[(state0, -1'i16)]
-  var visited: set[int16] = {}
-  template state: untyped = eNfa.s[ni]
-  while stack.len > 0:
-    let (ni, pi) = stack.pop()
-    if pi > -1:
-      result.s[ni].next.add pi
-    if ni in visited:
-      continue
-    visited.incl ni
-    for mi in state.next:
-      stack.add (mi, ni)
-  for n in mitems result.s:
-    n.next.reverse
-  # fix loops greediness
-  for i, n in pairs eNfa.s:
-    case n.kind:
-    of reZeroOrMore:
-      if not n.isGreedy:
-        result.s[i].next.reverse
-    of reOneOrMore:
-      if not n.isGreedy:
-        result.s[n.next[1]].next.reverse
-    else:
-      discard
-  # Swap initial state by eoe
-  var eoeIdx = -1'i16
-  for i, n in pairs result.s:
-    if n.kind == reEoe:
-      doAssert eoeIdx == -1
-      eoeIdx = i.int16
-  doAssert eoeIdx != -1
-  for i in eNfa.s[state0].next:
-    for j in 0 .. result.s[i].next.len-1:
-      if result.s[i].next[j] == state0:
-        result.s[i].next[j] = eoeIdx
-  swap result.s[state0].next, result.s[eoeIdx].next
-  doAssert result.s[state0].kind == reSkip
-  doAssert result.s[eoeIdx].kind == reEoe
-  doAssert result.s[state0].next.len > 0
-  doAssert result.s[eoeIdx].next.len == 0
-
 func subExps*(exp: RpnExp): RpnExp =
   result = exp
   for n in mitems result.s:
@@ -303,8 +276,7 @@ func subExps*(exp: RpnExp): RpnExp =
     of reLookbehind, reNotLookbehind:
       n.subExp.nfa = n.subExp.rpn
         .subExps
-        .eNfa
-        .reverse
+        .eNfa(reverse = true)
         .eRemoval
       n.subExp.rpn.s = newSeq[Node]()  # nullify
     else:

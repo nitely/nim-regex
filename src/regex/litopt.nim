@@ -45,6 +45,9 @@ https://nitely.github.io/2020/11/30/regex-literals-optimization.html
 
 ]#
 
+when defined(noRegexOpt):
+  {.error: "remove -d:noRegexOpt to import this module".}
+
 import std/algorithm
 import std/sets
 import std/unicode

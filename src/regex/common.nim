@@ -10,6 +10,7 @@ type
   ## is not a valid regex
 
 const
+  hasRegexOpt* = not defined(noRegexOpt)
   # This is used as start
   # and end of string. It should
   # be invalid code, but while it

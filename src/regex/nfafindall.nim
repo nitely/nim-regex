@@ -2,7 +2,6 @@
 
 import std/unicode
 import std/tables
-from std/strutils import find
 when defined(nimPreviewSlimSystem):
   import std/assertions
 
@@ -11,6 +10,9 @@ import ./nodematch
 import ./types
 import ./nfatype
 import ./nfamatch
+
+when hasRegexOpt:
+  from std/strutils import find
 
 type
   MatchItemIdx = int
@@ -212,51 +214,51 @@ func findSomeImpl*(
 # findAll with literal optimization below,
 # there is an explanation of how this work
 # in litopt.nim, move this there?
-
-func findSomeOptImpl*(
-  text: string,
-  regex: Regex,
-  ms: var RegexMatches,
-  start: Natural
-): int =
-  template regexSize: untyped =
-    max(regex.litOpt.nfa.s.len, regex.nfa.s.len)
-  template opt: untyped = regex.litOpt
-  template smA: untyped = ms.a
-  template smB: untyped = ms.b
-  template look: untyped = ms.look
-  doAssert opt.nfa.s.len > 0
-  initMaybeImpl(ms, regexSize)
-  ms.clear()
-  let hasLits = opt.lits.len > 0
-  let step = max(1, opt.lits.len)
-  var limit = start.int
-  var i = start.int
-  var i2 = -1
-  while i < len(text):
-    doAssert i > i2; i2 = i
-    #debugEcho "lit=", opt.lit
-    #debugEcho "i=", i
-    let litIdx = if hasLits:
-      text.find(opt.lits, i)
-    else:
-      text.find(opt.lit.char, i)
-    if litIdx == -1:
-      return -1
-    #debugEcho "litIdx=", litIdx
-    doAssert litIdx >= i
-    i = litIdx
-    i = reversedMatchImpl(smA, smB, text, opt.nfa, look, i, limit)
-    if i == -1:
-      #debugEcho "not.Match=", i
-      i = litIdx+step
-    else:
-      doAssert i <= litIdx
-      #debugEcho "bounds.a=", i
-      i = findSomeImpl(text, regex, ms, i, {mfFindMatchOpt})
-      #debugEcho "bounds.b=", i
-      if ms.hasMatches:
-        return i
-      if i == -1:
+when hasRegexOpt:
+  func findSomeOptImpl*(
+    text: string,
+    regex: Regex,
+    ms: var RegexMatches,
+    start: Natural
+  ): int =
+    template regexSize: untyped =
+      max(regex.litOpt.nfa.s.len, regex.nfa.s.len)
+    template opt: untyped = regex.litOpt
+    template smA: untyped = ms.a
+    template smB: untyped = ms.b
+    template look: untyped = ms.look
+    doAssert opt.nfa.s.len > 0
+    initMaybeImpl(ms, regexSize)
+    ms.clear()
+    let hasLits = opt.lits.len > 0
+    let step = max(1, opt.lits.len)
+    var limit = start.int
+    var i = start.int
+    var i2 = -1
+    while i < len(text):
+      doAssert i > i2; i2 = i
+      #debugEcho "lit=", opt.lit
+      #debugEcho "i=", i
+      let litIdx = if hasLits:
+        text.find(opt.lits, i)
+      else:
+        text.find(opt.lit.char, i)
+      if litIdx == -1:
         return -1
-  return -1
+      #debugEcho "litIdx=", litIdx
+      doAssert litIdx >= i
+      i = litIdx
+      i = reversedMatchImpl(smA, smB, text, opt.nfa, look, i, limit)
+      if i == -1:
+        #debugEcho "not.Match=", i
+        i = litIdx+step
+      else:
+        doAssert i <= litIdx
+        #debugEcho "bounds.a=", i
+        i = findSomeImpl(text, regex, ms, i, {mfFindMatchOpt})
+        #debugEcho "bounds.b=", i
+        if ms.hasMatches:
+          return i
+        if i == -1:
+          return -1
+    return -1

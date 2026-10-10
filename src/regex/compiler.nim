@@ -4,7 +4,8 @@ import ./exptransformation
 import ./types
 import ./nfatype
 import ./nfa
-import ./litopt
+when hasRegexOpt:
+  import ./litopt
 when defined(regexDotDir):
   import ./dotgraph
 
@@ -16,14 +17,14 @@ func reImpl*(s: string, flags: RegexFlags = {}): Regex =
     .parse(flags)
     .transformExp(groups, flags)
   let nfa = rpn.nfa2()
-  let opt = rpn.litopt3(flags)
   result = Regex(
     nfa: nfa,
     groupsCount: groups.count,
     namedGroups: groups.names,
-    flags: flags,
-    litOpt: opt
+    flags: flags
   )
+  when hasRegexOpt:
+    result.litOpt = rpn.litopt3(flags)
   when defined(regexDotDir):
     const regexDotDir {.strdefine.} = ""
     graphToFile(result, regexDotDir)

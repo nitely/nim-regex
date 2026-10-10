@@ -231,53 +231,21 @@ func lits(exp: RpnExp, flags: RegexFlags): Lits =
     result.idx = find(exp.s, litNfa.s[lits[litIdxStart]].uid)
     result.s.add ss
 
-func prefix(eNfa: Enfa, uid: NodeUid): Enfa =
-  template state0: untyped = eNfa.s.len.int16-1
-  result = eNfa
-  for n in result.s.mitems:
-    n.next.setLen 0
-  # reverse transitions; DFS
-  var stack = @[(state0, -1'i16)]
-  var visited: set[int16] = {}
-  template state: untyped = eNfa.s[ni]
-  while stack.len > 0:
-    let (ni, pi) = stack.pop()
-    if pi > -1:
-      result.s[ni].next.add pi
-    if ni in visited:
-      continue
-    visited.incl ni
-    # we only care about the prefix
-    if state.uid == uid:
-      continue
-    for mi in state.next:
-      stack.add (mi, ni)
-  for n in mitems result.s:
-    n.next.reverse
+func prefix(exp: RpnExp, uid: NodeUid): Enfa =
+  ## Return the NFA of the expression before the
+  ## literal ``uid``, matching backwards
+  var exp = exp
+  for n in mitems exp.s:
     n.isGreedy = true
-  # Swap initial state by eoe
-  var eoeIdx = -1'i16
-  for ni, n in pairs result.s:
-    if n.kind == reEoe:
-      doAssert eoeIdx == -1
-      eoeIdx = ni.int16
-  doAssert eoeIdx != -1
-  for ni in eNfa.s[state0].next:
-    for i in 0 .. result.s[ni].next.len-1:
-      if result.s[ni].next[i] == state0:
-        result.s[ni].next[i] = eoeIdx
-  doAssert result.s[eoeIdx].kind == reEoe
-  doAssert result.s[state0].kind == reSkip
-  swap result.s[state0].kind, result.s[eoeIdx].kind
-  swap result.s[state0], result.s[eoeIdx]
+  result = exp.eNfa(reverse = true)
   # cut
   var nIdx = -1
-  for ni, n in pairs eNfa.s:
+  for ni, n in pairs result.s:
     if n.uid == uid:
       doAssert nIdx == -1
       nIdx = ni
   doAssert nIdx != -1
-  result.s[state0].next = result.s[nIdx].next
+  result.s[^1].next = result.s[nIdx].next
 
 type
   LitOpt* = object
@@ -299,7 +267,6 @@ func litopt3*(exp: RpnExp, flags: RegexFlags = {}): LitOpt =
   result.lits = lits2.s
   result.nfa = exp
     .subExps
-    .eNfa
     .prefix(litNode.uid)
     .eRemoval
 

@@ -3385,3 +3385,19 @@ test "startsWith openArray[char] test":
     check startsWith(s.toOpenArray(1, 3), re2"^bcd$", m, 0)
     check m.boundaries == 0 .. 2
     check not startsWith(s.toOpenArray(0, 3), re2"^bcd", m, 1)
+
+test "issue_166":
+  # litopt prefix
+  check match("c", re2"a?(?:b?)*c")
+  check match("abbc", re2"a?(?:b?)*c")
+  check(not match("ab", re2"a?(?:b?)*c"))
+  check findAllBounds("xxabbcyy", re2"a?(?:b?)*c") == @[2 .. 5]
+  check findAllBounds("aacbc", re2"a?(?:b?)*c") == @[1 .. 2, 3 .. 4]
+  check findAllBounds("xabcabc", re2"(?:a|b?)+c") == @[1 .. 3, 4 .. 6]
+  # lookbehind
+  check findAllBounds("zabbc", re2"(?<=a?(?:b?)*)c") == @[4 .. 4]
+  check findAllBounds("zabbc", re2"(?<=a(?:b?)*)c") == @[4 .. 4]
+  check findAllBounds("zbbc", re2"(?<=a(?:b?)*)c").len == 0
+  check findAllBounds("xabc", re2"(?<=(?:a|b?)+)c") == @[3 .. 3]
+  check findWithCapt("zabbc", re2"(?<=(a)?(?:b?)*)c") == @["a"]
+  check findWithCapt("zabbc", re2"\w(?<=(a)?(b?)*)c") == @["a", "b"]

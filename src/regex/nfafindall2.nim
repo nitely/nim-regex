@@ -271,6 +271,7 @@ when hasRegexOpt:
     initMaybeImpl(ms, regexSize, groupsLen)
     ms.clear()
     let flags = regex.flags.toMatchFlags + flags + {mfFindMatchOpt}
+    let revFlags = flags + {mfLongestMatch, mfNoCaptures}
     let hasLits = opt.lits.len > 0
     let step = max(1, opt.lits.len)
     var limit = start.int
@@ -289,7 +290,7 @@ when hasRegexOpt:
       #debugEcho "litIdx=", litIdx
       doAssert litIdx >= i
       i = litIdx
-      i = reversedMatchImpl(smA, smB, text, opt.nfa, look, groupsLen, i, limit, flags + {mfLongestMatch})
+      i = reversedMatchImpl(smA, smB, text, opt.nfa, look, groupsLen, i, limit, revFlags)
       if i == -1:
         #debugEcho "not.Match=", i
         i = litIdx+step

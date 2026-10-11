@@ -231,7 +231,6 @@ when hasRegexOpt:
     initMaybeImpl(ms, regexSize)
     ms.clear()
     let hasLits = opt.lits.len > 0
-    let step = max(1, opt.lits.len)
     var limit = start.int
     var i = start.int
     var i2 = -1
@@ -251,7 +250,7 @@ when hasRegexOpt:
       i = reversedMatchImpl(smA, smB, text, opt.nfa, look, i, limit, {mfLongestMatch})
       if i == -1:
         #debugEcho "not.Match=", i
-        i = litIdx+step
+        i = litIdx+1
       else:
         doAssert i <= litIdx
         #debugEcho "bounds.a=", i

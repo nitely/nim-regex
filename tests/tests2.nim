@@ -3423,3 +3423,16 @@ test "tlitopt_prefix_alternation":
   check findAllBounds("xaaab", re2"((aa)|(a+))b") == @[1 .. 4]
   check findAllBounds("ab@", re2"(?:b|ab)@") == @[0 .. 2]
   check findAllBounds("xab@", re2"(?:a|ab|xab)@") == @[0 .. 3]
+
+test "issue_170":
+  check "abb".contains(re2"(?:(?:(?=z)z){2})?a")
+  check findAllBounds("abb", re2"(?:(?:(?=z)z){2})?a") == @[0 .. 0]
+  check findAllBounds("zzzza", re2"(?:(?:(?=z)z){2})?a") == @[2 .. 4]
+  check findAllBounds("abb", re2"(?:(?:(?=z)z){1,})?a") == @[0 .. 0]
+  check findAllBounds("zzzzzza", re2"(?:(?:(?=z)z){2,3})?a") == @[3 .. 6]
+  check findAllBounds("zza", re2"(?:(?:(?<=z)z){2})?a") == @[2 .. 2]
+  check findAllBounds("abb", re2"(?:(?:(?!y)z){2})?a") == @[0 .. 0]
+  check findAllBounds("abb", re2"(?:(?:(?<!y)z){2})?a") == @[0 .. 0]
+  check findAllBounds("abb", re2"(?:(?:(?=(?=z)z)z){2})?a") == @[0 .. 0]
+  check findAllBounds("xa", re2"(?:(?=z)z){2}a").len == 0
+  check match("z", re2"(?=z){2}z")

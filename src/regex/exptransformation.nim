@@ -303,13 +303,13 @@ func expandRepRange(exp: Exp): Exp =
         inc i
         if ne.kind == reGroupEnd:
           inc gi
-        if ne.kind == reGroupStart:
+        if ne.kind in groupStartKind:
           dec gi
         if gi == 0:
           break
         doAssert gi >= 0
       doAssert gi == 0
-      assert result.s[result.s.len-i].kind == reGroupStart
+      assert result.s[result.s.len-i].kind in groupStartKind
       result.s.add result.s[result.s.len-i .. result.s.len-1].expandOneRepRange(n)
     of matchableKind:
       result.s.add result.s[result.s.len-1 .. result.s.len-1].expandOneRepRange(n)

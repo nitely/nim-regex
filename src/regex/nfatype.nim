@@ -193,6 +193,7 @@ func reverse*(capts: var Capts, a, b: CaptIdx): CaptIdx =
 type
   MatchFlag* = enum
     mfShortestMatch
+    mfLongestMatch
     mfNoCaptures
     mfFindMatch
     mfFindMatchOpt

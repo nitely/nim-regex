@@ -76,6 +76,10 @@ template nextStateTpl(bwMatch = false): untyped {.dirty.} =
   smB.clear()
   for pstate in items smA:
     if anchored and nfa.s[n].kind == reEoe:
+      if mfLongestMatch in flags:
+        # the caller keeps the match, and the
+        # lower priority states keep matching
+        continue
       if n notin smB:
         smB.add initPstate(n, capt, bounds)
       break
@@ -164,6 +168,7 @@ func reversedMatchImpl(
 ): int =
   #doAssert start < len(text)
   doAssert start >= limit
+  result = -1
   var
     c = Rune(-1)
     cPrev = -1'i32
@@ -172,6 +177,7 @@ func reversedMatchImpl(
     captx = 0.CaptIdx
     matched = false
     anchored = true
+  let longest = mfLongestMatch in flags
   if start in 0 .. text.len-1:
     cPrev = text.runeAt(start).int32
   smA.clear()
@@ -179,9 +185,14 @@ func reversedMatchImpl(
   while iNext > limit:
     bwFastRuneAt(text, iNext, c)
     nextStateTpl(bwMatch = true)
+    if longest:
+      for pstate in items smA:
+        if nfa.s[pstate.ni].kind == reEoe:
+          captIdx = pstate.ci
+          result = pstate.bounds.a
     if smA.len == 0:
-      return -1
-    if nfa.s[smA[0].ni].kind == reEoe:
+      return
+    if not longest and nfa.s[smA[0].ni].kind == reEoe:
       break
     i = iNext
     cPrev = c.int32
@@ -196,51 +207,20 @@ func reversedMatchImpl(
       else:
         captIdx = pstate.ci
       return pstate.bounds.a
-  return -1
 
-func reversedLongestMatchImpl*(
+func reversedMatchImpl*(
   smA, smB: var Pstates,
   text: string,
   nfa: Nfa,
   look: var Lookaround,
-  start, limit: int
+  start, limit: int,
+  flags: set[MatchFlag] = {}
 ): int =
-  template removeEoe: untyped =
-    smB.clear()
-    for pstate in items smA:
-      if nfa.s[pstate.ni].kind == reEoe:
-        result = pstate.bounds.a
-      else:
-        smB.add pstate
-    swap smA, smB
-  doAssert start >= limit
-  result = -1
   var capts = default(Capts)
-  var
-    c = Rune(-1)
-    cPrev = -1'i32
-    i = start
-    iNext = start
-    captx = 0.CaptIdx
-    matched = false
-    anchored = true
-  if start in 0 .. text.len-1:
-    cPrev = text.runeAt(start).int32
-  smA.clear()
-  smA.add initPstate(0'i16, -1.CaptIdx, i .. i-1)
-  while iNext > limit:
-    bwFastRuneAt(text, iNext, c)
-    nextStateTpl(bwMatch = true)
-    removeEoe()
-    if smA.len == 0:
-      return
-    i = iNext
-    cPrev = c.int32
-  c = Rune(-1)
-  if iNext > 0:
-    bwFastRuneAt(text, iNext, c)
-  nextStateTpl(bwMatch = true)
-  removeEoe()
+  var captIdx = -1.CaptIdx
+  reversedMatchImpl(
+    smA, smB, capts, captIdx, text, nfa, look, start, limit, flags
+  )
 
 template initLook*: Lookaround =
   Lookaround(

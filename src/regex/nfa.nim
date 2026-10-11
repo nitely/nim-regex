@@ -173,7 +173,6 @@ type
   Transitions = seq[int16]
   TeClosure = seq[(int16, Transitions)]
   TecVisited = seq[seq[seq[int16]]]
-    ## the processing stacks each state was visited with
 
 func isEpsilonTransition2(n: Node): bool {.inline.} =
   result = case n.kind

@@ -3463,3 +3463,12 @@ test "issue_170":
   check(not match("za", re2"(?:zz)?a"))
   check findAllBounds("abb", re2"(?:zz)?a") == @[0 .. 0]
   check findAllBounds("zzzza", re2"(?:zz)?a") == @[2 .. 4]
+
+test "tlitopt_overlapping_lits":
+  # the next literal occurrence may overlap the current one
+  check "aaa".contains(re2"(?<=a)aa")
+  check findAllBounds("aaa", re2"(?<=a)aa") == @[1 .. 2]
+  check findAllBounds("aaaa", re2"(?<=a)aa") == @[1 .. 2]
+  check findAllBounds("aaa", re2"b?(?<=a)aa") == @[1 .. 2]
+  check findAllBounds("aaa", re2"\Baa") == @[1 .. 2]
+  check findAllBounds("ababab", re2"(?<=b)abab") == @[2 .. 5]

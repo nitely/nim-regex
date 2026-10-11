@@ -77,8 +77,6 @@ template nextStateTpl(bwMatch = false): untyped {.dirty.} =
   for pstate in items smA:
     if anchored and nfa.s[n].kind == reEoe:
       if mfLongestMatch in flags:
-        # the caller keeps the match, and the
-        # lower priority states keep matching
         continue
       if n notin smB:
         smB.add initPstate(n, capt, bounds)

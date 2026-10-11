@@ -3485,3 +3485,15 @@ test "issue_167":
   check findAllBounds("a", re2"(?:\b|)a") == @[0 .. 0]
   check findAllBounds("ba", re2"(?:^|)a") == @[1 .. 1]
   check findAllBounds("a", re2"(?:^|)a") == @[0 .. 0]
+  check(not match("", re2"\b(?:|y|()){18}"))
+  check match("yyy", re2"\b(?:|y|()){18}")
+  check matchWithBounds("yyy", re2"\b(?:|y|()){18}") == @[nonCapture]
+  check findAllBounds("yyy", re2"\b(?:|y|()){18}") == @[0 .. -1, 3 .. 2]
+  check findAllBounds("xy", re2"\b(?:|y|()){18}") == @[0 .. -1, 2 .. 1]
+  check match("", re2"^(?:|y|()){18}")
+  check match("yyy", re2"^(?:|y|()){18}")
+  check findAllBounds("yyy", re2"^(?:|y|()){18}") == @[0 .. -1]
+  check matchWithBounds("", re2"(?:\b|y|()){18}") == @[0 .. -1]
+  check matchWithBounds("yyy", re2"(?:\b|y|()){18}") == @[nonCapture]
+  check findAllBounds("yyy", re2"(?:\b|y|()){18}") == @[0 .. -1, 1 .. 2, 3 .. 2]
+  check findAllBounds("xy", re2"(?:\b|y|()){18}") == @[0 .. -1, 1 .. 1, 2 .. 1]

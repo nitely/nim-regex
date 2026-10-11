@@ -172,7 +172,10 @@ func eNfa*(
 type
   Transitions = seq[int16]
   TeClosure = seq[(int16, Transitions)]
-  TecVisited = seq[seq[seq[int16]]]
+  TecVisit = object
+    processing: seq[int16]
+    assertions: set[NodeKind]
+  TecVisited = seq[seq[TecVisit]]
 
 func isEpsilonTransition2(n: Node): bool {.inline.} =
   result = case n.kind
@@ -183,11 +186,11 @@ func isEpsilonTransition2(n: Node): bool {.inline.} =
     else:
       false
 
-func hasAssertion(eNfa: Enfa, transitions: Transitions): bool =
+func assertions(eNfa: Enfa, transitions: Transitions): set[NodeKind] =
+  result = {}
   for t in transitions:
     if eNfa.s[t].kind in assertionKind:
-      return true
-  false
+      result.incl eNfa.s[t].kind
 
 func teClosure(
   result: var TeClosure,
@@ -197,10 +200,14 @@ func teClosure(
   visited: var TecVisited,
   transitions: Transitions
 ) =
-  if processing in visited[state]:
-    return
-  if not hasAssertion(eNfa, transitions):
-    visited[state].add processing
+  let assertions = assertions(eNfa, transitions)
+  for visit in visited[state]:
+    if visit.processing == processing and visit.assertions <= assertions:
+      return
+  if assertions * lookaroundKind == {}:
+    visited[state].add TecVisit(
+      processing: processing,
+      assertions: assertions)
   var transitionsCurr = transitions
   if isEpsilonTransition2 eNfa.s[state]:
     transitionsCurr.add state
@@ -255,7 +262,7 @@ func eRemoval*(eNfa: Enfa): Nfa {.raises: [].} =
   qu.incl start
   var qa = 0'i16
   var processing = newSeqOfCap[int16](8)
-  var visited = newSeq[seq[seq[int16]]](eNfa.s.len)
+  var visited = newSeq[seq[TecVisit]](eNfa.s.len)
   while qw.len > 0:
     try:
       qa = qw.popLast()

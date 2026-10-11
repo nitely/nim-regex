@@ -3401,6 +3401,22 @@ test "issue_166":
   check findAllBounds("xabc", re2"(?<=(?:a|b?)+)c") == @[3 .. 3]
   check findWithCapt("zabbc", re2"(?<=(a)?(?:b?)*)c") == @["a"]
   check findWithCapt("zabbc", re2"\w(?<=(a)?(b?)*)c") == @["a", "b"]
+  # used to crash
+  check match("abbc", re2"a?(?:b*)*c")
+  check(not match("ab", re2"a?(?:b*)*c"))
+  check findAllBounds("xxabbcyy", re2"a?(?:b*)*c") == @[2 .. 5]
+  check match("ryy6", re2"r??(?:y??)*6")
+  check(not match("ry", re2"r??(?:y??)*6"))
+  check findAllBounds("xxryy6yy", re2"r??(?:y??)*6") == @[2 .. 5]
+  # did not crash
+  check match("abbc", re2"a?(?:b)*c")
+  check findAllBounds("xxabbcyy", re2"a?(?:b)*c") == @[2 .. 5]
+  check match("abbc", re2"a?(?:b?)+c")
+  check findAllBounds("xxabbcyy", re2"a?(?:b?)+c") == @[2 .. 5]
+  check match("aabbc", re2"a*(?:b?)*c")
+  check findAllBounds("xxaabbcyy", re2"a*(?:b?)*c") == @[2 .. 6]
+  check match("bbc", re2"(?:b?)*c")
+  check findAllBounds("xxbbcyy", re2"(?:b?)*c") == @[2 .. 4]
 
 test "tlitopt_prefix_alternation":
   check findAllBounds("xaaab", re2"((a+)|(aa))b") == @[1 .. 4]

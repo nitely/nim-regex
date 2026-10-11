@@ -172,6 +172,10 @@ func eNfa*(
 type
   Transitions = seq[int16]
   TeClosure = seq[(int16, Transitions)]
+  TecVisit = object
+    processing: seq[int16]
+    assertions: set[NodeKind]
+  TecVisited = seq[seq[TecVisit]]
 
 func isEpsilonTransition2(n: Node): bool {.inline.} =
   result = case n.kind
@@ -182,13 +186,28 @@ func isEpsilonTransition2(n: Node): bool {.inline.} =
     else:
       false
 
+func assertions(eNfa: Enfa, transitions: Transitions): set[NodeKind] =
+  result = {}
+  for t in transitions:
+    if eNfa.s[t].kind in assertionKind:
+      result.incl eNfa.s[t].kind
+
 func teClosure(
   result: var TeClosure,
   eNfa: Enfa,
   state: int16,
   processing: var seq[int16],
+  visited: var TecVisited,
   transitions: Transitions
 ) =
+  let assertions = assertions(eNfa, transitions)
+  for visit in visited[state]:
+    if visit.processing == processing and visit.assertions <= assertions:
+      return
+  if assertions * lookaroundKind == {}:
+    visited[state].add TecVisit(
+      processing: processing,
+      assertions: assertions)
   var transitionsCurr = transitions
   if isEpsilonTransition2 eNfa.s[state]:
     transitionsCurr.add state
@@ -200,22 +219,25 @@ func teClosure(
     if eNfa.s[state].kind in repetitionKind:
       if s notin processing or i == int(eNfa.s[state].isGreedy):
         processing.add s
-        teClosure(result, eNfa, s, processing, transitionsCurr)
+        teClosure(result, eNfa, s, processing, visited, transitionsCurr)
         discard processing.pop()
       # else skip loop
     else:
-      teClosure(result, eNfa, s, processing, transitionsCurr)
+      teClosure(result, eNfa, s, processing, visited, transitionsCurr)
 
 func teClosure(
   result: var TeClosure,
   eNfa: Enfa,
   state: int16,
-  processing: var seq[int16]
+  processing: var seq[int16],
+  visited: var TecVisited
 ) =
   doAssert processing.len == 0
+  for v in mitems visited:
+    v.setLen 0
   var transitions = default(Transitions)
   for s in eNfa.s[state].next:
-    teClosure(result, eNfa, s, processing, transitions)
+    teClosure(result, eNfa, s, processing, visited, transitions)
 
 func eRemoval*(eNfa: Enfa): Nfa {.raises: [].} =
   ## Remove e-transitions and return
@@ -240,13 +262,14 @@ func eRemoval*(eNfa: Enfa): Nfa {.raises: [].} =
   qu.incl start
   var qa = 0'i16
   var processing = newSeqOfCap[int16](8)
+  var visited = newSeq[seq[TecVisit]](eNfa.s.len)
   while qw.len > 0:
     try:
       qa = qw.popLast()
     except IndexDefect:
       doAssert false
     closure.setLen 0
-    teClosure(closure, eNfa, qa, processing)
+    teClosure(closure, eNfa, qa, processing, visited)
     doAssert statesMap[qa] > -1
     result.s[statesMap[qa]].next.setLen 0
     for qb, transitions in closure.items:

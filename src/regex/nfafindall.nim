@@ -248,7 +248,7 @@ when hasRegexOpt:
       #debugEcho "litIdx=", litIdx
       doAssert litIdx >= i
       i = litIdx
-      i = reversedMatchImpl(smA, smB, text, opt.nfa, look, i, limit)
+      i = reversedLongestMatchImpl(smA, smB, text, opt.nfa, look, i, limit)
       if i == -1:
         #debugEcho "not.Match=", i
         i = litIdx+step

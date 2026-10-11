@@ -269,7 +269,7 @@ func reversedMatchImpl(
       return pstate.bounds.a
   return -1
 
-func reversedMatchImpl*(
+func reversedLongestMatchImpl*(
   smA, smB: var Pstates,
   text: string,
   nfa: Nfa,
@@ -278,11 +278,52 @@ func reversedMatchImpl*(
   start, limit: int,
   flags: MatchFlags = {}
 ): int =
+  template removeEoe: untyped =
+    smB.clear()
+    for pstate in items smA:
+      if nfa.s[pstate.ni].kind == reEoe:
+        result = pstate.bounds.a
+      else:
+        smB.add pstate
+    swap smA, smB
+  doAssert start >= limit
+  result = -1
   var capts = initCapts3(groupsLen)
-  var captIdx = -1.CaptIdx
-  reversedMatchImpl(
-    smA, smB, capts, captIdx, text, nfa, look, start, limit, flags
-  )
+  var
+    c = Rune(-1)
+    cPrev = -1'i32
+    i = start
+    iNext = start
+  let flags = flags + {mfAnchored}
+  let binFlag = mfBytesInput in flags
+  if start in 0 .. text.len-1:
+    cPrev = if binFlag:
+      text[start].int32
+    else:
+      runeAt(text, start).int32
+  smA.clear()
+  smA.add initPstate(0'i16, -1.CaptIdx, i .. i-1)
+  while iNext > limit:
+    if binFlag:
+      c = text[iNext-1].Rune
+      dec iNext
+    else:
+      bwFastRuneAt(text, iNext, c)
+    nextState(smA, smB, capts, look, text, nfa, i, cPrev, c, flags, bwMatch = true)
+    removeEoe()
+    if smA.len == 0:
+      return
+    i = iNext
+    cPrev = c.int32
+  c = Rune(-1)
+  if iNext > 0:
+    if binFlag:
+      c = text[iNext-1].Rune
+      dec iNext
+    else:
+      bwFastRuneAt(text, iNext, c)
+  nextState(smA, smB, capts, look, text, nfa, i, cPrev, c, flags, bwMatch = true)
+  removeEoe()
 
 template initLook*: Lookaround =
   Lookaround(

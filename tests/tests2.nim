@@ -3401,3 +3401,9 @@ test "issue_166":
   check findAllBounds("xabc", re2"(?<=(?:a|b?)+)c") == @[3 .. 3]
   check findWithCapt("zabbc", re2"(?<=(a)?(?:b?)*)c") == @["a"]
   check findWithCapt("zabbc", re2"\w(?<=(a)?(b?)*)c") == @["a", "b"]
+
+test "tlitopt_prefix_alternation":
+  check findAllBounds("xaaab", re2"((a+)|(aa))b") == @[1 .. 4]
+  check findAllBounds("xaaab", re2"((aa)|(a+))b") == @[1 .. 4]
+  check findAllBounds("ab@", re2"(?:b|ab)@") == @[0 .. 2]
+  check findAllBounds("xab@", re2"(?:a|ab|xab)@") == @[0 .. 3]

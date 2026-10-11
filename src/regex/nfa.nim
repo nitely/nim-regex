@@ -192,6 +192,14 @@ func assertions(eNfa: Enfa, transitions: Transitions): set[NodeKind] =
     if eNfa.s[t].kind in assertionKind:
       result.incl eNfa.s[t].kind
 
+func hasGroup(eNfa: Enfa, transitions: Transitions, n: Node): bool =
+  ## Return true if the group start/end
+  ## of the same group is in the transitions
+  for t in transitions:
+    if eNfa.s[t].kind == n.kind and eNfa.s[t].idx == n.idx:
+      return true
+  false
+
 func teClosure(
   result: var TeClosure,
   eNfa: Enfa,
@@ -209,7 +217,13 @@ func teClosure(
       processing: processing,
       assertions: assertions)
   var transitionsCurr = transitions
-  if isEpsilonTransition2 eNfa.s[state]:
+  # All the transitions are taken at the same text position;
+  # an assertion of the same kind is the same condition,
+  # and a group start/end of the same group sets the same bound
+  let isRepeated =
+    eNfa.s[state].kind in assertions - lookaroundKind or
+    (eNfa.s[state].kind in groupKind and hasGroup(eNfa, transitions, eNfa.s[state]))
+  if isEpsilonTransition2(eNfa.s[state]) and not isRepeated:
     transitionsCurr.add state
   if eNfa.s[state].kind in matchableKind + {reEOE}:
     result.add (state, transitionsCurr)

@@ -3436,3 +3436,30 @@ test "issue_170":
   check findAllBounds("abb", re2"(?:(?:(?=(?=z)z)z){2})?a") == @[0 .. 0]
   check findAllBounds("xa", re2"(?:(?=z)z){2}a").len == 0
   check match("z", re2"(?=z){2}z")
+  # used to crash
+  check match("", re2"(?=a){0,1}")
+  check findAllBounds("ab", re2"(?=a){0,1}") == @[0 .. -1, 1 .. 0, 2 .. 1]
+  check(not match("", re2"(?=a){2}"))
+  check findAllBounds("ab", re2"(?=a){2}") == @[0 .. -1]
+  check findAllBounds("ba", re2"(?=a){2}") == @[1 .. 0]
+  check findAllBounds("b", re2"(?=a){2}").len == 0
+  check match("", re2"(?<=a){0,1}")
+  check findAllBounds("ab", re2"(?<=a){0,1}") == @[0 .. -1, 1 .. 0, 2 .. 1]
+  check match("", re2"(?:(?=a)b){0,1}")
+  check(not match("b", re2"(?:(?=a)b){0,1}"))
+  check findAllBounds("ab", re2"(?:(?=a)b){0,1}") == @[0 .. -1, 1 .. 0, 2 .. 1]
+  # did not crash
+  check match("", re2"(?=a)?")
+  check findAllBounds("ab", re2"(?=a)?") == @[0 .. -1, 1 .. 0, 2 .. 1]
+  check match("", re2"(?=a)*")
+  check findAllBounds("ab", re2"(?=a)*") == @[0 .. -1, 1 .. 0, 2 .. 1]
+  check match("a", re2"(?:(?:(?=z)z)?)?a")
+  check match("za", re2"(?:(?:(?=z)z)?)?a")
+  check(not match("zza", re2"(?:(?:(?=z)z)?)?a"))
+  check findAllBounds("abb", re2"(?:(?:(?=z)z)?)?a") == @[0 .. 0]
+  check findAllBounds("zzzza", re2"(?:(?:(?=z)z)?)?a") == @[3 .. 4]
+  check match("a", re2"(?:zz)?a")
+  check match("zza", re2"(?:zz)?a")
+  check(not match("za", re2"(?:zz)?a"))
+  check findAllBounds("abb", re2"(?:zz)?a") == @[0 .. 0]
+  check findAllBounds("zzzza", re2"(?:zz)?a") == @[2 .. 4]

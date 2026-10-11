@@ -3472,3 +3472,16 @@ test "tlitopt_overlapping_lits":
   check findAllBounds("aaa", re2"b?(?<=a)aa") == @[1 .. 2]
   check findAllBounds("aaa", re2"\Baa") == @[1 .. 2]
   check findAllBounds("ababab", re2"(?<=b)abab") == @[2 .. 5]
+
+test "issue_167":
+  check match("", re2"(?:|y|()){22}")
+  check match("yyy", re2"(?:|y|()){22}")
+  check matchWithBounds("yyy", re2"(?:|y|()){22}") == @[nonCapture]
+  check findAllBounds("y", re2"(?:|y|()){22}") == @[0 .. -1, 1 .. 0]
+  check(not match("x", re2"(?:|y|()){22}"))
+  check findAllBounds("a", re2"(?:(?=x)|)a") == @[0 .. 0]
+  check findAllBounds("xa", re2"(?:(?=x)|)a") == @[1 .. 1]
+  check findAllBounds("ba", re2"(?:\b|)a") == @[1 .. 1]
+  check findAllBounds("a", re2"(?:\b|)a") == @[0 .. 0]
+  check findAllBounds("ba", re2"(?:^|)a") == @[1 .. 1]
+  check findAllBounds("a", re2"(?:^|)a") == @[0 .. 0]

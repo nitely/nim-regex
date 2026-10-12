@@ -40,8 +40,9 @@ task test2, "Test":
   execTest "c", "-r -d:release -o:bin/regex src/regex.nim"
   execTest "c", "-r -d:danger -o:bin/regex src/regex.nim"
   # test nimPreviewSlimSystem
-  execTest "c", "-r -d:nimPreviewSlimSystem -o:bin/regex src/regex.nim"
-  execTest "c", "-r -d:nimPreviewSlimSystem -d:release -o:bin/regex src/regex.nim"
+  if NimMajor >= 2:
+    execTest "c", "-r -d:nimPreviewSlimSystem -o:bin/regex src/regex.nim"
+    execTest "c", "-r -d:nimPreviewSlimSystem -d:release -o:bin/regex src/regex.nim"
   # Test runnable examples
   exec "nim doc -o:./docs/ugh/ugh.html ./src/regex.nim"
 

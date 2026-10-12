@@ -2,7 +2,7 @@ import std/strutils
 import std/hashes
 import std/os
 when defined(nimPreviewSlimSystem):
-  import std/assertions
+  import std/[assertions, syncio]
 
 import ./nfatype
 import ./types

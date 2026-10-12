@@ -1,0 +1,3 @@
+GroupsCapture	regex/exptransformation.html#GroupsCapture	exptransformation: GroupsCapture	
+toAtoms	regex/exptransformation.html#toAtoms,Exp,GroupsCapture,RegexFlags	exptransformation: toAtoms(exp: Exp; groups: var GroupsCapture; flags: RegexFlags = {}): AtomsExp	
+transformExp	regex/exptransformation.html#transformExp,Exp,GroupsCapture,RegexFlags	exptransformation: transformExp(exp: Exp; groups: var GroupsCapture; flags: RegexFlags = {}): RpnExp	

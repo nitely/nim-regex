@@ -1,0 +1,2 @@
+reImpl	regex/compiler.html#reImpl,string,RegexFlags	compiler: reImpl(s: string; flags: RegexFlags = {}): Regex	
+reCt	regex/compiler.html#reCt,string,RegexFlags	compiler: reCt(s: string; flags: RegexFlags = {}): Regex	

@@ -1,3 +1,15 @@
+v0.27.2
+==================
+
+* Fix #167; Compile "(?:|y|()){N}" faster
+* Fix #168; Literals overlapping not matching
+* Fix #170; Repeated lookaround not matching
+* Fix literal optimization for alternations
+* Fix #166; Error compiling "a?(?:b?)*c"
+* Add start parameter to splitIncl func (thanks to @demotomohiro)
+* Add startsWith for openArray[char] input (thanks to @demotomohiro)
+* Add maxSplit parameter to splitIncl proc (thanks to @demotomohiro)
+
 v0.26.2
 ==================
 

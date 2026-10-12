@@ -1,6 +1,8 @@
 import std/strutils
 import std/hashes
 import std/os
+when defined(nimPreviewSlimSystem):
+  import std/assertions
 
 import ./nfatype
 import ./types
